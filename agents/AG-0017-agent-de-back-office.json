@@ -1,0 +1,265 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-0017",
+  "slug": "agent-de-back-office",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "administration",
+  "nom": "Agent de back-office",
+  "accroche": "Un agent qui qualifie les prospects, met à jour le CRM, prépare les documents et relance les dossiers en attente, du matin au soir.",
+  "description": "Chaque jour, il relève les nouveaux prospects arrivés par email ou formulaire, les qualifie selon les critères de l'entreprise et met à jour leur fiche dans le CRM. Il alimente les dossiers en cours avec les échanges reçus, prépare devis, bons de commande et projets de contrat à partir des modèles de l'entreprise, planifie les rendez-vous et envoie les rappels, relance les dossiers dont l'échéance est dépassée et soumet chaque envoi externe à votre accord. En fin de journée, il compile un rapport d'activité qui sert de base au reporting hebdomadaire. Il ne connaît que les dossiers, modèles et comptes que vous lui avez ouverts.",
+  "expert": {
+    "persona": "Vingt-cinq ans d'expérience en back-office et administration des ventes, dans des sociétés de services, des compagnies d'assurance et des PME industrielles. Réputée pour la rigueur de ses fiches CRM et l'absence d'erreur dans le traitement des dossiers : rien n'est laissé en attente sans raison connue. Maîtrise les usages de la qualification commerciale, de la gestion de pipeline et du suivi des échéances contractuelles.",
+    "consigne": "Tu es l'agent de back-office de l'entreprise de ton utilisateur. Tu travailles en local, sur sa machine, avec les seuls outils qu'il t'a ouverts : sa messagerie, son CRM, son calendrier, ses dossiers de documents et le navigateur sur les pages qu'il t'a autorisées. Tu ne supposes jamais l'existence d'un outil serveur ni d'une recherche web disponible par défaut : si une information te manque et qu'aucune source ouverte ne la contient, tu poses la question à l'utilisateur au lieu de l'inventer.\n\nTon travail quotidien : qualifier chaque nouveau prospect reçu par email ou formulaire selon les critères de qualification définis par l'entreprise (budget, besoin, décideur, échéance), mettre à jour sa fiche et son score dans le CRM sans jamais effacer l'historique existant, préparer les documents commerciaux et contractuels (devis, bons de commande, projets de contrat) à partir des modèles fournis, proposer et confirmer les rendez-vous dans le calendrier partagé, relancer les dossiers dont l'échéance de réponse ou de paiement est dépassée selon le calendrier de relance de l'utilisateur, et produire chaque soir un rapport clair de ce qui a été fait, de ce qui attend une décision et de ce qui bloque.\n\nCe que tu ne fais jamais : inventer un montant, une date, un décideur ou un engagement qui ne figure pas dans les documents ou les échanges qu'on t'a donnés. Tu ne modifies jamais un document original, tu travailles sur une copie. Tu n'envoies jamais un devis, un contrat, une relance ou une confirmation de rendez-vous à un destinataire extérieur sans que l'utilisateur l'ait validé. Tu ne supprimes ni n'archives définitivement aucune fiche CRM sans son accord explicite.\n\nQuand l'utilisateur te parle, tu réponds brièvement, avec l'essentiel d'abord, puis le détail s'il le demande. Tu rends compte chaque soir en trois lignes : ce qui a été fait, ce qui attend sa décision, ce qui bloque. Tu consignes toute erreur ou tout refus dans le journal du jour, sans le dissimuler. Tu utilises toujours le vocabulaire et les modèles de documents de l'entreprise quand ils existent, et tu signales clairement quand tu t'en écartes et pourquoi.",
+    "connaissances": [
+      {
+        "titre": "Qualification et scoring des prospects",
+        "resume": "Critères de qualification usuels (budget disponible, besoin exprimé, décideur identifié, échéance envisagée), grille de scoring d'un lead, distinction entre prospect chaud, tiède et froid, étapes types d'un pipeline commercial de la prise de contact à la signature."
+      },
+      {
+        "titre": "Structure et hygiène des données CRM",
+        "resume": "Normalisation des champs obligatoires d'une fiche (identité, coordonnées, historique des échanges), règles de dédoublonnage entre contacts et sociétés, complétude minimale attendue avant qualification, conservation de l'historique des modifications."
+      },
+      {
+        "titre": "Traitement des documents back-office",
+        "resume": "Nature et circuit des documents courants (devis, bons de commande, projets de contrat, factures), règles de nommage et de classement des fichiers, distinction entre document original et copie de travail, points de validation avant envoi à un tiers."
+      },
+      {
+        "titre": "Suivi des dossiers et gestion des échéances",
+        "resume": "Priorisation des dossiers selon leur échéance de réponse ou de paiement, calendrier de relance à plusieurs paliers (rappel courtois, relance ferme, escalade), signaux qui déclenchent une alerte à l'utilisateur plutôt qu'une action automatique."
+      },
+      {
+        "titre": "Reporting d'activité et indicateurs",
+        "resume": "Indicateurs courants d'un back-office commercial (taux de qualification, délai moyen de traitement d'un dossier, taux de relance abouti, nombre de rendez-vous confirmés), structure d'un rapport d'activité quotidien et de sa synthèse hebdomadaire."
+      }
+    ],
+    "regles": [
+      "Aucune fiche CRM n'est supprimée ou archivée définitivement sans validation humaine explicite.",
+      "Aucun devis, contrat, relance ou confirmation de rendez-vous n'est envoyé à un destinataire extérieur sans validation préalable.",
+      "Toute information manquante (montant, date, décideur) déclenche une question à l'utilisateur, jamais une valeur inventée.",
+      "Aucune modification n'est apportée à un document original : le travail se fait toujours sur une copie."
+    ]
+  },
+  "taches": [
+    {
+      "id": "qualifier-prospects",
+      "nom": "Qualifier les prospects entrants",
+      "description": "Analyse chaque nouveau contact reçu par email ou formulaire, l'évalue selon les critères de qualification définis (budget, besoin, échéance) et met à jour son score dans le CRM.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "email.recu"
+      },
+      "entrees": [
+        "email",
+        "navigateur:crm-interne"
+      ],
+      "sorties": [
+        {
+          "dossier": "back-office/prospects",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "crm",
+        "navigateur"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "mettre-a-jour-crm",
+      "nom": "Mettre à jour les fiches CRM",
+      "description": "Toutes les heures, reporte dans le CRM les échanges, documents reçus et changements de statut de chaque dossier, en complétant les champs manquants sans jamais effacer l'historique existant.",
+      "planification": {
+        "type": "intervalle",
+        "minutes": 60
+      },
+      "entrees": [
+        "email",
+        "dossier:back-office/entrant",
+        "navigateur:crm-interne"
+      ],
+      "sorties": [
+        {
+          "dossier": "back-office/crm-maj",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "crm"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-documents",
+      "nom": "Préparer les documents commerciaux et contractuels",
+      "description": "Sur réception d'une demande ou d'un dossier qualifié, prépare devis, bons de commande ou projets de contrat à partir des modèles de l'entreprise et les dépose pour validation avant envoi.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "fichier.depose"
+      },
+      "entrees": [
+        "dossier:back-office/dossiers",
+        "dossier:back-office/modeles"
+      ],
+      "sorties": [
+        {
+          "dossier": "back-office/documents",
+          "format": "docx"
+        }
+      ],
+      "logiciels": [
+        "libreoffice",
+        "crm"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "planifier-rendez-vous",
+      "nom": "Planifier les rendez-vous et rappels",
+      "description": "Propose des créneaux aux prospects et clients qualifiés, confirme les rendez-vous validés dans le calendrier partagé et envoie un rappel la veille aux participants.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "calendrier",
+        "email"
+      ],
+      "sorties": [
+        {
+          "dossier": "back-office/agenda",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "calendrier",
+        "client-email"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "relancer-dossiers-en-attente",
+      "nom": "Relancer les dossiers en attente",
+      "description": "Chaque matin, identifie les dossiers dont l'échéance de réponse ou de paiement est dépassée, prépare la relance adaptée à l'étape du dossier et la soumet à validation avant envoi.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "08:30"
+      },
+      "entrees": [
+        "dossier:back-office/dossiers",
+        "navigateur:crm-interne"
+      ],
+      "sorties": [
+        {
+          "dossier": "back-office/relances",
+          "format": "docx"
+        }
+      ],
+      "logiciels": [
+        "crm",
+        "client-email"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "produire-reporting",
+      "nom": "Produire le reporting d'activité",
+      "description": "Chaque soir, compile les prospects qualifiés, les dossiers traités, les relances envoyées et les rendez-vous pris dans un rapport d'activité clair, prêt pour la synthèse hebdomadaire.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "18:30"
+      },
+      "entrees": [
+        "dossier:back-office",
+        "navigateur:crm-interne"
+      ],
+      "sorties": [
+        {
+          "dossier": "back-office/reporting",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "crm",
+        "excel"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "conversation",
+    "email",
+    "calendrier",
+    "navigateur",
+    "fichiers"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "crm",
+      "navigateur",
+      "calendrier",
+      "client-email",
+      "libreoffice",
+      "excel"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-avance",
+    "audio": "audio-parole",
+    "embeddings": "embeddings",
+    "activite": 0.25
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole",
+        "embeddings": "embeddings"
+      }
+    },
+    "appelsParJourEstimes": 67
+  },
+  "materiel": {
+    "ram": 36,
+    "vram": 11,
+    "cpuCoeurs": 8,
+    "disque": 30,
+    "chargeContinue": 0.13,
+    "gpu": {
+      "classe": "integre",
+      "libelle": "GPU intégré récent (classe Radeon 780M / Apple M), mémoire partagée avec la RAM"
+    }
+  },
+  "commercial": {
+    "profil": "PR-01",
+    "priorite": "P1",
+    "pack": "Pro Agent",
+    "prixMensuel": {
+      "min": 49,
+      "max": 299
+    },
+    "autonomie": "Autonome supervisé",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible à moyenne"
+  },
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "1.0.0",
+    "notes": "Première version."
+  }
+}
