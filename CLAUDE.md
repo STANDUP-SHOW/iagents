@@ -65,7 +65,11 @@ par WhatsApp et email.
   Anthropic (moitié prix), Sonnet 5 par défaut, `--sec` pour préparer sans
   envoyer. **Les lots tournent dans GitHub Actions** (`generer-fiches.yml`) avec
   la clé en secret du dépôt et livrent une PR `fiches/…` à relire : la clé ne
-  vit ni sur une machine ni dans le dépôt.
+  vit ni sur une machine ni dans le dépôt. **Une clé créée au niveau de
+  l'organisation (hors espace de travail) est refusée en 400** « not scoped to
+  a workspace » : soit créer la clé DANS un espace de travail de la console,
+  soit poser aussi le secret `ANTHROPIC_WORKSPACE_ID` (en-tête
+  `anthropic-workspace-id`). Vu au run n°2 du 18/09/2026.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,
