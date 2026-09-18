@@ -21,6 +21,16 @@ import { fileURLToPath } from 'node:url';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { materielPour, appelsParJour } from '../dimensionnement/calculer.ts';
 
+/**
+ * A key created at organisation level (not inside a workspace) must name the
+ * workspace on every request. ANTHROPIC_WORKSPACE_ID is optional: a key created
+ * inside a workspace at console.anthropic.com needs nothing.
+ */
+function clientAnthropic() {
+  const workspace = process.env.ANTHROPIC_WORKSPACE_ID?.trim();
+  return new Anthropic(workspace ? { defaultHeaders: { 'anthropic-workspace-id': workspace } } : {});
+}
+
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const lire = (p: string) => readFileSync(join(racine, p), 'utf8');
 const catalogue = JSON.parse(lire('catalogue/catalogue.json'));
@@ -162,7 +172,7 @@ async function main() {
   if (commande === 'relever') {
     const id = args[args.indexOf('relever') + 1];
     if (!id) throw new Error('relever <batchId>');
-    await (args.includes('--attendre') ? attendre(new Anthropic(), id) : relever(new Anthropic(), id));
+    await (args.includes('--attendre') ? attendre(clientAnthropic(), id) : relever(clientAnthropic(), id));
     return;
   }
 
@@ -177,7 +187,7 @@ async function main() {
   const horodatage = new Date().toISOString().replace(/[:.]/g, '-');
   writeFileSync(join(dossierLots, `requetes-${horodatage}.json`), JSON.stringify(requetes, null, 1));
   if (sec || commande !== 'soumettre') { console.log(`Mode --sec : requêtes écrites dans outils/lots/requetes-${horodatage}.json, rien envoyé.`); return; }
-  const client = new Anthropic();
+  const client = clientAnthropic();
   const lot = await client.messages.batches.create({ requests: requetes });
   writeFileSync(join(dossierLots, `${lot.id}.json`), JSON.stringify({ id: lot.id, modele: MODELE, cree: lot.created_at, ids: entrees.map((e: any) => e.id) }, null, 2));
   console.log(`Lot soumis : ${lot.id} (${lot.processing_status}). Relever plus tard : npx tsx outils/generer-fiches.ts relever ${lot.id}`);
