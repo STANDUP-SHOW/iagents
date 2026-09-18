@@ -9,7 +9,7 @@ const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const lire = (id: string): PaquetEco => { const f = readdirSync(join(racine, 'agents')).find((f) => f.startsWith(id)); if (!f) throw new Error(`${id} absent`); return JSON.parse(readFileSync(join(racine, 'agents', f), 'utf8')); };
 let n = 0; const ok = (m: string) => { n++; console.log('  ok  ' + m); };
 
-// 1. An office agent (secretary) is at least 3x cheaper with Local-Agent, hardware shared on a full mini-PC, poste included.
+// 1. An office agent (secretary) is at least 3x cheaper with Local-Agent, hardware shared by load on a mixed mini-PC, poste included.
 const sec = economiePour(lire('AG-0001'), { avecPoste: true });
 assert.ok(sec.apiSeulReference > 100, `API seule ${sec.apiSeulReference} €/mois attendue > 100`);
 assert.ok(sec.ratioPartage >= RATIO_MINIMUM, `ratio ${sec.ratioPartage} < ${RATIO_MINIMUM}`);
@@ -34,6 +34,10 @@ const des = economiePour(lire('AG-0278'));
 assert.ok(des.bundle && des.bundle.gamme === 'XL', `designer sur ${des.bundle?.id}`);
 assert.ok(des.ratioSeul < RATIO_MINIMUM, `designer seul : ratio ${des.ratioSeul}, attendu < 3`);
 ok(`designer seul sur un bundle XL : ratio ${des.ratioSeul} (< 3, la regle ne tient pas sans partage) ; partage ${des.ratioPartage}`);
+
+// 5b. Fleet hardware is never dearer than the small-customer share: bigger bundles cost less per unit of load.
+assert.ok(sec.materielFlotte <= sec.materielPartage + 0.01, `flotte ${sec.materielFlotte} > partage ${sec.materielPartage}`);
+ok(`en flotte, la part de materiel du secretaire tombe a ${sec.materielFlotte} €/mois`);
 
 // 6. Inactive tasks cost nothing; a package with no active task has no API bill.
 assert.equal(coutApiMensuel({ id: 'x', modeles: { texte: 'texte-standard', activite: 0.1 }, taches: [{ planification: { type: 'quotidienne' }, active: false }] }).total, 0);

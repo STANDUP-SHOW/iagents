@@ -16,7 +16,7 @@ export interface Economie {
   toursParExecution: number;
   apiSeulReference: number; apiSeulHautDeGamme: number;
   apiResiduelle: number;
-  materielSeul: number; materielPartage: number; poste: number; electricite: number;
+  materielSeul: number; materielPartage: number; materielFlotte: number; poste: number; electricite: number;
   localAgentSeul: number; localAgentPartage: number;
   ratioSeul: number; ratioPartage: number;
   abonnement: number; totalClientPartage: number;
@@ -25,6 +25,8 @@ export interface Economie {
 }
 
 export const RATIO_MINIMUM = 3;
+/** A bundle never serves more than ~20 different agents' fixed overhead: no agent pays less than 5 % of it. */
+export const PART_MINIMALE = 0.05;
 const JOURS = 30;
 
 function toursPour(t: PaquetEco['taches'][number]): number {
@@ -74,10 +76,16 @@ export function economiePour(paquet: PaquetEco, { avecPoste = false, catalogue =
   const partApi = bundle ? tarifs.partApiResiduelle : 1;
   const apiResiduelle = ref.total * partApi;
   const agentsParBundle = bundle ? Math.max(1, agentsParMachine(bundle, paquet)) : 0;
-  const watts = bundle ? (tarifs.electricite.wattsParGamme as Record<string, number>)[bundle.gamme] ?? 100 : 0;
-  const elecBundle = (watts * 24 * JOURS / 1000) * tarifs.electricite.prixKwhEur;
-  const materielSeul = bundle ? bundle.prixIndicatif / tarifs.amortissementMois + elecBundle : 0;
-  const materielPartage = bundle ? (bundle.prixIndicatif / tarifs.amortissementMois + elecBundle) / agentsParBundle : 0;
+  const coutMensuel = (m: Machine) => m.prixIndicatif / tarifs.amortissementMois + ((tarifs.electricite.wattsParGamme as Record<string, number>)[m.gamme] ?? 100) * 24 * JOURS / 1000 * tarifs.electricite.prixKwhEur;
+  const elecBundle = bundle ? ((tarifs.electricite.wattsParGamme as Record<string, number>)[bundle.gamme] ?? 100) * 24 * JOURS / 1000 * tarifs.electricite.prixKwhEur : 0;
+  // Shared: a customer's bundle carries a MIX of agents; this one pays its share of the load (floor PART_MINIMALE).
+  const part = (m: Machine) => Math.max(PART_MINIMALE, mat.chargeContinue / m.capaciteGpu);
+  const materielSeul = bundle ? coutMensuel(bundle) : 0;
+  const materielPartage = bundle ? coutMensuel(bundle) * part(bundle) : 0;
+  // Fleet: the bundle with the best price per unit of capacity among those that hold the agent.
+  const flotte = catalogue.filter((m) => machinesPourPack([paquet], [m]).impossibles.length === 0)
+    .reduce<Machine | undefined>((best, m) => (!best || coutMensuel(m) / m.capaciteGpu < coutMensuel(best) / best.capaciteGpu ? m : best), undefined);
+  const materielFlotte = flotte ? coutMensuel(flotte) * part(flotte) : 0;
   const poste = avecPoste ? POSTES[0].prixIndicatif / tarifs.amortissementMois + (tarifs.electricite.wattsParGamme.poste * 24 * JOURS / 1000) * tarifs.electricite.prixKwhEur : 0;
   const localAgentSeul = apiResiduelle + materielSeul + poste;
   const localAgentPartage = apiResiduelle + materielPartage + poste;
@@ -86,11 +94,11 @@ export function economiePour(paquet: PaquetEco, { avecPoste = false, catalogue =
     executionsParMois: Math.round(ref.executions), toursParExecution: r(ref.toursMoyens),
     apiSeulReference: r(ref.total), apiSeulHautDeGamme: r(haut.total),
     apiResiduelle: r(apiResiduelle),
-    materielSeul: r(materielSeul), materielPartage: r(materielPartage), poste: r(poste), electricite: r(elecBundle / Math.max(1, agentsParBundle)),
+    materielSeul: r(materielSeul), materielPartage: r(materielPartage), materielFlotte: r(materielFlotte), poste: r(poste), electricite: r(elecBundle * (bundle ? part(bundle) : 0)),
     localAgentSeul: r(localAgentSeul), localAgentPartage: r(localAgentPartage),
     ratioSeul: r(ref.total / Math.max(0.01, localAgentSeul)), ratioPartage: r(ref.total / Math.max(0.01, localAgentPartage)),
     abonnement, totalClientPartage: r(localAgentPartage + abonnement),
     employe: tarifs.employe.coutEmployeurMensuelEur, smic: tarifs.employe.smicChargeMensuelEur,
-    bundle, agentsParBundle, capacitesHorsLocal, ...(mat && {}),
+    bundle, agentsParBundle, capacitesHorsLocal,
   };
 }
