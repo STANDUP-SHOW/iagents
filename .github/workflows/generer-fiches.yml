@@ -1,0 +1,68 @@
+# Génère des fiches d'agents avec l'API Batch d'Anthropic, depuis GitHub, avec la
+# clé posée dans les secrets du dépôt (ANTHROPIC_API_KEY). Se lance à la main
+# depuis l'onglet Actions. Le résultat arrive dans une pull request « fiches/… »
+# à relire avant de fusionner : un paquet non conforme n'est jamais écrit, les
+# échecs sont listés dans outils/lots/<lot>-echecs.json.
+name: Générer des fiches d'agents
+
+on:
+  workflow_dispatch:
+    inputs:
+      selection:
+        description: "Quoi générer : --secteur comptabilite | --ids AG-0002,AG-0003 | --priorite P1 --tout (ajouter --refaire pour réécrire des paquets existants)"
+        required: true
+        default: "--secteur administration"
+      modele:
+        description: "Modèle (claude-sonnet-5 par défaut, claude-opus-5 pour comparer)"
+        required: false
+        default: "claude-sonnet-5"
+      lot:
+        description: "Relever un lot déjà soumis : son identifiant (msgbatch_…). Laisser vide pour soumettre un nouveau lot."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  fiches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Contrôle avant génération
+        run: npm run controle
+      - name: Soumettre le lot et attendre les résultats
+        if: inputs.lot == ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node --experimental-strip-types outils/generer-fiches.ts soumettre ${{ inputs.selection }} --modele ${{ inputs.modele }} --attendre
+      - name: Relever un lot existant
+        if: inputs.lot != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node --experimental-strip-types outils/generer-fiches.ts relever ${{ inputs.lot }} --attendre
+      - name: Contrôle des paquets produits
+        run: npm run controle
+      - name: Ouvrir la pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then echo "Rien de nouveau."; exit 0; fi
+          branche="fiches/$(date -u +%Y%m%d-%H%M%S)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branche"
+          git add agents outils/lots
+          git commit -m "Fiches générées : ${{ inputs.selection }} (${{ inputs.modele }})"
+          git push -u origin "$branche"
+          gh pr create --draft --base "${{ github.ref_name }}" --head "$branche" \
+            --title "Fiches générées : ${{ inputs.selection }}" \
+            --body "Lot Anthropic (${{ inputs.modele }}) lancé depuis Actions. À relire agent par agent avant de fusionner ; les échecs éventuels sont dans outils/lots/*-echecs.json."

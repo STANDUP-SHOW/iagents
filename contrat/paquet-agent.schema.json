@@ -1,0 +1,586 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://iagent.agency/schemas/paquet-agent-1.json",
+  "title": "Paquet d'agent iAgent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "id",
+    "slug",
+    "version",
+    "famille",
+    "secteur",
+    "nom",
+    "accroche",
+    "description",
+    "expert",
+    "taches",
+    "connecteurs",
+    "acces",
+    "modeles",
+    "materiel",
+    "commercial",
+    "miseAJour",
+    "execution"
+  ],
+  "properties": {
+    "format": {
+      "const": "iagent-paquet/1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^AG-\\d{4}$"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "famille": {
+      "enum": [
+        "metier",
+        "fonction",
+        "ecommerce",
+        "reseaux-sociaux",
+        "configurable"
+      ]
+    },
+    "secteur": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "nom": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 80
+    },
+    "accroche": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 180
+    },
+    "description": {
+      "type": "string",
+      "minLength": 200
+    },
+    "expert": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "persona",
+        "consigne",
+        "connaissances",
+        "regles"
+      ],
+      "properties": {
+        "persona": {
+          "type": "string",
+          "minLength": 100
+        },
+        "consigne": {
+          "type": "string",
+          "minLength": 800
+        },
+        "connaissances": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "titre",
+              "resume"
+            ],
+            "properties": {
+              "titre": {
+                "type": "string"
+              },
+              "resume": {
+                "type": "string",
+                "minLength": 80
+              },
+              "fichier": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "regles": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "string",
+            "minLength": 20
+          }
+        }
+      }
+    },
+    "taches": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "nom",
+          "description",
+          "planification",
+          "entrees",
+          "sorties",
+          "logiciels",
+          "validationHumaine",
+          "active"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 60
+          },
+          "planification": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "heure"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "quotidienne"
+                  },
+                  "heure": {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "minutes"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "intervalle"
+                  },
+                  "minutes": {
+                    "type": "integer",
+                    "minimum": 5
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "evenement"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "declencheur"
+                  },
+                  "evenement": {
+                    "enum": [
+                      "email.recu",
+                      "whatsapp.recu",
+                      "fichier.depose",
+                      "calendrier.evenement",
+                      "appel.recu"
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "a-la-demande"
+                  }
+                }
+              }
+            ]
+          },
+          "entrees": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sorties": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "dossier",
+                "format"
+              ],
+              "properties": {
+                "dossier": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+(/[a-z0-9-]+)*$"
+                },
+                "format": {
+                  "enum": [
+                    "md",
+                    "txt",
+                    "docx",
+                    "xlsx",
+                    "pdf",
+                    "csv",
+                    "json",
+                    "png",
+                    "jpg",
+                    "mp4",
+                    "mp3",
+                    "wav",
+                    "html",
+                    "eml"
+                  ]
+                }
+              }
+            }
+          },
+          "logiciels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "validationHumaine": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "connecteurs": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "contains": {
+        "const": "voix"
+      },
+      "items": {
+        "enum": [
+          "email",
+          "whatsapp",
+          "voix",
+          "conversation",
+          "navigateur",
+          "calendrier",
+          "fichiers",
+          "telephone"
+        ]
+      }
+    },
+    "acces": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dossiers",
+        "internet",
+        "logiciels"
+      ],
+      "properties": {
+        "dossiers": {
+          "enum": [
+            "choisis",
+            "total"
+          ]
+        },
+        "internet": {
+          "type": "boolean"
+        },
+        "logiciels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "modeles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "texte",
+        "activite"
+      ],
+      "properties": {
+        "texte": {
+          "enum": [
+            "texte-leger",
+            "texte-standard",
+            "texte-avance",
+            "texte-expert"
+          ]
+        },
+        "vision": {
+          "enum": [
+            "vision"
+          ]
+        },
+        "image": {
+          "enum": [
+            "image-rapide",
+            "image-qualite"
+          ]
+        },
+        "video": {
+          "enum": [
+            "video"
+          ]
+        },
+        "audio": {
+          "enum": [
+            "audio-parole"
+          ]
+        },
+        "musique": {
+          "enum": [
+            "musique"
+          ]
+        },
+        "embeddings": {
+          "enum": [
+            "embeddings"
+          ]
+        },
+        "activite": {
+          "type": "number",
+          "minimum": 0.02,
+          "maximum": 1,
+          "description": "Part du temps, sur 24 h, ou l'agent sollicite reellement ses modeles. 0.1 = un poste de bureau qui traite du courrier ; 0.8 = un generateur d'images en file continue."
+        }
+      }
+    },
+    "materiel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ram",
+        "vram",
+        "cpuCoeurs",
+        "disque",
+        "chargeContinue"
+      ],
+      "properties": {
+        "ram": {
+          "type": "integer",
+          "minimum": 8
+        },
+        "vram": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cpuCoeurs": {
+          "type": "integer",
+          "minimum": 4
+        },
+        "disque": {
+          "type": "integer",
+          "minimum": 5
+        },
+        "chargeContinue": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 1
+        }
+      }
+    },
+    "commercial": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profil",
+        "priorite",
+        "pack",
+        "prixMensuel",
+        "autonomie",
+        "besoinHumain",
+        "risqueReglementaire"
+      ],
+      "properties": {
+        "profil": {
+          "type": "string",
+          "pattern": "^PR-\\d{2}$"
+        },
+        "priorite": {
+          "enum": [
+            "P1",
+            "P2"
+          ]
+        },
+        "pack": {
+          "type": "string"
+        },
+        "prixMensuel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "min",
+            "max"
+          ],
+          "properties": {
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            }
+          }
+        },
+        "autonomie": {
+          "type": "string"
+        },
+        "besoinHumain": {
+          "type": "string"
+        },
+        "risqueReglementaire": {
+          "type": "string"
+        }
+      }
+    },
+    "miseAJour": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canal",
+        "appMinimum",
+        "notes"
+      ],
+      "properties": {
+        "canal": {
+          "enum": [
+            "stable",
+            "beta"
+          ]
+        },
+        "appMinimum": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "modes",
+        "defaut",
+        "bascule",
+        "api",
+        "appelsParJourEstimes"
+      ],
+      "description": "Tout agent sait tourner en local ET par API : c'est le client qui choisit dans l'application, jamais le paquet qui l'impose.",
+      "properties": {
+        "modes": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "local",
+              "api"
+            ]
+          }
+        },
+        "defaut": {
+          "enum": [
+            "local",
+            "api"
+          ]
+        },
+        "bascule": {
+          "enum": [
+            "automatique",
+            "manuelle"
+          ],
+          "description": "automatique : l'application passe par l'API quand le local ne peut pas (materiel insuffisant, machine saturee, modele absent), en avertissant ; manuelle : elle s'arrete et demande."
+        },
+        "api": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "capacites"
+          ],
+          "properties": {
+            "capacites": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Pour chaque capacite du bloc modeles, la famille d'API qui peut la remplacer. Les cles saisies par le client (fournisseur, cle) restent dans l'application, jamais ici.",
+              "properties": {
+                "texte": {
+                  "enum": [
+                    "llm"
+                  ]
+                },
+                "vision": {
+                  "enum": [
+                    "llm-vision"
+                  ]
+                },
+                "image": {
+                  "enum": [
+                    "image"
+                  ]
+                },
+                "video": {
+                  "enum": [
+                    "video"
+                  ]
+                },
+                "audio": {
+                  "enum": [
+                    "parole"
+                  ]
+                },
+                "musique": {
+                  "enum": [
+                    "musique"
+                  ]
+                },
+                "embeddings": {
+                  "enum": [
+                    "embeddings"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "appelsParJourEstimes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Derive de la planification des taches par calculer.ts : sert a l'avertissement de cout en mode API."
+        }
+      }
+    }
+  }
+}
