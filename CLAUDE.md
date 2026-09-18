@@ -43,6 +43,16 @@ par WhatsApp et email.
   un poste d'analyse (14B) exige 24 Go ou plus, et **les agents image, vidéo,
   musique ne tournent en local sur aucune de ces machines** : ils passent par
   l'API ou par une station à GPU dédié, absente du relevé.
+- **Un agent qui ne tourne pas en local dit toujours pourquoi, et quelle
+  configuration il faudrait** (demande de Max, 18/09/2026). `materiel.gpu`
+  porte la classe de carte minimale (intégré, dédiée 8/12/16/24 Go, serveur),
+  dérivée de la charge et de la mémoire des modèles ; `diagnosticLocal()`
+  compare aux machines ressource par ressource et rend la raison en clair.
+  Règle de mémoire qui va avec : texte, audio et embeddings restent chargés ;
+  image, vidéo, vision et musique se chargent un à la fois. Sur le comparatif
+  AliExpress, un community manager (image rapide) réclame une carte 16 Go et
+  un designer (image qualité) une 24 Go : c'est la puissance qui manque, pas
+  la mémoire.
 - **Les chiffres de `paliers-modeles.json` et `machines.json` sont indicatifs**
   (quantification 4 bits, GPU de référence classe RTX 4070, prix bas de
   fourchette AliExpress, barebones chiffrés avec RAM et SSD à ajouter). À

@@ -15,7 +15,42 @@ import machinesJson from './machines.json' with { type: 'json' };
 export type PalierId = keyof typeof paliersJson.paliers;
 export interface Palier { ram: number; vram: number; disque: number; chargeUnitaire: number; exemples: string[]; usage: string }
 export interface Modeles { texte: PalierId; vision?: PalierId; image?: PalierId; video?: PalierId; audio?: PalierId; musique?: PalierId; embeddings?: PalierId; activite: number }
-export interface Materiel { ram: number; vram: number; cpuCoeurs: number; disque: number; chargeContinue: number }
+export interface ClasseGpu { classe: string; libelle: string; capacite: number; vram: number }
+export interface Materiel { ram: number; vram: number; cpuCoeurs: number; disque: number; chargeContinue: number; gpu: { classe: string; libelle: string } }
+
+/**
+ * GPU classes a customer can buy, from the integrated GPU of a mini-PC to a
+ * creation workstation. `capacite` is relative to the reference card (RTX 4070
+ * = 1.0), `vram` the memory available to models. The integrated class uses the
+ * machine RAM, so its vram is an upper bound reached with 64 Go of RAM.
+ */
+export const CLASSES_GPU: ClasseGpu[] = [
+  { classe: 'integre',        libelle: 'GPU intégré récent (classe Radeon 780M / Apple M), mémoire partagée avec la RAM', capacite: 0.20, vram: 58 },
+  { classe: 'dediee-entree',  libelle: 'carte graphique dédiée d entrée de gamme, 8 Go (classe RTX 4060)',              capacite: 0.50, vram: 8 },
+  { classe: 'dediee-milieu',  libelle: 'carte graphique dédiée milieu de gamme, 12 Go (classe RTX 4070)',               capacite: 1.00, vram: 12 },
+  { classe: 'dediee-16',      libelle: 'carte graphique dédiée 16 Go (classe RTX 4070 Ti Super / 4080)',                capacite: 1.30, vram: 16 },
+  { classe: 'dediee-haut',    libelle: 'carte graphique dédiée haut de gamme, 24 Go (classe RTX 4090)',                 capacite: 2.00, vram: 24 },
+  { classe: 'serveur',        libelle: 'plusieurs cartes ou serveur GPU (au-delà de 24 Go ou de la charge d une RTX 4090)', capacite: 99, vram: 999 },
+];
+
+/** Tiers kept loaded at all times (they answer the voice and the mail) vs tiers loaded on demand, one at a time. */
+const PALIERS_RESIDENTS = new Set<string>(['texte-leger', 'texte-standard', 'texte-avance', 'texte-expert', 'audio-parole', 'embeddings']);
+
+/** Model memory for a set of distinct tiers: resident tiers add up, on-demand tiers count once for the largest. */
+function memoireModeles(paliers: PalierId[]): number {
+  let residents = 0, aLaDemande = 0;
+  for (const id of paliers) {
+    const p = PALIERS[id];
+    const m = p.vram + (p.vram > 0 ? MEMOIRE_TRAVAIL_PAR_PALIER : 0);
+    if (PALIERS_RESIDENTS.has(id)) residents += m; else aLaDemande = Math.max(aLaDemande, m);
+  }
+  return Math.ceil(residents + aLaDemande);
+}
+
+/** Smallest GPU class that carries a given continuous load and model memory. */
+export function classeGpuPour(chargeContinue: number, vram: number): ClasseGpu {
+  return CLASSES_GPU.find((c) => c.capacite >= chargeContinue && c.vram >= vram) ?? CLASSES_GPU[CLASSES_GPU.length - 1];
+}
 export interface Machine { id: string; nom: string; ram: number; vram: number; memoireUnifiee: boolean; cpuCoeurs: number; disque: number; capaciteGpu: number; prixIndicatif: number; note?: string; modele?: string; cpu?: string; gpu?: string }
 export interface AgentDimension { id: string; modeles: Modeles }
 
@@ -40,12 +75,16 @@ export function materielPour(modeles: Modeles): Materiel {
   });
   const surCpu = ps.some((p) => p.vram === 0 && p.chargeUnitaire >= 0.1);
   const charge = ps.reduce((s, p) => s + p.chargeUnitaire, 0) * modeles.activite;
+  const chargeContinue = Math.min(1, Math.round(charge * 100) / 100);
+  const vram = memoireModeles(paliersDe(modeles));
+  const gpu = classeGpuPour(chargeContinue, vram);
   return {
     ram: Math.max(...ps.map((p) => p.ram)) + SYSTEME.ram,
-    vram: Math.ceil(ps.reduce((s, p) => s + p.vram + (p.vram > 0 ? MEMOIRE_TRAVAIL_PAR_PALIER : 0), 0)),
+    vram,
     cpuCoeurs: SYSTEME.cpuCoeurs + (surCpu ? 4 : 0),
     disque: ps.reduce((s, p) => s + p.disque, 0) + SYSTEME.disque,
-    chargeContinue: Math.min(1, Math.round(charge * 100) / 100),
+    chargeContinue,
+    gpu: { classe: gpu.classe, libelle: gpu.libelle },
   };
 }
 
@@ -59,9 +98,8 @@ function besoinsGroupe(agents: AgentDimension[]) {
     charge += materielPour(a.modeles).chargeContinue;
     ram = Math.max(ram, materielPour(a.modeles).ram);
   }
-  let vram = 0;
-  for (const id of distincts) { const p = PALIERS[id]; vram += p.vram + (p.vram > 0 ? MEMOIRE_TRAVAIL_PAR_PALIER : 0); disque += p.disque; }
-  return { vram, charge, ram: ram + agents.length, disque: disque + SYSTEME.disque, cpuCoeurs: SYSTEME.cpuCoeurs };
+  for (const id of distincts) disque += PALIERS[id].disque;
+  return { vram: memoireModeles([...distincts]), charge, ram: ram + agents.length, disque: disque + SYSTEME.disque, cpuCoeurs: SYSTEME.cpuCoeurs };
 }
 
 export function tientSur(machine: Machine, agents: AgentDimension[]): boolean {
@@ -138,4 +176,28 @@ export function jaugeMachine(machine: Machine, agents: AgentDimension[]): { jaug
   if (charge > 1) return { jauge: 'saturee', charge, vram: b.vram, message: `Charge ${Math.round(charge * 100)} % : les tâches prendront du retard. Passez les agents les plus lourds en mode API.` };
   if (charge > 0.8) return { jauge: 'chargee', charge, vram: b.vram, message: `Charge ${Math.round(charge * 100)} % : encore de la place pour un agent léger, pas pour un agent image ou vidéo.` };
   return { jauge: 'confortable', charge, vram: b.vram, message: `Charge ${Math.round(charge * 100)} % : la machine tient ce pack 24h/24.` };
+}
+
+/**
+ * Why an agent does or does not run locally on a machine catalogue, resource
+ * by resource, and the configuration it would need. Written for the product
+ * page and the desktop app: a customer must never read "impossible" without
+ * the reason and the machine that would do.
+ */
+export interface DiagnosticLocal { possible: boolean; machine?: Machine; raisons: string[]; configurationNecessaire: string }
+export function diagnosticLocal(agent: AgentDimension, catalogue: Machine[] = MACHINES): DiagnosticLocal {
+  const m = materielPour(agent.modeles);
+  const configurationNecessaire = `${m.gpu.libelle} ; ${m.vram} Go de mémoire pour les modèles ; ${m.ram} Go de RAM ; ${m.disque} Go de disque ; charge continue ${Math.round(m.chargeContinue * 100)} % d une carte de référence`;
+  const place = machinesPourPack([agent], catalogue);
+  if (!place.impossibles.length) return { possible: true, machine: place.machines[0].machine, raisons: [], configurationNecessaire };
+  const raisons: string[] = [];
+  const b = besoinsGroupe([agent]);
+  const maxVram = Math.max(...catalogue.map((c) => c.vram));
+  const maxCap = Math.max(...catalogue.map((c) => c.capaciteGpu));
+  const maxDisque = Math.max(...catalogue.map((c) => c.disque));
+  if (b.vram > maxVram) raisons.push(`mémoire des modèles : ${b.vram} Go nécessaires, ${maxVram} Go disponibles au mieux sur ces machines`);
+  if (b.charge > maxCap) raisons.push(`puissance : charge continue ${Math.round(b.charge * 100)} % d une carte de référence, ${Math.round(maxCap * 100)} % au mieux sur ces machines (GPU intégré) — il faut ${m.gpu.libelle}`);
+  if (b.disque > maxDisque) raisons.push(`disque : ${b.disque} Go nécessaires, ${maxDisque} Go au mieux`);
+  if (!raisons.length) raisons.push('aucune machine ne réunit à la fois la mémoire et la puissance nécessaires');
+  return { possible: false, raisons, configurationNecessaire };
 }

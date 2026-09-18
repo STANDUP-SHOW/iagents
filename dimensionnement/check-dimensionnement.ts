@@ -1,7 +1,7 @@
 // Bench for the sizing engine against the REAL machine catalogue (AliExpress mini-PCs, iGPU only).
 // Expectations are written by hand, never derived from the code under test.
 import assert from 'node:assert/strict';
-import { materielPour, machinesPourPack, agentsParMachine, appelsParJour, jaugeMachine, MACHINES, type AgentDimension } from './calculer.ts';
+import { materielPour, machinesPourPack, agentsParMachine, appelsParJour, jaugeMachine, diagnosticLocal, MACHINES, type AgentDimension } from './calculer.ts';
 
 const bureau: AgentDimension = { id: 'bureau', modeles: { texte: 'texte-standard', audio: 'audio-parole', embeddings: 'embeddings', activite: 0.15 } };
 const analyste: AgentDimension = { id: 'analyste', modeles: { texte: 'texte-avance', audio: 'audio-parole', embeddings: 'embeddings', activite: 0.3 } };
@@ -17,7 +17,8 @@ const ok = (msg: string) => { n++; console.log('  ok  ' + msg); };
 const m1 = materielPour(bureau.modeles);
 assert.equal(m1.vram, 7, 'texte 6 + memoire de travail 0,5, arrondi au-dessus ; audio et embeddings sur CPU');
 assert.ok(m1.chargeContinue < 0.1, `charge ${m1.chargeContinue} attendue < 0,1`);
-ok('un poste de bureau demande 7 Go pour ses modeles et moins de 10 % de charge');
+assert.equal(m1.gpu.classe, 'integre');
+ok('un poste de bureau demande 7 Go pour ses modeles, moins de 10 % de charge, un GPU integre suffit');
 
 // 2. One office agent alone goes on the cheapest machine that holds it: the Firebat AM02 Ryzen 5 6600H (~268 €).
 const seul = machinesPourPack([bureau]);
@@ -78,5 +79,22 @@ assert.equal(jaugeMachine(machine(AM02), quatre).jauge, 'saturee');
 assert.equal(jaugeMachine(machine(AM02), [video]).jauge, 'impossible');
 assert.match(jaugeMachine(machine(AM02), [video]).message, /mode API/);
 ok('la jauge distingue confortable / chargee / saturee / impossible et renvoie vers le mode API');
+
+// 11. An agent kept off local says why and which configuration it needs; a local one has no reason.
+const dImage = diagnosticLocal(image);
+assert.equal(dImage.possible, false);
+assert.equal(dImage.raisons.length, 1, `raisons : ${JSON.stringify(dImage.raisons)}`);
+assert.match(dImage.raisons[0], /^puissance/);
+assert.match(dImage.configurationNecessaire, /carte graphique dédiée/);
+assert.equal(materielPour(image.modeles).gpu.classe, 'dediee-16', 'texte 6 + image-rapide 8 + travail = 15 Go : ni 8 ni 12 Go ne suffisent');
+const dVideo = diagnosticLocal(video);
+assert.equal(dVideo.possible, false);
+assert.ok(dVideo.raisons.some((r) => r.startsWith('puissance')));
+assert.equal(materielPour(video.modeles).gpu.classe, 'dediee-16');
+const dBureau = diagnosticLocal(bureau);
+assert.equal(dBureau.possible, true);
+assert.deepEqual(dBureau.raisons, []);
+assert.equal(dBureau.machine?.id, 'firebat-am02-ryzen-5-6600h');
+ok('un agent hors local dit pourquoi (puissance) et la carte necessaire ; un agent local n a aucune raison');
 
 console.log(`\n${n} attentes tenues — dimensionnement ok`);

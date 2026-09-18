@@ -6,7 +6,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { machinesPourPack, agentsParMachine, materielPour, MACHINES, type AgentDimension } from '../dimensionnement/calculer.ts';
+import { machinesPourPack, agentsParMachine, materielPour, diagnosticLocal, MACHINES, type AgentDimension } from '../dimensionnement/calculer.ts';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const agents: (AgentDimension & { nom: string })[] = readdirSync(join(racine, 'agents')).filter((f) => f.endsWith('.json')).sort()
@@ -19,6 +19,15 @@ for (const a of agents) {
   const ligne = r.impossibles.length ? 'AUCUNE (mode API)' : r.machines[0].machine.id;
   const copies = r.impossibles.length ? '-' : String(agentsParMachine(r.machines[0].machine, a));
   console.log(`${(a.id + ' ' + a.nom).padEnd(30)} | ${String(m.vram).padStart(6)} Go       | ${m.chargeContinue.toFixed(2).padStart(6)} | ${ligne.padEnd(33)} | ${(r.machines[0]?.machine.prixIndicatif ?? '').toString().padStart(4)}  | ${copies}`);
+}
+
+console.log('\nAgents hors local sur ce catalogue — pourquoi, et quelle configuration il faudrait :');
+for (const a of agents) {
+  const d = diagnosticLocal(a);
+  if (d.possible) continue;
+  console.log(`  ${a.id} ${a.nom}`);
+  for (const r of d.raisons) console.log(`    - ${r}`);
+  console.log(`    → configuration nécessaire : ${d.configurationNecessaire}`);
 }
 
 const pack = machinesPourPack(agents);
