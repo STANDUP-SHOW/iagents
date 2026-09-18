@@ -71,6 +71,24 @@ par WhatsApp et email.
   AliExpress, un community manager (image rapide) réclame une carte 16 Go et
   un designer (image qualité) une 24 Go : c'est la puissance qui manque, pas
   la mémoire.
+- **L'argument de vente est le coût sur un an : matériel + API résiduelle au
+  moins 3× moins cher que l'API seule** (Max, 19/09/2026). `economie.ts` le
+  calcule par agent depuis sa fiche : exécutions par mois (planification),
+  tours par exécution (navigateur, document lourd), prix Sonnet 5 et Opus 5 du
+  jour, 20 % d'API résiduelle, bundle amorti sur 12 mois plus électricité,
+  employé médian et SMIC chargé en face. `docs/economie.md` (npm run economie)
+  donne la table pour toutes les fiches. **Toutes les hypothèses sont dans
+  `tarifs-api.json` et doivent être remplacées par la mesure** dès qu'un agent
+  tourne (tours et jetons consignés). Résultat au 19/09 : un poste de bureau
+  passe la règle en bundle partagé (≈ 290 € d'API seule contre ≈ 90 €), un
+  designer seul sur un bundle XL ne la passe pas (ratio 0,5) : les agents
+  image et vidéo se vendent en bundle partagé ou en mode API, jamais seuls
+  sur une carte dédiée. Le banc `check-economie.ts` tient ces deux vérités.
+- **Les fiches sont écrites par Claude Code sur l'abonnement de Max, pas par
+  l'API** (19/09/2026). Le workflow Batch reste dans le dépôt (il a servi au
+  lot Administration, 24 fiches pour 0,60 $) mais ne se relance plus : les
+  secteurs suivants sont écrits en session, validés par `npm run verifier`,
+  poussés secteur par secteur.
 - **Les chiffres de `paliers-modeles.json` et `machines.json` sont indicatifs**
   (quantification 4 bits, GPU de référence classe RTX 4070, prix bas de
   fourchette AliExpress, barebones chiffrés avec RAM et SSD à ajouter). À
