@@ -36,6 +36,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Vérifier que la clé Anthropic est bien posée
+        env:
+          CLE: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$CLE" ]; then
+            echo "::error::Le secret ANTHROPIC_API_KEY est vide ou absent. Le poser dans Settings › Secrets and variables › Actions › Repository secrets (onglet Secrets, pas Variables), sous ce nom exact, puis relancer." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "Clé présente (${#CLE} caractères)."
       - name: Contrôle avant génération
         run: npm run controle
       - name: Soumettre le lot et attendre les résultats
