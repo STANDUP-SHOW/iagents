@@ -50,12 +50,12 @@ jobs:
         run: node --experimental-strip-types outils/generer-fiches.ts relever ${{ inputs.lot }} --attendre
       - name: Contrôle des paquets produits
         run: npm run controle
-      - name: Ouvrir la pull request
+      - name: Pousser les fiches et ouvrir la pull request
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
-          if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then echo "Rien de nouveau."; exit 0; fi
+          if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then echo "Rien de nouveau." | tee -a "$GITHUB_STEP_SUMMARY"; exit 0; fi
           branche="fiches/$(date -u +%Y%m%d-%H%M%S)"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -63,6 +63,13 @@ jobs:
           git add agents outils/lots
           git commit -m "Fiches générées : ${{ inputs.selection }} (${{ inputs.modele }})"
           git push -u origin "$branche"
-          gh pr create --draft --base "${{ github.ref_name }}" --head "$branche" \
-            --title "Fiches générées : ${{ inputs.selection }}" \
-            --body "Lot Anthropic (${{ inputs.modele }}) lancé depuis Actions. À relire agent par agent avant de fusionner ; les échecs éventuels sont dans outils/lots/*-echecs.json."
+          echo "Branche poussée : $branche" | tee -a "$GITHUB_STEP_SUMMARY"
+          # Opening the PR needs « Allow GitHub Actions to create and approve pull requests » in the repo settings.
+          # Without it the branch is still there: the summary gives the compare link and the PR can be opened by hand or by l'API.
+          if gh pr create --draft --base "${{ github.ref_name }}" --head "$branche" \
+              --title "Fiches générées : ${{ inputs.selection }}" \
+              --body "Lot Anthropic (${{ inputs.modele }}) lancé depuis Actions. À relire agent par agent avant de fusionner ; les échecs éventuels sont dans outils/lots/*-echecs.json."; then
+            echo "Pull request ouverte." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "PR non ouverte (réglage Actions › Workflow permissions). Ouvrir à la main : https://github.com/${{ github.repository }}/compare/${{ github.ref_name }}...$branche" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
