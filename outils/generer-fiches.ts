@@ -73,6 +73,8 @@ Voici un exemple complet de la partie que tu dois produire (le paquet du Secrét
 
 ${JSON.stringify(exempleFiche, null, 1)}
 
+Client type : un indépendant, une TPE ou une PME qui achète l'agent pour son propre usage. « Administration » désigne les fonctions administratives d'une entreprise, jamais l'administration publique (mairie, préfecture, collectivité, usagers) sauf si le nom du métier le dit explicitement. Au premier lot, six fiches sur vingt-trois parlaient de mairies et d'usagers : c'est faux pour l'acheteur.
+
 Règles d'écriture :
 - Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, sans balises de code, conforme à ce schéma : ${JSON.stringify(schemaFiche)}
 - Français soigné pour tout ce que lit le client ; la "consigne" est écrite pour un modèle LOCAL (elle ne suppose ni recherche web, ni outil serveur, ni accès à des comptes que l'utilisateur n'a pas ouverts).
@@ -104,7 +106,7 @@ function requetePour(a: any): Anthropic.Messages.Batches.BatchCreateParams.Reque
     custom_id: a.id,
     params: {
       model: MODELE,
-      max_tokens: 16000,
+      max_tokens: 32000, // la réflexion compte dans la limite : AG-0002 a été coupé à 16 000 au premier lot
       system: [{ type: 'text', text: SYSTEME, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: `Écris le paquet de l'agent ${a.id} : « ${a.metier} », secteur « ${catalogue.secteurs.find((s: any) => s.id === a.secteur).nom} ».
 Profil commercial du catalogue (pour choisir le niveau d'autonomie et de validation) : autonomie « ${p.autonomie} », besoin humain « ${p.besoinHumain} », risque réglementaire « ${p.risqueReglementaire} », workflow « ${p.workflow.join(' → ')} », outils cibles « ${p.outils.join(', ')} ».` }],
