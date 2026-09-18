@@ -51,12 +51,15 @@ function memoireModeles(paliers: PalierId[]): number {
 export function classeGpuPour(chargeContinue: number, vram: number): ClasseGpu {
   return CLASSES_GPU.find((c) => c.capacite >= chargeContinue && c.vram >= vram) ?? CLASSES_GPU[CLASSES_GPU.length - 1];
 }
-export interface Machine { id: string; nom: string; ram: number; vram: number; memoireUnifiee: boolean; cpuCoeurs: number; disque: number; capaciteGpu: number; prixIndicatif: number; note?: string; modele?: string; cpu?: string; gpu?: string }
+export interface Machine { id: string; nom: string; role: 'bundle' | 'poste'; gamme: string; ram: number; vram: number; memoireUnifiee: boolean; cpuCoeurs: number; disque: number; capaciteGpu: number; prixIndicatif: number; note?: string; modele?: string; cpu?: string; gpu?: string }
 export interface AgentDimension { id: string; modeles: Modeles }
 
 const PALIERS = paliersJson.paliers as Record<PalierId, Palier>;
 const SYSTEME = paliersJson.systeme;
 export const MACHINES: Machine[] = machinesJson.machines as Machine[];
+/** The brains: only bundles carry agents. Postes are the customer's screens and never run a model. */
+export const BUNDLES: Machine[] = MACHINES.filter((m) => m.role === 'bundle');
+export const POSTES: Machine[] = MACHINES.filter((m) => m.role === 'poste');
 
 /** Working memory (KV cache, activations) per LOADED TIER, in GB, on top of the weights. Agents queue on one loaded model, so it is counted per tier, not per agent. */
 export const MEMOIRE_TRAVAIL_PAR_PALIER = 0.5;
@@ -109,27 +112,23 @@ export function tientSur(machine: Machine, agents: AgentDimension[]): boolean {
   return b.vram <= machine.vram && b.charge <= machine.capaciteGpu && ramOk && b.disque <= machine.disque && b.cpuCoeurs <= machine.cpuCoeurs;
 }
 
-/**
- * Pack -> machines. First-fit decreasing on load: heaviest agents first, each
- * placed on the first open machine that still holds it, else on a new machine:
- * the cheapest per copy while agents remain, the cheapest outright for the last
- * one. Agents no machine can hold alone are reported, never silently dropped.
- */
-export function machinesPourPack(agents: AgentDimension[], catalogue: Machine[] = MACHINES) {
-  const tri = [...agents].sort((a, b) => materielPour(b.modeles).chargeContinue - materielPour(a.modeles).chargeContinue);
-  const parPrix = [...catalogue].sort((a, b) => a.prixIndicatif - b.prixIndicatif);
+/** A plan on fewer boxes wins when it costs at most this much more than the cheapest plan: one Linux brain beats a pile of mini-PCs. */
+export const PRIME_BOITIER_UNIQUE = 0.15;
+
+interface Plan { machines: { machine: Machine; agents: string[]; besoins: ReturnType<typeof besoinsGroupe> }[]; prixTotal: number; impossibles: string[] }
+
+/** First-fit decreasing on load with the given catalogue: heaviest agents first, new machine = cheapest per agent left to place. */
+function planAvec(tri: AgentDimension[], catalogue: Machine[]): Plan {
   const ouvertes: Occupation[] = [];
   const impossibles: string[] = [];
   tri.forEach((agent, index) => {
     const place = ouvertes.find((o) => tientSur(o.machine, [...o.agents, agent]));
     if (place) { place.agents.push(agent); return; }
-    const candidates = parPrix.filter((m) => tientSur(m, [agent]));
+    const candidates = catalogue.filter((m) => tientSur(m, [agent]));
     if (!candidates.length) { impossibles.push(agent.id); return; }
-    // Last agent to place: cheapest machine. Otherwise: cheapest per copy of this agent, so a pack
-    // of similar agents lands on the machine that holds the most of them per euro.
-    const restants = tri.length - index - 1;
-    const neuve = restants === 0 ? candidates[0]
-      : candidates.reduce((best, m) => (m.prixIndicatif / agentsParMachine(m, agent) < best.prixIndicatif / agentsParMachine(best, agent) ? m : best));
+    const aPlacer = tri.length - index;
+    const coutParAgent = (m: Machine) => m.prixIndicatif / Math.min(agentsParMachine(m, agent), aPlacer);
+    const neuve = candidates.reduce((best, m) => (coutParAgent(m) < coutParAgent(best) ? m : best));
     ouvertes.push({ machine: neuve, agents: [agent] });
   });
   return {
@@ -139,10 +138,28 @@ export function machinesPourPack(agents: AgentDimension[], catalogue: Machine[] 
   };
 }
 
+/**
+ * Pack -> machines. Several plans are drawn (mixed catalogue, then one plan per
+ * machine type) and the cheapest wins; a plan on fewer boxes wins when it costs
+ * at most PRIME_BOITIER_UNIQUE more. Agents no machine can hold alone are
+ * reported, never silently dropped.
+ */
+export function machinesPourPack(agents: AgentDimension[], catalogue: Machine[] = BUNDLES) {
+  const tri = [...agents].sort((a, b) => materielPour(b.modeles).chargeContinue - materielPour(a.modeles).chargeContinue);
+  const parPrix = [...catalogue].sort((a, b) => a.prixIndicatif - b.prixIndicatif);
+  const mixte = planAvec(tri, parPrix);
+  const plans = [mixte, ...parPrix.map((m) => planAvec(tri, [m]))].filter((p) => p.impossibles.length === mixte.impossibles.length);
+  const moinsCher = plans.reduce((best, p) => (p.prixTotal < best.prixTotal ? p : best));
+  const plafond = moinsCher.prixTotal * (1 + PRIME_BOITIER_UNIQUE);
+  return plans
+    .filter((p) => p.prixTotal <= plafond)
+    .reduce((best, p) => (p.machines.length < best.machines.length || (p.machines.length === best.machines.length && p.prixTotal < best.prixTotal) ? p : best));
+}
+
 /** Machine -> how many copies of a given agent it runs 24/7 (the reverse question). */
 export function agentsParMachine(machine: Machine, agent: AgentDimension): number {
   let n = 0;
-  while (n < 200 && tientSur(machine, Array.from({ length: n + 1 }, (_, i) => ({ ...agent, id: `${agent.id}#${i}` })))) n++;
+  while (n < 400 && tientSur(machine, Array.from({ length: n + 1 }, (_, i) => ({ ...agent, id: `${agent.id}#${i}` })))) n++;
   return n;
 }
 
@@ -185,7 +202,7 @@ export function jaugeMachine(machine: Machine, agents: AgentDimension[]): { jaug
  * the reason and the machine that would do.
  */
 export interface DiagnosticLocal { possible: boolean; machine?: Machine; raisons: string[]; configurationNecessaire: string }
-export function diagnosticLocal(agent: AgentDimension, catalogue: Machine[] = MACHINES): DiagnosticLocal {
+export function diagnosticLocal(agent: AgentDimension, catalogue: Machine[] = BUNDLES): DiagnosticLocal {
   const m = materielPour(agent.modeles);
   const configurationNecessaire = `${m.gpu.libelle} ; ${m.vram} Go de mémoire pour les modèles ; ${m.ram} Go de RAM ; ${m.disque} Go de disque ; charge continue ${Math.round(m.chargeContinue * 100)} % d une carte de référence`;
   const place = machinesPourPack([agent], catalogue);
@@ -196,8 +213,18 @@ export function diagnosticLocal(agent: AgentDimension, catalogue: Machine[] = MA
   const maxCap = Math.max(...catalogue.map((c) => c.capaciteGpu));
   const maxDisque = Math.max(...catalogue.map((c) => c.disque));
   if (b.vram > maxVram) raisons.push(`mémoire des modèles : ${b.vram} Go nécessaires, ${maxVram} Go disponibles au mieux sur ces machines`);
-  if (b.charge > maxCap) raisons.push(`puissance : charge continue ${Math.round(b.charge * 100)} % d une carte de référence, ${Math.round(maxCap * 100)} % au mieux sur ces machines (GPU intégré) — il faut ${m.gpu.libelle}`);
+  if (b.charge > maxCap) raisons.push(`puissance : charge continue ${Math.round(b.charge * 100)} % d une carte de référence, ${Math.round(maxCap * 100)} % au mieux sur ces machines — il faut ${m.gpu.libelle}`);
   if (b.disque > maxDisque) raisons.push(`disque : ${b.disque} Go nécessaires, ${maxDisque} Go au mieux`);
   if (!raisons.length) raisons.push('aucune machine ne réunit à la fois la mémoire et la puissance nécessaires');
   return { possible: false, raisons, configurationNecessaire };
+}
+
+/**
+ * A customer kit: the bundles that carry the fleet, plus the postes the customer
+ * wants (one per person, one per agent, or none when the app runs on their own PC).
+ */
+export function kitClient(agents: AgentDimension[], nbPostes: number, poste: Machine = POSTES[0], catalogue: Machine[] = BUNDLES) {
+  const cerveau = machinesPourPack(agents, catalogue);
+  const prixPostes = nbPostes * poste.prixIndicatif;
+  return { ...cerveau, postes: { machine: poste, nombre: nbPostes, prix: prixPostes }, prixKit: cerveau.prixTotal + prixPostes };
 }

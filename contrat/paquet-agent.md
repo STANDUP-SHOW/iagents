@@ -102,3 +102,12 @@ Ce que l'application fait avec ça :
 1. À l'installation d'un agent, elle calcule la **jauge** de la machine avec tous les agents actifs en local (`jaugeMachine`) : confortable, chargée, saturée, impossible. Chaque état a son message et sa proposition (retirer un agent, passer le plus lourd en API).
 2. Quand le local ne peut pas (mémoire insuffisante, machine saturée, modèle non installé, panne) et que `bascule` est automatique, elle **prévient** (« l'agent X passe par l'API Y, ~N appels/jour, coût estimé ») et bascule. Sans clé d'API renseignée pour la capacité manquante, l'agent s'arrête avec le motif écrit : jamais de tâche exécutée à moitié en silence.
 3. Le client peut à tout moment forcer un agent en `local`, en `api` ou en `auto`, et voir pour chacun ce qu'il consomme (charge locale ou appels/jour).
+
+## Où tourne l'agent : poste + bundle (architecture du 19/09/2026)
+
+Deux boîtiers, expédiés ensemble ou non :
+
+- **Le poste** : le PC du client (le sien, ou un mini-PC Windows pas cher fourni par LocalAgent, un par personne ou un par agent s'il veut « un bureau par employé »). Il porte l'application iAgent, le navigateur piloté, la voix, les dossiers de travail. Il ne fait **aucun calcul de modèle**.
+- **Le bundle** : un boîtier Linux invisible pour le client, à adresse fixe sur son réseau (`ia-bundle.local`), préchargé avec le moteur d'inférence et les modèles. C'est le cerveau : tous les agents de la flotte y tournent, quel que soit le nombre de postes. Un client qui n'a qu'un PC et un bundle a la même chose qu'un client à vingt postes, en plus petit.
+
+Ce que ça change dans le paquet : rien. `modeles` et `materiel` décrivent ce que l'agent consomme, où qu'il tourne. Ce que ça change dans le calcul : les agents se placent sur les **bundles** (`machinesPourPack`, catalogue `role: bundle`), les postes se comptent à part (`kitClient`). Un poste ne porte jamais d'agent ; un bundle de gamme S est un mini-PC à GPU intégré (trois postes de bureau), les gammes M à Flotte ont une carte NVIDIA dédiée. L'application, sur le poste, s'adresse au bundle en local et bascule sur l'API du client selon le bloc `execution` quand le bundle ne peut pas.

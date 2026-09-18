@@ -1,9 +1,47 @@
 {
-  "version": "2026-09-19",
-  "source": "comparatif_mini_pc_aliexpress.xlsx (releve du 19/09/2026)",
-  "note": "Score IA locale >= 3, NAS exclu. AUCUNE de ces machines n'a de GPU dedie : memoire unifiee, donc vram = RAM - 6 Go reserves au systeme, a l'application et aux navigateurs. capaciteGpu = puissance d'inference relative a une carte de bureau classe RTX 4070 (= 1,0), estimee par classe de GPU integre (780M 0,20 ; 660M 0,12 ; Arc 0,10 ; Iris Xe 0,08 ; Vega 8 0,06 ; UHD 0,04) : sur un modele de langage c'est la bande passante memoire qui borne, un 780M sort ~8-10 mots/s sur un 8B. Le NPU n'est pas compte : llama.cpp / Ollama ne l'utilisent pas. Prix = bas de fourchette de l'annonce ; barebones chiffres avec RAM et SSD a ajouter. Pour les agents image, video et musique, aucune de ces machines ne suffit en local : ils passent par l'API (bloc execution) ou par une station a GPU dedie, absente de ce releve.",
+  "version": "2026-09-19b",
+  "source": "comparatif_computers.xlsx (etude du 19/09/2026 : comparatif AliExpress, GPU dediee et eGPU, achat Europe et multi-agents, kit client)",
+  "note": "ARCHITECTURE RETENUE (Max, 19/09/2026) : deux boitiers. Le POSTE (role poste) est un PC Windows pas cher qui porte l application iAgent, le navigateur, la voix et les fichiers ; le BUNDLE (role bundle) est un boitier Linux invisible, adresse fixe sur le reseau (ia-bundle.local), qui fait tout le calcul pour la flotte. Un client peut aussi n avoir qu un PC + un bundle, ou un poste par agent. Le dimensionnement place les agents sur les bundles ; les postes se comptent a part (un par personne ou par agent, au choix du client). Gamme S = mini-PC a GPU integre (memoire unifiee, vram = RAM - 6 Go). Gammes M/L/XL/Flotte = carte NVIDIA dediee (vram = memoire de la carte). capaciteGpu = bande passante memoire relative a une RTX 4070 (504 Go/s = 1,0), ce qui borne le debit d un modele de langage ; 780M et Jetson Orin NX ~0,20, 4060 Ti 0,57, RTX 3070 0,9, 5070 Ti 1,7, 5090 et RTX PRO 6000 3,5. Tous les prix sont INDICATIFS (bas de fourchette AliExpress, devis a demander a Materiel.net / PCSpecialist / Reichelt / Minisforum EU) et a confirmer par LocalAgent avant toute promesse. Le NPU n est pas compte.",
   "reserveSystemeGo": 6,
   "machines": [
+    {
+      "id": "poste-n150",
+      "nom": "Mini PC N150 16 Go / 1 To, Windows 11 Pro",
+      "role": "poste",
+      "gamme": "poste",
+      "ram": 16,
+      "vram": 0,
+      "memoireUnifiee": true,
+      "cpuCoeurs": 4,
+      "disque": 1000,
+      "capaciteGpu": 0.02,
+      "prixIndicatif": 170,
+      "prixMin": 151,
+      "prixMax": 190,
+      "canal": "AliExpress",
+      "cpu": "Intel N150",
+      "gpu": "Intel UHD",
+      "note": "Poste client : application iAgent, navigateur, voix, fichiers. Aucun calcul IA : le cerveau est dans le bundle."
+    },
+    {
+      "id": "poste-firebat-am02-r5",
+      "nom": "Firebat AM02 Ryzen 5 6600H 16 Go, Windows 11 Pro",
+      "role": "poste",
+      "gamme": "poste",
+      "ram": 16,
+      "vram": 0,
+      "memoireUnifiee": true,
+      "cpuCoeurs": 6,
+      "disque": 512,
+      "capaciteGpu": 0.02,
+      "prixIndicatif": 268,
+      "prixMin": 268,
+      "prixMax": 324,
+      "canal": "AliExpress",
+      "cpu": "AMD Ryzen 5 6600H",
+      "gpu": "Radeon 660M",
+      "note": "Poste client un cran au-dessus (CRM, ERP, beaucoup d onglets)."
+    },
     {
       "modele": "MLLSE M6",
       "cpu": "Intel Core i5-12450H (12e gén.)",
@@ -21,7 +59,11 @@
       "vram": 10,
       "disque": 512,
       "prixIndicatif": 366,
-      "note": ""
+      "note": "",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "MLLSE G5 Pro",
@@ -40,7 +82,11 @@
       "vram": 10,
       "disque": 512,
       "prixIndicatif": 327,
-      "note": "Vu 2 fois, même config."
+      "note": "Vu 2 fois, même config.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "Blackview MP100",
@@ -59,7 +105,11 @@
       "vram": 10,
       "disque": 512,
       "prixIndicatif": 346,
-      "note": ""
+      "note": "",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "Chuwi Ubox",
@@ -78,7 +128,11 @@
       "vram": 10,
       "disque": 1000,
       "prixIndicatif": 437,
-      "note": ""
+      "note": "",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "SOYO NcuBox S4 Plus",
@@ -97,7 +151,11 @@
       "vram": 18,
       "disque": 512,
       "prixIndicatif": 488,
-      "note": "Vu 2 fois (488 € et 539 €, config identique). RECOMMANDÉ : gros volume de RAM rapide + bon iGPU."
+      "note": "Vu 2 fois (488 € et 539 €, config identique). RECOMMANDÉ : gros volume de RAM rapide + bon iGPU.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "GMKtec K12 (barebone)",
@@ -116,7 +174,11 @@
       "vram": 26,
       "disque": 1000,
       "prixIndicatif": 401,
-      "note": "Barebone : 251 € + RAM 32 Go (~90 €) + SSD 1 To (~60 €), prix des pieces a confirmer."
+      "note": "Barebone : 251 € + RAM 32 Go (~90 €) + SSD 1 To (~60 €), prix des pieces a confirmer.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "GMKtec K12 (barebone)",
@@ -135,7 +197,11 @@
       "vram": 58,
       "disque": 1000,
       "prixIndicatif": 491,
-      "note": "Barebone : 251 € + RAM 64 Go (~180 €) + SSD 1 To (~60 €), prix des pieces a confirmer."
+      "note": "Barebone : 251 € + RAM 64 Go (~180 €) + SSD 1 To (~60 €), prix des pieces a confirmer.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "Chuwi Aubox (barebone)",
@@ -154,7 +220,11 @@
       "vram": 26,
       "disque": 1000,
       "prixIndicatif": 387,
-      "note": "Barebone : 237 € + RAM 32 Go (~90 €) + SSD 1 To (~60 €), prix des pieces a confirmer."
+      "note": "Barebone : 237 € + RAM 32 Go (~90 €) + SSD 1 To (~60 €), prix des pieces a confirmer.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "Chuwi Aubox (barebone)",
@@ -173,7 +243,11 @@
       "vram": 58,
       "disque": 1000,
       "prixIndicatif": 477,
-      "note": "Barebone : 237 € + RAM 64 Go (~180 €) + SSD 1 To (~60 €), prix des pieces a confirmer."
+      "note": "Barebone : 237 € + RAM 64 Go (~180 €) + SSD 1 To (~60 €), prix des pieces a confirmer.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "GMKtec K15 (barebone IA)",
@@ -192,7 +266,11 @@
       "vram": 26,
       "disque": 1000,
       "prixIndicatif": 508,
-      "note": "Barebone : 358 € + RAM 32 Go (~90 €) + SSD 1 To (~60 €), prix des pieces a confirmer."
+      "note": "Barebone : 358 € + RAM 32 Go (~90 €) + SSD 1 To (~60 €), prix des pieces a confirmer.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "GMKtec K15 (barebone IA)",
@@ -211,7 +289,11 @@
       "vram": 58,
       "disque": 1000,
       "prixIndicatif": 598,
-      "note": "Barebone : 358 € + RAM 64 Go (~180 €) + SSD 1 To (~60 €), prix des pieces a confirmer."
+      "note": "Barebone : 358 € + RAM 64 Go (~180 €) + SSD 1 To (~60 €), prix des pieces a confirmer.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "BMAX B11 Pro",
@@ -230,7 +312,11 @@
       "vram": 10,
       "disque": 512,
       "prixIndicatif": 441,
-      "note": "RECOMMANDÉ : NPU + configuration complète prête à l'emploi (pas de RAM/SSD à ajouter)."
+      "note": "RECOMMANDÉ : NPU + configuration complète prête à l'emploi (pas de RAM/SSD à ajouter).",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "Firebat F1 P",
@@ -249,7 +335,11 @@
       "vram": 10,
       "disque": 1000,
       "prixIndicatif": 387,
-      "note": "Vu 2 fois, écart de prix important (387 € vs 539 €) : bien vérifier la config RAM/SSD exacte avant achat."
+      "note": "Vu 2 fois, écart de prix important (387 € vs 539 €) : bien vérifier la config RAM/SSD exacte avant achat.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "Firebat F1 P",
@@ -268,7 +358,11 @@
       "vram": 18,
       "disque": 1000,
       "prixIndicatif": 539,
-      "note": "Vu 2 fois, écart de prix important (387 € vs 539 €) : bien vérifier la config RAM/SSD exacte avant achat."
+      "note": "Vu 2 fois, écart de prix important (387 € vs 539 €) : bien vérifier la config RAM/SSD exacte avant achat.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "Firebat AM02 (Ryzen 7 H255)",
@@ -287,7 +381,11 @@
       "vram": 10,
       "disque": 512,
       "prixIndicatif": 271,
-      "note": "Vu 3 fois. Meilleur rapport prix/puissance de la sélection pour l'IA locale. RECOMMANDÉ."
+      "note": "Vu 3 fois. Meilleur rapport prix/puissance de la sélection pour l'IA locale. RECOMMANDÉ.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "Firebat AM02 (Ryzen 5 6600H)",
@@ -306,7 +404,11 @@
       "vram": 10,
       "disque": 512,
       "prixIndicatif": 268,
-      "note": "Vu 2 fois."
+      "note": "Vu 2 fois.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "Firebat Mn56",
@@ -325,7 +427,11 @@
       "vram": 10,
       "disque": 1000,
       "prixIndicatif": 471,
-      "note": "Annonce à double config : bien lire l'option choisie."
+      "note": "Annonce à double config : bien lire l'option choisie.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "Firebat Mn56",
@@ -344,7 +450,11 @@
       "vram": 18,
       "disque": 1000,
       "prixIndicatif": 471,
-      "note": "Annonce à double config : bien lire l'option choisie."
+      "note": "Annonce à double config : bien lire l'option choisie.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "KAMRUI H1",
@@ -363,7 +473,11 @@
       "vram": 18,
       "disque": 512,
       "prixIndicatif": 524,
-      "note": ""
+      "note": "",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "KAMRUI R7 H255",
@@ -382,7 +496,11 @@
       "vram": 10,
       "disque": 512,
       "prixIndicatif": 588,
-      "note": "Prix élevé comparé à des configurations Ryzen 7 H255 équivalentes (Firebat AM02, même puce, ~2x moins cher)."
+      "note": "Prix élevé comparé à des configurations Ryzen 7 H255 équivalentes (Firebat AM02, même puce, ~2x moins cher).",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "CHUWI AuBox (16/32 Go, AMD ou Intel au choix)",
@@ -401,7 +519,11 @@
       "vram": 10,
       "disque": 1000,
       "prixIndicatif": 352,
-      "note": "RECOMMANDÉ en version 32 Go : rare à ce prix. Bien vérifier l'option CPU/RAM choisie à la commande."
+      "note": "RECOMMANDÉ en version 32 Go : rare à ce prix. Bien vérifier l'option CPU/RAM choisie à la commande.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "CHUWI AuBox (16/32 Go, AMD ou Intel au choix)",
@@ -420,7 +542,11 @@
       "vram": 26,
       "disque": 1000,
       "prixIndicatif": 352,
-      "note": "RECOMMANDÉ en version 32 Go : rare à ce prix. Bien vérifier l'option CPU/RAM choisie à la commande."
+      "note": "RECOMMANDÉ en version 32 Go : rare à ce prix. Bien vérifier l'option CPU/RAM choisie à la commande.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "Bmax B9 Power",
@@ -439,7 +565,11 @@
       "vram": 18,
       "disque": 1000,
       "prixIndicatif": 535,
-      "note": "CPU le plus véloce en multi-thread de la sélection. RECOMMANDÉ pour l'inférence sur CPU pur."
+      "note": "CPU le plus véloce en multi-thread de la sélection. RECOMMANDÉ pour l'inférence sur CPU pur.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "Ninkear L12 Pro",
@@ -458,7 +588,11 @@
       "vram": 10,
       "disque": 1000,
       "prixIndicatif": 534,
-      "note": "Compatibilité Linux annoncée explicitement : pratique pour des stacks IA locales type Ollama / llama.cpp."
+      "note": "Compatibilité Linux annoncée explicitement : pratique pour des stacks IA locales type Ollama / llama.cpp.",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
     },
     {
       "modele": "SOYO S5 Air",
@@ -477,7 +611,144 @@
       "vram": 10,
       "disque": 512,
       "prixIndicatif": 405,
-      "note": ""
+      "note": "",
+      "role": "bundle",
+      "gamme": "S",
+      "os": "Linux (bundle) ou Windows (poste)",
+      "canal": "AliExpress"
+    },
+    {
+      "id": "bundle-m-egpu-rtx3070-8go",
+      "nom": "Bundle M eGPU : Chuwi AuBox 32 Go + dock Oculink DEG1 + RTX 3070 8 Go",
+      "role": "bundle",
+      "gamme": "M",
+      "ram": 32,
+      "vram": 8,
+      "memoireUnifiee": false,
+      "cpuCoeurs": 8,
+      "disque": 1000,
+      "capaciteGpu": 0.9,
+      "prixIndicatif": 928,
+      "prixMin": 900,
+      "prixMax": 1000,
+      "canal": "AliExpress + Minisforum EU",
+      "cpu": "AMD Ryzen 7 8745HS",
+      "gpu": "NVIDIA RTX 3070 8 Go (448 Go/s)",
+      "note": "Onglet « GPU dediee et eGPU » : 387 + 154 + 387 €. Puissant mais 8 Go seulement : un modele texte 8B et c est plein."
+    },
+    {
+      "id": "bundle-m-itx-rtx4060ti-16go",
+      "nom": "Bundle M : mini-tour ITX Ryzen 5, 32 Go, RTX 4060 Ti 16 Go",
+      "role": "bundle",
+      "gamme": "M",
+      "ram": 32,
+      "vram": 16,
+      "memoireUnifiee": false,
+      "cpuCoeurs": 6,
+      "disque": 1000,
+      "capaciteGpu": 0.57,
+      "prixIndicatif": 950,
+      "prixMin": 900,
+      "prixMax": 1100,
+      "canal": "Materiel.net / assemblage",
+      "cpu": "AMD Ryzen 5",
+      "gpu": "NVIDIA RTX 4060 Ti 16 Go (288 Go/s)",
+      "note": "Le premier bundle qui tient un agent image en local (16 Go). Prix indicatif d un montage, a confirmer."
+    },
+    {
+      "id": "bundle-l-rtx5070ti-16go",
+      "nom": "Bundle L : tour Ryzen 7, 64 Go, RTX 5070 Ti 16 Go",
+      "role": "bundle",
+      "gamme": "L",
+      "ram": 64,
+      "vram": 16,
+      "memoireUnifiee": false,
+      "cpuCoeurs": 8,
+      "disque": 2000,
+      "capaciteGpu": 1.7,
+      "prixIndicatif": 1900,
+      "prixMin": 1700,
+      "prixMax": 2200,
+      "canal": "Materiel.net (gamme PC IA) / assemblage",
+      "cpu": "AMD Ryzen 7",
+      "gpu": "NVIDIA RTX 5070 Ti 16 Go (896 Go/s)",
+      "note": "Une vingtaine de postes de bureau ou un agent video. Prix indicatif, a confirmer sur le devis Materiel.net."
+    },
+    {
+      "id": "bundle-xl-rtx5090-32go",
+      "nom": "Bundle XL : tour Ryzen 9, 96 Go, RTX 5090 32 Go",
+      "role": "bundle",
+      "gamme": "XL",
+      "ram": 96,
+      "vram": 32,
+      "memoireUnifiee": false,
+      "cpuCoeurs": 16,
+      "disque": 4000,
+      "capaciteGpu": 3.5,
+      "prixIndicatif": 3800,
+      "prixMin": 3500,
+      "prixMax": 4500,
+      "canal": "Materiel.net (Astral IA) / assemblage",
+      "cpu": "AMD Ryzen 9 9950X3D",
+      "gpu": "NVIDIA RTX 5090 32 Go (1 792 Go/s)",
+      "note": "Flotte de 40 a 60 agents texte, ou creation image/video en serie. Prix indicatif."
+    },
+    {
+      "id": "bundle-flotte-rtxpro6000-96go",
+      "nom": "Bundle Flotte : workstation Threadripper PRO, 128 Go, RTX PRO 6000 96 Go",
+      "role": "bundle",
+      "gamme": "Flotte",
+      "ram": 128,
+      "vram": 96,
+      "memoireUnifiee": false,
+      "cpuCoeurs": 24,
+      "disque": 8000,
+      "capaciteGpu": 3.5,
+      "prixIndicatif": 26000,
+      "prixMin": 17000,
+      "prixMax": 28000,
+      "canal": "PCSpecialist PHX S 6000 (22 610 GBP) / Mineshop.eu",
+      "cpu": "AMD Threadripper PRO 9965WX",
+      "gpu": "NVIDIA RTX PRO 6000 96 Go (1 792 Go/s)",
+      "note": "Entreprise : gros modeles (70B) et centaines d agents legers. Meme debit brut qu une 5090, trois fois la memoire."
+    },
+    {
+      "id": "bundle-jetson-orin-nx-16go",
+      "nom": "Bundle appliance : reComputer J4012, Jetson Orin NX 16 Go (Reichelt)",
+      "role": "bundle",
+      "gamme": "S",
+      "ram": 16,
+      "vram": 10,
+      "memoireUnifiee": true,
+      "cpuCoeurs": 8,
+      "disque": 128,
+      "capaciteGpu": 0.2,
+      "prixIndicatif": 1008,
+      "prixMin": 1008,
+      "prixMax": 1200,
+      "canal": "Reichelt",
+      "cpu": "ARM Cortex-A78AE 8c",
+      "gpu": "Ampere 1024 coeurs, 102 Go/s memoire unifiee",
+      "note": "Onglet « Kit client » palier Standard. 100 TOPS en entier 8 bits, mais 102 Go/s de bande passante : sur un modele de langage, le MEME debit qu un mini-PC Radeon 780M a 271 €. Silencieux, 25 W, CUDA. Prix Jetson en hausse (+101 % mi-2026)."
+    },
+    {
+      "id": "bundle-jetson-agx-orin-64go",
+      "nom": "Bundle appliance : Jetson AGX Orin 64 Go + carte support (Reichelt)",
+      "role": "bundle",
+      "gamme": "L",
+      "ram": 64,
+      "vram": 58,
+      "memoireUnifiee": true,
+      "cpuCoeurs": 12,
+      "disque": 1000,
+      "capaciteGpu": 0.4,
+      "prixIndicatif": 4500,
+      "prixMin": 4200,
+      "prixMax": 5000,
+      "canal": "Reichelt (module 3 794 €, dispo 01/10/2026) + carte support",
+      "cpu": "ARM Cortex-A78AE 12c",
+      "gpu": "Ampere 2048 coeurs, 204 Go/s memoire unifiee",
+      "note": "Onglet « Kit client » palier Pro. 64 Go de memoire (modeles 32B), mais 204 Go/s : un quart du debit d une 5070 Ti a 1 900 €. A reserver aux clients qui exigent une appliance silencieuse et basse consommation."
     }
   ]
 }

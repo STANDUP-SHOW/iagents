@@ -36,6 +36,24 @@ par WhatsApp et email.
   agents sur le même palier partagent les poids, pas la charge : la mémoire se
   compte par palier distinct, la charge par agent. Le banc l'a imposé : compté
   par agent, un seul poste de bureau ne tenait plus sur un mini-PC.
+- **Architecture poste + bundle (Max, 19/09/2026).** Le client garde un PC
+  Windows (le sien ou un mini-PC N150 à ~170 €, un par personne ou par agent)
+  qui porte l'application, le navigateur, la voix, les fichiers. Le calcul est
+  dans un **bundle Linux invisible** à adresse fixe sur le réseau, préchargé,
+  qui sert toute la flotte. `machines.json` distingue `role: poste` et
+  `role: bundle` (gammes S mini-PC intégré, M/L/XL/Flotte carte NVIDIA) ;
+  `kitClient()` = bundles + postes. **Un poste ne porte jamais d'agent.**
+  Placement : plusieurs plans comparés, prime de 15 % au boîtier unique
+  (`PRIME_BOITIER_UNIQUE`) — sans elle, vingt agents s'émiettaient sur quatre
+  boîtiers pour le prix d'un seul bundle L. Résultat au 19/09 : 3 agents sur un
+  Firebat AM02 (271 €), 10 sur un eGPU RTX 3070 (~930 €), 20 sur un bundle L
+  5070 Ti (~1 900 €), 50 sur un XL 5090 (~3 800 €).
+- **Le Jetson de l'étude est cher pour ce qu'il débite.** Orin NX 16 Go à
+  ~1 008 € : 100 TOPS en entier 8 bits mais 102 Go/s de bande passante, soit le
+  MÊME débit qu'un mini-PC Radeon 780M à 271 € sur un modèle de langage ; AGX
+  Orin 64 Go à ~4 500 € : un quart d'une 5070 Ti à 1 900 €. Le banc vérifie
+  qu'il n'est jamais retenu sur le prix. À réserver à qui exige une appliance
+  silencieuse basse consommation. `capaciteGpu` = bande passante / 504 Go/s.
 - **Les mini-PC du comparatif n'ont aucun GPU dédié.** Mémoire unifiée : la
   mémoire des modèles, c'est la RAM moins 6 Go de réserve ; un Radeon 780M vaut
   ~0,20 d'une carte de bureau (bande passante mémoire). Conséquence mesurée par
