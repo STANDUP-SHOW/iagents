@@ -21,18 +21,20 @@ pub struct VoiceState {
 unsafe impl Send for VoiceState {}
 
 impl VoiceState {
-    pub fn new(chemin_modele: &str) -> Result<Self, Box<dyn Error>> {
-        if !std::path::Path::new(chemin_modele).exists() {
+    pub fn new(chemin_modele: &std::path::Path) -> Result<Self, Box<dyn Error>> {
+        if !chemin_modele.exists() {
             return Err(format!(
-                "modèle d'écoute introuvable : {}. Télécharger un modèle Whisper au format ggml.",
-                chemin_modele
+                "modèle d'écoute introuvable : {}. Déposer un modèle Whisper au format ggml à cet emplacement.",
+                chemin_modele.display()
             )
             .into());
         }
 
-        let contexte =
-            WhisperContext::new_with_params(chemin_modele, WhisperContextParameters::default())
-                .map_err(|e| format!("chargement du modèle d'écoute : {}", e))?;
+        let contexte = WhisperContext::new_with_params(
+            &chemin_modele.to_string_lossy(),
+            WhisperContextParameters::default(),
+        )
+        .map_err(|e| format!("chargement du modèle d'écoute : {}", e))?;
 
         Ok(VoiceState {
             contexte: Arc::new(contexte),
@@ -213,25 +215,40 @@ fn reduire(donnees: &[f32], canaux: usize, pas: usize) -> Vec<f32> {
         .collect()
 }
 
+/// Les ressources se cherchent à côté de l'exécutable, jamais depuis le dossier
+/// courant : une application installée est lancée depuis n'importe où, et un
+/// chemin relatif ne tomberait juste que par hasard.
+fn dossier_ressources() -> std::path::PathBuf {
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(std::path::Path::to_path_buf))
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+}
+
+fn ressource(variable: &str, defaut: &str) -> std::path::PathBuf {
+    match std::env::var_os(variable) {
+        Some(v) => std::path::PathBuf::from(v),
+        None => dossier_ressources().join(defaut),
+    }
+}
+
 /// Piper : synthèse neurone sur CPU, c'est ce que le palier « audio-parole »
 /// du dimensionnement chiffre. Le binaire et la voix sont livrés avec
 /// l'application ; aucun interpréteur tiers n'est requis sur le poste.
 fn chemin_piper() -> std::path::PathBuf {
-    std::env::var_os("IAGENT_PIPER")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| {
-            if cfg!(windows) {
-                std::path::PathBuf::from("piper/piper.exe")
-            } else {
-                std::path::PathBuf::from("piper/piper")
-            }
-        })
+    ressource(
+        "IAGENT_PIPER",
+        if cfg!(windows) { "piper/piper.exe" } else { "piper/piper" },
+    )
 }
 
 fn chemin_voix() -> std::path::PathBuf {
-    std::env::var_os("IAGENT_VOIX")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| std::path::PathBuf::from("modeles/fr_FR-siwis-medium.onnx"))
+    ressource("IAGENT_VOIX", "modeles/fr_FR-siwis-medium.onnx")
+}
+
+/// Le modèle d'écoute, cherché lui aussi à côté de l'exécutable.
+pub fn chemin_modele_ecoute() -> std::path::PathBuf {
+    ressource("IAGENT_MODELE_ECOUTE", "modeles/ggml-medium-fr.bin")
 }
 
 pub async fn text_to_speech(text: &str) -> Result<String, String> {

@@ -38,11 +38,9 @@ fn greet(name: &str) -> String {
 #[tauri::command]
 fn init_voice(state: State<AppState>) -> Result<String, String> {
     // Initialize voice with default model path (typically bundled)
-    // Whisper large-v3, le modèle sur lequel le dimensionnement est chiffré
-    // (palier audio-parole : 8 Go de RAM, 4 Go de disque, CPU).
-    let model_path = "modeles/ggml-large-v3.bin";
+    let model_path = voice::chemin_modele_ecoute();
 
-    match VoiceState::new(model_path) {
+    match VoiceState::new(&model_path) {
         Ok(voice_state) => {
             let mut voice = state.voice.lock().unwrap();
             *voice = Some(voice_state);

@@ -12,6 +12,12 @@ on:
       - 'v*'
   workflow_dispatch:
 
+# Une nouvelle poussée rend la précédente sans objet : l'annuler évite des
+# échecs trompeurs remontés sur d'anciens commits.
+concurrency:
+  group: msi-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-windows:
     runs-on: windows-latest
