@@ -74,6 +74,15 @@ npm run economie              # Price vs API-only comparison table
 - **Local par défaut, API au choix** — agents tournent sur PC client sans coûts, sauf fallback
 - **Économie 3× : matériel + API locale vs API seule**
 
+## ⚠️ À clarifier (confusions de noms)
+
+Le projet utilise 3 noms pour potentiellement la même chose ou des variantes:
+- **iAgent** = application desktop?
+- **iagent.agency** = boutique en ligne?
+- **LocalAgent** = mini-PCs + app?
+
+→ **Fable/dev suivant**: Clarifier ces noms avec Max. Quelle est la vraie distinction?
+
 ## Questions?
 
 Voir CLAUDE.md pour règles durables du projet.
