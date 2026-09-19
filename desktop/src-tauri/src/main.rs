@@ -193,6 +193,11 @@ fn train_voice(utterances: Vec<String>, state: State<AppState>) -> Result<String
 }
 
 #[tauri::command]
+async fn text_to_speech(text: String) -> Result<String, String> {
+    voice::text_to_speech(&text).await
+}
+
+#[tauri::command]
 fn connect_telegram(token: String) -> Result<String, String> {
     if token.is_empty() {
         return Err("Token cannot be empty".to_string());
@@ -218,6 +223,7 @@ fn main() {
             stop_voice_recognition,
             process_voice_audio,
             get_partial_result,
+            text_to_speech,
             init_llm,
             call_agent_llm,
             route_voice_command,

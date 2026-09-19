@@ -1,8 +1,8 @@
 # iAgent Desktop — Phase 1 Implementation Guide
 
-**Status**: Voice pipeline and agent routing implemented  
-**Date**: 2026-09-19  
-**Next**: Build and test on Windows
+**Status**: Complete voice loop implemented (listen → recognize → route → LLM → speak)  
+**Date**: 2026-09-19 (Phase 4 completed)  
+**Next**: Windows build and test, then Phase 5 (voice training)
 
 ## What's Implemented
 
@@ -237,26 +237,40 @@ npm run build  # or: tauri build
 export ANTHROPIC_API_KEY="sk-ant-..."  # Your Anthropic API key
 ```
 
-### 4. Text-to-Speech Output (Next)
-**File**: `src-tauri/src/voice.rs` → expand `text_to_speech()`
+## Phase 4 Completed: Text-to-Speech Output
 
-**Phase 1A** (recommended for MVP): Use `pyttsx3` via subprocess
+✅ **Status**: TTS wired to pyttsx3 via Python subprocess  
+✅ **Full Voice Loop**: Listen → Recognize → Route → LLM → Speak  
+✅ **New IPC Command**: `text_to_speech(text)` → speaks audio
+
+**Implementation**:
+- `text_to_speech()` in voice.rs calls pyttsx3 via `python3 -c`
+- Subprocess approach avoids native Rust TTS library complexity
+- Fallback to `python` command for Windows compatibility
+- Speed set to 150 WPM, volume 0.9/1.0
+- Async handler so frontend doesn't block waiting for speech
+
+**Full Voice Pipeline**:
+1. User clicks "Activate [Agent]" → listening starts
+2. User speaks: "Albert, what's the status?" 
+3. Live transcription appears in real-time
+4. After 1 second of silence, speech is final
+5. Command routed to Albert agent
+6. LLM called with Albert's persona → generates response
+7. TTS speaks response aloud
+8. Response text displayed in UI
+9. Back to listening (loop ready for next command)
+
+**Requirements**:
 ```bash
-# Install pyttsx3: pip install pyttsx3
-# Windows: subprocess call to Python
-# Linux: same (Python included)
-# macOS: same (Python 3 included)
+pip install pyttsx3
 ```
 
-**Phase 1B** (higher quality): ElevenLabs API integration
-- Requires API key (~$10-20/mo for production use)
-- Better voice quality and naturalness
-- Multiple voice options available
-
-**Implementation approach**:
-- Add `call_text_to_speech(text)` IPC handler
-- Stream audio output to speakers
-- Integrate with `call_agent_llm` response handling
+**Frontend changes**:
+- Added speech end detection (1 second silence)
+- Automatic LLM processing on final result
+- Three display states: Hearing, Thinking (animated), Response
+- Processing state shows while waiting for LLM response
 
 ### 5. Voice Print Enrollment (Training) (Later)
 **File**: `src-tauri/src/voice.rs`
@@ -336,14 +350,28 @@ export ANTHROPIC_API_KEY="sk-ant-..."  # Your Anthropic API key
 
 ## Testing Checklist for Windows Build
 
+**Basic**:
 - [ ] Application launches without errors
 - [ ] All 5 agents listed in Agent Manager
-- [ ] Clicking "Activate" changes agent status
-- [ ] No console errors in dev tools
 - [ ] CSS dark theme renders correctly
-- [ ] Responsive grid works on resize
-- [ ] Error banner appears on IPC errors
-- [ ] All 4 tabs load without errors
+- [ ] All 4 tabs load without errors (Dashboard, Agents, Voice Training, Connectors)
+
+**Voice Loop** (end-to-end):
+- [ ] Click "Activate" on an agent (e.g., Albert)
+- [ ] Speak a command clearly: "Albert, write an email"
+- [ ] Live transcription appears as you speak
+- [ ] After 1 second of silence, "Thinking..." appears
+- [ ] LLM response is displayed in UI
+- [ ] Response is spoken aloud by text-to-speech
+- [ ] No console errors
+- [ ] Try different agents and commands
+
+**Error Handling**:
+- [ ] Speak without an agent active → error message
+- [ ] No microphone → error message suggesting solution
+- [ ] No pyttsx3 installed → error message with install command
+- [ ] Network error (API unavailable) → error displayed
+- [ ] Error banner clears on next successful command
 
 ## Known Limitations (Phase 1)
 

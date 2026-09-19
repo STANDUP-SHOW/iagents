@@ -154,9 +154,45 @@ impl VoiceState {
     }
 }
 
-pub fn text_to_speech(text: &str) -> Result<Vec<u8>, Box<dyn Error>> {
-    // Phase 1: Placeholder for local TTS (pyttsx3 via subprocess)
-    // Phase 2: ElevenLabs API integration for higher quality
-    println!("TTS output: {}", text);
-    Ok(vec![])
+pub async fn text_to_speech(text: &str) -> Result<String, String> {
+    use std::process::Command;
+    use std::io::Write;
+
+    // Use pyttsx3 via Python subprocess for local TTS
+    // Requires: pip install pyttsx3
+
+    let python_code = format!(
+        r#"
+import pyttsx3
+import sys
+
+engine = pyttsx3.init()
+engine.setProperty('rate', 150)  # Speed
+engine.setProperty('volume', 0.9)  # Volume (0.0 to 1.0)
+engine.say(r#"{}"#)
+engine.runAndWait()
+print("TTS complete")
+"#,
+        text.replace('"', "\\\"")
+    );
+
+    let output = Command::new("python3")
+        .arg("-c")
+        .arg(&python_code)
+        .output()
+        .or_else(|_| {
+            // Fallback to python on Windows
+            Command::new("python")
+                .arg("-c")
+                .arg(&python_code)
+                .output()
+        })
+        .map_err(|e| format!("Failed to run pyttsx3: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("TTS error: {}", stderr));
+    }
+
+    Ok("Text spoken successfully".to_string())
 }
