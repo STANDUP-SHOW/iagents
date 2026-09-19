@@ -205,10 +205,26 @@ export class ConversationEngine {
           `formulation employée plus haut, tu parles de toi au ` +
           `${agent.sexe === 'femme' ? 'féminin' : 'masculin'} et accordes en conséquence.\n`;
 
+    const bloc = (titre: string, savoirs: readonly { titre: string; resume: string }[]) =>
+      savoirs.length === 0
+        ? ''
+        : `\n${titre}\n${savoirs.map((c) => `- ${c.titre} : ${c.resume}`).join('\n')}\n`;
+
+    const metier = bloc('Ce que tu sais de ton métier:', expert.connaissances);
+    // Ce que l'employeur a appris à son agent l'emporte : il connaît sa maison
+    // mieux que le savoir général du métier.
+    const maison =
+      agent.competences.length === 0
+        ? ''
+        : bloc(
+            "Ce que ton employeur t'a appris, et qui prime sur le savoir général:",
+            agent.competences
+          );
+
     return `${expert.consigne}
 
 Tu t'appelles ${agent.prenom}. Tu réponds quand on t'appelle par ce prénom.
-${accord}
+${accord}${metier}${maison}
 Règles strictes à respecter:
 ${regles}
 

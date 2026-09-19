@@ -7,6 +7,7 @@ import {
   planningDuClient,
   dossiersUtilises,
   dossiersManquants,
+  repartitionAutonomie,
   tachesQuotidiennes,
   AGENTS_MAX_PAR_POSTE,
   type Fiche,
@@ -259,6 +260,66 @@ verifier(
       dossiers: { 'facturation/devis-acceptes': 'D:/Devis' },
     },
   ])[0].dossiers['facturation/devis-acceptes'] === 'D:/Devis'
+);
+
+// Mode auto / mode contrôle, réglé par le client tâche par tâche.
+const enControle = marie.fiche.taches.find((t) => t.validationHumaine);
+const enAuto = marie.fiche.taches.find((t) => !t.validationHumaine);
+
+verifier(
+  'la fiche livre un mélange de tâches autonomes et contrôlées',
+  enControle !== undefined && enAuto !== undefined
+);
+
+verifier(
+  'le client passe une tâche contrôlée en mode auto',
+  enControle !== undefined &&
+    planningDuClient(marie.fiche, {
+      ajustements: [{ tacheId: enControle.id, validationHumaine: false }],
+    }).find((t) => t.id === enControle.id)?.validationHumaine === false
+);
+
+verifier(
+  'le client passe une tâche autonome en mode contrôle',
+  enAuto !== undefined &&
+    planningDuClient(marie.fiche, {
+      ajustements: [{ tacheId: enAuto.id, validationHumaine: true }],
+    }).find((t) => t.id === enAuto.id)?.validationHumaine === true
+);
+
+const partage = repartitionAutonomie(marie.planning);
+verifier(
+  "la répartition auto / contrôle se lit d'un coup d'œil",
+  partage.auto.length + partage.controle.length ===
+    marie.planning.filter((t) => t.active).length,
+  `auto ${partage.auto.length} / contrôle ${partage.controle.length}`
+);
+
+// Compétences : la fiche porte le métier, l'employeur ajoute sa maison.
+const avecCompetences = installerAgents(fiches, [
+  {
+    prenom: 'Nina',
+    ficheId: ids[0],
+    voix: 'v',
+    competences: [{ titre: 'Nos tarifs 2026', resume: 'Grille interne, remises par volume.' }],
+  },
+]);
+
+const invitePlus = new ConversationEngine(avecCompetences, {
+  conversation: { max_context_turns: 10, user_session_timeout_minutes: 30 },
+  tts: { primary: {} },
+  stt: { primary: {} },
+  llm: { primary: {} },
+}).formatSystemPrompt(ids[0]);
+
+verifier(
+  'les connaissances de la fiche arrivent jusqu au prompt',
+  invitePlus.includes(avecCompetences[0].fiche.expert.connaissances[0].titre)
+);
+
+verifier(
+  "ce que l employeur a appris figure au prompt et prime sur le savoir général",
+  invitePlus.includes('Nos tarifs 2026') && invitePlus.includes('prime sur le savoir général')
 );
 
 // Sexe : choix du client, et il doit primer sur le genre figé dans la fiche.

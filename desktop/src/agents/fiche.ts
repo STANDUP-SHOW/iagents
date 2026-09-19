@@ -117,6 +117,8 @@ export interface Ajustement {
   tacheId: string;
   active?: boolean;
   planification?: Planification;
+  /** false = mode auto, true = mode contrôle (l'agent attend l'accord). */
+  validationHumaine?: boolean;
 }
 
 /** Une tâche que le client ajoute à son agent, absente de la fiche. */
@@ -156,6 +158,12 @@ export interface Installation {
   planning?: Planning;
   /** Dossier logique de la fiche → dossier réel sur le poste du client. */
   dossiers?: Record<string, string>;
+  /**
+   * Ce que l'employeur apprend à son agent en plus du métier : ses procédures,
+   * son catalogue, sa façon de faire. S'ajoute aux connaissances de la fiche,
+   * ne les remplace jamais.
+   */
+  competences?: Connaissance[];
 }
 
 export interface AgentInstalle {
@@ -168,6 +176,7 @@ export interface AgentInstalle {
   /** Le plan réellement exécuté : fiche par défaut + modifications du client. */
   planning: Tache[];
   dossiers: Record<string, string>;
+  competences: Connaissance[];
 }
 
 export function planningDuClient(fiche: Fiche, planning: Planning = {}): Tache[] {
@@ -192,6 +201,7 @@ export function planningDuClient(fiche: Fiche, planning: Planning = {}): Tache[]
       ...tache,
       active: a.active ?? tache.active,
       planification: a.planification ?? tache.planification,
+      validationHumaine: a.validationHumaine ?? tache.validationHumaine,
     };
   });
 
@@ -230,7 +240,7 @@ export function installerAgents(
   const parId = new Map(fiches.map((f) => [f.id, f]));
   const prenomsVus = new Set<string>();
 
-  return installations.map(({ prenom, ficheId, voix, photo, sexe, planning, dossiers }) => {
+  return installations.map(({ prenom, ficheId, voix, photo, sexe, planning, dossiers, competences }) => {
     const fiche = parId.get(ficheId);
     if (!fiche) {
       throw new Error(
@@ -253,6 +263,7 @@ export function installerAgents(
       fiche,
       planning: planningDuClient(fiche, planning),
       dossiers: dossiers ?? {},
+      competences: competences ?? [],
     };
   });
 }
@@ -262,6 +273,18 @@ export function tachesQuotidiennes(taches: readonly Tache[], heure: string): Tac
   return taches.filter(
     (t) => t.active && t.planification.type === 'quotidienne' && t.planification.heure === heure
   );
+}
+
+/** Les tâches qui s'exécutent seules, et celles qui attendent l'accord du client. */
+export function repartitionAutonomie(taches: readonly Tache[]): {
+  auto: Tache[];
+  controle: Tache[];
+} {
+  const actives = taches.filter((t) => t.active);
+  return {
+    auto: actives.filter((t) => !t.validationHumaine),
+    controle: actives.filter((t) => t.validationHumaine),
+  };
 }
 
 /** Les logiciels métier (CRM, ERP…) que les tâches actives font manipuler. */
