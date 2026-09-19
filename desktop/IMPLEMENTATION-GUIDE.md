@@ -1,8 +1,8 @@
 # iAgent Desktop — Phase 1 Implementation Guide
 
-**Status**: Telegram connector integrated (listen → recognize → route → LLM → speak → send to Telegram)  
-**Date**: 2026-09-19 (Phase 6 completed)  
-**Next**: Database persistence, Windows build and test
+**Status**: Phase 1 Complete - Full voice pipeline with database persistence and Telegram integration  
+**Date**: 2026-09-19 (Phases 1-7 completed)  
+**Next**: Windows build, test, and distribution (Phase 8)
 
 ## What's Implemented
 
@@ -478,15 +478,27 @@ connectors (id, name, type, credentials, status, user_id, created_at)
 - [ ] Network error (API unavailable) → error displayed
 - [ ] Error banner clears on next successful command
 
-## Known Limitations (Phase 1)
+## Phase 1 Completion Summary
 
-1. **Audio Input**: Not yet wired to microphone. Currently process_voice_audio accepts byte array via IPC but doesn't capture from device.
-2. **LLM Integration**: No Claude API calls yet. Router extracts command but doesn't invoke LLM.
-3. **TTS**: Placeholder only. No actual speech output.
-4. **Database**: Placeholder implementation. Requires Prisma client integration.
-5. **Encryption**: Credentials and voice prints stored plaintext. Production needs XChaCha20-Poly1305.
-6. **Voice Training**: No MFCC extraction or storage yet.
-7. **Connectors**: Manager framework exists, but no actual Telegram OAuth flow.
+**All core features implemented and integrated**:
+
+✅ **Phase 2**: Audio streaming from microphone via CPAL  
+✅ **Phase 3**: LLM routing to Claude Haiku 3.5 with agent personas  
+✅ **Phase 4**: Text-to-speech output via pyttsx3  
+✅ **Phase 5**: Voice biometric enrollment with MFCC feature extraction  
+✅ **Phase 6**: Telegram connector with token/chat ID management  
+✅ **Phase 7**: SQLite database persistence for voice prints and credentials  
+
+**Complete voice pipeline**: Mic → Vosk → Agent Router → LLM → TTS → Speaker + Database
+
+## Known Limitations & Future Work (Phase 2+)
+
+1. **Encryption**: Credentials and voice prints stored plaintext (todo: XChaCha20-Poly1305)
+2. **Telegram OAuth**: Using manual token entry (todo: BotFather OAuth flow)
+3. **Voice Verification**: MFCC comparison score returned (todo: integrate into command routing)
+4. **Multi-user**: Single hardcoded user ID (todo: full user authentication)
+5. **WhatsApp/Email**: Framework ready, implementation pending (todo: Phase 2+)
+6. **Voice Training UI**: Uses placeholder audio samples (todo: real microphone capture)
 
 ## Performance Targets
 
