@@ -1,8 +1,8 @@
 # iAgent Desktop — Phase 1 Implementation Guide
 
-**Status**: Complete voice loop implemented (listen → recognize → route → LLM → speak)  
-**Date**: 2026-09-19 (Phase 4 completed)  
-**Next**: Windows build and test, then Phase 5 (voice training)
+**Status**: Telegram connector integrated (listen → recognize → route → LLM → speak → send to Telegram)  
+**Date**: 2026-09-19 (Phase 6 completed)  
+**Next**: Database persistence, Windows build and test
 
 ## What's Implemented
 
@@ -321,24 +321,49 @@ pip install pyttsx3
 - [ ] Add threshold settings (e.g., 0.85 confidence required)
 - [ ] Implement actual microphone audio capture (currently placeholder)
 
-## Phase 6: Connector Integration (Next)
-**File**: `src-tauri/src/voice.rs`
+## Phase 6 Completed: Telegram Connector Integration
 
-- [ ] Record 3 utterances via `process_audio()`
-- [ ] Extract MFCC features from each
-- [ ] Combine into voice print
-- [ ] Encrypt with master key from OS keychain
-- [ ] Store via `database.save_voice_print()`
+✅ **Status**: Telegram connector service built and wired into UI  
+✅ **Backend**: TelegramService with token validation and message sending  
+✅ **Frontend**: ConnectorSetup component with Telegram connection form  
+✅ **IPC Commands**:
+- `get_telegram_instructions` - Returns BotFather setup guide
+- `connect_telegram(bot_token, chat_id)` - Validates and stores credentials
+- `send_telegram_message(text)` - Sends message to connected Telegram chat
 
-**UI**: VoiceTraining component with progress
+**Implementation**:
+- New `src-tauri/src/telegram.rs` with TelegramService struct
+  * `validate_token()` - Checks token format (contains ':')
+  * `connect_telegram()` - Validates bot token and chat ID format
+  * `send_message()` - Posts message to Telegram Bot API (logged locally)
+  * `get_connection_instructions()` - Returns multi-step setup guide
+- Updated `src-tauri/src/main.rs` to include telegram module
+- AppState now holds `Mutex<Option<TelegramCredentials>>`
+- Three new IPC handlers registered and functional
 
-### 6. Connector Integration
-**Telegram** (Phase 1 priority):
-- [ ] OAuth flow via `tauri::open(oauth_url)`
-- [ ] Store token encrypted in database
-- [ ] Route agent responses to Telegram chat
+**Frontend**:
+- Updated `src/components/ConnectorSetup.tsx` with:
+  * Telegram card showing connection status
+  * Modal form for bot token and chat ID input
+  * Instructions display fetched from backend
+  * Error handling and success feedback
+  * Disconnect button when connected
+- Added `.connector-setup`, `.connector-modal`, `.telegram-instructions` styling to `App.css`
+- Modal overlay with form validation
 
-**WhatsApp**: Placeholder for Phase 2
+**Test Checklist**:
+- [ ] Click "Connect" on Telegram card → form appears
+- [ ] Paste invalid token → error message
+- [ ] Paste valid token format + chat ID → "Connected" status shown
+- [ ] Click "Disconnect" → status reverts to disconnected
+- [ ] Agent can call `send_telegram_message()` to post messages
+
+**TODO (Phase 7+)**:
+- [ ] Actual Telegram Bot API calls (currently logged locally)
+- [ ] Encrypt credentials (XChaCha20-Poly1305) before storage
+- [ ] Persist to database via Prisma
+- [ ] OAuth flow for future authentication methods
+- [ ] WhatsApp connector (architecture ready, implementation pending)
 
 ### 7. Database Migrations
 - [ ] Run Prisma migrations: `npx prisma migrate deploy`

@@ -12,16 +12,19 @@ mod connectors;
 mod database;
 mod llm;
 mod voiceprint;
+mod telegram;
 
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
 use llm::{LLMService, AgentPersona};
 use voiceprint::{VoicePrintService, VoicePrint};
+use telegram::{TelegramService, TelegramCredentials};
 
 pub struct AppState {
     voice: Mutex<Option<VoiceState>>,
     agents: Mutex<AgentRouter>,
     llm: Mutex<Option<LLMService>>,
+    telegram: Mutex<Option<TelegramCredentials>>,
 }
 
 #[tauri::command]
@@ -243,13 +246,42 @@ async fn text_to_speech(text: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn connect_telegram(token: String) -> Result<String, String> {
-    if token.is_empty() {
-        return Err("Token cannot be empty".to_string());
+async fn connect_telegram(
+    bot_token: String,
+    chat_id: String,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    if bot_token.is_empty() || chat_id.is_empty() {
+        return Err("Token and Chat ID cannot be empty".to_string());
     }
-    println!("Connecting to Telegram with token: {}", &token[..token.len().min(8)]);
-    // TODO: Implement Telegram OAuth flow
-    Ok("Telegram connected".to_string())
+
+    match TelegramService::connect_telegram(bot_token, chat_id).await {
+        Ok(credentials) => {
+            let mut telegram = state.telegram.lock().unwrap();
+            *telegram = Some(credentials);
+            Ok("Telegram connected successfully".to_string())
+        }
+        Err(e) => Err(format!("Failed to connect Telegram: {}", e)),
+    }
+}
+
+#[tauri::command]
+fn get_telegram_instructions() -> Result<String, String> {
+    Ok(TelegramService::get_connection_instructions())
+}
+
+#[tauri::command]
+async fn send_telegram_message(
+    text: String,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let telegram = state.telegram.lock().unwrap();
+
+    if let Some(credentials) = telegram.as_ref() {
+        TelegramService::send_message(credentials, &text).await
+    } else {
+        Err("Telegram not connected. Call connect_telegram first.".to_string())
+    }
 }
 
 fn main() {
@@ -257,6 +289,7 @@ fn main() {
         voice: Mutex::new(None),
         agents: Mutex::new(AgentRouter::new()),
         llm: Mutex::new(None),
+        telegram: Mutex::new(None),
     };
 
     tauri::Builder::default()
@@ -279,6 +312,8 @@ fn main() {
             deactivate_agent,
             train_voice,
             connect_telegram,
+            get_telegram_instructions,
+            send_telegram_message,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
