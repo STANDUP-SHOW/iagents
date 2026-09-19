@@ -84,16 +84,19 @@ export interface Planning {
   ajoutees?: TacheAjoutee[];
 }
 
+export type Sexe = 'femme' | 'homme';
+
 /**
- * Prénom, voix et photo n'appartiennent pas au métier : l'employeur les choisit
- * à l'installation, et deux clients peuvent habiller la même fiche autrement.
- * La fiche ne porte qu'une photo par défaut, que le client remplace ou non.
+ * Prénom, voix, photo et sexe n'appartiennent pas au métier : l'employeur les
+ * choisit à l'installation, et deux clients peuvent habiller la même fiche
+ * autrement. La fiche ne porte qu'une photo par défaut, remplaçable.
  */
 export interface Installation {
   prenom: string;
   ficheId: string;
   voix: string;
   photo?: string;
+  sexe?: Sexe;
   planning?: Planning;
 }
 
@@ -101,6 +104,8 @@ export interface AgentInstalle {
   prenom: string;
   voix: string;
   photo: string;
+  /** Absent tant que le client n'a rien choisi : on n'invente pas un genre. */
+  sexe?: Sexe;
   fiche: Fiche;
   /** Le plan réellement exécuté : fiche par défaut + modifications du client. */
   planning: Tache[];
@@ -164,7 +169,7 @@ export function installerAgents(
   const parId = new Map(fiches.map((f) => [f.id, f]));
   const prenomsVus = new Set<string>();
 
-  return installations.map(({ prenom, ficheId, voix, photo, planning }) => {
+  return installations.map(({ prenom, ficheId, voix, photo, sexe, planning }) => {
     const fiche = parId.get(ficheId);
     if (!fiche) {
       throw new Error(
@@ -183,6 +188,7 @@ export function installerAgents(
       prenom,
       voix,
       photo: photo ?? fiche.photo ?? '',
+      sexe,
       fiche,
       planning: planningDuClient(fiche, planning),
     };

@@ -196,10 +196,19 @@ export class ConversationEngine {
     const { expert } = agent.fiche;
     const regles = expert.regles.map((r) => `- ${r}`).join('\n');
 
+    // Les fiches portent un genre grammatical figé, parfois contradictoire d'un
+    // paragraphe à l'autre. Le choix du client prime sur ce qui est écrit.
+    const accord =
+      agent.sexe === undefined
+        ? ''
+        : `\nTu es ${agent.sexe === 'femme' ? 'une femme' : 'un homme'}. Quelle que soit la ` +
+          `formulation employée plus haut, tu parles de toi au ` +
+          `${agent.sexe === 'femme' ? 'féminin' : 'masculin'} et accordes en conséquence.\n`;
+
     return `${expert.consigne}
 
 Tu t'appelles ${agent.prenom}. Tu réponds quand on t'appelle par ce prénom.
-
+${accord}
 Règles strictes à respecter:
 ${regles}
 

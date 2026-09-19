@@ -217,6 +217,51 @@ verifier(
   agents.every((a) => typeof a.photo === 'string')
 );
 
+// Sexe : choix du client, et il doit primer sur le genre figé dans la fiche.
+const genres = installerAgents(marie ? [marie.fiche] : [], [
+  { prenom: 'Marie', ficheId: marie.fiche.id, voix: 'v', sexe: 'femme' },
+  { prenom: 'Marc', ficheId: marie.fiche.id, voix: 'v', sexe: 'homme' },
+  { prenom: 'Camille', ficheId: marie.fiche.id, voix: 'v' },
+]);
+
+const moteurGenres = new ConversationEngine(genres, {
+  conversation: { max_context_turns: 10, user_session_timeout_minutes: 30 },
+  tts: { primary: {} },
+  stt: { primary: {} },
+  llm: { primary: {} },
+});
+
+verifier(
+  'aucun genre choisi : le prompt n impose rien',
+  !moteurGenres.formatSystemPrompt(genres[2].fiche.id).includes('tu parles de toi')
+);
+
+verifier(
+  'le genre choisi est énoncé et prime sur la formulation de la fiche',
+  (() => {
+    const p = new ConversationEngine([genres[0]], {
+      conversation: { max_context_turns: 10, user_session_timeout_minutes: 30 },
+      tts: { primary: {} },
+      stt: { primary: {} },
+      llm: { primary: {} },
+    }).formatSystemPrompt(genres[0].fiche.id);
+    return p.includes('une femme') && p.includes('au féminin') && p.includes('Quelle que soit');
+  })()
+);
+
+verifier(
+  'le masculin est énoncé de la même façon',
+  (() => {
+    const p = new ConversationEngine([genres[1]], {
+      conversation: { max_context_turns: 10, user_session_timeout_minutes: 30 },
+      tts: { primary: {} },
+      stt: { primary: {} },
+      llm: { primary: {} },
+    }).formatSystemPrompt(genres[1].fiche.id);
+    return p.includes('un homme') && p.includes('au masculin');
+  })()
+);
+
 // Détection du prénom : « l'employeur dit Carla, Carla répond ».
 const moteur = new ConversationEngine(agents, {
   conversation: { max_context_turns: 10, user_session_timeout_minutes: 30 },
