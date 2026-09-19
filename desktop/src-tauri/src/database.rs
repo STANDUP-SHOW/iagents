@@ -27,7 +27,7 @@ pub struct Agent {
 pub struct VoicePrint {
     pub id: String,
     pub user_id: String,
-    pub mfcc_data: String, // Encrypted JSON
+    pub mfcc_data: String, // Plain JSON, stored as-is
     pub created_at: String,
 }
 
@@ -36,7 +36,7 @@ pub struct Connector {
     pub id: String,
     pub name: String,
     pub connector_type: String,
-    pub credentials: String, // Encrypted
+    pub credentials: String, // Plain text — never store a secret here
     pub status: String,
     pub user_id: String,
     pub created_at: String,

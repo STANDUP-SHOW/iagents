@@ -277,23 +277,10 @@ async fn connect_telegram(
 
     match TelegramService::connect_telegram(bot_token, chat_id).await {
         Ok(credentials) => {
-            // Store credentials in database
-            let verrou = state.db.lock().ok();
-            if let Some(db) = verrou.as_ref().and_then(|g| g.as_ref()) {
-                let creds_json = serde_json::json!({
-                    "bot_token": &credentials.bot_token,
-                    "chat_id": &credentials.chat_id,
-                }).to_string();
-                if let Err(e) = db.save_connector_credentials(
-                    "default_user",
-                    "Telegram",
-                    "telegram",
-                    &creds_json,
-                ) {
-                    eprintln!("Failed to store Telegram credentials: {}", e);
-                }
-            }
-
+            // Le jeton du bot reste en mémoire, jamais sur le disque : il était
+            // écrit en clair dans le SQLite du poste et jamais relu. Le jour où
+            // la connexion devra survivre à un redémarrage, elle passera par le
+            // coffre du système (Credential Manager, Trousseau), pas par cette base.
             let mut telegram = state.telegram.lock().unwrap();
             *telegram = Some(credentials);
             Ok("Telegram connected successfully".to_string())
