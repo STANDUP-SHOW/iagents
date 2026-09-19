@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
 import './App.css'
+import './components/index.css'
 import Dashboard from './components/Dashboard'
 import VoiceTraining from './components/VoiceTraining'
 import AgentManager from './components/AgentManager'
 import ConnectorSetup from './components/ConnectorSetup'
+
+type LocalRuntime = {
+  disponible: boolean
+  url: string
+  modeles_installes: string[]
+  motif: string | null
+}
 
 function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors'>('dashboard')
@@ -15,6 +23,8 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
+  const [localRuntime, setLocalRuntime] = useState<LocalRuntime | null>(null)
+  const [typedCommand, setTypedCommand] = useState('')
 
   useEffect(() => {
     initializeApp()
@@ -65,10 +75,15 @@ function App() {
         console.log('Voice module not available in this environment')
       })
 
-      // Initialize LLM service
-      await invoke('init_llm').catch(() => {
-        console.log('LLM service not available - check ANTHROPIC_API_KEY')
-      })
+      // Moteur de modeles : local (Ollama) par defaut, API au choix du client.
+      await invoke('init_llm')
+        .then(async () => {
+          const etat = await invoke<LocalRuntime>('local_runtime_status').catch(() => null)
+          setLocalRuntime(etat)
+        })
+        .catch((err) => {
+          console.log('Moteur indisponible:', err)
+        })
 
       // Load agents from backend
       await loadAgents()
@@ -130,7 +145,7 @@ function App() {
       }
 
       const response = await invoke<string>('call_agent_llm', {
-        agent_id: activeAgent,
+        agentId: activeAgent,
         command: command,
       })
 
@@ -149,6 +164,16 @@ function App() {
     }
   }
 
+  const submitTypedCommand = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const commande = typedCommand.trim()
+    if (!commande || isProcessing) return
+    setTypedCommand('')
+    await processVoiceCommand(commande)
+  }
+
+  const activeAgentName = agents.find((a) => a.id === activeAgent)?.name
+
   return (
     <div className="app">
       <header className="app-header">
@@ -162,7 +187,7 @@ function App() {
         </div>
       </header>
 
-      {isListening && (partialResult || isProcessing || lastResponse) && (
+      {(partialResult || isProcessing || lastResponse) && (
         <div className="voice-display">
           {partialResult && (
             <div className="transcription-display">
@@ -183,6 +208,32 @@ function App() {
             </div>
           )}
         </div>
+      )}
+
+      {localRuntime && !localRuntime.disponible && (
+        <div className="runtime-warning">
+          <strong>Moteur local indisponible.</strong> {localRuntime.motif}
+        </div>
+      )}
+
+      {activeAgent && (
+        <form className="command-box" onSubmit={submitTypedCommand}>
+          <label htmlFor="commande">Commande pour {activeAgentName}</label>
+          <div className="command-row">
+            <input
+              id="commande"
+              type="text"
+              value={typedCommand}
+              onChange={(e) => setTypedCommand(e.target.value)}
+              placeholder="Écrivez ce que vous voulez lui demander…"
+              disabled={isProcessing}
+              autoFocus
+            />
+            <button type="submit" disabled={isProcessing || !typedCommand.trim()}>
+              {isProcessing ? 'En cours…' : 'Envoyer'}
+            </button>
+          </div>
+        </form>
       )}
 
       <nav className="app-nav">

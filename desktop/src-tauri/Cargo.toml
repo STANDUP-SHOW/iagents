@@ -12,15 +12,22 @@ build = "build.rs"
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.5", features = ["shell-open", "dialog-open", "clipboard-write-text", "clipboard-read-text"] }
+tauri = { version = "1.5", features = ["dialog-open", "fs-create-dir", "fs-read-dir", "fs-read-file", "fs-remove-dir", "fs-remove-file", "fs-write-file", "shell-open"] }
 tokio = { version = "1", features = ["full"] }
-vosk = "0.3"
-hound = "3.5"
-cpal = "0.17"
-rubato = "0.13"
+vosk = { version = "0.3", optional = true }
+hound = { version = "3.5", optional = true }
+cpal = { version = "0.17", optional = true }
+rubato = { version = "0.13", optional = true }
 reqwest = { version = "0.11", features = ["json"] }
 rusqlite = { version = "0.30", features = ["bundled"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
+
+[features]
+# La voix est desactivee par defaut : elle reclame la bibliotheque native
+# libvosk, absente du depot, et le module n'a jamais compile contre les API
+# reelles de vosk 0.3 / cpal. `--features voice` la rallume une fois reecrite.
+default = []
+voice = ["dep:vosk", "dep:cpal", "dep:hound", "dep:rubato"]
 
 [build-dependencies]
 tauri-build = "1.5"

@@ -6,6 +6,10 @@
 use tauri::{Manager, State};
 use std::sync::Mutex;
 
+#[cfg(feature = "voice")]
+mod voice;
+#[cfg(not(feature = "voice"))]
+#[path = "voice_absent.rs"]
 mod voice;
 mod agents;
 mod connectors;
@@ -16,8 +20,8 @@ mod telegram;
 
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
-use llm::{LLMService, AgentPersona};
-use voiceprint::{VoicePrintService, VoicePrint};
+use llm::{LLMService, AgentPersona, EtatMoteurLocal};
+use voiceprint::VoicePrintService;
 use telegram::{TelegramService, TelegramCredentials};
 use database::Database;
 use std::sync::Arc;
@@ -99,8 +103,12 @@ fn init_llm(state: State<AppState>) -> Result<String, String> {
     match LLMService::new() {
         Ok(service) => {
             let mut llm = state.llm.lock().unwrap();
+            let mode = match service.mode() {
+                llm::Mode::Local => "local (Ollama, aucun token facture)",
+                llm::Mode::Api => "API (facturee)",
+            };
             *llm = Some(service);
-            Ok("LLM service initialized".to_string())
+            Ok(format!("Moteur pret en mode {}", mode))
         }
         Err(e) => Err(format!("Failed to initialize LLM: {}", e))
     }
@@ -112,29 +120,46 @@ async fn call_agent_llm(
     command: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let agents = state.agents.lock().unwrap();
-    let agent = agents
-        .list_agents()
-        .iter()
-        .find(|a| a.id == agent_id)
-        .cloned()
-        .ok_or("Agent not found".to_string())?;
-    drop(agents);
+    let agent = {
+        let agents = state.agents.lock().unwrap();
+        agents
+            .list_agents()
+            .iter()
+            .find(|a| a.id == agent_id)
+            .cloned()
+            .ok_or_else(|| "Agent not found".to_string())?
+    };
 
-    let llm = state.llm.lock().unwrap();
-    let llm_service = llm.as_ref().ok_or("LLM not initialized")?;
 
     let persona = AgentPersona {
         id: agent.id.clone(),
         name: agent.name.clone(),
         role: agent.description.clone(),
         system_prompt: format!(
-            "You are {}, a {}. Respond concisely and helpfully to user requests.",
+            "Tu es {}, {}. Tu reponds brievement et utilement, en francais.",
             agent.name, agent.description
         ),
+        palier: agent.palier.clone(),
     };
 
-    llm_service.call_agent_llm(&persona, &command).await
+    let service = {
+        let llm = state.llm.lock().unwrap();
+        llm.as_ref().ok_or("LLM not initialized")?.clone()
+    };
+
+    service.call_agent_llm(&persona, &command).await
+}
+
+/// Etat du moteur local : joignable ? quels poids sont tires ?
+/// Sert a dire en clair pourquoi un agent ne tourne pas en local.
+#[tauri::command]
+async fn local_runtime_status(state: State<'_, AppState>) -> Result<EtatMoteurLocal, String> {
+    let service = {
+        let llm = state.llm.lock().unwrap();
+        llm.as_ref().ok_or("LLM not initialized")?.clone()
+    };
+
+    Ok(service.etat_moteur_local().await)
 }
 
 #[tauri::command]
@@ -155,6 +180,7 @@ fn get_agents(state: State<AppState>) -> Result<Vec<serde_json::Value>, String> 
             "name": a.name,
             "description": a.description,
             "status": a.status,
+            "palier": a.palier,
         }))
         .collect())
 }
@@ -200,11 +226,13 @@ fn enroll_voice(
     match VoicePrintService::create_voice_print(&user_id, audio_samples, 44100) {
         Ok(voice_print) => {
             // Try to store in database
-            if let Ok(Some(db)) = state.db.lock().map(|guard| guard.as_ref()) {
-                let mfcc_json = serde_json::to_string(&voice_print.mfcc_features)
-                    .unwrap_or_else(|_| "[]".to_string());
-                if let Err(e) = db.save_voice_print(&user_id, &mfcc_json) {
-                    eprintln!("Failed to store voice print in database: {}", e);
+            if let Ok(guard) = state.db.lock() {
+                if let Some(db) = guard.as_ref() {
+                    let mfcc_json = serde_json::to_string(&voice_print.mfcc_features)
+                        .unwrap_or_else(|_| "[]".to_string());
+                    if let Err(e) = db.save_voice_print(&user_id, &mfcc_json) {
+                        eprintln!("Failed to store voice print in database: {}", e);
+                    }
                 }
             }
 
@@ -270,18 +298,20 @@ async fn connect_telegram(
     match TelegramService::connect_telegram(bot_token, chat_id).await {
         Ok(credentials) => {
             // Store credentials in database
-            if let Ok(Some(db)) = state.db.lock().map(|guard| guard.as_ref()) {
-                let creds_json = serde_json::json!({
-                    "bot_token": &credentials.bot_token,
-                    "chat_id": &credentials.chat_id,
-                }).to_string();
-                if let Err(e) = db.save_connector_credentials(
-                    "default_user",
-                    "Telegram",
-                    "telegram",
-                    &creds_json,
-                ) {
-                    eprintln!("Failed to store Telegram credentials: {}", e);
+            if let Ok(guard) = state.db.lock() {
+                if let Some(db) = guard.as_ref() {
+                    let creds_json = serde_json::json!({
+                        "bot_token": &credentials.bot_token,
+                        "chat_id": &credentials.chat_id,
+                    }).to_string();
+                    if let Err(e) = db.save_connector_credentials(
+                        "default_user",
+                        "Telegram",
+                        "telegram",
+                        &creds_json,
+                    ) {
+                        eprintln!("Failed to store Telegram credentials: {}", e);
+                    }
                 }
             }
 
@@ -303,13 +333,15 @@ async fn send_telegram_message(
     text: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let telegram = state.telegram.lock().unwrap();
+    let credentials = {
+        let telegram = state.telegram.lock().unwrap();
+        telegram
+            .as_ref()
+            .cloned()
+            .ok_or_else(|| "Telegram not connected. Call connect_telegram first.".to_string())?
+    };
 
-    if let Some(credentials) = telegram.as_ref() {
-        TelegramService::send_message(credentials, &text).await
-    } else {
-        Err("Telegram not connected. Call connect_telegram first.".to_string())
-    }
+    TelegramService::send_message(&credentials, &text).await
 }
 
 fn main() {
@@ -349,6 +381,7 @@ fn main() {
             verify_voice,
             init_llm,
             call_agent_llm,
+            local_runtime_status,
             route_voice_command,
             get_agents,
             activate_agent,
