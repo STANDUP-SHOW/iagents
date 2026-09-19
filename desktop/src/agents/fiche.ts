@@ -1,5 +1,19 @@
+export type JourSemaine =
+  | 'lundi'
+  | 'mardi'
+  | 'mercredi'
+  | 'jeudi'
+  | 'vendredi'
+  | 'samedi'
+  | 'dimanche';
+
+/** Au-delà du 28, une tâche mensuelle sauterait sans bruit les mois courts. */
+export const QUANTIEME_MAX = 28;
+
 export type Planification =
   | { type: 'quotidienne'; heure: string }
+  | { type: 'hebdomadaire'; jour: JourSemaine; heure: string }
+  | { type: 'mensuelle'; jour: number; heure: string }
   | { type: 'intervalle'; minutes: number }
   | {
       type: 'declencheur';

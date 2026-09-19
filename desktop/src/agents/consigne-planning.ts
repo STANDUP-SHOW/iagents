@@ -1,4 +1,25 @@
-import type { Planification } from './fiche';
+import { QUANTIEME_MAX, type JourSemaine, type Planification } from './fiche.ts';
+
+const JOURS: readonly JourSemaine[] = [
+  'lundi',
+  'mardi',
+  'mercredi',
+  'jeudi',
+  'vendredi',
+  'samedi',
+  'dimanche',
+];
+
+/** L'heure dite explicitement, ou celle que porte un moment de la journée. */
+function lireHeure(texte: string): string | null {
+  const explicite = texte.match(/\ba\s+(\d{1,2})\s*(?:h|:)\s*(\d{2})?/);
+  if (explicite) {
+    const heure = normaliserHeure(explicite[1], explicite[2]);
+    if (heure) return heure;
+  }
+  const moment = Object.keys(MOMENTS).find((m) => new RegExp(`\\b${m}s?\\b`).test(texte));
+  return moment ? MOMENTS[moment] : null;
+}
 
 const MOMENTS: Record<string, string> = {
   matin: '08:00',
@@ -57,10 +78,29 @@ export function lirePlanification(phrase: string): Planification | null {
     return minutes >= 5 ? { type: 'intervalle', minutes } : null;
   }
 
-  const heureExplicite = texte.match(/\ba\s+(\d{1,2})\s*(?:h|:)\s*(\d{2})?/);
-  if (heureExplicite) {
-    const heure = normaliserHeure(heureExplicite[1], heureExplicite[2]);
-    if (heure) return { type: 'quotidienne', heure };
+  const heure = lireHeure(texte);
+
+  // Mensuel et hebdomadaire passent avant le quotidien : « tous les lundis à 9h »
+  // porte une heure, et serait sinon pris pour une tâche de tous les jours.
+  const quantieme = texte.match(/\ble\s+(\d{1,2})\b[^.]*\bmois\b|\bmois\b[^.]*\ble\s+(\d{1,2})\b/);
+  if (quantieme && heure) {
+    const jour = Number(quantieme[1] ?? quantieme[2]);
+    // Au-delà du 28, la tâche sauterait les mois courts : on préfère redemander.
+    if (jour >= 1 && jour <= QUANTIEME_MAX) {
+      return { type: 'mensuelle', jour, heure };
+    }
+    return null;
+  }
+
+  const jourSemaine = JOURS.find((j) => new RegExp(`\\b${j}s?\\b`).test(texte));
+  if (jourSemaine && heure) {
+    return { type: 'hebdomadaire', jour: jourSemaine, heure };
+  }
+
+  const explicite = texte.match(/\ba\s+(\d{1,2})\s*(?:h|:)\s*(\d{2})?/);
+  if (explicite) {
+    const h = normaliserHeure(explicite[1], explicite[2]);
+    if (h) return { type: 'quotidienne', heure: h };
   }
 
   for (const [motif, planification] of EVENEMENTS) {
