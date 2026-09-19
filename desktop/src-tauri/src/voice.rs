@@ -1,42 +1,46 @@
-use std::sync::{Arc, Mutex};
 use std::error::Error;
-use std::thread;
-use vosk::Vosk;
+use std::sync::{Arc, Mutex};
+
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Stream, StreamConfig};
+use vosk::{DecodingState, LogLevel, Model, Recognizer};
+
+/// Capture rate handed to both the input device and the recognizer.
+const SAMPLE_RATE: u32 = 44100;
 
 pub struct VoiceState {
-    pub recognizer: Arc<Mutex<Option<vosk::Recognizer>>>,
-    pub model: Arc<vosk::Model>,
+    pub recognizer: Arc<Mutex<Option<Recognizer>>>,
+    pub model: Arc<Model>,
     pub is_listening: Arc<Mutex<bool>>,
     pub audio_stream: Arc<Mutex<Option<Stream>>>,
+    /// Last utterance the recognizer finalized, waiting to be polled.
+    pending_result: Arc<Mutex<Option<String>>>,
 }
 
 impl VoiceState {
     pub fn new(model_path: &str) -> Result<Self, Box<dyn Error>> {
-        // Initialize Vosk library
-        vosk::set_log_level(-1);
+        vosk::set_log_level(LogLevel::Warn);
 
         // Load model from path (typically bundled or downloaded)
-        let model = vosk::Model::new(model_path)?;
+        let model = Model::new(model_path)
+            .ok_or_else(|| format!("Could not load the Vosk model at {}", model_path))?;
 
         Ok(VoiceState {
             recognizer: Arc::new(Mutex::new(None)),
             model: Arc::new(model),
             is_listening: Arc::new(Mutex::new(false)),
             audio_stream: Arc::new(Mutex::new(None)),
+            pending_result: Arc::new(Mutex::new(None)),
         })
     }
 
     pub fn init_voice_recognition(&self) -> Result<String, String> {
-        match self.model.new_recognizer(44100) {
-            Ok(recognizer) => {
-                let mut rec = self.recognizer.lock().unwrap();
-                *rec = Some(recognizer);
-                Ok("Voice recognition initialized".to_string())
-            }
-            Err(e) => Err(format!("Failed to initialize recognizer: {}", e))
-        }
+        let recognizer = Recognizer::new(&self.model, SAMPLE_RATE as f32)
+            .ok_or_else(|| "Failed to initialize recognizer".to_string())?;
+
+        let mut rec = self.recognizer.lock().unwrap();
+        *rec = Some(recognizer);
+        Ok("Voice recognition initialized".to_string())
     }
 
     pub fn start_listening(&self) -> Result<String, String> {
@@ -66,38 +70,45 @@ impl VoiceState {
 
         let config = StreamConfig {
             channels: 1,
-            sample_rate: cpal::SampleRate(44100),
+            sample_rate: SAMPLE_RATE,
             buffer_size: cpal::BufferSize::Default,
         };
 
         let recognizer = Arc::clone(&self.recognizer);
         let is_listening = Arc::clone(&self.is_listening);
+        let pending_result = Arc::clone(&self.pending_result);
 
         let stream = device
             .build_input_stream(
                 &config,
-                move |data: &cpal::Data, _: &cpal::InputCallbackInfo| {
+                move |data: &[i16], _: &cpal::InputCallbackInfo| {
                     let is_active = *is_listening.lock().unwrap();
                     if !is_active {
                         return;
                     }
 
-                    let audio_samples: Vec<i16> = data
-                        .as_slice::<i16>()
-                        .unwrap_or(&[])
-                        .to_vec();
-
                     if let Ok(mut rec) = recognizer.lock() {
                         if let Some(recognizer) = rec.as_mut() {
-                            let _ = recognizer.accept_waveform(&audio_samples);
+                            // Silence ends an utterance; only then is a transcript ready.
+                            if let Ok(DecodingState::Finalized) = recognizer.accept_waveform(data) {
+                                if let Some(single) = recognizer.result().single() {
+                                    let text = single.text.to_string();
+                                    if let Ok(mut pending) = pending_result.lock() {
+                                        *pending = Some(text);
+                                    }
+                                }
+                            }
                         }
                     }
                 },
                 |err| eprintln!("Stream error: {}", err),
+                None,
             )
             .map_err(|e| format!("Failed to build input stream: {}", e))?;
 
-        stream.play().map_err(|e| format!("Failed to start stream: {}", e))?;
+        stream
+            .play()
+            .map_err(|e| format!("Failed to start stream: {}", e))?;
 
         let mut stream_guard = self.audio_stream.lock().unwrap();
         *stream_guard = Some(stream);
@@ -106,18 +117,12 @@ impl VoiceState {
     }
 
     pub fn process_audio(&self, _audio_data: &[i16]) -> Result<Option<String>, String> {
-        let mut rec_guard = self.recognizer.lock().unwrap();
-
-        if let Some(recognizer) = rec_guard.as_mut() {
-            if recognizer.is_final_result().unwrap_or(false) {
-                let result = recognizer.result().unwrap_or_default();
-                Ok(Some(result))
-            } else {
-                Ok(None)
-            }
-        } else {
-            Err("Recognizer not initialized".to_string())
+        if self.recognizer.lock().unwrap().is_none() {
+            return Err("Recognizer not initialized".to_string());
         }
+
+        let mut pending = self.pending_result.lock().unwrap();
+        Ok(pending.take())
     }
 
     pub fn stop_listening(&self) -> Result<String, String> {
@@ -131,7 +136,11 @@ impl VoiceState {
 
         let mut rec_guard = self.recognizer.lock().unwrap();
         if let Some(recognizer) = rec_guard.as_mut() {
-            let final_result = recognizer.final_result().unwrap_or_default();
+            let final_result = recognizer
+                .final_result()
+                .single()
+                .map(|single| single.text.to_string())
+                .unwrap_or_default();
             Ok(final_result)
         } else {
             Ok("No active listening session".to_string())
@@ -142,7 +151,7 @@ impl VoiceState {
         let mut rec_guard = self.recognizer.lock().unwrap();
 
         if let Some(recognizer) = rec_guard.as_mut() {
-            let partial = recognizer.partial_result().unwrap_or_default();
+            let partial = recognizer.partial_result().partial.to_string();
             if partial.is_empty() {
                 Ok(None)
             } else {
@@ -156,24 +165,20 @@ impl VoiceState {
 
 pub async fn text_to_speech(text: &str) -> Result<String, String> {
     use std::process::Command;
-    use std::io::Write;
 
-    // Use pyttsx3 via Python subprocess for local TTS
-    // Requires: pip install pyttsx3
+    // Local TTS through pyttsx3. The spoken text is injected as a JSON string
+    // literal, which is also valid Python, so quotes and backslashes in the
+    // text cannot break out of the generated snippet.
+    let literal = serde_json::to_string(text).map_err(|e| format!("Invalid text: {}", e))?;
 
     let python_code = format!(
-        r#"
-import pyttsx3
-import sys
-
-engine = pyttsx3.init()
-engine.setProperty('rate', 150)  # Speed
-engine.setProperty('volume', 0.9)  # Volume (0.0 to 1.0)
-engine.say(r#"{}"#)
-engine.runAndWait()
-print("TTS complete")
-"#,
-        text.replace('"', "\\\"")
+        "import pyttsx3\n\
+         engine = pyttsx3.init()\n\
+         engine.setProperty('rate', 150)\n\
+         engine.setProperty('volume', 0.9)\n\
+         engine.say({})\n\
+         engine.runAndWait()\n",
+        literal
     );
 
     let output = Command::new("python3")
@@ -181,11 +186,8 @@ print("TTS complete")
         .arg(&python_code)
         .output()
         .or_else(|_| {
-            // Fallback to python on Windows
-            Command::new("python")
-                .arg("-c")
-                .arg(&python_code)
-                .output()
+            // Fallback to `python`, which is the usual name on Windows.
+            Command::new("python").arg("-c").arg(&python_code).output()
         })
         .map_err(|e| format!("Failed to run pyttsx3: {}", e))?;
 

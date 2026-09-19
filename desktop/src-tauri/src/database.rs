@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
-use rusqlite::{Connection, params, Result as SqlResult};
+use rusqlite::{params, Connection, OptionalExtension};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -258,7 +258,7 @@ mod chrono {
                 .unwrap_or_default();
 
             let secs = duration.as_secs();
-            let millis = duration.subsec_millis();
+            let _millis = duration.subsec_millis();
 
             // Simple ISO 8601 format (YYYY-MM-DDTHH:MM:SS.fffZ)
             // For MVP, use a placeholder with current unix timestamp

@@ -1,14 +1,52 @@
 # iAgent Desktop — Windows Build & Test Guide
 
-**Phase 1 Complete**: Ready for Windows MSI installer generation and testing
+The desktop app is a **Tauri 1.5** project: a React/Vite frontend in `desktop/src`
+and a Rust backend in `desktop/src-tauri`. The MSI is produced by WiX, which runs
+on Windows only — there is no way to bundle an `.msi` from Linux or macOS. Either
+build on a Windows machine, or let the `Build Windows MSI` GitHub Actions workflow
+do it (`workflow_dispatch`, or a `v*` tag).
 
-## Pre-Build Checklist
+## Prerequisites
 
-- [ ] Windows machine with Rust installed (1.70+)
-- [ ] Node.js and npm installed
-- [ ] Visual Studio Build Tools or full Visual Studio with C++ support
-- [ ] Git installed
-- [ ] ANTHROPIC_API_KEY environment variable set
+| Requirement | Why | How |
+|---|---|---|
+| Windows 10 or 11 (x64) | WiX, and therefore the MSI target, is Windows-only | — |
+| Rust 1.70+, `x86_64-pc-windows-msvc` | Builds the backend | `rustup toolchain install stable-x86_64-pc-windows-msvc` |
+| Visual Studio Build Tools, "Desktop development with C++" | MSVC linker, and the C compiler `rusqlite`'s bundled SQLite needs | https://visualstudio.microsoft.com/visual-cpp-build-tools/ |
+| Node.js 20+ and npm | Builds the frontend and runs the Tauri CLI | https://nodejs.org |
+| **Vosk native library (`libvosk`)** | `vosk-sys` declares `#[link(name = "libvosk")]` and ships **no build script**, so nothing fetches it for you — without it the build fails at link time, not at compile time | See "Vosk native library" below |
+| WebView2 runtime | Tauri renders the UI in it | Preinstalled on Windows 11 and on up-to-date Windows 10 |
+
+WiX itself does **not** need to be installed: the Tauri CLI downloads it on first
+build.
+
+`ANTHROPIC_API_KEY` is **not** a build-time requirement. `LLMService::new()` reads
+it from the environment at runtime, so it only has to be set on the machine that
+runs the app.
+
+### Vosk native library
+
+1. Download `vosk-win64-<version>.zip` from
+   https://github.com/alphacep/vosk-api/releases
+2. Unzip it anywhere, e.g. `C:\vosk`.
+3. Make `libvosk.lib` visible to the linker, either by adding that folder to the
+   `LIB` environment variable, or with `RUSTFLAGS`:
+
+   ```powershell
+   $env:LIB = "C:\vosk;$env:LIB"
+   # or
+   $env:RUSTFLAGS = "-L C:\vosk"
+   ```
+
+4. `libvosk.dll` is also needed **at runtime**, next to `iagent-desktop.exe`.
+   The MSI does not carry it yet — see "Known gaps" below.
+
+### Speech model
+
+`init_voice` loads the model from the relative path `model/vosk-model-en-us-0.22`.
+That model is ~1.8 GB and is not in the repository; the small English model
+(~40 MB) is enough to smoke-test. Download from https://alphacephei.com/vosk/models
+and unzip next to the executable so that `model/<model-name>` resolves.
 
 ## Build Steps
 
@@ -22,22 +60,12 @@ cd iagents/desktop
 ### 2. Install Dependencies
 
 ```bash
-npm install
+npm ci
 cd src-tauri && cargo fetch
 cd ..
 ```
 
-### 3. Set Environment Variables
-
-```bash
-# PowerShell
-$env:ANTHROPIC_API_KEY="your-api-key-here"
-
-# Command Prompt
-set ANTHROPIC_API_KEY=your-api-key-here
-```
-
-### 4. Build Development Version (Debug)
+### 3. Build Development Version (Debug)
 
 ```bash
 npm run dev
@@ -49,23 +77,49 @@ This launches:
 
 Test features before building release version.
 
-### 5. Build Production MSI Installer
+### 4. Build Production MSI Installer
 
 ```bash
 npm run build
 ```
 
-**Output**: `src-tauri/target/release/bundle/msi/iAgent Desktop_0.1.0_x64_en-US.msi`
+**Output**: `desktop/src-tauri/target/release/bundle/msi/iAgent Desktop_0.1.0_x64_fr-FR.msi`
 
-**Installer size**: ~80-100 MB (includes Rust runtime, Node dependencies bundled)
+Measured at 4.15 MB on the 19/09/2026 CI build. The NSIS installer is built
+alongside it, in `desktop/src-tauri/target/release/bundle/nsis/`.
 
-### 6. Install from MSI
+The GitHub Actions workflow publishes both as the `iagent-desktop-installers`
+artifact, kept 30 days.
+
+### Script layout
+
+`npm run build` is `tauri build`. The frontend half is `npm run build:web`
+(`tsc --noEmit && vite build`), which Tauri runs itself through
+`beforeBuildCommand`; run it on its own to check the frontend without paying for
+a Rust release build. Do not point `beforeBuildCommand` back at `npm run build`:
+that makes the build call itself.
+
+### 5. Install from MSI
 
 1. Run the generated `.msi` installer
 2. Follow Windows installation wizard
 3. Installer places app in `C:\Program Files\iAgent Desktop\`
 4. Desktop shortcut created automatically
 5. App available in Start Menu
+
+## Known gaps
+
+- **`libvosk.dll` is not bundled.** The MSI installs the app, but voice
+  recognition cannot start until the DLL sits next to the installed
+  `iagent-desktop.exe`. Bundling it means adding it to `tauri.bundle.resources`.
+- **The speech model is not bundled either**, for the same reason, and it is far
+  too large to ship inside the installer. It has to be downloaded on first run or
+  installed alongside.
+- **Capture runs at 44.1 kHz.** Vosk models are trained at 16 kHz; `rubato` is
+  already a dependency but nothing resamples yet, so transcription quality will
+  be poor until it does.
+- **`database.rs` hardcodes the date** in its `chrono` stand-in: every
+  `created_at` reads `2026-09-19` whatever the real date.
 
 ## Functional Testing Checklist
 
@@ -228,11 +282,14 @@ rustup update
 rustup toolchain install stable-x86_64-pc-windows-msvc
 ```
 
-### Issue: "Could not compile Vosk"
+### Issue: `LINK : fatal error LNK1181: cannot open input file 'libvosk.lib'`
 
-**Solution**: Install Visual Studio Build Tools with C++ support
-- Download from: https://visualstudio.microsoft.com/visual-cpp-build-tools/
-- Install "Desktop development with C++"
+**Cause**: the Vosk native library is missing. `vosk-sys` has no build script, so
+cargo never fetches it.
+
+**Solution**: follow "Vosk native library" in the Prerequisites above — the error
+is a linker error, not a compiler error, and installing more of Visual Studio
+will not fix it.
 
 ### Issue: "npm ERR! code ELIFECYCLE"
 
@@ -268,7 +325,6 @@ Before shipping:
 - [ ] Database persistence verified
 - [ ] Error messages user-friendly
 - [ ] Extension check passes: `node check.cjs` (if applicable)
-- [ ] Installer size reasonable (~80-100 MB)
 - [ ] Version bumped in `Cargo.toml` and `package.json`
 - [ ] CHANGELOG.md updated with new features
 

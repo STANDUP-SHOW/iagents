@@ -3,7 +3,7 @@
   windows_subsystem = "windows"
 )]
 
-use tauri::{Manager, State};
+use tauri::State;
 use std::sync::Mutex;
 
 mod voice;
@@ -17,7 +17,7 @@ mod telegram;
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
 use llm::{LLMService, AgentPersona};
-use voiceprint::{VoicePrintService, VoicePrint};
+use voiceprint::VoicePrintService;
 use telegram::{TelegramService, TelegramCredentials};
 use database::Database;
 use std::sync::Arc;
@@ -112,17 +112,22 @@ async fn call_agent_llm(
     command: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let agents = state.agents.lock().unwrap();
-    let agent = agents
-        .list_agents()
-        .iter()
-        .find(|a| a.id == agent_id)
-        .cloned()
-        .ok_or("Agent not found".to_string())?;
-    drop(agents);
+    // Scope the guard: a MutexGuard cannot be held across an await.
+    let agent = {
+        let agents = state.agents.lock().unwrap();
+        agents
+            .list_agents()
+            .iter()
+            .find(|a| a.id == agent_id)
+            .cloned()
+    }
+    .ok_or("Agent not found".to_string())?;
 
-    let llm = state.llm.lock().unwrap();
-    let llm_service = llm.as_ref().ok_or("LLM not initialized")?;
+    // Clone the service out of the state: a MutexGuard cannot be held across an await.
+    let llm_service = {
+        let llm = state.llm.lock().unwrap();
+        llm.as_ref().ok_or("LLM not initialized")?.clone()
+    };
 
     let persona = AgentPersona {
         id: agent.id.clone(),
@@ -200,7 +205,7 @@ fn enroll_voice(
     match VoicePrintService::create_voice_print(&user_id, audio_samples, 44100) {
         Ok(voice_print) => {
             // Try to store in database
-            if let Ok(Some(db)) = state.db.lock().map(|guard| guard.as_ref()) {
+            if let Some(db) = state.db.lock().ok().as_ref().and_then(|guard| guard.as_ref()) {
                 let mfcc_json = serde_json::to_string(&voice_print.mfcc_features)
                     .unwrap_or_else(|_| "[]".to_string());
                 if let Err(e) = db.save_voice_print(&user_id, &mfcc_json) {
@@ -223,7 +228,7 @@ fn enroll_voice(
 
 #[tauri::command]
 fn verify_voice(
-    user_id: String,
+    _user_id: String,
     audio_sample: Vec<i16>,
 ) -> Result<f32, String> {
     if audio_sample.is_empty() {
@@ -270,7 +275,7 @@ async fn connect_telegram(
     match TelegramService::connect_telegram(bot_token, chat_id).await {
         Ok(credentials) => {
             // Store credentials in database
-            if let Ok(Some(db)) = state.db.lock().map(|guard| guard.as_ref()) {
+            if let Some(db) = state.db.lock().ok().as_ref().and_then(|guard| guard.as_ref()) {
                 let creds_json = serde_json::json!({
                     "bot_token": &credentials.bot_token,
                     "chat_id": &credentials.chat_id,
@@ -303,12 +308,15 @@ async fn send_telegram_message(
     text: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let telegram = state.telegram.lock().unwrap();
+    // Copy the credentials out: a MutexGuard cannot be held across an await.
+    let credentials = {
+        let telegram = state.telegram.lock().unwrap();
+        telegram.as_ref().cloned()
+    };
 
-    if let Some(credentials) = telegram.as_ref() {
-        TelegramService::send_message(credentials, &text).await
-    } else {
-        Err("Telegram not connected. Call connect_telegram first.".to_string())
+    match credentials {
+        Some(credentials) => TelegramService::send_message(&credentials, &text).await,
+        None => Err("Telegram not connected. Call connect_telegram first.".to_string()),
     }
 }
 
