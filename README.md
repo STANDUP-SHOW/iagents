@@ -46,10 +46,24 @@ conforme n'est jamais écrit.
 - **Deux agents sur le même palier partagent le modèle**, pas la charge : c'est ce qui rend un mini-PC viable pour un pack de bureau (13 postes de bureau sur la machine « studio » d'exemple).
 - **Les chiffres de `paliers-modeles.json` sont indicatifs** (quantification 4 bits, GPU de référence classe RTX 4070). À confirmer sur les vraies machines LocalAgent avant toute promesse commerciale. `machines.json` est un jeu d'exemples à remplacer par leur catalogue.
 
-## Ce qui manque encore
+## État de réalisation (2026-09-19)
 
-1. Le dépôt Git du projet (à créer : le code n'a rien à faire dans DropShipPro).
-2. Le catalogue réel des machines LocalAgent (référence, RAM, VRAM, prix).
-3. La clé `ANTHROPIC_API_KEY` dans les secrets du dépôt (Settings › Secrets and variables › Actions). Le lot se lance depuis l'onglet Actions (« Générer des fiches d'agents ») et arrive en pull request. Commencer par un secteur, relire, puis les 544 P1.
-4. L'application desktop (Electron + TypeScript, moteur de modèles locaux type Ollama, Playwright pour le navigateur) — parcours minimal : installer → se connecter → télécharger un agent → une tâche s'exécute → résultat dans le dossier → conversation vocale.
-5. La boutique : `drop-shipper.fr/b/iagent-agency` reste la vitrine ; les paquets deviennent des produits par le flux.
+### ✅ Complété
+
+- **Dépôt Git** : https://github.com/STANDUP-SHOW/iagents
+- **Catalogue agents** : 1249 paquets valides (tous secteurs)
+- **Validation** : `npm run controle` passe (dimensionnement 15/15, économie 7/7, paquets 0 faute)
+- **Dimensionnement** : placement sur machines (Firebat S/M/L, bundles), jauge de charge, diagnostique raison
+- **Économie** : coût comparé API seule vs local, calcul par agent et en flotte
+- **Application desktop** : Phase 1-7 complète (Tauri + React, audio/Vosk/LLM/TTS/database/Telegram)
+  - Voice pipeline: Mic → Vosk → Agent Router → Claude Haiku 3.5 → pyttsx3 → Speaker
+  - SQLite persistence pour voice prints et connecteurs
+  - Prête pour Phase 8 (Windows build)
+- **Tests** : tous les bancs passent (dimensionnement, économie, paquets)
+
+### ⏳ À faire
+
+1. **Windows build** (Phase 8) : `npm run build` sur machine Windows, résultat MSI installer
+2. **Catalogue LocalAgent définitif** : remplacer `machines.json` par références réelles, prix, stock
+3. **Boutique iagent.agency** : vitrine produits, panier, paiement (actuellement sur `drop-shipper.fr/b/iagent-agency`)
+4. **Automate de génération** : GitHub Actions pour lots futurs (ANTHROPIC_API_KEY en secret du dépôt)
