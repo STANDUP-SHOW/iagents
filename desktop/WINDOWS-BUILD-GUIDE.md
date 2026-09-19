@@ -85,8 +85,11 @@ npm run build
 
 **Output**: `desktop/src-tauri/target/release/bundle/msi/iAgent Desktop_0.1.0_x64_fr-FR.msi`
 
-The NSIS installer is built alongside it, in
-`desktop/src-tauri/target/release/bundle/nsis/`.
+Measured at 4.15 MB on the 19/09/2026 CI build. The NSIS installer is built
+alongside it, in `desktop/src-tauri/target/release/bundle/nsis/`.
+
+The GitHub Actions workflow publishes both as the `iagent-desktop-installers`
+artifact, kept 30 days.
 
 ### Script layout
 
