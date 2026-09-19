@@ -450,6 +450,33 @@ verifier(
   })()
 );
 
+// Le journal : ce que l'employeur a repris revient dans le prompt.
+const moteurJournal = new ConversationEngine(avecCompetences, {
+  conversation: { max_context_turns: 10, user_session_timeout_minutes: 30 },
+  tts: { primary: {} },
+  stt: { primary: {} },
+  llm: { primary: {} },
+});
+
+verifier(
+  "sans journal, le prompt ne parle pas de reproches",
+  !moteurJournal.formatSystemPrompt(ids[0]).includes('déjà repris')
+);
+
+moteurJournal.enregistrerJournal(ids[0], [
+  'Rédiger les factures : tu as mis le mauvais taux de TVA',
+]);
+
+verifier(
+  "ce que l'employeur a repris revient dans le prompt",
+  moteurJournal.formatSystemPrompt(ids[0]).includes('mauvais taux de TVA')
+);
+
+verifier(
+  "le reproche est présenté comme prioritaire",
+  moteurJournal.formatSystemPrompt(ids[0]).includes('que tu ne refais pas')
+);
+
 // Détection du prénom : « l'employeur dit Carla, Carla répond ».
 const moteur = new ConversationEngine(agents, {
   conversation: { max_context_turns: 10, user_session_timeout_minutes: 30 },

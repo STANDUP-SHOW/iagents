@@ -9,6 +9,7 @@ use std::sync::Mutex;
 mod voice;
 mod fiches;
 mod courriel;
+mod journal;
 mod agents;
 mod connectors;
 mod database;
@@ -391,6 +392,8 @@ fn main() {
             courriel::courriel_enregistrer_motdepasse,
             courriel::courriel_motdepasse_present,
             courriel::courriel_relever,
+            journal::journal_lire,
+            journal::journal_ajouter,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

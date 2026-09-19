@@ -39,6 +39,8 @@ export class ConversationEngine {
   private parFicheId: Map<string, AgentInstalle> = new Map();
   private agents: readonly AgentInstalle[];
   private reglages: Reglages;
+  /** Ce que l'employeur a reproché à chaque agent, par identifiant de fiche. */
+  private journaux: Map<string, string[]> = new Map();
 
   constructor(agents: readonly AgentInstalle[], reglages: Reglages) {
     this.agents = agents;
@@ -46,6 +48,11 @@ export class ConversationEngine {
     for (const agent of agents) {
       this.parFicheId.set(agent.fiche.id, agent);
     }
+  }
+
+  /** Le journal d'un agent, relu du disque : ce qu'il a appris de son employeur. */
+  enregistrerJournal(ficheId: string, retours: readonly string[]): void {
+    this.journaux.set(ficheId, [...retours]);
   }
 
   /**
@@ -221,10 +228,20 @@ export class ConversationEngine {
             agent.competences
           );
 
+    // Ce qui lui a déjà été reproché passe en dernier et prime : c'est la
+    // correction la plus récente, celle qui doit l'emporter sur le reste.
+    const retours = this.journaux.get(agentId) ?? [];
+    const appris =
+      retours.length === 0
+        ? ''
+        : `\nCe que ton employeur t'a déjà repris, et que tu ne refais pas:\n` +
+          retours.map((r) => `- ${r}`).join('\n') +
+          '\n';
+
     return `${expert.consigne}
 
 Tu t'appelles ${agent.prenom}. Tu réponds quand on t'appelle par ce prénom.
-${accord}${metier}${maison}
+${accord}${metier}${maison}${appris}
 Règles strictes à respecter:
 ${regles}
 
