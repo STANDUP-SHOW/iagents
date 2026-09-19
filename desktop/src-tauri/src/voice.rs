@@ -1,157 +1,216 @@
-use std::sync::{Arc, Mutex};
 use std::error::Error;
-use std::thread;
-use vosk::Vosk;
+use std::sync::{Arc, Mutex};
+
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{Stream, StreamConfig};
+use cpal::{SampleFormat, Stream};
+use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
+
+/// Whisper travaille en 16 kHz mono : tout ce qui entre est ramené à ce taux.
+const TAUX_WHISPER: u32 = 16_000;
 
 pub struct VoiceState {
-    pub recognizer: Arc<Mutex<Option<vosk::Recognizer>>>,
-    pub model: Arc<vosk::Model>,
+    contexte: Arc<WhisperContext>,
+    /// Audio capté depuis le dernier vidage, déjà ramené en 16 kHz mono.
+    tampon: Arc<Mutex<Vec<f32>>>,
     pub is_listening: Arc<Mutex<bool>>,
     pub audio_stream: Arc<Mutex<Option<Stream>>>,
 }
 
-impl VoiceState {
-    pub fn new(model_path: &str) -> Result<Self, Box<dyn Error>> {
-        // Initialize Vosk library
-        vosk::set_log_level(-1);
+// Le flux cpal n'est pas Send ; il ne sort jamais du mutex qui le détient et
+// n'est manipulé que depuis les commandes de l'application.
+unsafe impl Send for VoiceState {}
 
-        // Load model from path (typically bundled or downloaded)
-        let model = vosk::Model::new(model_path)?;
+impl VoiceState {
+    pub fn new(chemin_modele: &str) -> Result<Self, Box<dyn Error>> {
+        if !std::path::Path::new(chemin_modele).exists() {
+            return Err(format!(
+                "modèle d'écoute introuvable : {}. Télécharger un modèle Whisper au format ggml.",
+                chemin_modele
+            )
+            .into());
+        }
+
+        let contexte =
+            WhisperContext::new_with_params(chemin_modele, WhisperContextParameters::default())
+                .map_err(|e| format!("chargement du modèle d'écoute : {}", e))?;
 
         Ok(VoiceState {
-            recognizer: Arc::new(Mutex::new(None)),
-            model: Arc::new(model),
+            contexte: Arc::new(contexte),
+            tampon: Arc::new(Mutex::new(Vec::new())),
             is_listening: Arc::new(Mutex::new(false)),
             audio_stream: Arc::new(Mutex::new(None)),
         })
     }
 
-    pub fn init_voice_recognition(&self) -> Result<String, String> {
-        match self.model.new_recognizer(44100) {
-            Ok(recognizer) => {
-                let mut rec = self.recognizer.lock().unwrap();
-                *rec = Some(recognizer);
-                Ok("Voice recognition initialized".to_string())
-            }
-            Err(e) => Err(format!("Failed to initialize recognizer: {}", e))
-        }
-    }
-
     pub fn start_listening(&self) -> Result<String, String> {
-        let mut listening = self.is_listening.lock().unwrap();
-        if *listening {
-            return Err("Already listening".to_string());
-        }
-        *listening = true;
-        drop(listening);
-
-        // Initialize recognizer if not already done
-        if self.recognizer.lock().unwrap().is_none() {
-            self.init_voice_recognition()?;
+        {
+            let mut ecoute = self.is_listening.lock().unwrap();
+            if *ecoute {
+                return Err("écoute déjà en cours".to_string());
+            }
+            *ecoute = true;
         }
 
-        // Start audio input stream
-        self.start_audio_stream()?;
-
-        Ok("Listening started".to_string())
+        self.ouvrir_flux()?;
+        Ok("écoute démarrée".to_string())
     }
 
-    fn start_audio_stream(&self) -> Result<(), String> {
-        let host = cpal::default_host();
-        let device = host
+    pub fn stop_listening(&self) -> Result<String, String> {
+        *self.is_listening.lock().unwrap() = false;
+        self.audio_stream.lock().unwrap().take();
+        Ok("écoute arrêtée".to_string())
+    }
+
+    fn ouvrir_flux(&self) -> Result<(), String> {
+        let hote = cpal::default_host();
+        let peripherique = hote
             .default_input_device()
-            .ok_or_else(|| "No input device available".to_string())?;
+            .ok_or_else(|| "aucun microphone disponible".to_string())?;
 
-        let config = StreamConfig {
-            channels: 1,
-            sample_rate: cpal::SampleRate(44100),
-            buffer_size: cpal::BufferSize::Default,
-        };
+        let config = peripherique
+            .default_input_config()
+            .map_err(|e| format!("configuration du microphone : {}", e))?;
 
-        let recognizer = Arc::clone(&self.recognizer);
-        let is_listening = Arc::clone(&self.is_listening);
+        let taux = config.sample_rate();
+        let canaux = config.channels() as usize;
+        if taux % TAUX_WHISPER != 0 {
+            return Err(format!(
+                "microphone à {} Hz : seuls les multiples de {} Hz sont pris en charge \
+                 (48000 et 16000 couvrent la quasi-totalité des appareils).",
+                taux, TAUX_WHISPER
+            ));
+        }
+        let pas = (taux / TAUX_WHISPER) as usize;
 
-        let stream = device
-            .build_input_stream(
+        let tampon = Arc::clone(&self.tampon);
+        let ecoute = Arc::clone(&self.is_listening);
+        let format = config.sample_format();
+        let config: cpal::StreamConfig = config.into();
+
+        let sur_erreur = |e| eprintln!("flux audio : {}", e);
+
+        let flux = match format {
+            SampleFormat::F32 => peripherique.build_input_stream(
                 &config,
-                move |data: &cpal::Data, _: &cpal::InputCallbackInfo| {
-                    let is_active = *is_listening.lock().unwrap();
-                    if !is_active {
+                move |donnees: &[f32], _: &cpal::InputCallbackInfo| {
+                    if !*ecoute.lock().unwrap() {
                         return;
                     }
-
-                    let audio_samples: Vec<i16> = data
-                        .as_slice::<i16>()
-                        .unwrap_or(&[])
-                        .to_vec();
-
-                    if let Ok(mut rec) = recognizer.lock() {
-                        if let Some(recognizer) = rec.as_mut() {
-                            let _ = recognizer.accept_waveform(&audio_samples);
-                        }
-                    }
+                    let mut t = tampon.lock().unwrap();
+                    t.extend(reduire(donnees, canaux, pas));
                 },
-                |err| eprintln!("Stream error: {}", err),
-            )
-            .map_err(|e| format!("Failed to build input stream: {}", e))?;
+                sur_erreur,
+                None,
+            ),
+            SampleFormat::I16 => peripherique.build_input_stream(
+                &config,
+                move |donnees: &[i16], _: &cpal::InputCallbackInfo| {
+                    if !*ecoute.lock().unwrap() {
+                        return;
+                    }
+                    let en_f32: Vec<f32> = donnees
+                        .iter()
+                        .map(|e| *e as f32 / i16::MAX as f32)
+                        .collect();
+                    let mut t = tampon.lock().unwrap();
+                    t.extend(reduire(&en_f32, canaux, pas));
+                },
+                sur_erreur,
+                None,
+            ),
+            autre => return Err(format!("format audio non pris en charge : {:?}", autre)),
+        }
+        .map_err(|e| format!("ouverture du flux audio : {}", e))?;
 
-        stream.play().map_err(|e| format!("Failed to start stream: {}", e))?;
-
-        let mut stream_guard = self.audio_stream.lock().unwrap();
-        *stream_guard = Some(stream);
+        flux.play().map_err(|e| format!("démarrage du flux : {}", e))?;
+        *self.audio_stream.lock().unwrap() = Some(flux);
 
         Ok(())
     }
 
-    pub fn process_audio(&self, _audio_data: &[i16]) -> Result<Option<String>, String> {
-        let mut rec_guard = self.recognizer.lock().unwrap();
-
-        if let Some(recognizer) = rec_guard.as_mut() {
-            if recognizer.is_final_result().unwrap_or(false) {
-                let result = recognizer.result().unwrap_or_default();
-                Ok(Some(result))
-            } else {
-                Ok(None)
-            }
+    /// Transcrit ce qui a été capté et vide le tampon.
+    pub fn process_audio(&self, audio_data: &[i16]) -> Result<Option<String>, String> {
+        let echantillons: Vec<f32> = if audio_data.is_empty() {
+            let mut t = self.tampon.lock().unwrap();
+            std::mem::take(&mut *t)
         } else {
-            Err("Recognizer not initialized".to_string())
+            audio_data
+                .iter()
+                .map(|e| *e as f32 / i16::MAX as f32)
+                .collect()
+        };
+
+        if echantillons.is_empty() {
+            return Ok(None);
         }
+
+        self.transcrire(&echantillons).map(Some)
     }
 
-    pub fn stop_listening(&self) -> Result<String, String> {
-        let mut listening = self.is_listening.lock().unwrap();
-        *listening = false;
-        drop(listening);
-
-        // Stop audio stream
-        let mut stream_guard = self.audio_stream.lock().unwrap();
-        *stream_guard = None;
-
-        let mut rec_guard = self.recognizer.lock().unwrap();
-        if let Some(recognizer) = rec_guard.as_mut() {
-            let final_result = recognizer.final_result().unwrap_or_default();
-            Ok(final_result)
-        } else {
-            Ok("No active listening session".to_string())
+    /// Transcrit ce qui a été capté sans vider le tampon.
+    pub fn get_partial_result(&self) -> Result<String, String> {
+        let echantillons = self.tampon.lock().unwrap().clone();
+        if echantillons.is_empty() {
+            return Ok(String::new());
         }
+        self.transcrire(&echantillons)
     }
 
-    pub fn get_partial_result(&self) -> Result<Option<String>, String> {
-        let mut rec_guard = self.recognizer.lock().unwrap();
-
-        if let Some(recognizer) = rec_guard.as_mut() {
-            let partial = recognizer.partial_result().unwrap_or_default();
-            if partial.is_empty() {
-                Ok(None)
-            } else {
-                Ok(Some(partial))
-            }
-        } else {
-            Err("Recognizer not initialized".to_string())
+    fn transcrire(&self, echantillons: &[f32]) -> Result<String, String> {
+        // Whisper refuse les fragments trop courts : moins d'une seconde ne
+        // porte pas de phrase exploitable.
+        if echantillons.len() < TAUX_WHISPER as usize {
+            return Ok(String::new());
         }
+
+        let mut etat = self
+            .contexte
+            .create_state()
+            .map_err(|e| format!("initialisation de la transcription : {}", e))?;
+
+        let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
+        params.set_language(Some("fr"));
+        params.set_print_special(false);
+        params.set_print_progress(false);
+        params.set_print_realtime(false);
+        params.set_print_timestamps(false);
+
+        etat
+            .full(params, echantillons)
+            .map_err(|e| format!("transcription : {}", e))?;
+
+        let segments = etat
+            .full_n_segments()
+            .map_err(|e| format!("lecture de la transcription : {}", e))?;
+
+        let mut texte = String::new();
+        for i in 0..segments {
+            let segment = etat
+                .full_get_segment_text(i)
+                .map_err(|e| format!("lecture du segment {} : {}", i, e))?;
+            texte.push_str(&segment);
+        }
+
+        Ok(texte.trim().to_string())
     }
+}
+
+/// Ramène un bloc multicanal au mono 16 kHz : moyenne des canaux, puis moyenne
+/// glissante sur `pas` échantillons plutôt qu'une décimation sèche, qui
+/// replierait les aigus sur la voix.
+fn reduire(donnees: &[f32], canaux: usize, pas: usize) -> Vec<f32> {
+    if canaux == 0 || pas == 0 {
+        return Vec::new();
+    }
+
+    let mono: Vec<f32> = donnees
+        .chunks_exact(canaux)
+        .map(|trame| trame.iter().sum::<f32>() / canaux as f32)
+        .collect();
+
+    mono.chunks_exact(pas)
+        .map(|groupe| groupe.iter().sum::<f32>() / pas as f32)
+        .collect()
 }
 
 // The spoken text is fed through stdin and never interpolated into the script:

@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
-use rusqlite::{Connection, params, Result as SqlResult};
+use rusqlite::{Connection, OptionalExtension, params};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
