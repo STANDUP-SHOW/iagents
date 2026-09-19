@@ -1,4 +1,4 @@
-// Charge les 129 fiches JSON depuis le répertoire agents
+// Charge les 1249 fiches JSON depuis le répertoire agents
 const agentModules = import.meta.glob('../../../agents/*.json', {
   eager: true,
   import: 'default'
