@@ -48,22 +48,17 @@ conforme n'est jamais écrit.
 
 ## État de réalisation (2026-09-19)
 
-### ✅ Complété
+Le détail, ce qui reste à faire et ce qui a cassé sont dans `ONBOARDING.md`.
 
-- **Dépôt Git** : https://github.com/STANDUP-SHOW/iagents
-- **Catalogue agents** : 1249 paquets valides (tous secteurs)
-- **Validation** : `npm run controle` passe (dimensionnement 15/15, économie 7/7, paquets 0 faute)
-- **Dimensionnement** : placement sur machines (Firebat S/M/L, bundles), jauge de charge, diagnostique raison
-- **Économie** : coût comparé API seule vs local, calcul par agent et en flotte
-- **Application desktop** : Phase 1-7 complète (Tauri + React, audio/Vosk/LLM/TTS/database/Telegram)
-  - Voice pipeline: Mic → Vosk → Agent Router → Claude Haiku 3.5 → pyttsx3 → Speaker
-  - SQLite persistence pour voice prints et connecteurs
-  - Prête pour Phase 8 (Windows build)
-- **Tests** : tous les bancs passent (dimensionnement, économie, paquets)
-
-### ⏳ À faire
-
-1. **Windows build** (Phase 8) : `npm run build` sur machine Windows, résultat MSI installer
-2. **Catalogue LocalAgent définitif** : remplacer `machines.json` par références réelles, prix, stock
-3. **Boutique iagent.agency** : vitrine produits, panier, paiement (actuellement sur `drop-shipper.fr/b/iagent-agency`)
-4. **Automate de génération** : GitHub Actions pour lots futurs (ANTHROPIC_API_KEY en secret du dépôt)
+- **Boutique en ligne** : https://iagents-beta.vercel.app (projet Vercel `iagents`,
+  redéployé à chaque push sur `main`). Domaine `iagent.agency` attaché, DNS OVH à
+  basculer.
+- **Fiches** : 1249 paquets valides, `npm run controle` passe (dimensionnement
+  15/15, économie 7/7, paquets 0 faute).
+- **Dimensionnement et économie** : placement poste + bundle, diagnostic en clair,
+  coût API seule contre Local-Agent par fiche (`npm run economie`).
+- **Application desktop** (`desktop/`, Tauri 1 + Rust + React) : code présent,
+  workflow « Build Windows MSI » (GitHub Actions) en remise en état,
+  5 agents d'exemple codés en dur, pas encore branchée sur `agents/`.
+- **Pas fait** : panier et paiement sur la boutique ; catalogue LocalAgent
+  définitif (`machines.json` reste un relevé AliExpress indicatif).
