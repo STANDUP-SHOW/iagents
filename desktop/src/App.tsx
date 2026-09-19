@@ -99,10 +99,14 @@ function App() {
     try {
       if (currentStatus === 'inactive') {
         await invoke('activate_agent', { agentId })
+        // Sans cet appel, la boucle interroge un moteur qui n'écoute pas :
+        // le micro n'est jamais ouvert et aucune phrase n'arrive.
+        await invoke('start_voice_recognition')
         setActiveAgent(agentId)
         setIsListening(true)
         setLastResponse('')
       } else {
+        await invoke('stop_voice_recognition').catch(() => {})
         await invoke('deactivate_agent', { agentId })
         setActiveAgent(null)
         setIsListening(false)
@@ -138,7 +142,7 @@ function App() {
 
       await invoke('text_to_speech', { text: response }).catch((err) => {
         console.error('TTS failed:', err)
-        setError('Text-to-speech failed. Ensure pyttsx3 is installed: pip install pyttsx3')
+        setError("La synthèse vocale a échoué. Vérifier que piper et sa voix sont présents à côté de l'application.")
       })
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err)

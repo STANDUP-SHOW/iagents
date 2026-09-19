@@ -7,6 +7,7 @@ use tauri::State;
 use std::sync::Mutex;
 
 mod voice;
+mod fiches;
 mod agents;
 mod connectors;
 mod database;
@@ -353,6 +354,8 @@ fn main() {
             connect_telegram,
             get_telegram_instructions,
             send_telegram_message,
+            fiches::lire_installation,
+            fiches::lire_fiche,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
