@@ -194,14 +194,16 @@ export function planningDuClient(fiche: Fiche, planning: Planning = {}): Tache[]
     (planning.ajustements ?? []).map((a) => [a.tacheId, a])
   );
 
+  // L'agent travaille seul par défaut : on ne vend pas un employé dont il faut
+  // relire chaque geste. Le contrôle est une décision du client, tâche par tâche.
   const taches = fiche.taches.map((tache) => {
     const a = ajuste.get(tache.id);
-    if (!a) return tache;
+    if (!a) return { ...tache, validationHumaine: false };
     return {
       ...tache,
       active: a.active ?? tache.active,
       planification: a.planification ?? tache.planification,
-      validationHumaine: a.validationHumaine ?? tache.validationHumaine,
+      validationHumaine: a.validationHumaine ?? false,
     };
   });
 
@@ -216,7 +218,7 @@ export function planningDuClient(fiche: Fiche, planning: Planning = {}): Tache[]
       entrees: ajoutee.entrees ?? [],
       sorties: ajoutee.sorties ?? [],
       logiciels: ajoutee.logiciels ?? [],
-      validationHumaine: ajoutee.validationHumaine ?? true,
+      validationHumaine: ajoutee.validationHumaine ?? false,
       active: true,
     });
   }
@@ -272,6 +274,85 @@ export function installerAgents(
 export function tachesQuotidiennes(taches: readonly Tache[], heure: string): Tache[] {
   return taches.filter(
     (t) => t.active && t.planification.type === 'quotidienne' && t.planification.heure === heure
+  );
+}
+
+/**
+ * Bloquer sans dire pourquoi n'apprend rien à l'agent. La raison peut être
+ * dictée à la voix ; elle lui revient comme un compte rendu, et c'est ainsi
+ * qu'il s'ajuste au fil du temps.
+ */
+export type Decision =
+  | { verbe: 'lancer' }
+  | { verbe: 'bloquer'; raison: string };
+
+/**
+ * Une tâche que le client a mise sous contrôle. Elle fait son travail jusqu'au
+ * bout et dépose son résultat, mais n'agit pas : elle attend que l'employeur
+ * lance ou bloque. C'est lui qui l'a mise là — par défaut l'agent va seul.
+ */
+export interface Controle {
+  tacheId: string;
+  nom: string;
+  /** Où le client trouvera ce qu'il doit relire avant de trancher. */
+  dossiers: string[];
+  decision?: Decision;
+}
+
+/**
+ * Ce qui attend une décision. Sert à prévenir l'employeur : une tâche sous
+ * contrôle qui n'avertit personne bloque sans que quiconque le sache.
+ */
+export function enAttenteDeControle(taches: readonly Tache[]): Controle[] {
+  return taches
+    .filter((t) => t.active && t.validationHumaine)
+    .map((t) => ({
+      tacheId: t.id,
+      nom: t.nom,
+      dossiers: t.sorties.map((s) => s.dossier),
+    }));
+}
+
+/**
+ * Enregistre ce que l'employeur a tranché. Une décision déjà prise n'est pas
+ * reprise en silence : relancer une tâche bloquée doit être un geste explicite,
+ * pas un effet de bord.
+ */
+export function decider(
+  attentes: readonly Controle[],
+  tacheId: string,
+  decision: Decision
+): Controle[] {
+  const connue = attentes.some((c) => c.tacheId === tacheId);
+  if (!connue) {
+    throw new Error(`Aucune tâche « ${tacheId} » n'attend de décision.`);
+  }
+
+  if (decision.verbe === 'bloquer' && decision.raison.trim() === '') {
+    throw new Error(
+      `Blocage de « ${tacheId} » sans raison : l'agent ne saurait pas quoi corriger.`
+    );
+  }
+
+  return attentes.map((c) =>
+    c.tacheId === tacheId && c.decision === undefined ? { ...c, decision } : c
+  );
+}
+
+/** Ce que l'agent reçoit en retour : pourquoi son travail a été refusé. */
+export function retoursPourAgent(attentes: readonly Controle[]): string[] {
+  return attentes.flatMap((c) =>
+    c.decision?.verbe === 'bloquer' ? [`${c.nom} : ${c.decision.raison}`] : []
+  );
+}
+
+/** Ce que l'agent peut exécuter : le lancé par décision, et le reste en auto. */
+export function aExecuter(taches: readonly Tache[], attentes: readonly Controle[]): Tache[] {
+  const lancees = new Set(
+    attentes.filter((c) => c.decision?.verbe === 'lancer').map((c) => c.tacheId)
+  );
+  return taches.filter(
+    (t) => t.active && (!t.validationHumaine || lancees.has(t.id))
   );
 }
 

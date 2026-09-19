@@ -8,6 +8,10 @@ import {
   dossiersUtilises,
   dossiersManquants,
   repartitionAutonomie,
+  enAttenteDeControle,
+  decider,
+  aExecuter,
+  retoursPourAgent,
   tachesQuotidiennes,
   AGENTS_MAX_PAR_POSTE,
   type Fiche,
@@ -116,8 +120,8 @@ verifier(
 );
 
 verifier(
-  'une tâche ajoutée par le client exige une validation humaine par défaut',
-  marie.planning.find((t) => t.id === 'compte-rendu-du-soir')?.validationHumaine === true
+  "une tâche ajoutée tourne en auto : l'agent n'attend pas qu'on le relise",
+  marie.planning.find((t) => t.id === 'compte-rendu-du-soir')?.validationHumaine === false
 );
 
 verifier(
@@ -293,6 +297,85 @@ verifier(
   partage.auto.length + partage.controle.length ===
     marie.planning.filter((t) => t.active).length,
   `auto ${partage.auto.length} / contrôle ${partage.controle.length}`
+);
+
+// Règle de Max : l'agent va seul, sauf si le client met une tâche sous contrôle.
+const parDefaut = planningDuClient(marie.fiche, {});
+verifier(
+  "sans réglage du client, aucune tâche n'attend de validation",
+  parDefaut.every((t) => !t.validationHumaine),
+  `${parDefaut.filter((t) => t.validationHumaine).length} sous contrôle`
+);
+
+const sousControle = planningDuClient(marie.fiche, {
+  ajustements: [{ tacheId: 'rediger-factures', validationHumaine: true }],
+});
+const attentes = enAttenteDeControle(sousControle);
+
+verifier(
+  'une tâche mise sous contrôle attend une décision',
+  attentes.length === 1 && attentes[0].tacheId === 'rediger-factures'
+);
+
+verifier(
+  "l'attente dit où trouver ce qu'il faut relire",
+  attentes[0].dossiers.length > 0,
+  attentes[0].dossiers.join(' ')
+);
+
+verifier(
+  "tant que rien n'est décidé, la tâche sous contrôle ne s'exécute pas",
+  !aExecuter(sousControle, attentes).some((t) => t.id === 'rediger-factures')
+);
+
+verifier(
+  'lancée par le client, elle s exécute',
+  aExecuter(sousControle, decider(attentes, 'rediger-factures', { verbe: 'lancer' })).some(
+    (t) => t.id === 'rediger-factures'
+  )
+);
+
+verifier(
+  'bloquée par le client, elle ne s exécute pas',
+  !aExecuter(sousControle, decider(attentes, 'rediger-factures', { verbe: 'bloquer', raison: 'montant faux' })).some(
+    (t) => t.id === 'rediger-factures'
+  )
+);
+
+verifier(
+  'les tâches en mode auto tournent sans rien attendre',
+  aExecuter(sousControle, attentes).length === sousControle.filter((t) => t.active).length - 1
+);
+
+verifier(
+  'un blocage sans raison est refusé',
+  (() => {
+    try {
+      decider(attentes, 'rediger-factures', { verbe: 'bloquer', raison: '   ' });
+      return false;
+    } catch {
+      return true;
+    }
+  })()
+);
+
+verifier(
+  "la raison du blocage revient à l'agent",
+  retoursPourAgent(
+    decider(attentes, 'rediger-factures', { verbe: 'bloquer', raison: 'montant faux' })
+  ).some((r) => r.includes('montant faux'))
+);
+
+verifier(
+  "décider d'une tâche qui n'attend rien est refusé",
+  (() => {
+    try {
+      decider(attentes, 'inexistante', { verbe: 'lancer' });
+      return false;
+    } catch {
+      return true;
+    }
+  })()
 );
 
 // Compétences : la fiche porte le métier, l'employeur ajoute sa maison.
