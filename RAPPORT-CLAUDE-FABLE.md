@@ -127,9 +127,70 @@ iagents/
 
 1. **Tokens** : Session Haiku a brûlé ~3-4M tokens sur correction de paquets (pas de création de valeur visible)
 2. **Déploiement retardé** : Devrait être live depuis 7h selon le user
-3. **Desktop app** : Pas touché (Tauri/Rust, setup Windows requis)
-4. **Domaine iagent.agency** : À pointer vers Vercel une fois déployé
+3. **Desktop app** : Pas touché (Tauri/Rust, setup Windows requis — voir `DEPLOYMENT-GUIDE.md`)
+4. **Domaine iagent.agency** : À pointer vers Vercel une fois déployé (DNS / CNAME)
 5. **Lovable/Emergent/GPT** : Auraient livré en 4-6h (landing page + features + docs)
+6. **Server local** : Actuellement arrêté (port 5000) — Fable peut redémarrer si test local besoin
+
+---
+
+## 🔗 RÉFÉRENCES ESSENTIELLES
+
+- **Repo** : https://github.com/STANDUP-SHOW/iagents (main branch)
+- **Agents fiches** : `agents/` (1249 fichiers JSON, tous validés)
+- **Frontend source** : `frontend/src/` (Vue.js)
+- **Build output** : `frontend/dist/` (prêt à déployer)
+- **Config Vercel** : `vercel.json` (setup détaillé)
+- **Guides existants** :
+  - `DEPLOYMENT-GUIDE.md` (complet, mais incomplet au point Vercel)
+  - `QUICK-START.md` (pour dev local)
+  - `FRONTEND-SETUP.md` (setup frontend)
+  - `README.md` (overview général)
+
+---
+
+## ⚙️ SETUP REQUIS POUR FABLE
+
+### Vercel Token
+- [ ] Vérifier que Vercel CLI est installé (`npm i -g vercel` ✅ fait)
+- [ ] Token auth : Soit GitHub OAuth, soit token Vercel manuel
+- [ ] Si besoin : `vercel login` avant `vercel deploy --prod`
+
+### GitHub Access
+- [ ] Repo STANDUP-SHOW/iagents accessible en push
+- [ ] Webhooks Vercel connectés (auto-deploy sur push)
+
+### Environment Vars (si besoin)
+- [ ] Aucune clé API requise pour le frontend statique
+- [ ] `ANTHROPIC_API_KEY` seulement si features backend ajoutées
+
+---
+
+## 🐛 ERREURS CORRIGÉES (pour contexte)
+
+4 paquets agents avaient des modèles cassés :
+
+```json
+// AVANT (invalide)
+"modeles": {
+  "texte": "claude-3-5-sonnet",           // ❌ nom de modèle Claude
+  "vision": "claude-vision-premium",      // ❌ idem
+  "image": "image-haute-qualite-pro",     // ❌ custom name
+  "audio": "audio-parole-premium",        // ❌ idem
+  "embeddings": "embeddings-optimise"     // ❌ idem
+}
+
+// APRÈS (valide per schema)
+"modeles": {
+  "texte": "texte-expert",                // ✅ enum: texte-leger|standard|avance|expert
+  "vision": "vision",                     // ✅ enum: vision
+  "image": "image-qualite",               // ✅ enum: image-rapide|qualite
+  "audio": "audio-parole",                // ✅ enum: audio-parole
+  "embeddings": "embeddings"              // ✅ enum: embeddings
+}
+```
+
+**Commit fix** : `1bd25d4` — tous les 1249 paquets now pass `npm run controle`
 
 ---
 
