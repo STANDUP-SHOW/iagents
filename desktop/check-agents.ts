@@ -5,6 +5,8 @@ import {
   installerAgents,
   logicielsMetier,
   planningDuClient,
+  dossiersUtilises,
+  dossiersManquants,
   tachesQuotidiennes,
   AGENTS_MAX_PAR_POSTE,
   type Fiche,
@@ -215,6 +217,48 @@ verifier(
 verifier(
   "une fiche sans photo n'empêche pas l'installation",
   agents.every((a) => typeof a.photo === 'string')
+);
+
+// Dossiers : la fiche les nomme logiquement, le client dit où ils sont.
+const attendus = dossiersUtilises(marie.planning);
+
+verifier(
+  'les dossiers nommés par les tâches sont retrouvés',
+  attendus.length > 0,
+  attendus.join(' ')
+);
+
+verifier(
+  "sans réglage, tous les dossiers restent à demander au client",
+  dossiersManquants(marie.planning).length === attendus.length
+);
+
+verifier(
+  'un dossier renseigné disparaît de la liste des questions',
+  dossiersManquants(marie.planning, { [attendus[0]]: 'C:/Factures/Devis' }).length ===
+    attendus.length - 1
+);
+
+verifier(
+  "un dossier d'une tâche désactivée n'est pas demandé",
+  (() => {
+    const sansJournal = marie.planning.map((t) =>
+      t.id === 'tenir-journal-ventes' ? { ...t, active: false } : t
+    );
+    return dossiersUtilises(sansJournal).length <= attendus.length;
+  })()
+);
+
+verifier(
+  "les dossiers réglés à l'installation arrivent jusqu'à l'agent",
+  installerAgents(fiches, [
+    {
+      prenom: 'Zoe',
+      ficheId: ids[0],
+      voix: 'v',
+      dossiers: { 'facturation/devis-acceptes': 'D:/Devis' },
+    },
+  ])[0].dossiers['facturation/devis-acceptes'] === 'D:/Devis'
 );
 
 // Sexe : choix du client, et il doit primer sur le genre figé dans la fiche.

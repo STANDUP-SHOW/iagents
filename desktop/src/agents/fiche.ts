@@ -22,14 +22,54 @@ export type Connecteur =
   | 'fichiers'
   | 'telephone';
 
+export interface Sortie {
+  dossier: string;
+  format: string;
+}
+
 export interface Tache {
   id: string;
   nom: string;
   description: string;
   planification: Planification;
+  /** « dossier:facturation/devis » ou un connecteur comme « calendrier ». */
+  entrees: string[];
+  sorties: Sortie[];
   logiciels: string[];
   validationHumaine: boolean;
   active: boolean;
+}
+
+const PREFIXE_DOSSIER = 'dossier:';
+
+/**
+ * Les dossiers nommés par une tâche sont logiques (« facturation/devis ») : le
+ * client dit à l'installation où ils se trouvent vraiment sur sa machine.
+ */
+export function dossiersUtilises(taches: readonly Tache[]): string[] {
+  const vus = new Set<string>();
+  for (const tache of taches) {
+    if (!tache.active) continue;
+    for (const entree of tache.entrees) {
+      if (entree.startsWith(PREFIXE_DOSSIER)) {
+        vus.add(entree.slice(PREFIXE_DOSSIER.length));
+      }
+    }
+    for (const sortie of tache.sorties) vus.add(sortie.dossier);
+  }
+  return [...vus].sort();
+}
+
+/**
+ * Ce qu'il reste à demander au client. Le parcours de configuration ne lui pose
+ * que ces questions-là : un agent ne doit pas réclamer des dossiers dont aucune
+ * de ses tâches actives ne se sert.
+ */
+export function dossiersManquants(
+  taches: readonly Tache[],
+  dossiers: Readonly<Record<string, string>> = {}
+): string[] {
+  return dossiersUtilises(taches).filter((logique) => !dossiers[logique]);
 }
 
 export interface Connaissance {
@@ -71,6 +111,8 @@ export interface TacheAjoutee {
   nom: string;
   description: string;
   planification: Planification;
+  entrees?: string[];
+  sorties?: Sortie[];
   logiciels?: string[];
   validationHumaine?: boolean;
 }
@@ -98,6 +140,8 @@ export interface Installation {
   photo?: string;
   sexe?: Sexe;
   planning?: Planning;
+  /** Dossier logique de la fiche → dossier réel sur le poste du client. */
+  dossiers?: Record<string, string>;
 }
 
 export interface AgentInstalle {
@@ -109,6 +153,7 @@ export interface AgentInstalle {
   fiche: Fiche;
   /** Le plan réellement exécuté : fiche par défaut + modifications du client. */
   planning: Tache[];
+  dossiers: Record<string, string>;
 }
 
 export function planningDuClient(fiche: Fiche, planning: Planning = {}): Tache[] {
@@ -144,6 +189,8 @@ export function planningDuClient(fiche: Fiche, planning: Planning = {}): Tache[]
     }
     taches.push({
       ...ajoutee,
+      entrees: ajoutee.entrees ?? [],
+      sorties: ajoutee.sorties ?? [],
       logiciels: ajoutee.logiciels ?? [],
       validationHumaine: ajoutee.validationHumaine ?? true,
       active: true,
@@ -169,7 +216,7 @@ export function installerAgents(
   const parId = new Map(fiches.map((f) => [f.id, f]));
   const prenomsVus = new Set<string>();
 
-  return installations.map(({ prenom, ficheId, voix, photo, sexe, planning }) => {
+  return installations.map(({ prenom, ficheId, voix, photo, sexe, planning, dossiers }) => {
     const fiche = parId.get(ficheId);
     if (!fiche) {
       throw new Error(
@@ -191,6 +238,7 @@ export function installerAgents(
       sexe,
       fiche,
       planning: planningDuClient(fiche, planning),
+      dossiers: dossiers ?? {},
     };
   });
 }
