@@ -193,6 +193,30 @@ verifier(
   refuse([{ prenom: 'X', ficheId: 'AG-9999', voix: 'v' }], fiches)
 );
 
+// Photo : la fiche en livre une, le client peut la remplacer.
+const avecPhotos = installerAgents(
+  [{ ...marie.fiche, photo: 'visuels/ag-0028.png' }],
+  [
+    { prenom: 'Marie', ficheId: marie.fiche.id, voix: 'v' },
+    { prenom: 'Sophie', ficheId: marie.fiche.id, voix: 'v', photo: 'visuels/sophie.png' },
+  ]
+);
+
+verifier(
+  'sans choix du client, la photo de la fiche est reprise',
+  avecPhotos[0].photo === 'visuels/ag-0028.png'
+);
+
+verifier(
+  "la photo choisie par le client l'emporte sur celle de la fiche",
+  avecPhotos[1].photo === 'visuels/sophie.png'
+);
+
+verifier(
+  "une fiche sans photo n'empêche pas l'installation",
+  agents.every((a) => typeof a.photo === 'string')
+);
+
 // Détection du prénom : « l'employeur dit Carla, Carla répond ».
 const moteur = new ConversationEngine(agents, {
   conversation: { max_context_turns: 10, user_session_timeout_minutes: 30 },

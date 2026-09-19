@@ -54,6 +54,8 @@ export interface Fiche {
   expert: Expert;
   taches: Tache[];
   connecteurs: Connecteur[];
+  /** Portrait livré avec la fiche ; le client peut lui en substituer un autre. */
+  photo?: string;
 }
 
 /** Ce que le client change au plan par défaut d'une tâche de la fiche. */
@@ -83,19 +85,22 @@ export interface Planning {
 }
 
 /**
- * Le prénom et la voix n'existent pas dans la fiche : l'employeur les choisit à
- * l'installation, et deux clients peuvent nommer la même fiche différemment.
+ * Prénom, voix et photo n'appartiennent pas au métier : l'employeur les choisit
+ * à l'installation, et deux clients peuvent habiller la même fiche autrement.
+ * La fiche ne porte qu'une photo par défaut, que le client remplace ou non.
  */
 export interface Installation {
   prenom: string;
   ficheId: string;
   voix: string;
+  photo?: string;
   planning?: Planning;
 }
 
 export interface AgentInstalle {
   prenom: string;
   voix: string;
+  photo: string;
   fiche: Fiche;
   /** Le plan réellement exécuté : fiche par défaut + modifications du client. */
   planning: Tache[];
@@ -159,7 +164,7 @@ export function installerAgents(
   const parId = new Map(fiches.map((f) => [f.id, f]));
   const prenomsVus = new Set<string>();
 
-  return installations.map(({ prenom, ficheId, voix, planning }) => {
+  return installations.map(({ prenom, ficheId, voix, photo, planning }) => {
     const fiche = parId.get(ficheId);
     if (!fiche) {
       throw new Error(
@@ -174,7 +179,13 @@ export function installerAgents(
     }
     prenomsVus.add(clef);
 
-    return { prenom, voix, fiche, planning: planningDuClient(fiche, planning) };
+    return {
+      prenom,
+      voix,
+      photo: photo ?? fiche.photo ?? '',
+      fiche,
+      planning: planningDuClient(fiche, planning),
+    };
   });
 }
 
