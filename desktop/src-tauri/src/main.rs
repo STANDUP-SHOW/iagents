@@ -19,12 +19,15 @@ use agents::{AgentRouter, AgentCommand};
 use llm::{LLMService, AgentPersona};
 use voiceprint::{VoicePrintService, VoicePrint};
 use telegram::{TelegramService, TelegramCredentials};
+use database::Database;
+use std::sync::Arc;
 
 pub struct AppState {
     voice: Mutex<Option<VoiceState>>,
     agents: Mutex<AgentRouter>,
     llm: Mutex<Option<LLMService>>,
     telegram: Mutex<Option<TelegramCredentials>>,
+    db: Arc<Mutex<Option<Database>>>,
 }
 
 #[tauri::command]
@@ -188,6 +191,7 @@ fn deactivate_agent(agent_id: String, state: State<AppState>) -> Result<serde_js
 fn enroll_voice(
     user_id: String,
     audio_samples: Vec<Vec<i16>>,
+    state: State<AppState>,
 ) -> Result<String, String> {
     if audio_samples.is_empty() {
         return Err("No audio samples provided".to_string());
@@ -195,7 +199,15 @@ fn enroll_voice(
 
     match VoicePrintService::create_voice_print(&user_id, audio_samples, 44100) {
         Ok(voice_print) => {
-            // TODO: Store in database with encryption
+            // Try to store in database
+            if let Ok(Some(db)) = state.db.lock().map(|guard| guard.as_ref()) {
+                let mfcc_json = serde_json::to_string(&voice_print.mfcc_features)
+                    .unwrap_or_else(|_| "[]".to_string());
+                if let Err(e) = db.save_voice_print(&user_id, &mfcc_json) {
+                    eprintln!("Failed to store voice print in database: {}", e);
+                }
+            }
+
             println!(
                 "Voice print created with {} features",
                 voice_print.mfcc_features.len()
@@ -257,6 +269,22 @@ async fn connect_telegram(
 
     match TelegramService::connect_telegram(bot_token, chat_id).await {
         Ok(credentials) => {
+            // Store credentials in database
+            if let Ok(Some(db)) = state.db.lock().map(|guard| guard.as_ref()) {
+                let creds_json = serde_json::json!({
+                    "bot_token": &credentials.bot_token,
+                    "chat_id": &credentials.chat_id,
+                }).to_string();
+                if let Err(e) = db.save_connector_credentials(
+                    "default_user",
+                    "Telegram",
+                    "telegram",
+                    &creds_json,
+                ) {
+                    eprintln!("Failed to store Telegram credentials: {}", e);
+                }
+            }
+
             let mut telegram = state.telegram.lock().unwrap();
             *telegram = Some(credentials);
             Ok("Telegram connected successfully".to_string())
@@ -285,11 +313,26 @@ async fn send_telegram_message(
 }
 
 fn main() {
+    // Initialize database
+    let db = match Database::new("iagent.db") {
+        Ok(database) => {
+            if let Err(e) = database.init() {
+                eprintln!("Failed to initialize database: {}", e);
+            }
+            Some(database)
+        }
+        Err(e) => {
+            eprintln!("Failed to create database: {}", e);
+            None
+        }
+    };
+
     let state = AppState {
         voice: Mutex::new(None),
         agents: Mutex::new(AgentRouter::new()),
         llm: Mutex::new(None),
         telegram: Mutex::new(None),
+        db: Arc::new(Mutex::new(db)),
     };
 
     tauri::Builder::default()

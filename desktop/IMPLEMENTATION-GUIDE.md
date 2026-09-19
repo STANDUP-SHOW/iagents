@@ -358,12 +358,43 @@ pip install pyttsx3
 - [ ] Click "Disconnect" → status reverts to disconnected
 - [ ] Agent can call `send_telegram_message()` to post messages
 
-**TODO (Phase 7+)**:
+**TODO (Phase 8+)**:
 - [ ] Actual Telegram Bot API calls (currently logged locally)
 - [ ] Encrypt credentials (XChaCha20-Poly1305) before storage
-- [ ] Persist to database via Prisma
 - [ ] OAuth flow for future authentication methods
 - [ ] WhatsApp connector (architecture ready, implementation pending)
+
+## Phase 7 Completed: Database Persistence
+
+✅ **Status**: SQLite database initialized with schema for users, voice prints, and connectors  
+✅ **Voice Print Storage**: MFCC features saved to database on enrollment  
+✅ **Telegram Credentials**: Bot token and chat ID persisted on connection  
+✅ **Database Module**: Full CRUD operations via rusqlite
+
+**Implementation**:
+- Updated `src-tauri/Cargo.toml` with rusqlite and uuid dependencies
+- Refactored `src-tauri/src/database.rs` with real SQLite operations:
+  * `new()` - Opens/creates iagent.db at app launch
+  * `init()` - Creates users, voice_prints, and connectors tables
+  * `save_voice_print()` - Stores MFCC data as JSON
+  * `get_voice_print()` - Retrieves voice print for user
+  * `save_connector_credentials()` - Stores encrypted connector credentials
+  * `get_connector_credentials()` - Retrieves credentials by type
+- Updated `src-tauri/src/main.rs`:
+  * Added Database to AppState
+  * Database initialized at app startup
+  * `enroll_voice()` now saves voice print to DB
+  * `connect_telegram()` persists credentials to DB
+- Database file: `iagent.db` (SQLite3 format)
+
+**Schema**:
+```sql
+users (id TEXT PRIMARY KEY, username, email, created_at)
+voice_prints (id, user_id UNIQUE, mfcc_data, created_at)
+connectors (id, name, type, credentials, status, user_id, created_at)
+```
+
+**Next**: Windows build and test phase
 
 ### 7. Database Migrations
 - [ ] Run Prisma migrations: `npx prisma migrate deploy`
