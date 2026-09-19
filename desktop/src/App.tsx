@@ -19,6 +19,10 @@ function App() {
   const [lastResponse, setLastResponse] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [moteur, setMoteur] = useState<ConversationEngine | null>(null)
+  // Pourquoi l'écoute ou le modèle manquent : sans ça, l'utilisateur ne voit
+  // qu'un « Voice not initialized » qui ne dit pas quel fichier déposer.
+  const [motifEcoute, setMotifEcoute] = useState<string | null>(null)
+  const [motifModele, setMotifModele] = useState<string | null>(null)
 
   useEffect(() => {
     initializeApp()
@@ -64,15 +68,20 @@ function App() {
 
   const initializeApp = async () => {
     try {
-      // Initialize voice module
-      await invoke('init_voice').catch(() => {
-        console.log('Voice module not available in this environment')
-      })
+      // L'échec dit quel fichier manque et où : le taire obligerait à deviner.
+      await invoke('init_voice')
+        .then(() => setMotifEcoute(null))
+        .catch((err) => setMotifEcoute(String(err)))
 
-      // Initialize LLM service
-      await invoke('init_llm').catch(() => {
-        console.log('LLM service not available - check ANTHROPIC_API_KEY')
-      })
+      await invoke('init_llm')
+        .then(() => setMotifModele(null))
+        .catch(() =>
+          setMotifModele(
+            "Le modèle de langage n'est pas joignable : la variable " +
+              "d'environnement ANTHROPIC_API_KEY n'est pas définie. L'agent " +
+              'entendra, mais ne répondra pas.'
+          )
+        )
 
       await chargerAgentsInstalles()
     } catch (err) {
@@ -139,9 +148,7 @@ function App() {
         setError(null)
       } catch (err) {
         setIsListening(false)
-        setError(
-          "Agent activé, mais l'écoute est indisponible : " + String(err)
-        )
+        setError("Agent activé, mais l'écoute est indisponible. " + (motifEcoute ?? String(err)))
       }
     } else {
       setIsListening(false)
@@ -252,6 +259,10 @@ function App() {
 
       <main className="app-main">
         {error && <div className="error-banner">{error}</div>}
+        {motifEcoute && (
+          <div className="error-banner">Écoute indisponible — {motifEcoute}</div>
+        )}
+        {motifModele && <div className="error-banner">{motifModele}</div>}
         {activeTab === 'dashboard' && <Dashboard agents={agents} isListening={isListening} />}
         {activeTab === 'agents' && (
           <AgentManager
