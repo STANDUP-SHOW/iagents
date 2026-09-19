@@ -10,13 +10,16 @@ mod voice;
 mod agents;
 mod connectors;
 mod database;
+mod llm;
 
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
+use llm::{LLMService, AgentPersona};
 
 pub struct AppState {
     voice: Mutex<Option<VoiceState>>,
     agents: Mutex<AgentRouter>,
+    llm: Mutex<Option<LLMService>>,
 }
 
 #[tauri::command]
@@ -70,6 +73,60 @@ fn process_voice_audio(audio_data: Vec<i16>, state: State<AppState>) -> Result<O
     } else {
         Err("Voice not initialized".to_string())
     }
+}
+
+#[tauri::command]
+fn get_partial_result(state: State<AppState>) -> Result<Option<String>, String> {
+    let voice_guard = state.voice.lock().unwrap();
+
+    if let Some(voice) = voice_guard.as_ref() {
+        voice.get_partial_result()
+    } else {
+        Err("Voice not initialized".to_string())
+    }
+}
+
+#[tauri::command]
+fn init_llm(state: State<AppState>) -> Result<String, String> {
+    match LLMService::new() {
+        Ok(service) => {
+            let mut llm = state.llm.lock().unwrap();
+            *llm = Some(service);
+            Ok("LLM service initialized".to_string())
+        }
+        Err(e) => Err(format!("Failed to initialize LLM: {}", e))
+    }
+}
+
+#[tauri::command]
+async fn call_agent_llm(
+    agent_id: String,
+    command: String,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let agents = state.agents.lock().unwrap();
+    let agent = agents
+        .list_agents()
+        .iter()
+        .find(|a| a.id == agent_id)
+        .cloned()
+        .ok_or("Agent not found".to_string())?;
+    drop(agents);
+
+    let llm = state.llm.lock().unwrap();
+    let llm_service = llm.as_ref().ok_or("LLM not initialized")?;
+
+    let persona = AgentPersona {
+        id: agent.id.clone(),
+        name: agent.name.clone(),
+        role: agent.description.clone(),
+        system_prompt: format!(
+            "You are {}, a {}. Respond concisely and helpfully to user requests.",
+            agent.name, agent.description
+        ),
+    };
+
+    llm_service.call_agent_llm(&persona, &command).await
 }
 
 #[tauri::command]
@@ -149,6 +206,7 @@ fn main() {
     let state = AppState {
         voice: Mutex::new(None),
         agents: Mutex::new(AgentRouter::new()),
+        llm: Mutex::new(None),
     };
 
     tauri::Builder::default()
@@ -159,6 +217,9 @@ fn main() {
             start_voice_recognition,
             stop_voice_recognition,
             process_voice_audio,
+            get_partial_result,
+            init_llm,
+            call_agent_llm,
             route_voice_command,
             get_agents,
             activate_agent,

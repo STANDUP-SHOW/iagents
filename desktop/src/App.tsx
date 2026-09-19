@@ -10,17 +10,43 @@ function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors'>('dashboard')
   const [agents, setAgents] = useState<any[]>([])
   const [isListening, setIsListening] = useState(false)
+  const [partialResult, setPartialResult] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     initializeApp()
   }, [])
 
+  useEffect(() => {
+    if (!isListening) {
+      setPartialResult('')
+      return
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const result = await invoke<string | null>('get_partial_result')
+        if (result) {
+          setPartialResult(result)
+        }
+      } catch (err) {
+        console.log('Failed to get partial result:', err)
+      }
+    }, 200)
+
+    return () => clearInterval(interval)
+  }, [isListening])
+
   const initializeApp = async () => {
     try {
       // Initialize voice module
       await invoke('init_voice').catch(() => {
         console.log('Voice module not available in this environment')
+      })
+
+      // Initialize LLM service
+      await invoke('init_llm').catch(() => {
+        console.log('LLM service not available - check ANTHROPIC_API_KEY')
       })
 
       // Load agents from backend
@@ -77,6 +103,13 @@ function App() {
           )}
         </div>
       </header>
+
+      {isListening && partialResult && (
+        <div className="transcription-display">
+          <span className="transcription-label">Hearing:</span>
+          <span className="transcription-text">{partialResult}</span>
+        </div>
+      )}
 
       <nav className="app-nav">
         <button
