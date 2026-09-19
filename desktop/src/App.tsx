@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import './App.css'
+import { installerAgents, type Fiche, type Installation } from './agents/fiche'
+import { ConversationEngine } from './engines/ConversationEngine'
+import reglages from './config/conversation-settings.json'
 import Dashboard from './components/Dashboard'
 import VoiceTraining from './components/VoiceTraining'
 import AgentManager from './components/AgentManager'
@@ -15,6 +18,7 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
+  const [moteur, setMoteur] = useState<ConversationEngine | null>(null)
 
   useEffect(() => {
     initializeApp()
@@ -70,6 +74,8 @@ function App() {
         console.log('LLM service not available - check ANTHROPIC_API_KEY')
       })
 
+      await chargerAgentsInstalles()
+
       // Load agents from backend
       await loadAgents()
     } catch (err) {
@@ -120,22 +126,45 @@ function App() {
     }
   }
 
+  // Les fiches font 16 Mo : Rust les sert, l'assemblage reste ici où il est testé.
+  const chargerAgentsInstalles = async () => {
+    try {
+      const brut = await invoke<string>('lire_installation')
+      const installation: { agents: Installation[] } = JSON.parse(brut)
+
+      const fiches = await Promise.all(
+        installation.agents.map(async (a) =>
+          JSON.parse(await invoke<string>('lire_fiche', { id: a.ficheId })) as Fiche
+        )
+      )
+
+      setMoteur(new ConversationEngine(installerAgents(fiches, installation.agents), reglages))
+    } catch (err) {
+      console.log('Agents installés non chargés :', err)
+    }
+  }
+
   const processVoiceCommand = async (command: string) => {
-    if (!activeAgent || !command.trim()) return
+    if (!command.trim()) return
 
     try {
       setIsProcessing(true)
       setPartialResult('')
 
-      const agent = agents.find((a) => a.id === activeAgent)
-      if (!agent) {
-        setError('Active agent not found')
+      // C'est le prénom prononcé qui choisit l'agent, pas la case cochée.
+      const detecte = moteur?.detectAgent(command)
+      if (!detecte) {
+        // Aucun prénom reconnu : on ne fait pas répondre un agent au hasard.
         return
       }
 
-      const response = await invoke<string>('call_agent_llm', {
-        agent_id: activeAgent,
-        command: command,
+      const { agent, utterance } = detecte
+      setActiveAgent(agent.fiche.id)
+
+      const response = await invoke<string>('repondre', {
+        prenom: agent.prenom,
+        promptSysteme: moteur!.formatSystemPrompt(agent.fiche.id),
+        enonce: utterance || command,
       })
 
       setLastResponse(response)

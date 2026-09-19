@@ -64,10 +64,14 @@ impl LLMService {
             },
         ];
 
-        // Build request
+        // Le modele est celui que dimensionnement/tarifs-api.json prend pour
+        // reference : c'est sur lui que l'argument economique est calcule.
+        // Effort bas parce que la conversation vise moins de trois secondes ;
+        // une reponse de standard telephonique ne demande pas de reflexion longue.
         let request = serde_json::json!({
-            "model": "claude-3-5-haiku-20241022",
+            "model": "claude-sonnet-5",
             "max_tokens": 1024,
+            "output_config": { "effort": "low" },
             "system": agent_persona.system_prompt,
             "messages": messages,
         });

@@ -143,6 +143,36 @@ async fn call_agent_llm(
     llm_service.call_agent_llm(&persona, &command).await
 }
 
+/// Le prompt vient de l'interface, qui l'assemble depuis la vraie fiche :
+/// consigne d'expert, connaissances du metier, savoir de la maison, genre choisi
+/// par le client. Le construire ici a partir du routeur code en dur donnerait un
+/// agent generique, en anglais, qui ignore tout ce que la fiche decrit.
+#[tauri::command]
+async fn repondre(
+    prenom: String,
+    prompt_systeme: String,
+    enonce: String,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    if prompt_systeme.trim().is_empty() {
+        return Err("prompt systeme vide : la fiche n a pas ete chargee".to_string());
+    }
+
+    let llm_service = {
+        let llm = state.llm.lock().unwrap();
+        llm.as_ref().ok_or("LLM not initialized")?.clone()
+    };
+
+    let persona = AgentPersona {
+        id: prenom.clone(),
+        name: prenom,
+        role: String::new(),
+        system_prompt: prompt_systeme,
+    };
+
+    llm_service.call_agent_llm(&persona, &enonce).await
+}
+
 #[tauri::command]
 fn route_voice_command(utterance: String, state: State<AppState>) -> Result<AgentCommand, String> {
     let agents = state.agents.lock().unwrap();
@@ -356,6 +386,7 @@ fn main() {
             send_telegram_message,
             fiches::lire_installation,
             fiches::lire_fiche,
+            repondre,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
