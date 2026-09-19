@@ -76,7 +76,27 @@ Lancer la boutique iagent.agency avec :
 - [ ] Dashboard acheteur
 - [ ] **Temps estimé** : 4-6h pour MVP
 
-### 3. **Documentation Commerciale**
+### 3. **Application Desktop iAgent** ⚠️
+- **État** : Non touché cette session
+- **Technologie** : Tauri (Rust) + Vue.js frontend
+- **Dossier** : `desktop/`
+- **Prérequis** : 
+  - Windows 10/11 (pour build MSI)
+  - Rust 1.70+
+  - Node.js 18+
+  - Visual Studio Build Tools (C++)
+- **Commandes** :
+  ```bash
+  cd desktop
+  npm install
+  npm run dev      # Dev mode (http://localhost:5173)
+  npm run build    # MSI installer (~80-100 MB)
+  ```
+- **Test requis** : Vérifier que 1249 agents se chargent en local
+- **À faire** : Build MSI si release requise (⚠️ Windows machine only)
+- **Temps estimé** : 30 min (dev test) + 1h (MSI build sur Windows)
+
+### 4. **Documentation Commerciale**
 - [ ] Tableau de pricing par agent
 - [ ] Docs économie (ROI local vs API)
 - [ ] Guide d'installation iAgent Desktop
@@ -117,7 +137,12 @@ iagents/
 - [ ] Ajouter bouton CTA "Télécharger iAgent Desktop"
 - [ ] Lien vers doc économie (créer si absent)
 
-### Phase 3 : Buffer (5 min)
+### Phase 3 : Desktop App Check (5 min)
+- [ ] Vérifier état build desktop (`npm run dev` dans `desktop/`)
+- [ ] Vérifier que 1249 agents se chargent
+- [ ] Pas de build MSI requis pour ce soir (Windows machine requise)
+
+### Phase 4 : Buffer (5 min)
 - [ ] Screenshot du site en ligne
 - [ ] Vérification finale avant remise
 
