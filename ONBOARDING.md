@@ -1,88 +1,88 @@
-# iAgent — Onboarding (5 min)
+# iAgent — prise en main en 5 minutes
 
-## Qu'est-ce qu'on fait?
+Lu en premier par toute nouvelle session (humain ou Claude). `CLAUDE.md` garde
+les règles durables, `README.md` le contenu du dépôt et les commandes. Ce
+fichier dit **ce qu'on vend, où on en est, et quoi faire ensuite**.
 
-On vend **1249 fiches d'agents IA** — des employés virtuels préconfi gurés pour des métiers spécifiques (secrétaire, designer, vendeur, etc.). Chaque agent est un expert avec 25 ans d'expérience.
+## Ce qu'on vend
 
-## À qui on vend?
+Des **employés virtuels** : 1249 fiches d'agents IA, un métier par fiche
+(secrétaire administratif, designer publicitaire, gestionnaire de courrier…),
+chacun préconfiguré avec son persona d'expert, ses tâches quotidiennes, ses
+connecteurs (email, WhatsApp, navigateur), et ce qu'il lui faut comme machine.
 
-- **PME**: Pour automatiser les tâches quotidiennes (email, docs, images, vidéos).
-- **LocalAgent** (partenaire): Mini-PCs préconfigurés avec les agents dedans, sans frais API.
-- **iagent.agency** (boutique): Site pour acheter des agents à la carte.
+Trois noms, trois choses distinctes :
 
-## Comment ça marche?
+| Nom | C'est quoi | Où |
+|---|---|---|
+| **iAgent** | La marque et l'application desktop qui exécute les agents sur le PC du client, **en local sans tokens facturés**, ou par API avec la clé du client. | `desktop/` (Tauri + Rust + React) |
+| **iagent.agency** | La boutique en ligne où l'on achète les agents à la carte. | `frontend/` (React + Vite), déployé sur Vercel |
+| **LocalAgent** | Le matériel : mini-PC « poste » (~170 €) et « bundle » de calcul (mini-PC S à carte NVIDIA XL), livrés avec les agents préinstallés. | `dimensionnement/` (catalogue, placement, coût) |
 
-**1 agent = 1 fichier JSON** (`agents/AG-XXXX-nom.json`) avec:
-- **Qui**: Persona, expérience, règles
-- **Quoi**: Tâches quotidiennes (email, rapports, images, etc.)
-- **Avec quoi**: Modèles IA (texte, image, vision, audio)
-- **Coût**: Matériel GPU + API résiduelle vs API seule
+Argument de vente : **matériel + API résiduelle au moins 3× moins cher que
+l'API seule** sur un an, et sans commune mesure avec un employé (2 800 €/mois
+chargé). `npm run economie` le calcule fiche par fiche.
 
-**Exécution**: 
-- Local (mini-PC du client) → pas de frais API
-- API (cloud) → fallback si le local n'a pas la puissance
+## Comment ça marche
 
-## État du projet (19/09/2026, 13h)
+- **Un agent = un fichier JSON** dans `agents/` (`AG-0001-secretaire-administratif.json`),
+  conforme à `contrat/paquet-agent.schema.json`. Boutique, application et
+  dimensionnement lisent le même fichier.
+- Tout ce qui est **dérivé** (`materiel`, `commercial`, `execution.appelsParJourEstimes`)
+  est recalculé par `npm run verifier -- --corriger`. On ne le retouche jamais à la main.
+- Local par défaut ; bascule API annoncée au client ; ses clés restent sur sa machine.
 
-### ✅ Fait
-- **1249 fiches JSON validées** (`npm run controle` → 0 erreur)
-- **Frontend compilé** (Vue.js + Vite, prêt à déployer)
-- **Schéma agent finalisé** (`paquet-agent.schema.json`)
-- **Dimensionnement matériel** (GPU, RAM, prix pour chaque agent)
+## État réel au 19/09/2026
 
-### ❌ Manque (urgent)
-- **Site en ligne** (Vercel deployment jamais fait)
-- **Features e-commerce** (panier, achat, paiement)
-- **Business plan** (doc d'économie, tarifs, ROI)
-- **Application desktop** (iAgent.exe, Tauri + Rust)
+### En ligne et vérifié
+- **Boutique** : https://iagents-beta.vercel.app — 1249 fiches, filtres par secteur et famille, recherche.
+  Projet Vercel `iagents` lié au dépôt GitHub : **chaque push sur `main` redéploie**.
+- **Fiches** : 1249 paquets, `npm run controle` → 0 faute (dimensionnement 15/15, économie 7/7).
 
-## Structure du dépôt
+### Configuré, en attente d'une action de Max
+- **iagent.agency** : le domaine est attaché au projet Vercel (`iagent.agency` + redirection `www`),
+  mais le DNS chez OVH pointe encore vers l'hébergement OVH (51.91.236.255). À faire dans
+  l'espace client OVH → zone DNS de `iagent.agency` :
+  - enregistrement `A` de `iagent.agency` → `76.76.21.21` (remplacer l'A actuel, supprimer l'AAAA `2001:41d0:301::29`)
+  - enregistrement `CNAME` de `www` → `cname.vercel-dns.com`
+  Vercel émet le certificat tout seul dans l'heure qui suit.
 
-```
-iagents/
-├── agents/                    # 1249 fiches JSON (validated ✅)
-├── frontend/                  # Vue.js/Vite app (compiled ✅)
-│   └── dist/                 # Build ready to ship
-├── desktop/                   # Tauri app (untouched)
-├── contrat/                   # JSON schema + doc
-├── dimensionnement/           # GPU/CPU/Price calculator
-└── outils/                    # Validators, batch generator
-```
+### Pas encore fait
+- **Application desktop iAgent (MSI Windows)** : le code Rust/Tauri existe (voix, routage,
+  base SQLite, Telegram) mais **n'a jamais compilé sur GitHub Actions** : config Tauri
+  invalide, icônes absentes, dépendance Vosk non liable. Voir `desktop/README.md` pour l'état
+  du workflow « Build Windows MSI ». L'application n'exécute pas encore les 1249 fiches :
+  elle embarque 5 agents d'exemple codés en dur.
+- **E-commerce** : pas de panier, pas de paiement. La vitrine `drop-shipper.fr/b/iagent-agency`
+  reste le point de vente en attendant.
+- **Catalogue LocalAgent définitif** : `dimensionnement/machines.json` est un relevé AliExpress
+  indicatif, pas des références négociées.
 
-## Commandes clés
+## Ce qui a cassé la veille (pour ne pas recommencer)
+
+- `vercel.json` contenait une clé `projectSettings` que Vercel refuse : dix déploiements en
+  erreur d'affilée **avant même de builder**. Toujours lire `errorMessage` du déploiement
+  (API ou tableau de bord) plutôt que relancer.
+- Trois cibles de déploiement en parallèle (Vercel, Netlify, GitHub Pages) avec trois configs :
+  une seule reste, Vercel.
+- Un serveur local sur le port 5000 d'une machine distante n'est joignable par personne.
+- La page « Économie » du front inventait ses chiffres (`prix × 0,3` = matériel) au lieu de
+  lire `dimensionnement/economie.ts`. Remplacé par les vrais calculs, générés au build.
+
+## Commandes
 
 ```bash
-npm run controle              # Validate all 1249 packages
-npm run verifier -- --corriger # Auto-fix schema errors
-npm run generer -- --sec --ids AG-0002  # Generate new agents (Batch API)
-node outils/packs.ts          # Which agent runs on which PC?
-npm run economie              # Price vs API-only comparison table
+npm install && npm run controle            # tout valider (obligatoire avant de pousser)
+npm run verifier -- --corriger             # recalculer les champs dérivés
+npm run economie                           # docs/economie.md : coût API seule vs Local-Agent
+npm --prefix frontend ci && npm --prefix frontend run build   # exactement ce que fait Vercel
+npm --prefix frontend run dev              # boutique en local (http://localhost:3000)
 ```
 
-## Prochaines étapes (dans l'ordre)
+## Prochaines étapes, dans l'ordre
 
-1. **Déployer sur Vercel** ← Blocké (besoin credentials)
-2. Ajouter panier + checkout (Stripe)
-3. Créer business plan doc
-4. Build desktop app MSI
-5. Connecter localagent.fr
-
-## Notes importantes
-
-- **Schema est la source de vérité** — tout dériv é (materiel, commercial, pricing) est recalculé auto
-- **Pas de hand-copy** — si un chiffre existe à deux endroits, l'un sera faux
-- **Local par défaut, API au choix** — agents tournent sur PC client sans coûts, sauf fallback
-- **Économie 3× : matériel + API locale vs API seule**
-
-## ⚠️ À clarifier (confusions de noms)
-
-Le projet utilise 3 noms pour potentiellement la même chose ou des variantes:
-- **iAgent** = application desktop?
-- **iagent.agency** = boutique en ligne?
-- **LocalAgent** = mini-PCs + app?
-
-→ **Fable/dev suivant**: Clarifier ces noms avec Max. Quelle est la vraie distinction?
-
-## Questions?
-
-Voir CLAUDE.md pour règles durables du projet.
+1. Max : DNS OVH → Vercel (ci-dessus). Ensuite `https://iagent.agency` répond.
+2. Obtenir un premier MSI qui s'installe (workflow « Build Windows MSI », artefact `iagent-desktop-msi`),
+   puis brancher l'application sur les fiches `agents/` au lieu des 5 agents codés en dur.
+3. Boutique : bouton « Acheter » vers la vitrine existante, puis panier + Stripe.
+4. Catalogue LocalAgent réel (références, prix négociés) à la place du relevé AliExpress.
