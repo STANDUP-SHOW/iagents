@@ -1,0 +1,161 @@
+{
+  "stt": {
+    "primary": {
+      "provider": "whisper",
+      "mode": "local",
+      "model": "base",
+      "language": "fr-FR",
+      "sample_rate": 16000,
+      "channels": 1,
+      "vad_threshold": 0.5,
+      "silence_duration_ms": 1000,
+      "max_duration_seconds": 300
+    },
+    "fallback": {
+      "provider": "openai_api",
+      "api_key": "${OPENAI_API_KEY}",
+      "model": "whisper-1",
+      "timeout_ms": 30000
+    },
+    "performance": {
+      "expected_latency_ms": "2000-3000",
+      "accuracy_target": 0.95
+    }
+  },
+  "tts": {
+    "primary": {
+      "provider": "elevenlabs",
+      "api_key": "${ELEVENLABS_API_KEY}",
+      "api_url": "https://api.elevenlabs.io/v1",
+      "model": "eleven_monolingual_v1",
+      "default_voice_id": "EXAVITQu4vr4xnSDxMaL",
+      "default_stability": 0.75,
+      "default_similarity_boost": 0.75,
+      "default_speed": 1.0,
+      "cache_audio": true,
+      "timeout_ms": 10000
+    },
+    "fallback": {
+      "provider": "google_cloud",
+      "project_id": "${GOOGLE_PROJECT_ID}",
+      "voice_name": "fr-FR-Neural2-A",
+      "ssml_gender": "FEMALE"
+    },
+    "performance": {
+      "expected_latency_ms": "1000-2000",
+      "naturalness_target": "human-like"
+    }
+  },
+  "llm": {
+    "primary": {
+      "provider": "claude",
+      "api_key": "${ANTHROPIC_API_KEY}",
+      "api_url": "https://api.anthropic.com/v1",
+      "model": "claude-3-5-sonnet-20241022",
+      "max_tokens": 500,
+      "timeout_ms": 15000,
+      "temperature": 0.7,
+      "top_p": 0.9,
+      "presence_penalty": 0.1,
+      "frequency_penalty": 0.0,
+      "conversation_cache": true
+    },
+    "fallback": {
+      "provider": "ollama_local",
+      "base_url": "http://localhost:11434",
+      "model": "mistral:7b",
+      "temperature": 0.7,
+      "timeout_ms": 20000
+    },
+    "performance": {
+      "expected_latency_ms": "1000-3000",
+      "quality_target": "natural conversation"
+    }
+  },
+  "vad": {
+    "provider": "silero",
+    "model": "silero_vad",
+    "mode": "local",
+    "threshold": 0.5,
+    "min_speech_duration_ms": 300,
+    "min_silence_duration_ms": 1000,
+    "sample_rate": 16000
+  },
+  "wake_word": {
+    "provider": "custom_regex",
+    "case_insensitive": true,
+    "fuzzy_matching": true,
+    "fuzzy_ratio_threshold": 0.85,
+    "extract_utterance": true
+  },
+  "conversation": {
+    "max_context_turns": 10,
+    "context_token_limit": 8000,
+    "memory_backend": "redis",
+    "memory_ttl_hours": 24,
+    "user_session_timeout_minutes": 30,
+    "agent_switch_cooldown_ms": 500,
+    "concurrent_conversations_per_agent": 5,
+    "recording": {
+      "enabled": true,
+      "format": "wav",
+      "bitrate": 16,
+      "sample_rate": 16000,
+      "compression": "none"
+    }
+  },
+  "audio_hardware": {
+    "input": {
+      "device": "default",
+      "sample_rate": 16000,
+      "channels": 1,
+      "buffer_size": 4096,
+      "latency": "low"
+    },
+    "output": {
+      "device": "default",
+      "sample_rate": 16000,
+      "channels": 1,
+      "buffer_size": 4096,
+      "latency": "low"
+    }
+  },
+  "performance": {
+    "target_latency_ms": {
+      "stt": 2500,
+      "llm": 2000,
+      "tts": 1500,
+      "total_tube_to_tube": 3000
+    },
+    "quality_metrics": {
+      "stt_accuracy": 0.95,
+      "naturalness_rating": 4.5,
+      "user_satisfaction": 0.9
+    }
+  },
+  "security": {
+    "encrypt_conversation_logs": true,
+    "encrypt_at_rest": true,
+    "encrypt_in_transit": true,
+    "api_key_rotation_days": 90,
+    "gdpr_compliance": true,
+    "consent_required": true,
+    "consent_message": "Cet appel sera enregistré à des fins d'amélioration de service. Confirmez-vous?"
+  },
+  "fallbacks": {
+    "stt_failure": "ask_user_to_repeat",
+    "tts_failure": "use_fallback_tts",
+    "llm_failure": "use_fallback_llm",
+    "audio_failure": "escalate_to_human",
+    "max_retries": 3,
+    "retry_delay_ms": 1000
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "include_audio": false,
+    "include_full_transcript": true,
+    "include_api_calls": true,
+    "retention_days": 90
+  }
+}

@@ -3,7 +3,7 @@
   windows_subsystem = "windows"
 )]
 
-use tauri::{Manager, State};
+use tauri::State;
 use std::sync::Mutex;
 
 mod voice;
@@ -38,7 +38,9 @@ fn greet(name: &str) -> String {
 #[tauri::command]
 fn init_voice(state: State<AppState>) -> Result<String, String> {
     // Initialize voice with default model path (typically bundled)
-    let model_path = "model/vosk-model-en-us-0.22";
+    // Whisper large-v3, le modèle sur lequel le dimensionnement est chiffré
+    // (palier audio-parole : 8 Go de RAM, 4 Go de disque, CPU).
+    let model_path = "modeles/ggml-large-v3.bin";
 
     match VoiceState::new(model_path) {
         Ok(voice_state) => {
@@ -88,7 +90,7 @@ fn get_partial_result(state: State<AppState>) -> Result<Option<String>, String> 
     let voice_guard = state.voice.lock().unwrap();
 
     if let Some(voice) = voice_guard.as_ref() {
-        voice.get_partial_result()
+        voice.get_partial_result().map(Some)
     } else {
         Err("Voice not initialized".to_string())
     }
@@ -112,17 +114,22 @@ async fn call_agent_llm(
     command: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let agents = state.agents.lock().unwrap();
-    let agent = agents
-        .list_agents()
-        .iter()
-        .find(|a| a.id == agent_id)
-        .cloned()
-        .ok_or("Agent not found".to_string())?;
-    drop(agents);
+    let agent = {
+        let agents = state.agents.lock().unwrap();
+        agents
+            .list_agents()
+            .iter()
+            .find(|a| a.id == agent_id)
+            .cloned()
+            .ok_or("Agent not found".to_string())?
+    };
 
-    let llm = state.llm.lock().unwrap();
-    let llm_service = llm.as_ref().ok_or("LLM not initialized")?;
+    // Le service est copié puis le verrou relâché : le garder à travers le .await
+    // rendrait la commande non transmissible entre fils d'exécution.
+    let llm_service = {
+        let llm = state.llm.lock().unwrap();
+        llm.as_ref().ok_or("LLM not initialized")?.clone()
+    };
 
     let persona = AgentPersona {
         id: agent.id.clone(),
@@ -200,7 +207,8 @@ fn enroll_voice(
     match VoicePrintService::create_voice_print(&user_id, audio_samples, 44100) {
         Ok(voice_print) => {
             // Try to store in database
-            if let Ok(Some(db)) = state.db.lock().map(|guard| guard.as_ref()) {
+            let verrou = state.db.lock().ok();
+            if let Some(db) = verrou.as_ref().and_then(|g| g.as_ref()) {
                 let mfcc_json = serde_json::to_string(&voice_print.mfcc_features)
                     .unwrap_or_else(|_| "[]".to_string());
                 if let Err(e) = db.save_voice_print(&user_id, &mfcc_json) {
@@ -269,22 +277,10 @@ async fn connect_telegram(
 
     match TelegramService::connect_telegram(bot_token, chat_id).await {
         Ok(credentials) => {
-            // Store credentials in database
-            if let Ok(Some(db)) = state.db.lock().map(|guard| guard.as_ref()) {
-                let creds_json = serde_json::json!({
-                    "bot_token": &credentials.bot_token,
-                    "chat_id": &credentials.chat_id,
-                }).to_string();
-                if let Err(e) = db.save_connector_credentials(
-                    "default_user",
-                    "Telegram",
-                    "telegram",
-                    &creds_json,
-                ) {
-                    eprintln!("Failed to store Telegram credentials: {}", e);
-                }
-            }
-
+            // Le jeton du bot reste en mémoire, jamais sur le disque : il était
+            // écrit en clair dans le SQLite du poste et jamais relu. Le jour où
+            // la connexion devra survivre à un redémarrage, elle passera par le
+            // coffre du système (Credential Manager, Trousseau), pas par cette base.
             let mut telegram = state.telegram.lock().unwrap();
             *telegram = Some(credentials);
             Ok("Telegram connected successfully".to_string())
@@ -303,12 +299,14 @@ async fn send_telegram_message(
     text: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let telegram = state.telegram.lock().unwrap();
+    let credentials = {
+        let telegram = state.telegram.lock().unwrap();
+        telegram.clone()
+    };
 
-    if let Some(credentials) = telegram.as_ref() {
-        TelegramService::send_message(credentials, &text).await
-    } else {
-        Err("Telegram not connected. Call connect_telegram first.".to_string())
+    match credentials {
+        Some(credentials) => TelegramService::send_message(&credentials, &text).await,
+        None => Err("Telegram not connected. Call connect_telegram first.".to_string()),
     }
 }
 

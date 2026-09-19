@@ -69,6 +69,11 @@
       "type": "string",
       "minLength": 200
     },
+    "photo": {
+      "description": "Portrait livré avec la fiche, chemin relatif au dépôt. Le client peut lui en substituer un autre à l'installation ; la fiche n'est pas modifiée pour autant. Un chemin plutôt qu'une adresse web : la boutique et l'application locale lisent le même fichier, et une fiche ne dépend d'aucun hébergeur extérieur.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9/_-]*\\.(png|jpg|jpeg|webp)$"
+    },
     "expert": {
       "type": "object",
       "additionalProperties": false,
@@ -162,6 +167,59 @@
                 "properties": {
                   "type": {
                     "const": "quotidienne"
+                  },
+                  "heure": {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "jour",
+                  "heure"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "hebdomadaire"
+                  },
+                  "jour": {
+                    "enum": [
+                      "lundi",
+                      "mardi",
+                      "mercredi",
+                      "jeudi",
+                      "vendredi",
+                      "samedi",
+                      "dimanche"
+                    ]
+                  },
+                  "heure": {
+                    "type": "string",
+                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "jour",
+                  "heure"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "mensuelle"
+                  },
+                  "jour": {
+                    "description": "Quantième du mois, borné à 28 : au-delà, la tâche sauterait silencieusement les mois courts.",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 28
                   },
                   "heure": {
                     "type": "string",

@@ -34,6 +34,7 @@ pub struct ResponseContent {
     pub text: Option<String>,
 }
 
+#[derive(Clone)]
 pub struct LLMService {
     api_key: String,
     api_url: String,

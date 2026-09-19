@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
 import './App.css'
 import Dashboard from './components/Dashboard'
 import VoiceTraining from './components/VoiceTraining'
