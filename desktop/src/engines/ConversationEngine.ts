@@ -1,5 +1,22 @@
-import agentsConfig from '../config/agents-config.json';
-import conversationSettings from '../config/conversation-settings.json';
+import type { AgentInstalle } from '../agents/fiche';
+
+export interface Reglages {
+  conversation: {
+    max_context_turns: number;
+    user_session_timeout_minutes: number;
+  };
+  tts: { primary: Record<string, unknown> };
+  stt: { primary: Record<string, unknown> };
+  llm: { primary: Record<string, unknown> };
+}
+
+function normaliserPrenom(mot: string): string {
+  return mot
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^\p{Letter}]/gu, '');
+}
 
 interface Message {
   role: 'user' | 'agent';
@@ -19,63 +36,45 @@ interface ConversationContext {
 
 export class ConversationEngine {
   private contexts: Map<string, ConversationContext> = new Map();
-  private agentIndex: Map<string, any> = new Map();
+  private parFicheId: Map<string, AgentInstalle> = new Map();
+  private agents: readonly AgentInstalle[];
+  private reglages: Reglages;
 
-  constructor() {
-    this.initializeAgents();
-  }
-
-  private initializeAgents(): void {
-    for (const agent of agentsConfig.agents) {
-      this.agentIndex.set(agent.id, agent);
-      // Index also by prenom for wake word detection
-      this.agentIndex.set(agent.prenom.toLowerCase(), agent);
+  constructor(agents: readonly AgentInstalle[], reglages: Reglages) {
+    this.agents = agents;
+    this.reglages = reglages;
+    for (const agent of agents) {
+      this.parFicheId.set(agent.fiche.id, agent);
     }
   }
 
   /**
    * Détecte le prénom de l'agent dans la transcription
-   * Exemple: "Carla, quels sont les horaires?" → "carla"
+   * Exemple: "Carla, quels sont les horaires?" → Carla
    */
-  detectAgent(transcription: string): { agent: any; utterance: string } | null {
-    const lowerTranscription = transcription.toLowerCase().trim();
+  detectAgent(
+    transcription: string
+  ): { agent: AgentInstalle; utterance: string } | null {
+    const mots = transcription.trim().split(/\s+/);
+    if (mots.length === 0 || mots[0] === '') return null;
 
-    for (const agent of agentsConfig.agents) {
-      for (const wakeWord of agent.wake_word) {
-        const pattern = new RegExp(`^${wakeWord}\\s+(.+)$`, 'i');
-        const match = lowerTranscription.match(pattern);
+    const premier = normaliserPrenom(mots[0]);
+    const reste = mots.slice(1).join(' ').trim();
 
-        if (match) {
-          const utterance = match[1];
-          return { agent, utterance };
-        }
+    const exact = this.agents.find((a) => normaliserPrenom(a.prenom) === premier);
+    if (exact) return { agent: exact, utterance: reste };
 
-        // Fuzzy match with threshold
-        if (this.fuzzyMatch(lowerTranscription, wakeWord, 0.85)) {
-          const utterance = lowerTranscription.replace(wakeWord, '').trim();
-          return { agent, utterance };
-        }
-      }
-    }
+    const proches = this.agents.filter((a) => {
+      const prenom = normaliserPrenom(a.prenom);
+      // Une lettre de travers sur un prénom un peu long reste reconnaissable ;
+      // sur un prénom court, elle en désigne souvent un autre.
+      const tolerance = prenom.length >= 5 ? 1 : 0;
+      return this.levenshteinDistance(premier, prenom) <= tolerance;
+    });
 
-    return null;
-  }
-
-  private fuzzyMatch(text: string, pattern: string, threshold: number): boolean {
-    const words = text.split(/\s+/);
-    for (const word of words) {
-      const similarity = this.levenshteinSimilarity(word, pattern);
-      if (similarity >= threshold) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private levenshteinSimilarity(a: string, b: string): number {
-    const maxLen = Math.max(a.length, b.length);
-    const distance = this.levenshteinDistance(a, b);
-    return 1 - distance / maxLen;
+    // Deux prénoms aussi proches l'un que l'autre : mieux vaut ne pas répondre
+    // que faire répondre le mauvais agent.
+    return proches.length === 1 ? { agent: proches[0], utterance: reste } : null;
   }
 
   private levenshteinDistance(a: string, b: string): number {
@@ -143,7 +142,7 @@ export class ConversationEngine {
     context.last_activity = new Date();
 
     // Limite la mémoire à max_context_turns
-    const maxTurns = conversationSettings.conversation.max_context_turns * 2;
+    const maxTurns = this.reglages.conversation.max_context_turns * 2;
     if (context.messages.length > maxTurns) {
       context.messages = context.messages.slice(-maxTurns);
     }
@@ -164,7 +163,7 @@ export class ConversationEngine {
     const context = this.contexts.get(sessionId);
     if (!context) return false;
 
-    const agent = this.agentIndex.get(newAgentId);
+    const agent = this.parFicheId.get(newAgentId);
     if (!agent) return false;
 
     context.current_agent_id = newAgentId;
@@ -174,7 +173,7 @@ export class ConversationEngine {
     this.addMessage(
       sessionId,
       'agent',
-      `[Changement d'agent: ${agent.nom}]`
+      `[Changement d'agent: ${agent.prenom}]`
     );
 
     return true;
@@ -183,8 +182,8 @@ export class ConversationEngine {
   /**
    * Récupère les paramètres de l'agent actuel
    */
-  getAgentConfig(agentId: string): any {
-    return this.agentIndex.get(agentId);
+  getAgentConfig(agentId: string): AgentInstalle | undefined {
+    return this.parFicheId.get(agentId);
   }
 
   /**
@@ -194,10 +193,12 @@ export class ConversationEngine {
     const agent = this.getAgentConfig(agentId);
     if (!agent) return '';
 
-    const basePrompt = agent.llm.system_prompt;
-    const regles = agent.regles.map((r: string) => `- ${r}`).join('\n');
+    const { expert } = agent.fiche;
+    const regles = expert.regles.map((r) => `- ${r}`).join('\n');
 
-    return `${basePrompt}
+    return `${expert.consigne}
+
+Tu t'appelles ${agent.prenom}. Tu réponds quand on t'appelle par ce prénom.
 
 Règles strictes à respecter:
 ${regles}
@@ -242,7 +243,7 @@ Réponse courte et naturelle, comme si vous parliez au téléphone.`;
     const context = this.contexts.get(sessionId);
     if (!context) return true;
 
-    const timeoutMinutes = conversationSettings.conversation.user_session_timeout_minutes;
+    const timeoutMinutes = this.reglages.conversation.user_session_timeout_minutes;
     const elapsed = Date.now() - context.last_activity.getTime();
 
     return elapsed > timeoutMinutes * 60 * 1000;
@@ -252,7 +253,7 @@ Réponse courte et naturelle, comme si vous parliez au téléphone.`;
    * Nettoie les sessions expirées
    */
   cleanupExpiredSessions(): void {
-    for (const [sessionId, context] of this.contexts.entries()) {
+    for (const sessionId of this.contexts.keys()) {
       if (this.isSessionExpired(sessionId)) {
         this.contexts.delete(sessionId);
       }
@@ -280,7 +281,7 @@ Réponse courte et naturelle, comme si vous parliez au téléphone.`;
     return {
       session_id: context.session_id,
       agent_id: context.current_agent_id,
-      agent_name: agent?.nom || 'Unknown',
+      agent_name: agent?.prenom ?? 'inconnu',
       duration_seconds: Math.round(durationMs / 1000),
       messages: context.messages,
       start_time: context.start_time,
@@ -293,11 +294,11 @@ Réponse courte et naturelle, comme si vous parliez au téléphone.`;
    */
   getTTSConfig(agentId: string): any {
     const agent = this.getAgentConfig(agentId);
-    if (!agent) return conversationSettings.tts.primary;
+    if (!agent) return this.reglages.tts.primary;
 
     return {
-      ...conversationSettings.tts.primary,
-      ...agent.tts,
+      ...this.reglages.tts.primary,
+      voice_id: agent.voix,
     };
   }
 
@@ -305,27 +306,21 @@ Réponse courte et naturelle, comme si vous parliez au téléphone.`;
    * Récupère les paramètres STT (global)
    */
   getSTTConfig(): any {
-    return conversationSettings.stt.primary;
+    return this.reglages.stt.primary;
   }
 
   /**
    * Récupère les paramètres LLM pour l'agent
    */
-  getLLMConfig(agentId: string): any {
-    const agent = this.getAgentConfig(agentId);
-    if (!agent) return conversationSettings.llm.primary;
-
-    return {
-      ...conversationSettings.llm.primary,
-      ...agent.llm,
-    };
+  getLLMConfig(): any {
+    return this.reglages.llm.primary;
   }
 
   /**
-   * Liste tous les agents disponibles
+   * Liste tous les agents installés sur ce poste
    */
-  getAllAgents(): any[] {
-    return agentsConfig.agents;
+  getAllAgents(): readonly AgentInstalle[] {
+    return this.agents;
   }
 
   /**
@@ -348,7 +343,7 @@ Réponse courte et naturelle, comme si vous parliez au téléphone.`;
       duration_seconds: duration,
       message_count: context.messages.length,
       agent_id: context.current_agent_id,
-      agent_name: agent?.nom || 'Unknown',
+      agent_name: agent?.prenom ?? 'inconnu',
       last_activity: context.last_activity,
     };
   }

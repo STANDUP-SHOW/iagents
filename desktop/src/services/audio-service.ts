@@ -16,12 +16,10 @@ export interface AudioConfig {
 }
 
 export class AudioService {
-  private sttConfig: AudioConfig;
   private ttsConfig: AudioConfig;
   private audioContext: AudioContext | null = null;
 
   constructor() {
-    this.sttConfig = conversationSettings.stt.primary;
     this.ttsConfig = conversationSettings.tts.primary;
     this.initAudioContext();
   }
