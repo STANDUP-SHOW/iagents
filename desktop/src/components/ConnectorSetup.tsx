@@ -40,8 +40,8 @@ export default function ConnectorSetup() {
     setLoading(true)
     try {
       await invoke<string>('connect_telegram', {
-        bot_token: botToken,
-        chat_id: chatId,
+        botToken: botToken,
+        chatId: chatId,
       })
       setTelegramConnected(true)
       setBotToken('')

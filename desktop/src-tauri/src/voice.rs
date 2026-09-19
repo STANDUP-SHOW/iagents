@@ -156,37 +156,33 @@ impl VoiceState {
 
 pub async fn text_to_speech(text: &str) -> Result<String, String> {
     use std::process::Command;
-    use std::io::Write;
 
-    // Use pyttsx3 via Python subprocess for local TTS
-    // Requires: pip install pyttsx3
-
-    let python_code = format!(
-        r#"
-import pyttsx3
+    // TTS local via pyttsx3 (pip install pyttsx3).
+    // Le texte passe par argv, jamais par le source Python : une reponse de
+    // modele — ou un message arrive par un connecteur — ne doit pas pouvoir
+    // se faire executer ici.
+    const PYTHON_TTS: &str = r##"
 import sys
+import pyttsx3
 
 engine = pyttsx3.init()
-engine.setProperty('rate', 150)  # Speed
-engine.setProperty('volume', 0.9)  # Volume (0.0 to 1.0)
-engine.say(r#"{}"#)
+engine.setProperty('rate', 150)
+engine.setProperty('volume', 0.9)
+engine.say(sys.argv[1])
 engine.runAndWait()
 print("TTS complete")
-"#,
-        text.replace('"', "\\\"")
-    );
+"##;
 
-    let output = Command::new("python3")
-        .arg("-c")
-        .arg(&python_code)
-        .output()
-        .or_else(|_| {
-            // Fallback to python on Windows
-            Command::new("python")
-                .arg("-c")
-                .arg(&python_code)
-                .output()
-        })
+    let lancer = |binaire: &str| {
+        Command::new(binaire)
+            .arg("-c")
+            .arg(PYTHON_TTS)
+            .arg(text)
+            .output()
+    };
+
+    let output = lancer("python3")
+        .or_else(|_| lancer("python"))
         .map_err(|e| format!("Failed to run pyttsx3: {}", e))?;
 
     if !output.status.success() {

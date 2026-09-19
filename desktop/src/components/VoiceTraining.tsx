@@ -46,8 +46,8 @@ export default function VoiceTraining() {
           // Send all 3 utterances to backend
           const allSamples = [placeholderSamples, placeholderSamples, placeholderSamples]
           await invoke<string>('enroll_voice', {
-            user_id: 'current_user',
-            audio_samples: allSamples,
+            userId: 'current_user',
+            audioSamples: allSamples,
           })
           setStage('complete')
           setError('')

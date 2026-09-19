@@ -7,6 +7,8 @@ pub struct Agent {
     pub name: String,
     pub description: String,
     pub status: String, // "active" or "inactive"
+    /// Palier de modele texte (voir dimensionnement/paliers-modeles.json).
+    pub palier: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,30 +35,35 @@ impl AgentRouter {
                 name: "Albert".to_string(),
                 description: "Assistant productivité".to_string(),
                 status: "inactive".to_string(),
+                palier: "texte-standard".to_string(),
             },
             Agent {
                 id: "AG-0002".to_string(),
                 name: "Justine".to_string(),
                 description: "Assistante communication".to_string(),
                 status: "inactive".to_string(),
+                palier: "texte-standard".to_string(),
             },
             Agent {
                 id: "AG-0050".to_string(),
                 name: "Audrey".to_string(),
                 description: "Assistante créative".to_string(),
                 status: "inactive".to_string(),
+                palier: "texte-standard".to_string(),
             },
             Agent {
                 id: "AG-0100".to_string(),
                 name: "Marcus".to_string(),
                 description: "Analyste données".to_string(),
                 status: "inactive".to_string(),
+                palier: "texte-avance".to_string(),
             },
             Agent {
                 id: "AG-0150".to_string(),
                 name: "Olivia".to_string(),
                 description: "Gestionnaire projets".to_string(),
                 status: "inactive".to_string(),
+                palier: "texte-standard".to_string(),
             },
         ];
 
