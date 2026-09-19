@@ -75,57 +75,14 @@ function App() {
       })
 
       await chargerAgentsInstalles()
-
-      // Load agents from backend
-      await loadAgents()
     } catch (err) {
       console.error('Failed to initialize app:', err)
     }
   }
 
-  const loadAgents = async () => {
-    try {
-      const agentList = await invoke<any[]>('get_agents')
-      setAgents(agentList)
-    } catch (err) {
-      console.error('Failed to load agents:', err)
-      // Fallback to hardcoded agents
-      const sampleAgents = [
-        { id: 'AG-0001', name: 'Albert', description: 'Assistant productivité', status: 'inactive' },
-        { id: 'AG-0002', name: 'Justine', description: 'Assistante communication', status: 'inactive' },
-        { id: 'AG-0050', name: 'Audrey', description: 'Assistante créative', status: 'inactive' },
-        { id: 'AG-0100', name: 'Marcus', description: 'Analyste données', status: 'inactive' },
-        { id: 'AG-0150', name: 'Olivia', description: 'Gestionnaire projets', status: 'inactive' },
-      ]
-      setAgents(sampleAgents)
-    }
-  }
-
-  const toggleAgentStatus = async (agentId: string, currentStatus: string) => {
-    try {
-      if (currentStatus === 'inactive') {
-        await invoke('activate_agent', { agentId })
-        // Sans cet appel, la boucle interroge un moteur qui n'écoute pas :
-        // le micro n'est jamais ouvert et aucune phrase n'arrive.
-        await invoke('start_voice_recognition')
-        setActiveAgent(agentId)
-        setIsListening(true)
-        setLastResponse('')
-      } else {
-        await invoke('stop_voice_recognition').catch(() => {})
-        await invoke('deactivate_agent', { agentId })
-        setActiveAgent(null)
-        setIsListening(false)
-        setPartialResult('')
-      }
-      await loadAgents()
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err)
-      setError(errMsg)
-      console.error('Failed to toggle agent:', err)
-    }
-  }
-
+  // La liste montre les agents réellement installés, lus depuis installation.json
+  // et les vraies fiches. Le routeur Rust ne connaît que cinq exemples codés en
+  // dur qui ne correspondent à aucune fiche du catalogue.
   // Les fiches font 16 Mo : Rust les sert, l'assemblage reste ici où il est testé.
   const chargerAgentsInstalles = async () => {
     try {
@@ -138,9 +95,57 @@ function App() {
         )
       )
 
-      setMoteur(new ConversationEngine(installerAgents(fiches, installation.agents), reglages))
+      const m = new ConversationEngine(installerAgents(fiches, installation.agents), reglages)
+      setMoteur(m)
+      setAgents(listerDepuisMoteur(m))
+      setError(null)
     } catch (err) {
-      console.log('Agents installés non chargés :', err)
+      // Sans agents installés, la bibliothèque reste vide plutôt que de montrer
+      // des exemples qui ne correspondent à aucune fiche du catalogue.
+      setAgents([])
+      setError(
+        "Aucun agent installé n'a pu être chargé. Vérifier config/installation.json " +
+          'et le dossier agents/ à côté de l\'application. Détail : ' + String(err)
+      )
+    }
+  }
+
+  const listerDepuisMoteur = (m: ConversationEngine) =>
+    m.getAllAgents().map((a) => ({
+      id: a.fiche.id,
+      name: a.prenom,
+      description: a.fiche.nom,
+      status: 'inactive',
+    }))
+
+  const toggleAgentStatus = async (agentId: string, currentStatus: string) => {
+    const active = currentStatus === 'inactive'
+
+    setActiveAgent(active ? agentId : null)
+    setAgents((liste) =>
+      liste.map((a) =>
+        a.id === agentId ? { ...a, status: active ? 'active' : 'inactive' } : a
+      )
+    )
+    setLastResponse('')
+    setPartialResult('')
+
+    // L'écoute peut manquer (modèle absent) sans empêcher d'activer un agent :
+    // le lier à l'activation rendait le bouton muet sur un poste sans modèle.
+    if (active) {
+      try {
+        await invoke('start_voice_recognition')
+        setIsListening(true)
+        setError(null)
+      } catch (err) {
+        setIsListening(false)
+        setError(
+          "Agent activé, mais l'écoute est indisponible : " + String(err)
+        )
+      }
+    } else {
+      setIsListening(false)
+      await invoke('stop_voice_recognition').catch(() => {})
     }
   }
 
