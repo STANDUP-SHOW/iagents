@@ -154,45 +154,56 @@ impl VoiceState {
     }
 }
 
+// The spoken text is fed through stdin and never interpolated into the script:
+// it comes from the model, so building a program around it would let a crafted
+// sentence run arbitrary code on the client machine.
+const SCRIPT_TTS: &str = "\
+import sys, pyttsx3
+texte = sys.stdin.read()
+moteur = pyttsx3.init()
+moteur.setProperty('rate', 150)
+moteur.setProperty('volume', 0.9)
+moteur.say(texte)
+moteur.runAndWait()
+";
+
 pub async fn text_to_speech(text: &str) -> Result<String, String> {
-    use std::process::Command;
     use std::io::Write;
+    use std::process::{Command, Stdio};
 
-    // Use pyttsx3 via Python subprocess for local TTS
-    // Requires: pip install pyttsx3
-
-    let python_code = format!(
-        r#"
-import pyttsx3
-import sys
-
-engine = pyttsx3.init()
-engine.setProperty('rate', 150)  # Speed
-engine.setProperty('volume', 0.9)  # Volume (0.0 to 1.0)
-engine.say(r#"{}"#)
-engine.runAndWait()
-print("TTS complete")
-"#,
-        text.replace('"', "\\\"")
-    );
-
-    let output = Command::new("python3")
-        .arg("-c")
-        .arg(&python_code)
-        .output()
-        .or_else(|_| {
-            // Fallback to python on Windows
-            Command::new("python")
-                .arg("-c")
-                .arg(&python_code)
-                .output()
-        })
-        .map_err(|e| format!("Failed to run pyttsx3: {}", e))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("TTS error: {}", stderr));
+    fn lancer(programme: &str) -> std::io::Result<std::process::Child> {
+        Command::new(programme)
+            .arg("-c")
+            .arg(SCRIPT_TTS)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
     }
 
-    Ok("Text spoken successfully".to_string())
+    let mut enfant = lancer("python3")
+        .or_else(|_| lancer("python"))
+        .map_err(|e| format!("python introuvable pour la synthèse vocale : {}", e))?;
+
+    let mut entree = enfant
+        .stdin
+        .take()
+        .ok_or_else(|| "entrée standard indisponible".to_string())?;
+    entree
+        .write_all(text.as_bytes())
+        .map_err(|e| format!("écriture vers la synthèse vocale : {}", e))?;
+    drop(entree);
+
+    let sortie = enfant
+        .wait_with_output()
+        .map_err(|e| format!("synthèse vocale interrompue : {}", e))?;
+
+    if !sortie.status.success() {
+        return Err(format!(
+            "synthèse vocale en échec : {}",
+            String::from_utf8_lossy(&sortie.stderr)
+        ));
+    }
+
+    Ok("texte prononcé".to_string())
 }

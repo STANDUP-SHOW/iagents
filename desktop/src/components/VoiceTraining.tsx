@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
 
 export default function VoiceTraining() {
   const [stage, setStage] = useState<'intro' | 'recording' | 'complete'>('intro')
