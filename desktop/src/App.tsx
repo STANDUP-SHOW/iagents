@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { invoke } from '@tauri-apps/api/tauri'
 import './App.css'
 import Dashboard from './components/Dashboard'
 import VoiceTraining from './components/VoiceTraining'
@@ -8,16 +9,34 @@ import ConnectorSetup from './components/ConnectorSetup'
 function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors'>('dashboard')
   const [agents, setAgents] = useState<any[]>([])
-  const [isListening] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Load agents from catalogue on startup
-    loadAgents()
+    initializeApp()
   }, [])
+
+  const initializeApp = async () => {
+    try {
+      // Initialize voice module
+      await invoke('init_voice').catch(() => {
+        console.log('Voice module not available in this environment')
+      })
+
+      // Load agents from backend
+      await loadAgents()
+    } catch (err) {
+      console.error('Failed to initialize app:', err)
+    }
+  }
 
   const loadAgents = async () => {
     try {
-      // Load 5 sample agents for Phase 1
+      const agentList = await invoke<any[]>('get_agents')
+      setAgents(agentList)
+    } catch (err) {
+      console.error('Failed to load agents:', err)
+      // Fallback to hardcoded agents
       const sampleAgents = [
         { id: 'AG-0001', name: 'Albert', description: 'Assistant productivité', status: 'inactive' },
         { id: 'AG-0002', name: 'Justine', description: 'Assistante communication', status: 'inactive' },
@@ -26,8 +45,23 @@ function App() {
         { id: 'AG-0150', name: 'Olivia', description: 'Gestionnaire projets', status: 'inactive' },
       ]
       setAgents(sampleAgents)
+    }
+  }
+
+  const toggleAgentStatus = async (agentId: string, currentStatus: string) => {
+    try {
+      if (currentStatus === 'inactive') {
+        await invoke('activate_agent', { agentId })
+        setIsListening(true)
+      } else {
+        await invoke('deactivate_agent', { agentId })
+        setIsListening(false)
+      }
+      await loadAgents()
     } catch (err) {
-      console.error('Failed to load agents:', err)
+      const errMsg = err instanceof Error ? err.message : String(err)
+      setError(errMsg)
+      console.error('Failed to toggle agent:', err)
     }
   }
 
@@ -72,8 +106,14 @@ function App() {
       </nav>
 
       <main className="app-main">
+        {error && <div className="error-banner">{error}</div>}
         {activeTab === 'dashboard' && <Dashboard agents={agents} isListening={isListening} />}
-        {activeTab === 'agents' && <AgentManager agents={agents} setAgents={setAgents} />}
+        {activeTab === 'agents' && (
+          <AgentManager
+            agents={agents}
+            onToggleAgent={toggleAgentStatus}
+          />
+        )}
         {activeTab === 'voice' && <VoiceTraining />}
         {activeTab === 'connectors' && <ConnectorSetup />}
       </main>

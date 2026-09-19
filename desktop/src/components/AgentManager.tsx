@@ -1,8 +1,18 @@
-export default function AgentManager({ agents, setAgents }: any) {
-  const toggleAgent = (id: string) => {
-    setAgents(agents.map((a: any) =>
-      a.id === id ? { ...a, status: a.status === 'active' ? 'inactive' : 'active' } : a
-    ))
+import { useState } from 'react'
+
+export default function AgentManager({ agents, onToggleAgent }: any) {
+  const [loading, setLoading] = useState<string | null>(null)
+
+  const toggleAgent = async (id: string) => {
+    const agent = agents.find((a: any) => a.id === id)
+    if (!agent || !onToggleAgent) return
+
+    setLoading(id)
+    try {
+      await onToggleAgent(id, agent.status)
+    } finally {
+      setLoading(null)
+    }
   }
 
   return (
@@ -21,8 +31,11 @@ export default function AgentManager({ agents, setAgents }: any) {
             <button
               className="toggle-btn"
               onClick={() => toggleAgent(agent.id)}
+              disabled={loading === agent.id}
             >
-              {agent.status === 'active' ? 'Deactivate' : 'Activate'}
+              {loading === agent.id
+                ? 'Loading...'
+                : agent.status === 'active' ? 'Deactivate' : 'Activate'}
             </button>
           </div>
         ))}
