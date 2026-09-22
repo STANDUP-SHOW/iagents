@@ -23,20 +23,29 @@ const aReecrire = new Set<string>(
 );
 const restants: string[] = [];
 
-// L'accroche et le résumé de métier sont ce que lit le client dans la boutique. Le générateur
-// en avait produit une poignée de gabarits pour onze cent vingt fiches : même phrase, nom du
-// poste changé, et une faute recopiée telle quelle sur trois cent quatre-vingt-neuf d'entre
-// elles. Les fiches encore à réécrire sont listées dans accroches-gabarit.json, qui ne peut
-// que rétrécir : une fiche n'en sort que lorsque ses deux textes sont écrits pour elle.
-const LISTE_ACCROCHES = 'catalogue/accroches-gabarit.json';
-const gabaritsSource = JSON.parse(readFileSync(join(racine, LISTE_ACCROCHES), 'utf8'));
-const aReecrireAccroche = new Set<string>(gabaritsSource.agents as string[]);
+// Une fiche doit décrire le métier vendu sous son identifiant, et non le gabarit du générateur.
+// Sur 1249 fiches, 1026 partageaient le même jeu de tâches au mot près, la même persona, les
+// mêmes règles, les mêmes connaissances, et une consigne où seul le nom du poste était glissé —
+// accroche et résumé venaient de la même fabrique. Les fiches encore à écrire sont listées dans
+// fiches-generiques.json, qui ne peut que rétrécir : une fiche n'en sort que lorsque plus rien
+// en elle n'est repris du gabarit ni d'une autre fiche.
+const LISTE_GENERIQUES = 'catalogue/fiches-generiques.json';
+const gabaritsSource = JSON.parse(readFileSync(join(racine, LISTE_GENERIQUES), 'utf8'));
+const aReecrireContenu = new Set<string>(gabaritsSource.agents as string[]);
 const motif = (g: string) => new RegExp(g.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-const GABARITS: RegExp[] = (gabaritsSource.gabarits as string[]).map(motif);
-const GABARITS_RESUME: RegExp[] = (gabaritsSource.gabaritsResume as string[]).map(motif);
-const restantsAccroche: string[] = [];
-const accroches = new Map<string, string>();
-const resumes = new Map<string, string>();
+const GAB_ACCROCHE: RegExp[] = (gabaritsSource.gabaritsAccroche as string[]).map(motif);
+const GAB_RESUME: RegExp[] = (gabaritsSource.gabaritsResume as string[]).map(motif);
+const GAB_CONSIGNE: RegExp[] = (gabaritsSource.gabaritsConsigne as string[]).map(motif);
+const TACHES_GENERIQUES = (gabaritsSource.tachesGeneriques as string[]).join('|');
+const restantsContenu: string[] = [];
+// Chaque champ garde la première fiche qui l'a employé : la reprise ultérieure est la faute.
+const vus = {
+  accroche: new Map<string, string>(),
+  resume: new Map<string, string>(),
+  persona: new Map<string, string>(),
+  regles: new Map<string, string>(),
+  connaissances: new Map<string, string>(),
+};
 
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 const valider = ajv.compile(schema);
@@ -75,24 +84,35 @@ for (const f of fichiers) {
   }
   if (f !== `${paquet.id}-${paquet.slug}.json`) faute(f, `nom de fichier attendu ${paquet.id}-${paquet.slug}.json`);
   if (slugs.has(paquet.slug)) faute(f, `slug en double avec ${slugs.get(paquet.slug)}`); else slugs.set(paquet.slug, f);
-  const gabarit = GABARITS.find((r) => r.test(paquet.accroche));
-  const gabaritResume = GABARITS_RESUME.find((r) => r.test(paquet.resume_metier ?? ''));
-  const cle = paquet.accroche.trim().toLowerCase();
-  const cleResume = (paquet.resume_metier ?? '').trim().toLowerCase();
-  const jumelle = accroches.get(cle);
-  const jumelleResume = resumes.get(cleResume);
-  const repris = gabarit || gabaritResume || jumelle || jumelleResume;
-  if (aReecrireAccroche.has(paquet.id)) {
-    if (!repris) faute(f, `accroche et résumé réécrits : retirer ${paquet.id} de ${LISTE_ACCROCHES}`);
-    else restantsAccroche.push(paquet.id);
-  } else {
-    if (gabarit) faute(f, `accroche reprise du gabarit « ${gabarit.source} »`);
-    if (gabaritResume) faute(f, `resume_metier repris du gabarit « ${gabaritResume.source} »`);
-    if (jumelle) faute(f, `accroche identique à celle de ${jumelle}`);
-    if (jumelleResume) faute(f, `resume_metier identique à celui de ${jumelleResume}`);
+  const champs: [keyof typeof vus, string, string][] = [
+    ['accroche', paquet.accroche, 'accroche'],
+    ['resume', paquet.resume_metier ?? '', 'resume_metier'],
+    ['persona', paquet.expert.persona, 'expert.persona'],
+    ['regles', JSON.stringify(paquet.expert.regles), 'expert.regles'],
+    ['connaissances', JSON.stringify(paquet.expert.connaissances), 'expert.connaissances'],
+  ];
+  const reprises: string[] = [];
+  const gabAccroche = GAB_ACCROCHE.find((r) => r.test(paquet.accroche));
+  if (gabAccroche) reprises.push(`accroche reprise du gabarit « ${gabAccroche.source} »`);
+  const gabResume = GAB_RESUME.find((r) => r.test(paquet.resume_metier ?? ''));
+  if (gabResume) reprises.push(`resume_metier repris du gabarit « ${gabResume.source} »`);
+  const gabConsigne = GAB_CONSIGNE.find((r) => r.test(paquet.expert.consigne));
+  if (gabConsigne) reprises.push(`consigne reprise du gabarit « ${gabConsigne.source} »`);
+  if (paquet.taches.map((t: any) => t.nom).join('|') === TACHES_GENERIQUES) {
+    reprises.push('les six tâches sont celles du gabarit, pas celles du métier');
   }
-  if (!accroches.has(cle)) accroches.set(cle, f);
-  if (!resumes.has(cleResume)) resumes.set(cleResume, f);
+  for (const [cleChamp, valeur, libelle] of champs) {
+    const k = valeur.trim().toLowerCase();
+    const jumelle = vus[cleChamp].get(k);
+    if (jumelle) reprises.push(`${libelle} identique à celui de ${jumelle}`);
+    else vus[cleChamp].set(k, f);
+  }
+  if (aReecrireContenu.has(paquet.id)) {
+    if (!reprises.length) faute(f, `fiche réécrite : retirer ${paquet.id} de ${LISTE_GENERIQUES}`);
+    else restantsContenu.push(paquet.id);
+  } else {
+    for (const r of reprises) faute(f, r);
+  }
   const com = commercialAttendu(entree.profil);
   if (JSON.stringify(com) !== JSON.stringify(paquet.commercial)) {
     if (corriger) { paquet.commercial = com; modifie = true; } else faute(f, `commercial ≠ profil ${entree.profil} : attendu ${JSON.stringify(com)}`);
@@ -118,8 +138,8 @@ if (restants.length) {
   console.log(`  ⟳ ${restants.length} fiche(s) dont le métier reste à réécrire depuis le catalogue :`);
   for (const r of restants) console.log(`     ${r}`);
 }
-if (restantsAccroche.length) {
-  console.log(`  ⟳ ${restantsAccroche.length} fiche(s) dont l'accroche ou le résumé reste à écrire (gabarit du générateur).`);
+if (restantsContenu.length) {
+  console.log(`  ⟳ ${restantsContenu.length} fiche(s) dont le contenu reste à écrire pour son métier (gabarit du générateur).`);
 }
 console.log(`${fichiers.length} paquets, ${fautes} faute(s)`);
 if (fautes) process.exit(1);
