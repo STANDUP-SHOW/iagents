@@ -150,6 +150,8 @@ export const INTITULES: Record<string, string> = {
   'audit-grc': "Vos missions d'audit et le suivi des recommandations passent par quel outil ?",
   'design-creation': "Vos visuels, vous les faites avec quoi ?",
   'dam-marque': "Où sont rangés vos visuels et votre charte graphique ?",
+  prospection: "Pour trouver de nouveaux clients, vous vous servez de quoi ?",
+  'appels-offres': "Les appels d'offres, vous les suivez où ?",
 };
 
 /**
