@@ -676,6 +676,121 @@
       "type": "string",
       "minLength": 100,
       "description": "Résumé de la journée type de l'expert : ce qu'il fait le matin, l'après-midi, en fin de journée. Montre l'autonomie et les décisions prises seul."
+    },
+    "relais": {
+      "type": "object",
+      "description": "Ce que l'agent reçoit d'autres postes et ce qu'il leur transmet. Une équipe d'agents doit pouvoir se passer le travail sans humain intermédiaire : ce bloc dit où chaque fiche se branche.",
+      "additionalProperties": false,
+      "required": [
+        "recoitDe",
+        "transmetA"
+      ],
+      "properties": {
+        "recoitDe": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "poste",
+              "quoi"
+            ],
+            "properties": {
+              "poste": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 80,
+                "description": "Le poste qui remet ou qui reçoit. Quand il correspond à un agent du catalogue, « agent » porte son identifiant et ce libellé doit être le métier inscrit au catalogue."
+              },
+              "agent": {
+                "type": "string",
+                "pattern": "^AG-[0-9]{4}$",
+                "description": "Identifiant de l'agent du catalogue qui tient ce poste, quand il en existe un."
+              },
+              "quoi": {
+                "type": "string",
+                "minLength": 25,
+                "maxLength": 300,
+                "description": "Ce qui passe d'un poste à l'autre, nommé concrètement."
+              }
+            }
+          }
+        },
+        "transmetA": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "poste",
+              "quoi"
+            ],
+            "properties": {
+              "poste": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 80,
+                "description": "Le poste qui remet ou qui reçoit. Quand il correspond à un agent du catalogue, « agent » porte son identifiant et ce libellé doit être le métier inscrit au catalogue."
+              },
+              "agent": {
+                "type": "string",
+                "pattern": "^AG-[0-9]{4}$",
+                "description": "Identifiant de l'agent du catalogue qui tient ce poste, quand il en existe un."
+              },
+              "quoi": {
+                "type": "string",
+                "minLength": 25,
+                "maxLength": 300,
+                "description": "Ce qui passe d'un poste à l'autre, nommé concrètement."
+              }
+            }
+          }
+        }
+      }
+    },
+    "qualifications": {
+      "type": "object",
+      "description": "Les logiciels du métier que l'agent sait tenir. C'est ce que le client filtre sur la boutique et ce que l'agent confirme à l'entretien d'embauche. Savoir tenir un outil et y être branché sont deux choses : le niveau d'accès réel vient de catalogue/logiciels.json, jamais d'ici.",
+      "additionalProperties": false,
+      "required": [
+        "logiciels"
+      ],
+      "properties": {
+        "logiciels": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "logiciel",
+              "usage"
+            ],
+            "properties": {
+              "logiciel": {
+                "type": "string",
+                "pattern": "^LOG-[0-9]{4}$",
+                "description": "Identifiant d'une entrée de catalogue/logiciels.json. Une fiche ne peut déclarer que des outils qui y figurent : sinon la boutique vendrait des compétences inventées."
+              },
+              "usage": {
+                "type": "string",
+                "minLength": 30,
+                "maxLength": 250,
+                "description": "Ce que l'agent fait concrètement dans cet outil, en une phrase."
+              },
+              "principal": {
+                "type": "boolean",
+                "description": "Vrai pour les deux ou trois outils sans lesquels le poste n'existe pas."
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

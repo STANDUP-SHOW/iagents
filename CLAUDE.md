@@ -106,6 +106,27 @@ par WhatsApp et email.
   a workspace » : soit créer la clé DANS un espace de travail de la console,
   soit poser aussi le secret `ANTHROPIC_WORKSPACE_ID` (en-tête
   `anthropic-workspace-id`). Vu au run n°2 du 18/09/2026.
+- **Une qualification logicielle se déclare par identifiant, jamais en texte libre**
+  (Max, 22/09/2026). `catalogue/logiciels.json` est le référentiel des outils métier
+  du marché européen (611 entrées au 22/09 : ERP, CRM, compta, paie, SIRH, ATS,
+  e-commerce, caisse, WMS/TMS, BTP, immobilier, santé, juridique, assurance,
+  hôtellerie, automobile, terrain, industrie, bureautique). Le bloc
+  `qualifications` d'une fiche ne cite que des `LOG-XXXX` existants ;
+  `npm run verifier` refuse le reste. **Savoir tenir un outil et y être branché sont
+  deux choses** : le niveau d'accès réel (`acces.api`, `acces.mcp`,
+  `acces.navigateur`) vit dans le référentiel et nulle part ailleurs, pour que la
+  boutique ne promette pas un connecteur qui n'existe pas. Les données du
+  référentiel sont indicatives et à confirmer sur un compte réel. Le relevé V6 de
+  Max (`catalogue/reference/connecteurs-erp-crm.json`) reste couvert nom par nom :
+  `npm run verifier-logiciels` échoue si l'un de ses produits disparaît.
+- **Le client règle ses logiciels à l'oral, pendant l'entretien d'embauche**
+  (Max, 22/09/2026). L'agent ouvre la conversation, demande ce que tourne
+  l'entreprise, reconnaît la réponse dans le référentiel (nom ou alias) et écrit sa
+  propre configuration. C'est la première impression du produit.
+- **Une fiche dit de quel poste elle reçoit et à quel poste elle transmet**
+  (bloc `relais`). Un groupe d'agents doit pouvoir faire tourner une entreprise sans
+  humain intermédiaire ; sans ce bloc, chaque fiche est un îlot. Quand le relais
+  nomme un agent du catalogue, le libellé du poste vient du catalogue, pas de la fiche.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,

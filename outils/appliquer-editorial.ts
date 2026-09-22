@@ -70,6 +70,13 @@ for (const e of editorial.agents) {
   paquet.acces = e.acces;
   paquet.modeles = e.modeles;
   paquet.resume_metier = e.resume_metier;
+  // Le relais dit de quel poste la fiche reçoit et à quel poste elle transmet : sans lui,
+  // une équipe d'agents ne se passe le travail que par un humain.
+  if (e.relais) paquet.relais = e.relais;
+  else delete paquet.relais;
+  // Les logiciels du métier : l'agent les annonce sur la boutique et les confirme à l'entretien.
+  if (e.qualifications) paquet.qualifications = e.qualifications;
+  else delete paquet.qualifications;
 
   const capacites: Record<string, string> = {};
   for (const cle of Object.keys(e.modeles)) {

@@ -15,6 +15,8 @@ import { materielPour, appelsParJour } from '../dimensionnement/calculer.ts';
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const schema = JSON.parse(readFileSync(join(racine, 'contrat/paquet-agent.schema.json'), 'utf8'));
 const catalogue = JSON.parse(readFileSync(join(racine, 'catalogue/catalogue.json'), 'utf8'));
+const logiciels = JSON.parse(readFileSync(join(racine, 'catalogue/logiciels.json'), 'utf8'));
+const logicielsParId = new Map<string, any>(logiciels.logiciels.map((l: any) => [l.id, l]));
 const corriger = process.argv.includes('--corriger');
 
 const LISTE = 'catalogue/identite-a-reecrire.json';
@@ -112,6 +114,35 @@ for (const f of fichiers) {
     else restantsContenu.push(paquet.id);
   } else {
     for (const r of reprises) faute(f, r);
+  }
+  // Un relais qui nomme un agent du catalogue ne réécrit pas son métier : le libellé vient
+  // du catalogue, comme partout ailleurs, sinon il finira faux à l'un des deux endroits.
+  if (paquet.relais) {
+    for (const sens of ['recoitDe', 'transmetA'] as const) {
+      for (const lien of paquet.relais[sens] ?? []) {
+        if (!lien.agent) continue;
+        const cible = parId.get(lien.agent);
+        if (!cible) { faute(f, `relais.${sens} : agent ${lien.agent} absent du catalogue`); continue; }
+        if (cible.metier !== lien.poste) {
+          if (corriger) { lien.poste = cible.metier; modifie = true; }
+          else faute(f, `relais.${sens} : poste « ${lien.poste} » ≠ catalogue « ${cible.metier} » pour ${lien.agent}`);
+        }
+        if (lien.agent === paquet.id) faute(f, `relais.${sens} : la fiche se renvoie à elle-même`);
+      }
+    }
+  }
+  // Une qualification ne s'invente pas : l'outil doit exister au référentiel, sinon la boutique
+  // promet un savoir-faire que rien ne soutient.
+  if (paquet.qualifications) {
+    const vusLog = new Set<string>();
+    for (const q of paquet.qualifications.logiciels) {
+      const outil = logicielsParId.get(q.logiciel);
+      if (!outil) { faute(f, `qualifications : ${q.logiciel} absent de catalogue/logiciels.json`); continue; }
+      if (vusLog.has(q.logiciel)) faute(f, `qualifications : ${outil.nom} déclaré deux fois`);
+      vusLog.add(q.logiciel);
+    }
+    const principaux = paquet.qualifications.logiciels.filter((q: any) => q.principal).length;
+    if (principaux > 3) faute(f, `qualifications : ${principaux} outils principaux, trois au plus`);
   }
   const com = commercialAttendu(entree.profil);
   if (JSON.stringify(com) !== JSON.stringify(paquet.commercial)) {
