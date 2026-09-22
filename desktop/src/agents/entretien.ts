@@ -152,6 +152,9 @@ export const INTITULES: Record<string, string> = {
   'dam-marque': "Où sont rangés vos visuels et votre charte graphique ?",
   prospection: "Pour trouver de nouveaux clients, vous vous servez de quoi ?",
   'appels-offres': "Les appels d'offres, vous les suivez où ?",
+  'donnees-marche': "Vos données de marché et vos cours, vous les prenez où ?",
+  fiscalite: "Vos déclarations fiscales partent par quel outil ?",
+  consolidation: "Votre consolidation et votre reporting groupe se font sur quoi ?",
 };
 
 /**
