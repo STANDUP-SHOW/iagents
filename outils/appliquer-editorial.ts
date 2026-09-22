@@ -91,4 +91,16 @@ for (const e of editorial.agents) {
   ecrits++;
 }
 
+// Une fiche réécrite sort de la liste : le vérificateur refuse qu'elle y reste, pour que
+// la liste ne puisse que rétrécir et finisse vide.
+const cheminListe = join(racine, 'catalogue/identite-a-reecrire.json');
+const liste = JSON.parse(readFileSync(cheminListe, 'utf8'));
+const avant = liste.agents.length;
+const ecritsIds = new Set(editorial.agents.map((e: any) => e.id));
+liste.agents = liste.agents.filter((id: string) => !ecritsIds.has(id));
+if (liste.agents.length !== avant) {
+  writeFileSync(cheminListe, JSON.stringify(liste, null, 2) + '\n');
+  console.log(`  ↓ ${avant - liste.agents.length} identifiant(s) retiré(s) de identite-a-reecrire.json, ${liste.agents.length} restant(s)`);
+}
+
 console.log(`${ecrits} fiche(s) réécrite(s) pour le secteur ${secteur}`);
