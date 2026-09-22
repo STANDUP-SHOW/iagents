@@ -23,6 +23,18 @@ const aReecrire = new Set<string>(
 );
 const restants: string[] = [];
 
+// Une accroche est la première chose que lit le client. Le générateur en avait produit huit
+// gabarits pour mille vingt-six fiches : même phrase, nom du poste changé. Les fiches encore
+// à réécrire sont listées dans accroches-gabarit.json, qui ne peut que rétrécir.
+const LISTE_ACCROCHES = 'catalogue/accroches-gabarit.json';
+const gabaritsSource = JSON.parse(readFileSync(join(racine, LISTE_ACCROCHES), 'utf8'));
+const aReecrireAccroche = new Set<string>(gabaritsSource.agents as string[]);
+const GABARITS: RegExp[] = (gabaritsSource.gabarits as string[]).map(
+  (g) => new RegExp(g.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+);
+const restantsAccroche: string[] = [];
+const accroches = new Map<string, string>();
+
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 const valider = ajv.compile(schema);
 const parId = new Map<string, any>(catalogue.agents.map((a: any) => [a.id, a]));
@@ -60,6 +72,17 @@ for (const f of fichiers) {
   }
   if (f !== `${paquet.id}-${paquet.slug}.json`) faute(f, `nom de fichier attendu ${paquet.id}-${paquet.slug}.json`);
   if (slugs.has(paquet.slug)) faute(f, `slug en double avec ${slugs.get(paquet.slug)}`); else slugs.set(paquet.slug, f);
+  const gabarit = GABARITS.find((r) => r.test(paquet.accroche));
+  const cle = paquet.accroche.trim().toLowerCase();
+  const jumelle = accroches.get(cle);
+  if (aReecrireAccroche.has(paquet.id)) {
+    if (!gabarit && !jumelle) faute(f, `accroche réécrite : retirer ${paquet.id} de ${LISTE_ACCROCHES}`);
+    else restantsAccroche.push(paquet.id);
+  } else {
+    if (gabarit) faute(f, `accroche reprise du gabarit « ${gabarit.source} »`);
+    if (jumelle) faute(f, `accroche identique à celle de ${jumelle}`);
+  }
+  if (!accroches.has(cle)) accroches.set(cle, f);
   const com = commercialAttendu(entree.profil);
   if (JSON.stringify(com) !== JSON.stringify(paquet.commercial)) {
     if (corriger) { paquet.commercial = com; modifie = true; } else faute(f, `commercial ≠ profil ${entree.profil} : attendu ${JSON.stringify(com)}`);
@@ -84,6 +107,9 @@ for (const f of fichiers) {
 if (restants.length) {
   console.log(`  ⟳ ${restants.length} fiche(s) dont le métier reste à réécrire depuis le catalogue :`);
   for (const r of restants) console.log(`     ${r}`);
+}
+if (restantsAccroche.length) {
+  console.log(`  ⟳ ${restantsAccroche.length} fiche(s) dont l'accroche reste à écrire (gabarit du générateur).`);
 }
 console.log(`${fichiers.length} paquets, ${fautes} faute(s)`);
 if (fautes) process.exit(1);
