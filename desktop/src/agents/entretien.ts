@@ -100,7 +100,7 @@ export interface Configuration {
   sansReponse: { categorie: string; principale: boolean }[];
 }
 
-const INTITULES: Record<string, string> = {
+export const INTITULES: Record<string, string> = {
   erp: "Quel logiciel de gestion faites-vous tourner, votre ERP ?",
   crm: "Où sont vos clients et vos affaires en cours, quel CRM ?",
   comptabilite: "Avec quel logiciel tenez-vous votre comptabilité ?",
@@ -143,6 +143,10 @@ const INTITULES: Record<string, string> = {
   telephonie: "Vos appels passent par quel système ?",
   association: "Vos adhérents et vos dons sont gérés dans quel outil ?",
   transport: "Vos tournées et vos véhicules sont suivis dans quoi ?",
+  evenementiel: "Vos inscriptions et votre billetterie passent par quel outil ?",
+  'mobilite-internationale': "Vos dossiers de visa et d'expatriation sont suivis dans quel outil ?",
+  energie: "Vos consommations d'énergie sont relevées dans quel outil ?",
+  'rse-carbone': "Votre bilan carbone et vos données RSE sont tenus dans quoi ?",
 };
 
 /**

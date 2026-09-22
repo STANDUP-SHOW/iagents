@@ -23,6 +23,7 @@ import {
   type FicheQualifiee,
   type FicheCompelete,
   type ReferentielActivites,
+  INTITULES,
 } from './src/agents/entretien.ts';
 
 const ici = dirname(fileURLToPath(import.meta.url));
@@ -301,6 +302,14 @@ verifier("une activité inconnue reste inconnue plutôt que rapprochée de force
 verifier(
   "chaque activité dit ce qui caractérise la branche, pas seulement son nom",
   activites.activites.every((a) => a.trait.length >= 40),
+);
+
+// Une catégorie sans question écrite retombe sur une phrase fabriquée à partir de son
+// identifiant (« Quel outil utilisez-vous pour note de frais ? ») : lue à voix haute, elle
+// trahit la fiche produit derrière l'agent.
+verifier(
+  "chaque famille de logiciels a sa question dite en français, aucune n'est fabriquée",
+  ref.categories.every((c) => typeof INTITULES[c] === 'string' && INTITULES[c].length > 10),
 );
 
 console.log(`${echecs === 0 ? `${qualifiees} fiches qualifiées — entretien d'embauche ok` : `${echecs} attente(s) non tenue(s)`}`);
