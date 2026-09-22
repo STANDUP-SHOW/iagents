@@ -17,6 +17,12 @@ const schema = JSON.parse(readFileSync(join(racine, 'contrat/paquet-agent.schema
 const catalogue = JSON.parse(readFileSync(join(racine, 'catalogue/catalogue.json'), 'utf8'));
 const corriger = process.argv.includes('--corriger');
 
+const LISTE = 'catalogue/identite-a-reecrire.json';
+const aReecrire = new Set<string>(
+  JSON.parse(readFileSync(join(racine, LISTE), 'utf8')).agents as string[]
+);
+const restants: string[] = [];
+
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 const valider = ajv.compile(schema);
 const parId = new Map<string, any>(catalogue.agents.map((a: any) => [a.id, a]));
@@ -41,6 +47,17 @@ for (const f of fichiers) {
   const entree = parId.get(paquet.id);
   if (!entree) { faute(f, `id ${paquet.id} absent du catalogue`); continue; }
   if (entree.secteur !== paquet.secteur) faute(f, `secteur ${paquet.secteur} ≠ catalogue ${entree.secteur}`);
+  // Le métier et le slug appartiennent au catalogue. Sans ce contrôle, une fiche peut décrire
+  // un autre métier que celui vendu sous son identifiant — et quatre-vingt-onze l'ont fait sans
+  // que rien ne le signale. Les fiches encore à réécrire sont listées dans identite-a-reecrire.json.
+  const derive = entree.metier !== paquet.nom || entree.slug !== paquet.slug;
+  if (aReecrire.has(paquet.id)) {
+    if (!derive) faute(f, `${paquet.id} est corrigé : le retirer de ${LISTE}`);
+    else restants.push(`${paquet.id} « ${paquet.nom} » → « ${entree.metier} »`);
+  } else {
+    if (entree.metier !== paquet.nom) faute(f, `nom « ${paquet.nom} » ≠ catalogue « ${entree.metier} »`);
+    if (entree.slug !== paquet.slug) faute(f, `slug ${paquet.slug} ≠ catalogue ${entree.slug}`);
+  }
   if (f !== `${paquet.id}-${paquet.slug}.json`) faute(f, `nom de fichier attendu ${paquet.id}-${paquet.slug}.json`);
   if (slugs.has(paquet.slug)) faute(f, `slug en double avec ${slugs.get(paquet.slug)}`); else slugs.set(paquet.slug, f);
   const com = commercialAttendu(entree.profil);
@@ -63,6 +80,10 @@ for (const f of fichiers) {
     if (capsModeles !== capsApi) faute(f, `execution.api.capacites (${capsApi}) ne couvre pas modeles (${capsModeles})`);
   }
   if (modifie) { writeFileSync(chemin, JSON.stringify(paquet, null, 2) + '\n'); console.log(`  ✎ ${f} corrigé`); }
+}
+if (restants.length) {
+  console.log(`  ⟳ ${restants.length} fiche(s) dont le métier reste à réécrire depuis le catalogue :`);
+  for (const r of restants) console.log(`     ${r}`);
 }
 console.log(`${fichiers.length} paquets, ${fautes} faute(s)`);
 if (fautes) process.exit(1);
