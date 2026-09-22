@@ -148,6 +148,8 @@ export const INTITULES: Record<string, string> = {
   energie: "Vos consommations d'énergie sont relevées dans quel outil ?",
   'rse-carbone': "Votre bilan carbone et vos données RSE sont tenus dans quoi ?",
   'audit-grc': "Vos missions d'audit et le suivi des recommandations passent par quel outil ?",
+  'design-creation': "Vos visuels, vous les faites avec quoi ?",
+  'dam-marque': "Où sont rangés vos visuels et votre charte graphique ?",
 };
 
 /**
