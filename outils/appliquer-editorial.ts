@@ -103,4 +103,15 @@ if (liste.agents.length !== avant) {
   console.log(`  ↓ ${avant - liste.agents.length} identifiant(s) retiré(s) de identite-a-reecrire.json, ${liste.agents.length} restant(s)`);
 }
 
+// Même règle pour la liste des fiches restées au gabarit du générateur : une fiche réécrite
+// en sort, et le vérificateur refuse qu'elle y reste.
+const cheminGeneriques = join(racine, 'catalogue/fiches-generiques.json');
+const generiques = JSON.parse(readFileSync(cheminGeneriques, 'utf8'));
+const avantG = generiques.agents.length;
+generiques.agents = generiques.agents.filter((id: string) => !ecritsIds.has(id));
+if (generiques.agents.length !== avantG) {
+  writeFileSync(cheminGeneriques, JSON.stringify(generiques, null, 2) + '\n');
+  console.log(`  ↓ ${avantG - generiques.agents.length} identifiant(s) retiré(s) de fiches-generiques.json, ${generiques.agents.length} restant(s)`);
+}
+
 console.log(`${ecrits} fiche(s) réécrite(s) pour le secteur ${secteur}`);
