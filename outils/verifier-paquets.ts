@@ -140,6 +140,9 @@ for (const f of fichiers) {
       if (!outil) { faute(f, `qualifications : ${q.logiciel} absent de catalogue/logiciels.json`); continue; }
       if (vusLog.has(q.logiciel)) faute(f, `qualifications : ${outil.nom} déclaré deux fois`);
       vusLog.add(q.logiciel);
+      // L'agent prononce cette phrase à l'entretien d'embauche : à la troisième personne, elle
+      // sonne comme une fiche produit lue à voix haute.
+      if (!/^(Je |J')/.test(q.usage)) faute(f, `qualifications : ${outil.nom} — l'usage doit être dit à la première personne, il est prononcé à l'entretien : « ${q.usage.slice(0, 40)}… »`);
     }
     const principaux = paquet.qualifications.logiciels.filter((q: any) => q.principal).length;
     if (principaux > 3) faute(f, `qualifications : ${principaux} outils principaux, trois au plus`);

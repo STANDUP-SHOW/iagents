@@ -1,0 +1,217 @@
+/**
+ * Banc de l'entretien d'embauche. Ce qui est vérifié ici n'est pas du confort : c'est la
+ * limite entre un agent qui dit ce qu'il sait faire et un agent qui promet.
+ */
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import {
+  questionsEntretien,
+  reconnaitre,
+  configurer,
+  porteeReelle,
+  phrasePortee,
+  resumeParle,
+  normaliser,
+  type Referentiel,
+  type FicheQualifiee,
+} from './src/agents/entretien.ts';
+
+const ici = dirname(fileURLToPath(import.meta.url));
+const racine = join(ici, '..');
+const ref: Referentiel = JSON.parse(readFileSync(join(racine, 'catalogue/logiciels.json'), 'utf8'));
+
+function fiche(id: string): FicheQualifiee {
+  const f = readdirSync(join(racine, 'agents')).find((n) => n.startsWith(`${id}-`));
+  if (!f) throw new Error(`fiche ${id} absente`);
+  return JSON.parse(readFileSync(join(racine, 'agents', f), 'utf8'));
+}
+
+let echecs = 0;
+function verifier(intitule: string, condition: boolean, detail = ''): void {
+  if (condition) console.log(`  ok  ${intitule}`);
+  else { echecs++; console.log(`  ✗   ${intitule}${detail ? ` — ${detail}` : ''}`); }
+}
+
+const paie = fiche('AG-0133');       // Assistant paie : Silae, PayFit, Sage Paie, ADP, Cegid, DSN
+const courrier = fiche('AG-0009');   // Gestionnaire de courrier
+
+// --- Les questions ---------------------------------------------------------
+const questions = questionsEntretien(paie, ref);
+verifier(
+  "l'agent pose une question par famille d'outils, pas une par produit",
+  questions.length < (paie.qualifications?.logiciels.length ?? 0),
+  `${questions.length} questions pour ${paie.qualifications?.logiciels.length} logiciels`
+);
+verifier(
+  "les familles sans lesquelles le poste n'existe pas viennent en premier",
+  questions[0].principale === true,
+  questions[0].categorie
+);
+verifier(
+  "la question de paie cite les logiciels que l'agent sait tenir",
+  questions.some((q) => q.categorie === 'paie' && q.propositions.includes('Silae')),
+);
+verifier(
+  "chaque question est une phrase parlée, pas un nom de champ",
+  questions.every((q) => q.intitule.endsWith('?') && q.intitule.length > 20),
+);
+
+// --- La reconnaissance de ce que le client dit -----------------------------
+verifier("« silae » sans majuscule est reconnu", (() => {
+  const v = reconnaitre('silae', ref, 'paie');
+  return v.etat === 'reconnu' && v.logiciel.nom === 'Silae';
+})());
+verifier("« on est sur Pennylane » est reconnu dans la phrase", (() => {
+  const v = reconnaitre('on est sur Pennylane', ref, 'comptabilite');
+  return v.etat === 'reconnu' && v.logiciel.nom === 'Pennylane';
+})());
+verifier("un alias du relevé V6 est reconnu", (() => {
+  const v = reconnaitre('Workday', ref, 'sirh');
+  return v.etat === 'reconnu' && v.logiciel.nom === 'Workday HCM';
+})(), 'Workday → Workday HCM');
+verifier("les accents ne changent rien", normaliser('Eurécia') === normaliser('eurecia'));
+verifier("« Sage » sans famille désigne trop de produits pour être tranché", (() => {
+  const v = reconnaitre('Sage', ref);
+  return v.etat === 'ambigu' && v.candidats.length > 2;
+})());
+verifier("dans une famille donnée, « Sage » se résout au produit de cette famille", (() => {
+  const v = reconnaitre('Sage', ref, 'paie');
+  return v.etat === 'reconnu' && v.logiciel.nom === 'Sage Paie & RH';
+})());
+verifier("« Microsoft » reste ambigu même dans sa famille, il y en a deux", (() => {
+  const v = reconnaitre('Microsoft', ref, 'bureautique');
+  return v.etat === 'ambigu' && v.candidats.length === 2;
+})());
+verifier("un outil inconnu reste inconnu, il n'est pas rapproché du plus proche", (() => {
+  const v = reconnaitre('Gestipaye 3000', ref, 'paie');
+  return v.etat === 'inconnu';
+})());
+
+// --- La configuration ------------------------------------------------------
+const config = configurer(paie, ref, [{ categorie: 'paie', dit: 'Silae' }]);
+verifier(
+  "un outil reconnu et déclaré par la fiche est retenu",
+  config.retenus.some((o) => o.logiciel.nom === 'Silae'),
+);
+
+// Le gestionnaire de courrier travaille dans quatre familles : on n'en renseigne qu'une.
+const partielle = configurer(courrier, ref, [{ categorie: 'bureautique', dit: 'Microsoft 365' }]);
+verifier(
+  "une famille restée sans réponse est signalée comme telle",
+  partielle.sansReponse.length === 3,
+  partielle.sansReponse.map((s) => s.categorie).join(', ')
+);
+verifier(
+  "l'agent distingue ce qui lui manque d'essentiel du reste",
+  partielle.sansReponse.some((s) => s.principale) &&
+    resumeParle(partielle).some((l) => l.includes('Il me manque l\'essentiel')),
+);
+
+const horsMetier = configurer(paie, ref, [{ categorie: 'paie', dit: 'Procore' }]);
+verifier(
+  "un outil que la fiche n'a jamais déclaré savoir tenir n'est pas retenu",
+  horsMetier.retenus.length === 0 && horsMetier.horsMetier.some((l) => l.nom === 'Procore'),
+);
+
+const inconnu = configurer(paie, ref, [{ categorie: 'paie', dit: 'notre logiciel maison Paie2001' }]);
+verifier(
+  "ce que le référentiel ignore est conservé mot pour mot, jamais deviné",
+  inconnu.inconnus.includes('notre logiciel maison Paie2001') && inconnu.retenus.length === 0,
+);
+
+const ambigu = configurer(courrier, ref, [{ categorie: 'bureautique', dit: 'Microsoft' }]);
+verifier(
+  "une réponse qui désigne plusieurs produits fait redemander, pas choisir",
+  ambigu.aPreciser.length === 1 && ambigu.retenus.length === 0,
+);
+verifier(
+  "et l'agent redemande à voix haute en citant les produits possibles",
+  resumeParle(ambigu).some((l) => l.includes('Lequel est le vôtre ?') && l.includes('Microsoft 365')),
+);
+
+// --- Le client parle comme il parle ---------------------------------------
+verifier("« on fait ça sur Excel » tombe sur la suite bureautique", (() => {
+  const v = reconnaitre('on fait ça sur Excel', ref, 'bureautique');
+  return v.etat === 'reconnu' && v.logiciel.nom === 'Microsoft 365';
+})());
+verifier("« LinkedIn » tout court désigne l'outil de recrutement", (() => {
+  const v = reconnaitre('LinkedIn', ref, 'ats');
+  return v.etat === 'reconnu' && v.logiciel.nom === 'LinkedIn Recruiter';
+})());
+verifier("« on n'a rien » est une réponse, pas une incompréhension", (() => {
+  const v = reconnaitre("on n'a rien", ref, 'facturation');
+  return v.etat === 'sans-outil';
+})());
+verifier("« tout est sur papier » aussi", (() => {
+  const v = reconnaitre('tout est sur papier', ref, 'ged');
+  return v.etat === 'sans-outil';
+})());
+const rien = configurer(courrier, ref, [{ categorie: 'facturation', dit: "on n'a rien pour ça" }]);
+verifier(
+  "une famille sans outil n'est ni retenue, ni notée comme inconnue",
+  rien.sansOutil.length === 1 && rien.inconnus.length === 0 && rien.retenus.length === 0,
+);
+verifier(
+  "l'agent le dit à voix haute et annonce comment il fera sans",
+  resumeParle(rien).some((l) => l.includes("Vous n'avez pas d'outil") && l.includes('vos fichiers')),
+);
+verifier(
+  "un nom de produit contenant un mot de négation reste reconnu comme produit",
+  (() => {
+    const v = reconnaitre('Pennylane', ref, 'comptabilite');
+    return v.etat === 'reconnu';
+  })(),
+);
+
+// --- Ce que l'agent promet -------------------------------------------------
+const sansApi = ref.logiciels.filter((l) => porteeReelle(l) === 'navigateur');
+verifier(
+  "un outil sans interface annonce le navigateur et la validation du client",
+  sansApi.length > 0 && sansApi.every((l) => {
+    const p = phrasePortee(l);
+    return p.includes('navigateur') && p.includes('valid');
+  }),
+  `${sansApi.length} outils concernés`
+);
+const avecApi = ref.logiciels.filter((l) => porteeReelle(l) === 'api');
+verifier(
+  "même avec une interface officielle, l'agent ne se dit jamais déjà connecté",
+  avecApi.every((l) => {
+    const p = phrasePortee(l).toLowerCase();
+    return !p.includes('je suis connecté') && !p.includes('je suis branché');
+  }),
+);
+verifier(
+  "un outil à interface officielle dit que l'accès reste à ouvrir sur le compte du client",
+  avecApi.every((l) => phrasePortee(l).includes('votre compte')),
+);
+
+const resume = resumeParle(inconnu);
+verifier(
+  "devant un outil inconnu, l'agent dit qu'il ne prétendra pas savoir s'en servir",
+  resume.some((l) => l.includes('Paie2001') && l.includes('ne prétendrai pas')),
+);
+
+// --- Toutes les fiches qualifiées passent l'entretien ----------------------
+const fichiers = readdirSync(join(racine, 'agents'));
+let qualifiees = 0;
+let sansQuestion = 0;
+for (const f of fichiers) {
+  const p: FicheQualifiee = JSON.parse(readFileSync(join(racine, 'agents', f), 'utf8'));
+  if (!p.qualifications) continue;
+  qualifiees++;
+  if (questionsEntretien(p, ref).length === 0) sansQuestion++;
+}
+verifier(
+  "toute fiche qualifiée sait mener son entretien",
+  sansQuestion === 0,
+  `${qualifiees} fiches qualifiées, ${sansQuestion} sans question`
+);
+verifier(
+  "un agent sans qualification ne pose aucune question plutôt que d'en inventer",
+  questionsEntretien({ nom: 'témoin' }, ref).length === 0,
+);
+
+console.log(`${echecs === 0 ? `${qualifiees} fiches qualifiées — entretien d'embauche ok` : `${echecs} attente(s) non tenue(s)`}`);
+if (echecs) process.exit(1);
