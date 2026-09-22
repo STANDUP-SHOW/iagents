@@ -110,7 +110,7 @@ const aDixNeuf = tachesQuotidiennes(marie.planning, '19:00').map((t) => t.id);
 
 verifier(
   "le client déplace une tâche de la fiche à 19h00",
-  aDixNeuf.includes('tenir-journal-ventes'),
+  aDixNeuf.includes('etat-facturation-du-jour'),
   aDixNeuf.join(' ')
 );
 
@@ -132,7 +132,7 @@ verifier(
 
 verifier(
   "la fiche n'est pas modifiée par le planning du client",
-  marie.fiche.taches.find((t) => t.id === 'tenir-journal-ventes')?.planification.heure ===
+  marie.fiche.taches.find((t) => t.id === 'etat-facturation-du-jour')?.planification.heure ===
     '17:30'
 );
 
@@ -160,7 +160,7 @@ try {
   planningDuClient(marie.fiche, {
     ajoutees: [
       {
-        id: 'rediger-factures',
+        id: 'etablir-factures',
         nom: 'x',
         description: 'x',
         planification: { type: 'a-la-demande' },
@@ -248,7 +248,7 @@ verifier(
   "un dossier d'une tâche désactivée n'est pas demandé",
   (() => {
     const sansJournal = marie.planning.map((t) =>
-      t.id === 'tenir-journal-ventes' ? { ...t, active: false } : t
+      t.id === 'etat-facturation-du-jour' ? { ...t, active: false } : t
     );
     return dossiersUtilises(sansJournal).length <= attendus.length;
   })()
@@ -308,13 +308,13 @@ verifier(
 );
 
 const sousControle = planningDuClient(marie.fiche, {
-  ajustements: [{ tacheId: 'rediger-factures', validationHumaine: true }],
+  ajustements: [{ tacheId: 'etablir-factures', validationHumaine: true }],
 });
 const attentes = enAttenteDeControle(sousControle);
 
 verifier(
   'une tâche mise sous contrôle attend une décision',
-  attentes.length === 1 && attentes[0].tacheId === 'rediger-factures'
+  attentes.length === 1 && attentes[0].tacheId === 'etablir-factures'
 );
 
 verifier(
@@ -325,20 +325,20 @@ verifier(
 
 verifier(
   "tant que rien n'est décidé, la tâche sous contrôle ne s'exécute pas",
-  !aExecuter(sousControle, attentes).some((t) => t.id === 'rediger-factures')
+  !aExecuter(sousControle, attentes).some((t) => t.id === 'etablir-factures')
 );
 
 verifier(
   'lancée par le client, elle s exécute',
-  aExecuter(sousControle, decider(attentes, 'rediger-factures', { verbe: 'lancer' })).some(
-    (t) => t.id === 'rediger-factures'
+  aExecuter(sousControle, decider(attentes, 'etablir-factures', { verbe: 'lancer' })).some(
+    (t) => t.id === 'etablir-factures'
   )
 );
 
 verifier(
   'bloquée par le client, elle ne s exécute pas',
-  !aExecuter(sousControle, decider(attentes, 'rediger-factures', { verbe: 'bloquer', raison: 'montant faux' })).some(
-    (t) => t.id === 'rediger-factures'
+  !aExecuter(sousControle, decider(attentes, 'etablir-factures', { verbe: 'bloquer', raison: 'montant faux' })).some(
+    (t) => t.id === 'etablir-factures'
   )
 );
 
@@ -351,7 +351,7 @@ verifier(
   'un blocage sans raison est refusé',
   (() => {
     try {
-      decider(attentes, 'rediger-factures', { verbe: 'bloquer', raison: '   ' });
+      decider(attentes, 'etablir-factures', { verbe: 'bloquer', raison: '   ' });
       return false;
     } catch {
       return true;
@@ -362,7 +362,7 @@ verifier(
 verifier(
   "la raison du blocage revient à l'agent",
   retoursPourAgent(
-    decider(attentes, 'rediger-factures', { verbe: 'bloquer', raison: 'montant faux' })
+    decider(attentes, 'etablir-factures', { verbe: 'bloquer', raison: 'montant faux' })
   ).some((r) => r.includes('montant faux'))
 );
 
