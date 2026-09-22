@@ -1,0 +1,139 @@
+{
+ "source": "catalogue V6",
+ "verifie": "2026-09-21",
+ "note": "Par profil : ou va le secret, comment tester, comment revoquer.",
+ "entrees": [
+  {
+   "Profil connexion": "OAuth utilisateur",
+   "Cas d’usage": "SaaS au nom de l’utilisateur",
+   "Authentification": "OAuth 2.0 Authorization Code + PKCE",
+   "Actions utilisateur": "Cliquer Connecter, choisir compte, lire les permissions, consentir",
+   "Actions administrateur / intégrateur": "Enregistrer client et callback; demander les scopes minimaux",
+   "Stockage secret": "Coffre OS; jamais dans le tableur/log",
+   "Test automatique": "Lire profil puis opération sans effet",
+   "Révocation": "Bouton Déconnecter + révocation fournisseur",
+   "Mode MCP desktop": "Serveur MCP distant ou proxy desktop",
+   "Contrôles obligatoires": "Expiration/rotation, état du consentement, journal"
+  },
+  {
+   "Profil connexion": "OAuth administrateur",
+   "Cas d’usage": "Tenant entreprise",
+   "Authentification": "OAuth 2.0 + consentement admin",
+   "Actions utilisateur": "Demander à l’administrateur d’approuver",
+   "Actions administrateur / intégrateur": "Créer application multi/single tenant, politique de consentement",
+   "Stockage secret": "Coffre OS/HSM entreprise",
+   "Test automatique": "Lecture tenant + test sur ressource dédiée",
+   "Révocation": "Révocation Entra/Google/Admin",
+   "Mode MCP desktop": "MCP distant via passerelle desktop",
+   "Contrôles obligatoires": "Séparation tenants, least privilege, DPA"
+  },
+  {
+   "Profil connexion": "Clé API / PAT",
+   "Cas d’usage": "SaaS sans OAuth",
+   "Authentification": "Clé personnelle ou compte service",
+   "Actions utilisateur": "Créer/coller la clé ou demander à l’admin",
+   "Actions administrateur / intégrateur": "Limiter scopes/IP, expiration et rotation",
+   "Stockage secret": "Coffre OS chiffré",
+   "Test automatique": "Endpoint identité ou lecture minimale",
+   "Révocation": "Supprimer clé fournisseur + local",
+   "Mode MCP desktop": "MCP desktop garde la clé",
+   "Contrôles obligatoires": "Masquage, rotation, aucun export"
+  },
+  {
+   "Profil connexion": "Compte service",
+   "Cas d’usage": "Automatisation serveur",
+   "Authentification": "OAuth client credentials / JWT / certificat",
+   "Actions utilisateur": "Choisir l’organisation et faire approuver",
+   "Actions administrateur / intégrateur": "Créer compte non humain, rôles, certificat",
+   "Stockage secret": "Coffre OS/TPM/HSM",
+   "Test automatique": "Lecture/écriture dans bac à sable",
+   "Révocation": "Désactiver compte et certificat",
+   "Mode MCP desktop": "Serveur MCP distant dédié",
+   "Contrôles obligatoires": "Pas de droits interactifs, audit complet"
+  },
+  {
+   "Profil connexion": "Protocole standard",
+   "Cas d’usage": "Email/fichiers/calendrier",
+   "Authentification": "SMTP/IMAP, WebDAV, CalDAV, SFTP",
+   "Actions utilisateur": "Entrer serveur ou utiliser découverte; consentir",
+   "Actions administrateur / intégrateur": "Forcer TLS, dossiers autorisés, quotas",
+   "Stockage secret": "Coffre OS",
+   "Test automatique": "Envoi brouillon/test, listing dossier",
+   "Révocation": "Supprimer identifiants/app password",
+   "Mode MCP desktop": "Serveur MCP desktop local",
+   "Contrôles obligatoires": "Préférer OAuth, interdire TLS obsolète"
+  },
+  {
+   "Profil connexion": "Application locale",
+   "Cas d’usage": "LibreOffice, Sage, dossiers, DB",
+   "Authentification": "Session OS / compte DB local",
+   "Actions utilisateur": "Installer logiciel, choisir dossier/base, autoriser",
+   "Actions administrateur / intégrateur": "Installer pilote/SDK signé, créer compte restreint",
+   "Stockage secret": "Keychain/DPAPI/libsecret",
+   "Test automatique": "Lire un fichier ou requête de santé",
+   "Révocation": "Retirer permission dossier/compte",
+   "Mode MCP desktop": "MCP stdio local isolé",
+   "Contrôles obligatoires": "Sandbox, allowlist chemins, sauvegarde, corbeille"
+  },
+  {
+   "Profil connexion": "Partenariat éditeur",
+   "Cas d’usage": "API non publique",
+   "Authentification": "Contrat + credentials partenaire",
+   "Actions utilisateur": "Demander activation auprès de l’éditeur",
+   "Actions administrateur / intégrateur": "Signer accord, obtenir sandbox et certification",
+   "Stockage secret": "Coffre entreprise",
+   "Test automatique": "Scénario certifié en sandbox",
+   "Révocation": "Résiliation + révocation",
+   "Mode MCP desktop": "MCP distant contrôlé",
+   "Contrôles obligatoires": "Ne jamais promettre avant validation commerciale"
+  },
+  {
+   "Profil connexion": "Sans API officielle",
+   "Cas d’usage": "Outil fermé",
+   "Authentification": "Aucune voie fiable",
+   "Actions utilisateur": "Informer l’utilisateur des limites",
+   "Actions administrateur / intégrateur": "Chercher export/import ou partenariat",
+   "Stockage secret": "Aucun secret tant que non validé",
+   "Test automatique": "Aucun",
+   "Révocation": "Sans objet",
+   "Mode MCP desktop": "MCP déconseillé",
+   "Contrôles obligatoires": "RPA navigateur seulement avec accord explicite, fragile et auditée"
+  },
+  {
+   "Profil connexion": "MCP local stdio",
+   "Cas d’usage": "Logiciels et données de la machine",
+   "Authentification": "Processus enfant local + permissions OS",
+   "Actions utilisateur": "Activer le connecteur et choisir ressources",
+   "Actions administrateur / intégrateur": "Signer binaire, manifeste, allowlist outils/ressources",
+   "Stockage secret": "Coffre OS, variables éphémères",
+   "Test automatique": "initialize + tools/list + appel sans effet",
+   "Révocation": "Arrêt serveur + retrait autorisations",
+   "Mode MCP desktop": "Desktop héberge client et serveur",
+   "Contrôles obligatoires": "Isolation processus, timeouts, quotas, kill switch"
+  },
+  {
+   "Profil connexion": "MCP distant",
+   "Cas d’usage": "Services cloud",
+   "Authentification": "Streamable HTTP + OAuth",
+   "Actions utilisateur": "Connecter le fournisseur puis activer MCP",
+   "Actions administrateur / intégrateur": "TLS, OAuth, audience, rotation, webhooks",
+   "Stockage secret": "Coffre OS; jetons par tenant",
+   "Test automatique": "Health check + capabilities + appel test",
+   "Révocation": "Révocation OAuth + suppression session",
+   "Mode MCP desktop": "Desktop reste le client de confiance",
+   "Contrôles obligatoires": "Aucun serveur communautaire non audité; pin version"
+  },
+  {
+   "Profil connexion": "Tablette / signature",
+   "Cas d’usage": "Signature manuscrite ou e-signature",
+   "Authentification": "Appairage local ou OAuth fournisseur",
+   "Actions utilisateur": "Associer appareil, vérifier document, signer",
+   "Actions administrateur / intégrateur": "Pilote signé; hash, horodatage et preuve",
+   "Stockage secret": "Clés appareil dans coffre OS",
+   "Test automatique": "Signature sur document de test",
+   "Révocation": "Désappairage + révocation",
+   "Mode MCP desktop": "MCP stdio pour appareil local",
+   "Contrôles obligatoires": "Consentement explicite; validation juridique du niveau de signature"
+  }
+ ]
+}
