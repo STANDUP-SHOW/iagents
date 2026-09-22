@@ -147,6 +147,7 @@ export const INTITULES: Record<string, string> = {
   'mobilite-internationale': "Vos dossiers de visa et d'expatriation sont suivis dans quel outil ?",
   energie: "Vos consommations d'énergie sont relevées dans quel outil ?",
   'rse-carbone': "Votre bilan carbone et vos données RSE sont tenus dans quoi ?",
+  'audit-grc': "Vos missions d'audit et le suivi des recommandations passent par quel outil ?",
 };
 
 /**
