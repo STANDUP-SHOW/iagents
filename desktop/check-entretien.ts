@@ -5,7 +5,13 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { economiePour } from '../dimensionnement/economie.ts';
+import { INTENSITES, REPARTITIONS } from '../dimensionnement/intensite.ts';
 import {
+  questionsCadre,
+  reconnaitreActivite,
+  horairesDeLaFiche,
+  dossiersDeLaFiche,
   questionsEntretien,
   reconnaitre,
   configurer,
@@ -15,11 +21,14 @@ import {
   normaliser,
   type Referentiel,
   type FicheQualifiee,
+  type FicheCompelete,
+  type ReferentielActivites,
 } from './src/agents/entretien.ts';
 
 const ici = dirname(fileURLToPath(import.meta.url));
 const racine = join(ici, '..');
 const ref: Referentiel = JSON.parse(readFileSync(join(racine, 'catalogue/logiciels.json'), 'utf8'));
+const activites: ReferentielActivites = JSON.parse(readFileSync(join(racine, 'catalogue/activites.json'), 'utf8'));
 
 function fiche(id: string): FicheQualifiee {
   const f = readdirSync(join(racine, 'agents')).find((n) => n.startsWith(`${id}-`));
@@ -211,6 +220,87 @@ verifier(
 verifier(
   "un agent sans qualification ne pose aucune question plutôt que d'en inventer",
   questionsEntretien({ nom: 'témoin' }, ref).length === 0,
+);
+
+// --- Le cadrage : activité, horaires, intensité, répartition, autonomie ----
+const pleine = paie as FicheCompelete;
+const couts = {
+  light: economiePour(pleine as never, { intensite: 'light' }).apiResiduelle,
+  medium: economiePour(pleine as never, { intensite: 'medium' }).apiResiduelle,
+  high: economiePour(pleine as never, { intensite: 'high' }).apiResiduelle,
+};
+const cadre = questionsCadre(pleine, couts);
+const sujets = cadre.map((q) => q.sujet);
+verifier(
+  "l'entretien couvre l'activité, les horaires, l'intensité, la répartition, l'autonomie et les dossiers",
+  ['activite', 'horaires', 'intensite', 'repartition', 'autonomie', 'dossiers'].every((s) => sujets.includes(s as never)),
+  sujets.join(', ')
+);
+verifier(
+  "chaque question de cadrage porte déjà sa réponse, sauf celle que l'agent ne peut pas deviner",
+  cadre.filter((q) => !q.defaut).length === 1 && cadre.find((q) => !q.defaut)?.sujet === 'activite',
+);
+verifier(
+  "les horaires proposés viennent des heures écrites sur la fiche",
+  (() => {
+    const h = horairesDeLaFiche(pleine.taches ?? []);
+    const q = cadre.find((x) => x.sujet === 'horaires');
+    return !!h && !!q && q.intitule.includes(String(Number(h.debut.split(':')[0])));
+  })(),
+);
+verifier(
+  "le choix de l'intensité est présenté avec son coût en euros, pas avec un adjectif",
+  (() => {
+    const q = cadre.find((x) => x.sujet === 'intensite');
+    return !!q && /\d+ € d'API par mois/.test(q.intitule);
+  })(),
+);
+verifier(
+  "un rythme soutenu coûte plus cher qu'un rythme normal, qui coûte plus qu'un rythme léger",
+  couts.high > couts.medium && couts.medium > couts.light,
+  `${couts.light} < ${couts.medium} < ${couts.high}`
+);
+verifier(
+  "en tout local, rien ne se paie au jeton",
+  economiePour(pleine as never, { repartition: 'local' }).apiResiduelle === 0,
+);
+verifier(
+  "et l'agent dit alors que ce que la machine ne tient pas s'arrête au lieu d'être fait en moins bien",
+  REPARTITIONS.local.phrase.includes("s'arrête"),
+);
+verifier(
+  "changer d'intensité ne change aucune autonomie : c'est un réglage de charge, pas de droits",
+  Object.values(INTENSITES).every((i) => !/autonom|valid|accord/i.test(i.phrase)),
+);
+verifier(
+  "la question d'autonomie dit combien de tâches attendent l'accord du client",
+  (() => {
+    const q = cadre.find((x) => x.sujet === 'autonomie');
+    const aValider = (pleine.taches ?? []).filter((t) => t.validationHumaine).length;
+    return !!q && q.intitule.includes(String(aValider));
+  })(),
+);
+verifier(
+  "les dossiers annoncés sont ceux où la fiche écrit vraiment",
+  dossiersDeLaFiche(pleine.taches ?? []).length > 0,
+);
+
+// --- L'activité du client --------------------------------------------------
+verifier("« on est dans la quincaillerie de gros » est reconnu", (() => {
+  const v = reconnaitreActivite('on est dans la quincaillerie de gros', activites);
+  return v.etat === 'reconnu' && v.activite.nom === 'Quincaillerie de gros';
+})());
+verifier("« imprimeur » tombe sur l'imprimerie", (() => {
+  const v = reconnaitreActivite('imprimeur', activites);
+  return v.etat === 'reconnu' && v.activite.famille === 'industrie';
+})());
+verifier("une activité inconnue reste inconnue plutôt que rapprochée de force", (() => {
+  const v = reconnaitreActivite('fabricant de soucoupes volantes', activites);
+  return v.etat === 'inconnu';
+})());
+verifier(
+  "chaque activité dit ce qui caractérise la branche, pas seulement son nom",
+  activites.activites.every((a) => a.trait.length >= 40),
 );
 
 console.log(`${echecs === 0 ? `${qualifiees} fiches qualifiées — entretien d'embauche ok` : `${echecs} attente(s) non tenue(s)`}`);
