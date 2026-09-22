@@ -127,6 +127,11 @@ par WhatsApp et email.
   (bloc `relais`). Un groupe d'agents doit pouvoir faire tourner une entreprise sans
   humain intermédiaire ; sans ce bloc, chaque fiche est un îlot. Quand le relais
   nomme un agent du catalogue, le libellé du poste vient du catalogue, pas de la fiche.
+- **Trois fiches sont citées par le banc de l'application** (`desktop/src/config/installation.json` : AG-0179, AG-0196, AG-0028, et
+  `check-agents.ts` nomme leurs tâches). Réécrire une de ces fiches change ses
+  identifiants de tâches et casse `check-agents` — qui s'arrête sur une exception,
+  pas sur un message de banc. Toujours lancer `npm run controle` en entier après
+  une réécriture, jamais `npm run verifier` seul.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,
