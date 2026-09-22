@@ -23,17 +23,20 @@ const aReecrire = new Set<string>(
 );
 const restants: string[] = [];
 
-// Une accroche est la première chose que lit le client. Le générateur en avait produit huit
-// gabarits pour mille vingt-six fiches : même phrase, nom du poste changé. Les fiches encore
-// à réécrire sont listées dans accroches-gabarit.json, qui ne peut que rétrécir.
+// L'accroche et le résumé de métier sont ce que lit le client dans la boutique. Le générateur
+// en avait produit une poignée de gabarits pour onze cent vingt fiches : même phrase, nom du
+// poste changé, et une faute recopiée telle quelle sur trois cent quatre-vingt-neuf d'entre
+// elles. Les fiches encore à réécrire sont listées dans accroches-gabarit.json, qui ne peut
+// que rétrécir : une fiche n'en sort que lorsque ses deux textes sont écrits pour elle.
 const LISTE_ACCROCHES = 'catalogue/accroches-gabarit.json';
 const gabaritsSource = JSON.parse(readFileSync(join(racine, LISTE_ACCROCHES), 'utf8'));
 const aReecrireAccroche = new Set<string>(gabaritsSource.agents as string[]);
-const GABARITS: RegExp[] = (gabaritsSource.gabarits as string[]).map(
-  (g) => new RegExp(g.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
-);
+const motif = (g: string) => new RegExp(g.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+const GABARITS: RegExp[] = (gabaritsSource.gabarits as string[]).map(motif);
+const GABARITS_RESUME: RegExp[] = (gabaritsSource.gabaritsResume as string[]).map(motif);
 const restantsAccroche: string[] = [];
 const accroches = new Map<string, string>();
+const resumes = new Map<string, string>();
 
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 const valider = ajv.compile(schema);
@@ -73,16 +76,23 @@ for (const f of fichiers) {
   if (f !== `${paquet.id}-${paquet.slug}.json`) faute(f, `nom de fichier attendu ${paquet.id}-${paquet.slug}.json`);
   if (slugs.has(paquet.slug)) faute(f, `slug en double avec ${slugs.get(paquet.slug)}`); else slugs.set(paquet.slug, f);
   const gabarit = GABARITS.find((r) => r.test(paquet.accroche));
+  const gabaritResume = GABARITS_RESUME.find((r) => r.test(paquet.resume_metier ?? ''));
   const cle = paquet.accroche.trim().toLowerCase();
+  const cleResume = (paquet.resume_metier ?? '').trim().toLowerCase();
   const jumelle = accroches.get(cle);
+  const jumelleResume = resumes.get(cleResume);
+  const repris = gabarit || gabaritResume || jumelle || jumelleResume;
   if (aReecrireAccroche.has(paquet.id)) {
-    if (!gabarit && !jumelle) faute(f, `accroche réécrite : retirer ${paquet.id} de ${LISTE_ACCROCHES}`);
+    if (!repris) faute(f, `accroche et résumé réécrits : retirer ${paquet.id} de ${LISTE_ACCROCHES}`);
     else restantsAccroche.push(paquet.id);
   } else {
     if (gabarit) faute(f, `accroche reprise du gabarit « ${gabarit.source} »`);
+    if (gabaritResume) faute(f, `resume_metier repris du gabarit « ${gabaritResume.source} »`);
     if (jumelle) faute(f, `accroche identique à celle de ${jumelle}`);
+    if (jumelleResume) faute(f, `resume_metier identique à celui de ${jumelleResume}`);
   }
   if (!accroches.has(cle)) accroches.set(cle, f);
+  if (!resumes.has(cleResume)) resumes.set(cleResume, f);
   const com = commercialAttendu(entree.profil);
   if (JSON.stringify(com) !== JSON.stringify(paquet.commercial)) {
     if (corriger) { paquet.commercial = com; modifie = true; } else faute(f, `commercial ≠ profil ${entree.profil} : attendu ${JSON.stringify(com)}`);
@@ -109,7 +119,7 @@ if (restants.length) {
   for (const r of restants) console.log(`     ${r}`);
 }
 if (restantsAccroche.length) {
-  console.log(`  ⟳ ${restantsAccroche.length} fiche(s) dont l'accroche reste à écrire (gabarit du générateur).`);
+  console.log(`  ⟳ ${restantsAccroche.length} fiche(s) dont l'accroche ou le résumé reste à écrire (gabarit du générateur).`);
 }
 console.log(`${fichiers.length} paquets, ${fautes} faute(s)`);
 if (fautes) process.exit(1);
