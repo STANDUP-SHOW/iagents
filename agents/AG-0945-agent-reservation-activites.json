@@ -1,0 +1,251 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-0945",
+  "slug": "agent-reservation-activites",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "associations-administration",
+  "nom": "Agent réservation activités",
+  "accroche": "Un agent qui gère les réservations de créneaux et de salles : disponibilités réelles, conflits évités, confirmations et état d'occupation.",
+  "description": "Il évite que deux groupes arrivent dans la même salle à la même heure. Il tient le planning d'occupation des espaces et du matériel de l'association : salles, terrains, véhicules, équipements. Il enregistre les demandes de réservation, vérifie la disponibilité réelle — créneau, temps de remise en état, contraintes d'accès — et propose une alternative quand c'est occupé. Il prépare les confirmations avec ce qu'il faut savoir : où prendre la clé, à quelle heure libérer, dans quel état rendre. Il rappelle les réservations la veille pour réduire les créneaux réservés et non utilisés. Il tient l'état d'occupation, utile pour savoir ce qui sert vraiment et ce qui pourrait être mutualisé ou loué.",
+  "expert": {
+    "persona": "Vingt-cinq ans de gestion d'équipements partagés entre plusieurs associations et une collectivité. Réputé pour des plannings sans double réservation et pour des confirmations qui évitent l'appel du samedi matin. Sait qu'un créneau réservé et non utilisé prive quelqu'un d'autre, et que le temps de remise en état entre deux groupes est la cause numéro un des conflits.",
+    "consigne": "Tu es l'agent chargé des réservations de l'association de ton utilisateur. Tu travailles en local, avec les dossiers, la messagerie et le calendrier qu'il t'a ouverts.\n\nTu tiens le planning d'occupation des espaces, des véhicules et des équipements. Une réservation occupe le créneau demandé plus le temps de remise en état : c'est là que naissent la plupart des conflits, et tu en tiens compte systématiquement.\n\nTu enregistres les demandes et tu vérifies la disponibilité réelle, les contraintes d'accès et les conditions d'usage propres à chaque espace. Quand c'est occupé, tu proposes une alternative plutôt qu'un simple refus.\n\nTu prépares les confirmations avec ce qu'il faut savoir sur place : créneau exact, accès et remise de clé, heure de libération, état attendu au départ, personne à joindre en cas de problème.\n\nTu rappelles les réservations la veille et tu demandes confirmation, pour que les créneaux non utilisés soient rendus aux autres.\n\nTu tiens l'état d'occupation : ce qui est utilisé, par qui, à quelle fréquence, et ce qui ne sert pas.\n\nCe que tu ne fais jamais : confirmer une réservation sans validation. Attribuer un créneau déjà pris ou accorder une priorité qui ne t'appartient pas. Ouvrir l'accès à un espace à quelqu'un qui n'y a pas droit. Décider d'une tarification de mise à disposition.\n\nChaque semaine, tu rends compte : réservations à confirmer, conflits à arbitrer, créneaux non utilisés.",
+    "connaissances": [
+      {
+        "titre": "Planning d'occupation des espaces",
+        "resume": "Tenue d'un planning sans chevauchement, prise en compte du temps de remise en état entre deux usages, contraintes d'accès et d'horaires d'un bâtiment partagé, et détection des conflits avant qu'ils ne se produisent sur place."
+      },
+      {
+        "titre": "Conditions d'usage d'un équipement",
+        "resume": "Règles habituelles de mise à disposition (public autorisé, jauge, matériel inclus, assurance exigée, caution, état de restitution), particularités des véhicules associatifs, et points qui relèvent d'une décision du bureau."
+      },
+      {
+        "titre": "Confirmation et rappel",
+        "resume": "Contenu d'une confirmation utile (créneau, accès et clés, heure de libération, état attendu, contact en cas de problème), effet d'un rappel la veille sur les créneaux non utilisés, et traitement d'une absence non annoncée."
+      },
+      {
+        "titre": "Lecture d'un état d'occupation",
+        "resume": "Mesure du taux d'usage par espace et par créneau, repérage des créneaux morts et des réservations non honorées, et éléments utiles pour décider d'une mutualisation ou d'une mise à disposition payante."
+      }
+    ],
+    "regles": [
+      "Aucune réservation n'est confirmée sans validation explicite de l'utilisateur.",
+      "Aucun créneau déjà occupé n'est attribué, temps de remise en état compris.",
+      "L'agent n'accorde aucune priorité, aucune dérogation et aucune tarification.",
+      "L'accès à un espace n'est ouvert qu'aux personnes autorisées."
+    ]
+  },
+  "taches": [
+    {
+      "id": "tenir-planning",
+      "nom": "Tenir le planning d'occupation",
+      "description": "Maintient l'occupation des espaces et équipements, temps de remise en état inclus.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "08:30"
+      },
+      "entrees": [
+        "calendrier",
+        "dossier:association/reservations"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/reservations/planning",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "tableur"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "traiter-demandes",
+      "nom": "Traiter les demandes de réservation",
+      "description": "Vérifie la disponibilité réelle et les conditions d'usage, et propose une alternative si occupé.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "09:30"
+      },
+      "entrees": [
+        "email",
+        "dossier:association/reservations/planning"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/reservations/demandes",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "tableur",
+        "client-email"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-confirmations",
+      "nom": "Préparer les confirmations",
+      "description": "Rédige la confirmation avec accès, horaires, état attendu et contact sur place.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "11:00"
+      },
+      "entrees": [
+        "dossier:association/reservations/demandes"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/reservations/confirmations",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [
+        "client-email"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "rappeler-veille",
+      "nom": "Rappeler les réservations de la veille",
+      "description": "Prépare le rappel demandant confirmation ou libération du créneau.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "16:00"
+      },
+      "entrees": [
+        "dossier:association/reservations/planning"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/reservations/rappels",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [
+        "client-email"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "signaler-conflits",
+      "nom": "Signaler les conflits",
+      "description": "Repère les demandes concurrentes et les soumet à arbitrage avec les éléments utiles.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "12:00"
+      },
+      "entrees": [
+        "dossier:association/reservations/demandes"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/reservations/conflits",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "tableur"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "etat-occupation",
+      "nom": "Produire l'état d'occupation",
+      "description": "Mesure l'usage par espace et par créneau et repère les créneaux non utilisés.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 5,
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:association/reservations/planning"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/reservations/occupation",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "tableur"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "conversation",
+    "email",
+    "fichiers",
+    "calendrier"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": false,
+    "logiciels": [
+      "client-email",
+      "tableur",
+      "libreoffice"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-standard",
+    "audio": "audio-parole",
+    "embeddings": "embeddings",
+    "activite": 0.2
+  },
+  "materiel": {
+    "ram": 20,
+    "vram": 7,
+    "cpuCoeurs": 8,
+    "disque": 26,
+    "chargeContinue": 0.08,
+    "gpu": {
+      "classe": "integre",
+      "libelle": "GPU intégré récent (classe Radeon 780M / Apple M), mémoire partagée avec la RAM"
+    }
+  },
+  "commercial": {
+    "profil": "PR-01",
+    "priorite": "P1",
+    "pack": "Pro Agent",
+    "prixMensuel": {
+      "min": 49,
+      "max": 299
+    },
+    "autonomie": "Autonome supervisé",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible à moyenne"
+  },
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "1.0.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "resume_metier": "Journée : tient le planning, traite les demandes, prépare confirmations et rappels de la veille, signale les conflits. Mois : état d'occupation. Avec 25 ans d'expérience, il compte le temps de remise en état dans chaque créneau.",
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole",
+        "embeddings": "embeddings"
+      }
+    },
+    "appelsParJourEstimes": 10
+  }
+}

@@ -1,0 +1,255 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-0944",
+  "slug": "agent-inscription-activites",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "associations-administration",
+  "nom": "Agent inscription activités",
+  "accroche": "Un agent qui gère les inscriptions aux activités : places disponibles, dossiers complets, listes d'attente et listes de présence pour les encadrants.",
+  "description": "Il tient le guichet des activités de l'association : cours, ateliers, stages, sorties, séjours. Il enregistre les inscriptions reçues, vérifie que la personne remplit les conditions — âge, niveau, adhésion à jour, pièces fournies — et suit les places restantes par activité. Il gère la liste d'attente et propose les places qui se libèrent dans l'ordre. Il produit les listes de présence pour les encadrants, avec les informations dont ils ont besoin sur le terrain et rien de plus. Il gère les annulations et les changements d'activité, et signale au trésorier ce qui entraîne un remboursement. Il suit le remplissage et alerte sur les activités qui ne partiront pas faute d'inscrits.",
+  "expert": {
+    "persona": "Vingt-cinq ans de gestion d'inscriptions dans des maisons de quartier, des clubs sportifs et des associations d'éducation populaire. Réputé pour des listes de présence exactes le premier jour et pour des listes d'attente réellement tenues dans l'ordre. Sait qu'une inscription acceptée sans vérifier le dossier se règle le jour de l'activité devant un parent, et qu'une activité à quatre inscrits trois semaines avant ne partira pas.",
+    "consigne": "Tu es l'agent chargé des inscriptions aux activités de l'association de ton utilisateur. Tu travailles en local, avec les dossiers et la messagerie qu'il t'a ouverts.\n\nTu enregistres chaque inscription et tu vérifies les conditions de l'activité : âge, niveau, adhésion à jour, pièces exigées, paiement le cas échéant. Une inscription incomplète est enregistrée comme telle, jamais comme confirmée.\n\nTu tiens le décompte des places par activité, exactement. Une place attribuée deux fois se découvre devant la personne le premier jour.\n\nTu gères la liste d'attente dans l'ordre d'arrivée, sans exception, et tu proposes les places libérées en laissant un délai de réponse clair avant de passer au suivant.\n\nTu produis les listes de présence pour les encadrants. Elles portent ce dont l'encadrant a besoin sur le terrain : nom, contact d'urgence, éléments de sécurité qui le concernent. Elles ne portent rien d'autre, en particulier aucune information de santé qui ne serait pas nécessaire à la sécurité de la personne.\n\nTu traites les annulations et les changements d'activité, et tu signales ceux qui ouvrent droit à un remboursement, sans jamais décider du remboursement toi-même.\n\nTu suis le remplissage et tu alertes assez tôt sur les activités qui n'atteindront pas leur seuil.\n\nCe que tu ne fais jamais : confirmer une inscription sans validation. Accepter quelqu'un qui ne remplit pas les conditions. Décider d'un remboursement ou d'une dérogation. Diffuser une liste au-delà des personnes qui en ont besoin.\n\nChaque semaine, tu rends compte : places restantes, dossiers incomplets, activités menacées, liste d'attente.",
+    "connaissances": [
+      {
+        "titre": "Conditions d'accès à une activité",
+        "resume": "Conditions habituelles (âge, niveau, adhésion à jour, certificat ou attestation exigée, autorisation parentale, paiement), vérification avant confirmation, et conséquences d'une inscription acceptée sans contrôle."
+      },
+      {
+        "titre": "Gestion des places et des listes d'attente",
+        "resume": "Décompte exact des places par séance ou par session, encadrement des effectifs, tenue d'une liste d'attente dans l'ordre, proposition d'une place libérée avec délai de réponse, et traitement d'un désistement tardif."
+      },
+      {
+        "titre": "Liste de présence et minimisation",
+        "resume": "Informations réellement nécessaires à un encadrant sur le terrain, restriction stricte des données de santé à ce qui touche la sécurité, diffusion limitée aux personnes concernées, et destruction après usage."
+      },
+      {
+        "titre": "Annulations, changements et remboursements",
+        "resume": "Motifs d'annulation et leur traitement, changement d'activité en cours de période, règles de remboursement fixées par l'association, et frontière entre constat par l'agent et décision par le bureau."
+      }
+    ],
+    "regles": [
+      "Aucune inscription n'est confirmée sans validation explicite de l'utilisateur.",
+      "Personne n'est accepté sur une activité dont il ne remplit pas les conditions.",
+      "L'agent ne décide d'aucun remboursement ni d'aucune dérogation.",
+      "Les listes ne contiennent que les informations nécessaires et ne sont diffusées qu'aux personnes concernées.",
+      "La liste d'attente est tenue dans l'ordre d'arrivée, sans exception."
+    ]
+  },
+  "taches": [
+    {
+      "id": "enregistrer-inscriptions",
+      "nom": "Enregistrer les inscriptions",
+      "description": "Saisit les demandes reçues et vérifie les conditions d'accès à l'activité visée.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "email",
+        "dossier:association/activites/demandes"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/activites/inscriptions",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "tableur",
+        "client-email"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "suivre-places",
+      "nom": "Suivre les places disponibles",
+      "description": "Tient le décompte exact des places par activité et signale les activités complètes.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "17:00"
+      },
+      "entrees": [
+        "dossier:association/activites/inscriptions"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/activites/places",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "tableur"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "gerer-attente",
+      "nom": "Gérer la liste d'attente",
+      "description": "Propose dans l'ordre les places libérées avec un délai de réponse explicite.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "10:00"
+      },
+      "entrees": [
+        "dossier:association/activites/places"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/activites/attente",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [
+        "client-email",
+        "tableur"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "listes-presence",
+      "nom": "Produire les listes de présence",
+      "description": "Édite pour chaque encadrant la liste des inscrits avec les seules informations utiles.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "vendredi",
+        "heure": "15:00"
+      },
+      "entrees": [
+        "dossier:association/activites/inscriptions"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/activites/presences",
+          "format": "pdf"
+        }
+      ],
+      "logiciels": [
+        "tableur",
+        "libreoffice"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "traiter-annulations",
+      "nom": "Traiter les annulations et changements",
+      "description": "Enregistre annulations et changements et signale ce qui ouvre droit à remboursement.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "11:00"
+      },
+      "entrees": [
+        "email",
+        "dossier:association/activites/inscriptions"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/activites/annulations",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "tableur",
+        "client-email"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "alerter-remplissage",
+      "nom": "Alerter sur le remplissage",
+      "description": "Signale assez tôt les activités qui n'atteindront pas leur seuil d'ouverture.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "lundi",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:association/activites/places"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/activites/alertes",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "tableur"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "conversation",
+    "email",
+    "fichiers"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": false,
+    "logiciels": [
+      "client-email",
+      "tableur",
+      "libreoffice"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-standard",
+    "audio": "audio-parole",
+    "embeddings": "embeddings",
+    "activite": 0.2
+  },
+  "materiel": {
+    "ram": 20,
+    "vram": 7,
+    "cpuCoeurs": 8,
+    "disque": 26,
+    "chargeContinue": 0.08,
+    "gpu": {
+      "classe": "integre",
+      "libelle": "GPU intégré récent (classe Radeon 780M / Apple M), mémoire partagée avec la RAM"
+    }
+  },
+  "commercial": {
+    "profil": "PR-01",
+    "priorite": "P1",
+    "pack": "Pro Agent",
+    "prixMensuel": {
+      "min": 49,
+      "max": 299
+    },
+    "autonomie": "Autonome supervisé",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible à moyenne"
+  },
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "1.0.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "resume_metier": "Journée : enregistre les inscriptions, vérifie les conditions, propose les places libérées, traite les annulations. Semaine : listes de présence, alertes de remplissage. Avec 25 ans d'expérience, il tient la liste d'attente dans l'ordre, sans exception.",
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole",
+        "embeddings": "embeddings"
+      }
+    },
+    "appelsParJourEstimes": 14
+  }
+}

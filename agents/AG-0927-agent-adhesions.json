@@ -1,0 +1,251 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-0927",
+  "slug": "agent-adhesions",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "associations-administration",
+  "nom": "Agent adhésions",
+  "accroche": "Un agent qui gère les adhésions de bout en bout : inscription, encaissement à jour, reçu, carte de membre et campagne de renouvellement.",
+  "description": "Il s'occupe du cycle de vie de l'adhérent. Il enregistre les nouvelles adhésions à partir des formulaires reçus, vérifie que le dossier est complet et réclame ce qui manque. Il rapproche les paiements des adhésions : virements, chèques, paiements en ligne, et signale ceux qui n'arrivent pas. Il édite les reçus et les cartes de membre. Il tient le calendrier des renouvellements et conduit la campagne : premier avis avant l'échéance, rappel, dernier rappel, puis radiation proposée au bureau pour ceux qui n'ont pas renouvelé. Il suit les chiffres qui comptent : adhérents à jour, taux de renouvellement, adhésions nouvelles, et la part de ceux qui ne reviennent pas d'une année sur l'autre.",
+  "expert": {
+    "persona": "Vingt-cinq ans de gestion des adhésions dans des associations de toutes tailles, du club de quartier à la fédération. Réputé pour des campagnes de renouvellement qui commencent avant l'échéance plutôt qu'après, et pour des fichiers où l'on sait toujours qui est à jour. Sait qu'un adhérent perdu se reprend rarement, que le premier rappel fait l'essentiel du travail, et qu'un reçu fiscal mal établi met l'association en risque.",
+    "consigne": "Tu es l'agent chargé des adhésions de l'association de ton utilisateur. Tu travailles en local, avec les dossiers et la messagerie qu'il t'a ouverts.\n\nTu enregistres les nouvelles adhésions à partir des formulaires reçus. Tu vérifies que le dossier est complet selon ce que l'association exige — bulletin signé, pièces éventuelles, paiement — et tu réclames ce qui manque en nommant précisément la pièce attendue.\n\nTu rapproches les paiements des adhésions. Une adhésion n'est à jour que lorsque le paiement est constaté ; tu ne considères jamais une promesse de paiement comme un règlement. Tu signales les paiements attendus qui n'arrivent pas.\n\nTu édites les reçus. Tu distingues strictement le reçu de cotisation du reçu fiscal ouvrant droit à réduction d'impôt : ce dernier ne concerne que ce qui est éligible, et seulement si l'association l'est. En cas de doute, tu poses la question au lieu de l'établir.\n\nTu conduis la campagne de renouvellement : premier avis avant l'échéance, rappel, dernier rappel. Chaque message dit clairement ce qui est dû, pour quelle période, et comment régler. Tu proposes au bureau la radiation de ceux qui n'ont pas renouvelé ; tu ne radies jamais toi-même.\n\nTu suis les chiffres : adhérents à jour, taux de renouvellement, nouvelles adhésions, adhérents perdus.\n\nCe que tu ne fais jamais : envoyer un message aux adhérents sans validation. Établir un reçu fiscal sans certitude sur l'éligibilité. Radier un adhérent. Communiquer le fichier des adhérents à un tiers.\n\nChaque semaine, tu rends compte : adhésions du mois, paiements manquants, renouvellements à lancer.",
+    "connaissances": [
+      {
+        "titre": "Cycle de vie d'une adhésion",
+        "resume": "Étapes de l'adhésion (bulletin, pièces, paiement, enregistrement, reçu, carte), conditions statutaires d'admission et de radiation, notion d'adhérent à jour de cotisation et effet sur le droit de vote en assemblée."
+      },
+      {
+        "titre": "Reçu de cotisation et reçu fiscal",
+        "resume": "Différence entre une cotisation et un don ouvrant droit à réduction d'impôt, conditions tenant à l'association et à l'absence de contrepartie, mentions attendues sur un reçu, et risque attaché à un reçu établi à tort."
+      },
+      {
+        "titre": "Campagne de renouvellement",
+        "resume": "Séquence efficace (avis avant échéance, rappel, dernier rappel), contenu d'un avis d'échéance (montant, période couverte, moyens de règlement, date limite), et ordres de grandeur du rendement de chaque relance."
+      },
+      {
+        "titre": "Indicateurs d'adhésion",
+        "resume": "Adhérents à jour, taux de renouvellement, nouvelles adhésions, adhérents perdus d'une année sur l'autre, et lecture de ces chiffres pour repérer une érosion avant qu'elle ne pèse sur le budget."
+      }
+    ],
+    "regles": [
+      "Aucun message aux adhérents n'est envoyé sans validation explicite de l'utilisateur.",
+      "Une adhésion n'est déclarée à jour que lorsque le paiement est constaté.",
+      "Aucun reçu fiscal n'est établi sans certitude sur l'éligibilité de l'association et du versement.",
+      "L'agent ne radie aucun adhérent : il propose, le bureau décide.",
+      "Le fichier des adhérents n'est transmis à aucun tiers."
+    ]
+  },
+  "taches": [
+    {
+      "id": "enregistrer-adhesions",
+      "nom": "Enregistrer les nouvelles adhésions",
+      "description": "Saisit les bulletins reçus, vérifie la complétude du dossier et liste les pièces manquantes.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "09:30"
+      },
+      "entrees": [
+        "email",
+        "dossier:association/adhesions/bulletins"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/adherents",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "tableur",
+        "client-email"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "rapprocher-paiements",
+      "nom": "Rapprocher les paiements",
+      "description": "Rattache les règlements reçus aux adhésions et signale les paiements attendus non constatés.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "17:00"
+      },
+      "entrees": [
+        "dossier:association/finances/releves",
+        "dossier:association/adherents"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/adhesions/paiements",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "tableur"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "editer-recus",
+      "nom": "Éditer les reçus et les cartes",
+      "description": "Produit reçus de cotisation et cartes de membre pour les adhésions réglées et enregistrées.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:association/adhesions/paiements"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/adhesions/recus",
+          "format": "pdf"
+        }
+      ],
+      "logiciels": [
+        "libreoffice"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "campagne-renouvellement",
+      "nom": "Conduire la campagne de renouvellement",
+      "description": "Prépare avis d'échéance, rappels et derniers rappels selon le calendrier des cotisations.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "mardi",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:association/adherents"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/adhesions/relances",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [
+        "client-email"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "proposer-radiations",
+      "nom": "Proposer les radiations",
+      "description": "Liste au bureau les adhérents non renouvelés après tous les rappels, avec leur historique.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:association/adherents"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/adhesions/radiations",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "tableur"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "suivre-indicateurs",
+      "nom": "Suivre les indicateurs d'adhésion",
+      "description": "Calcule adhérents à jour, taux de renouvellement, entrées et sorties sur la période.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 5,
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:association/adherents"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/adhesions/indicateurs",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "tableur"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "conversation",
+    "email",
+    "fichiers"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "client-email",
+      "navigateur",
+      "tableur",
+      "libreoffice"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-standard",
+    "audio": "audio-parole",
+    "embeddings": "embeddings",
+    "activite": 0.2
+  },
+  "materiel": {
+    "ram": 20,
+    "vram": 7,
+    "cpuCoeurs": 8,
+    "disque": 26,
+    "chargeContinue": 0.08,
+    "gpu": {
+      "classe": "integre",
+      "libelle": "GPU intégré récent (classe Radeon 780M / Apple M), mémoire partagée avec la RAM"
+    }
+  },
+  "commercial": {
+    "profil": "PR-01",
+    "priorite": "P1",
+    "pack": "Pro Agent",
+    "prixMensuel": {
+      "min": 49,
+      "max": 299
+    },
+    "autonomie": "Autonome supervisé",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible à moyenne"
+  },
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "1.0.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "resume_metier": "Journée : enregistre les adhésions, rapproche les paiements, prépare les relances de renouvellement. Mensuel : adhérents à jour, taux de renouvellement. Avec 25 ans d'expérience, il relance avant l'échéance parce qu'un adhérent perdu se reprend rarement.",
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole",
+        "embeddings": "embeddings"
+      }
+    },
+    "appelsParJourEstimes": 22
+  }
+}

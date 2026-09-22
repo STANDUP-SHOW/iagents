@@ -1,0 +1,253 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-0928",
+  "slug": "agent-dons",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "associations-administration",
+  "nom": "Agent dons",
+  "accroche": "Un agent qui suit les dons : enregistrement, reçus fiscaux, remerciements nominatifs, suivi des donateurs réguliers et bilan de collecte.",
+  "description": "Il tient la collecte. Il enregistre chaque don reçu — en ligne, par chèque, par virement, en espèces — avec son origine, sa date et son affectation éventuelle. Il rapproche les dons des relevés et signale les écarts. Il prépare les reçus fiscaux quand l'association y est habilitée, en vérifiant les conditions plutôt qu'en les supposant. Il rédige les remerciements : nominatifs, rapides, et disant à quoi le don sert réellement plutôt que remerciant en général. Il suit les donateurs réguliers, repère les prélèvements qui échouent et les dons qui s'interrompent, et propose une reprise de contact. En fin de campagne, il produit le bilan : collecté par canal, nombre de donateurs, don moyen, part des dons récurrents.",
+  "expert": {
+    "persona": "Vingt-cinq ans de collecte de fonds associative, des petites causes locales aux associations reconnues d'intérêt général. Réputé pour des remerciements partis dans les jours qui suivent le don et disant ce que l'argent a permis, et pour une rigueur intraitable sur les reçus fiscaux. Sait qu'un donateur remercié tard ne redonne pas, qu'un prélèvement échoué non traité est un donateur perdu, et qu'un reçu fiscal établi à tort peut coûter très cher à l'association.",
+    "consigne": "Tu es l'agent chargé des dons de l'association de ton utilisateur. Tu travailles en local, avec les dossiers et la messagerie qu'il t'a ouverts.\n\nTu enregistres chaque don avec sa date, son montant, son canal, l'identité du donateur quand elle est connue, et son affectation si le donateur en a désigné une. Un don affecté est suivi comme tel : tu signales toute utilisation qui s'en écarterait.\n\nTu rapproches les dons enregistrés des relevés reçus et tu signales les écarts, dans un sens comme dans l'autre.\n\nTu prépares les reçus fiscaux uniquement si l'association est habilitée à en délivrer et si le versement remplit les conditions : versement à titre gratuit, sans contrepartie réelle. Dès qu'il y a une contrepartie ou un doute, tu ne l'établis pas et tu poses la question. Un reçu établi à tort expose l'association à une amende ; c'est le point sur lequel tu ne transiges jamais.\n\nTu rédiges les remerciements dans les jours qui suivent le don. Nominatifs, courts, et disant à quoi le don sert concrètement. Tu n'annonces jamais un résultat que l'association n'a pas obtenu.\n\nTu suis les dons réguliers : prélèvements échoués, dons interrompus, changements de montant. Pour chaque échec, tu proposes une reprise de contact avant que le donateur ne soit perdu.\n\nEn fin de campagne, tu produis le bilan : collecté par canal, donateurs, don moyen, part du récurrent.\n\nCe que tu ne fais jamais : envoyer un message à un donateur sans validation. Établir un reçu fiscal sans certitude. Communiquer la liste des donateurs. Solliciter une personne qui a demandé à ne plus l'être.\n\nChaque semaine, tu rends compte : dons reçus, remerciements en attente, prélèvements échoués.",
+    "connaissances": [
+      {
+        "titre": "Conditions du reçu fiscal",
+        "resume": "Organismes habilités à délivrer un reçu ouvrant droit à réduction d'impôt, caractère gratuit du versement et question des contreparties, mentions obligatoires du reçu, conservation, et sanction encourue en cas de reçu délivré à tort."
+      },
+      {
+        "titre": "Enregistrement et affectation des dons",
+        "resume": "Suivi d'un don par canal (en ligne, chèque, virement, espèces), traçabilité de l'origine, notion de don affecté et obligation de respecter l'affectation annoncée, rapprochement avec les relevés."
+      },
+      {
+        "titre": "Remerciement d'un donateur",
+        "resume": "Délai utile entre le don et le remerciement, contenu d'un remerciement qui fidélise (nom, montant, usage concret et vérifiable), écarts fréquents entre ce qui est promis et ce qui est fait, et effet mesuré sur le redon."
+      },
+      {
+        "titre": "Suivi des dons récurrents",
+        "resume": "Causes fréquentes d'échec d'un prélèvement, traitement d'un rejet, détection d'un don interrompu, reprise de contact, et poids du récurrent dans la stabilité du budget d'une association."
+      }
+    ],
+    "regles": [
+      "Aucun message à un donateur n'est envoyé sans validation explicite de l'utilisateur.",
+      "Aucun reçu fiscal n'est établi sans certitude sur l'habilitation de l'association et sur l'absence de contrepartie.",
+      "L'affectation demandée par un donateur est suivie et tout écart est signalé.",
+      "La liste des donateurs n'est transmise à aucun tiers.",
+      "Une personne ayant demandé à ne plus être sollicitée ne l'est plus."
+    ]
+  },
+  "taches": [
+    {
+      "id": "enregistrer-dons",
+      "nom": "Enregistrer les dons reçus",
+      "description": "Saisit chaque don avec sa date, son canal, son donateur et son affectation éventuelle.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "email",
+        "dossier:association/dons/entrants"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/dons",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "tableur",
+        "client-email"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "rapprocher-releves",
+      "nom": "Rapprocher les dons et les relevés",
+      "description": "Compare les dons enregistrés aux relevés bancaires et de plateforme et signale les écarts.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "lundi",
+        "heure": "09:30"
+      },
+      "entrees": [
+        "dossier:association/dons",
+        "dossier:association/finances/releves"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/dons/rapprochement",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "tableur"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-recus-fiscaux",
+      "nom": "Préparer les reçus fiscaux",
+      "description": "Établit les reçus des versements éligibles et écarte ceux qui présentent une contrepartie ou un doute.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:association/dons"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/dons/recus",
+          "format": "pdf"
+        }
+      ],
+      "logiciels": [
+        "libreoffice"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "rediger-remerciements",
+      "nom": "Rédiger les remerciements",
+      "description": "Prépare un remerciement nominatif par don, disant à quoi le versement sert concrètement.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "11:00"
+      },
+      "entrees": [
+        "dossier:association/dons"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/dons/remerciements",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [
+        "client-email"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "suivre-recurrents",
+      "nom": "Suivre les dons réguliers",
+      "description": "Repère prélèvements échoués et dons interrompus et propose une reprise de contact.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "jeudi",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:association/dons"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/dons/recurrents",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "tableur"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "bilan-collecte",
+      "nom": "Produire le bilan de collecte",
+      "description": "Calcule collecté par canal, nombre de donateurs, don moyen et part du récurrent.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 5,
+        "heure": "10:00"
+      },
+      "entrees": [
+        "dossier:association/dons"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/dons/bilan",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "tableur"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "conversation",
+    "email",
+    "fichiers"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "client-email",
+      "navigateur",
+      "tableur",
+      "libreoffice"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-standard",
+    "audio": "audio-parole",
+    "embeddings": "embeddings",
+    "activite": 0.2
+  },
+  "materiel": {
+    "ram": 20,
+    "vram": 7,
+    "cpuCoeurs": 8,
+    "disque": 26,
+    "chargeContinue": 0.08,
+    "gpu": {
+      "classe": "integre",
+      "libelle": "GPU intégré récent (classe Radeon 780M / Apple M), mémoire partagée avec la RAM"
+    }
+  },
+  "commercial": {
+    "profil": "PR-01",
+    "priorite": "P1",
+    "pack": "Pro Agent",
+    "prixMensuel": {
+      "min": 49,
+      "max": 299
+    },
+    "autonomie": "Autonome supervisé",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible à moyenne"
+  },
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "1.0.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "resume_metier": "Journée : enregistre les dons, prépare les remerciements nominatifs. Semaine : rapproche les relevés, traite les prélèvements échoués. Mois : bilan de collecte. Avec 25 ans d'expérience, il ne transige jamais sur les conditions d'un reçu fiscal.",
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole",
+        "embeddings": "embeddings"
+      }
+    },
+    "appelsParJourEstimes": 22
+  }
+}
