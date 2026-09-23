@@ -31,7 +31,12 @@ par WhatsApp et email.
   du 18/09/2026, bloc `execution`). L'application calcule la jauge de la machine
   (`jaugeMachine`) et prévient avant de basculer ; sans clé d'API pour la
   capacité manquante, l'agent s'arrête avec le motif écrit. Les clés du client
-  restent sur sa machine, jamais dans un paquet ni chez nous.
+  restent sur sa machine, jamais dans un paquet ni chez nous. **Tenu par le code depuis
+  le 23/09/2026 seulement** : jusque-là l'application ne savait parler qu'à
+  l'API d'Anthropic, les 1 249 fiches disaient `defaut: "local"` et rien ne les
+  lisait. `desktop/src-tauri/src/modele.rs` est maintenant le seul endroit où la
+  voie se choisit, et `choisir()` est une fonction pure qu'on éprouve sans rien
+  joindre.
 - **Les agents d'une machine se relaient sur un modèle chargé une fois.** Deux
   agents sur le même palier partagent les poids, pas la charge : la mémoire se
   compte par palier distinct, la charge par agent. Le banc l'a imposé : compté
@@ -152,6 +157,22 @@ par WhatsApp et email.
   « null » ni « MCP ». **Le tuyau d'un processus local n'est constaté que sous
   Unix** (test avec un vrai `sh`) ; sous Windows, cible du produit, il ne l'est
   pas encore.
+- **Le moteur local, c'est Ollama, et son format a été relevé chez lui.**
+  `POST /api/chat` avec `stream: false`, `GET /api/tags`, hôte
+  `http://127.0.0.1:11434` — lu le 23/09/2026 dans la bibliothèque cliente que
+  publie Ollama (`npm pack ollama`, `ChatRequest` / `ChatResponse` /
+  `ListResponse` dans ses types), pas recopié de mémoire. Le banc parle à un
+  moteur de banc écrit à la main sur la boucle locale.
+- **Le modèle à lancer se déduit du palier de la fiche, pas d'un réglage.**
+  `modeles.texte` de la fiche donne le palier, `paliers-modeles.json` donne ses
+  exemples (« Llama 3.1 8B »), et `meme_modele()` les reconnaît sous l'écriture
+  du moteur local (« llama3.1:8b », « llama3.1:latest ») en comparant la BASE du
+  nom. **La taille n'entre pas dans la comparaison** : le palier dit ce qu'il
+  faut au moins, et qui a installé plus gros l'a fait exprès ; à base égale on
+  préfère quand même la taille du palier, c'est sur elle que le dimensionnement
+  a été calculé. Quand rien ne convient, le motif nomme les modèles à installer,
+  et il distingue les trois manques — pas de moteur, moteur vide, mauvais modèle
+  — parce qu'ils ne se soignent pas pareil.
 - **Un serveur MCP se lance OU se joint, jamais les deux.** `ServeurDeclare`
   porte une `commande` (processus local, tuyaux) ou une `url` (serveur distant,
   « Streamable HTTP »), et `ouvrir_transport()` est le seul endroit qui choisit.

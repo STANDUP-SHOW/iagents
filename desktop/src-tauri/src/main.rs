@@ -11,6 +11,7 @@ mod fiches;
 mod courriel;
 mod journal;
 mod mcp;
+mod modele;
 mod navigateur;
 mod agents;
 mod connectors;
@@ -155,30 +156,61 @@ async fn call_agent_llm(
 /// consigne d'expert, connaissances du metier, savoir de la maison, genre choisi
 /// par le client. Le construire ici a partir du routeur code en dur donnerait un
 /// agent generique, en anglais, qui ignore tout ce que la fiche decrit.
+/// Ce que l'agent a repondu, et par ou il est passe pour le dire.
+///
+/// La voie fait partie de la reponse et pas d'un reglage cache : un agent qui
+/// bascule sur l'API se met a couter des jetons, et le client a le droit de
+/// l'apprendre en le lisant plutot que sur sa facture.
+#[derive(serde::Serialize)]
+struct ReponseAgent {
+    texte: String,
+    motif: String,
+    bascule: bool,
+}
+
 #[tauri::command]
 async fn repondre(
     prenom: String,
+    fiche_id: String,
     prompt_systeme: String,
     enonce: String,
     state: State<'_, AppState>,
-) -> Result<String, String> {
+) -> Result<ReponseAgent, String> {
     if prompt_systeme.trim().is_empty() {
         return Err("prompt systeme vide : la fiche n a pas ete chargee".to_string());
     }
 
-    let llm_service = {
-        let llm = state.llm.lock().unwrap();
-        llm.as_ref().ok_or("LLM not initialized")?.clone()
+    // La fiche dit ou ce poste travaille. Jusqu'ici personne ne le lisait et
+    // tout passait par l'API, quoi qu'elle dise.
+    let (execution, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
+    let offre = modele::Offre {
+        locaux: modele::modeles_installes(modele::ADRESSE_LOCALE).await.ok(),
+        cle_api: std::env::var("ANTHROPIC_API_KEY").is_ok(),
+    };
+    let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_API)?;
+
+    let texte = match &choix.voie {
+        modele::Voie::Local { modele: nom } => {
+            modele::repondre_en_local(modele::ADRESSE_LOCALE, nom, &prompt_systeme, &enonce).await?
+        }
+        modele::Voie::Api { .. } => {
+            let llm_service = {
+                let llm = state.llm.lock().unwrap();
+                llm.as_ref()
+                    .ok_or("aucune cle d API n est enregistree sur cet ordinateur")?
+                    .clone()
+            };
+            let persona = AgentPersona {
+                id: prenom.clone(),
+                name: prenom,
+                role: String::new(),
+                system_prompt: prompt_systeme,
+            };
+            llm_service.call_agent_llm(&persona, &enonce).await?
+        }
     };
 
-    let persona = AgentPersona {
-        id: prenom.clone(),
-        name: prenom,
-        role: String::new(),
-        system_prompt: prompt_systeme,
-    };
-
-    llm_service.call_agent_llm(&persona, &enonce).await
+    Ok(ReponseAgent { texte, motif: choix.motif, bascule: choix.bascule })
 }
 
 #[tauri::command]
@@ -440,6 +472,7 @@ fn main() {
             mcp::mcp_outils_permis,
             mcp::mcp_appeler,
             mcp::mcp_journal,
+            modele::modele_etat,
             repondre,
             courriel::courriel_enregistrer_motdepasse,
             courriel::courriel_motdepasse_present,

@@ -34,6 +34,10 @@ pub struct ResponseContent {
     pub text: Option<String>,
 }
 
+/// Le modele de l'API, ecrit une fois. `dimensionnement/tarifs-api.json` prend
+/// le meme pour reference : c'est sur lui que l'argument economique est calcule.
+pub const MODELE_API: &str = "claude-sonnet-5";
+
 #[derive(Clone)]
 pub struct LLMService {
     api_key: String,
@@ -69,7 +73,7 @@ impl LLMService {
         // Effort bas parce que la conversation vise moins de trois secondes ;
         // une reponse de standard telephonique ne demande pas de reflexion longue.
         let request = serde_json::json!({
-            "model": "claude-sonnet-5",
+            "model": MODELE_API,
             "max_tokens": 1024,
             "output_config": { "effort": "low" },
             "system": agent_persona.system_prompt,

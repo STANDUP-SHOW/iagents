@@ -25,7 +25,11 @@ function App() {
   // Pourquoi l'écoute ou le modèle manquent : sans ça, l'utilisateur ne voit
   // qu'un « Voice not initialized » qui ne dit pas quel fichier déposer.
   const [motifEcoute, setMotifEcoute] = useState<string | null>(null)
-  const [motifModele, setMotifModele] = useState<string | null>(null)
+  // Où travaille l'agent qu'on vient d'activer, et ce que ça coûte. Dit à
+  // l'activation et pas après la première réponse : une bascule vers l'API se
+  // paie, et ça ne se découvre pas sur la facture.
+  const [voie, setVoie] = useState<string | null>(null)
+  const [voieBascule, setVoieBascule] = useState(false)
 
   useEffect(() => {
     initializeApp()
@@ -76,15 +80,10 @@ function App() {
         .then(() => setMotifEcoute(null))
         .catch((err) => setMotifEcoute(String(err)))
 
-      await invoke('init_llm')
-        .then(() => setMotifModele(null))
-        .catch(() =>
-          setMotifModele(
-            "Le modèle de langage n'est pas joignable : la variable " +
-              "d'environnement ANTHROPIC_API_KEY n'est pas définie. L'agent " +
-              'entendra, mais ne répondra pas.'
-          )
-        )
+      // L'absence de clé d'API n'est plus une panne : l'agent travaille en
+      // local si le poste a le modèle de son palier. C'est `modele_etat`, à
+      // l'activation, qui dit ce qu'il en est pour CE poste.
+      await invoke('init_llm').catch(() => {})
 
       await chargerAgentsInstalles()
     } catch (err) {
@@ -144,6 +143,22 @@ function App() {
 
     // L'écoute peut manquer (modèle absent) sans empêcher d'activer un agent :
     // le lier à l'activation rendait le bouton muet sur un poste sans modèle.
+    // Où ce poste travaille, avant qu'il ne dise un mot.
+    if (active) {
+      await invoke<{ motif: string; bascule: boolean }>('modele_etat', { ficheId: agentId })
+        .then((etat) => {
+          setVoie(etat.motif)
+          setVoieBascule(etat.bascule)
+        })
+        .catch((e) => {
+          setVoie(String(e))
+          setVoieBascule(true)
+        })
+    } else {
+      setVoie(null)
+      setVoieBascule(false)
+    }
+
     if (active) {
       try {
         await invoke('start_voice_recognition')
@@ -176,15 +191,21 @@ function App() {
       const { agent, utterance } = detecte
       setActiveAgent(agent.fiche.id)
 
-      const response = await invoke<string>('repondre', {
-        prenom: agent.prenom,
-        promptSysteme: moteur!.formatSystemPrompt(agent.fiche.id),
-        enonce: utterance || command,
-      })
+      const reponse = await invoke<{ texte: string; motif: string; bascule: boolean }>(
+        'repondre',
+        {
+          prenom: agent.prenom,
+          ficheId: agent.fiche.id,
+          promptSysteme: moteur!.formatSystemPrompt(agent.fiche.id),
+          enonce: utterance || command,
+        }
+      )
 
-      setLastResponse(response)
+      setLastResponse(reponse.texte)
+      setVoie(reponse.motif)
+      setVoieBascule(reponse.bascule)
 
-      await invoke('text_to_speech', { text: response }).catch((err) => {
+      await invoke('text_to_speech', { text: reponse.texte }).catch((err) => {
         console.error('TTS failed:', err)
         setError("La synthèse vocale a échoué. Vérifier que piper et sa voix sont présents à côté de l'application.")
       })
@@ -283,7 +304,9 @@ function App() {
         {motifEcoute && (
           <div className="error-banner">Écoute indisponible — {motifEcoute}</div>
         )}
-        {motifModele && <div className="error-banner">{motifModele}</div>}
+        {voie && (
+          <div className={voieBascule ? 'error-banner' : 'succes-banner'}>{voie}</div>
+        )}
         {activeTab === 'dashboard' && <Dashboard agents={agents} isListening={isListening} />}
         {activeTab === 'agents' && (
           <AgentManager
