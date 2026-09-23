@@ -173,6 +173,36 @@ verifier(
     return v.etat === 'reconnu';
   })(),
 );
+verifier(
+  "un nom d'outil caché dans un mot plus long n'est pas reconnu comme cet outil",
+  (() => {
+    // « papier » contient « PAP », « sapin » contient « SAP » : sans mots entiers,
+    // le client qui dit n'avoir aucun outil se voit proposer un portail d'annonces.
+    const v = reconnaitre('tout est sur papier', ref);
+    const w = reconnaitre('on range ça dans un sapin de dossiers', ref);
+    return v.etat !== 'reconnu' && w.etat !== 'reconnu';
+  })(),
+);
+verifier(
+  "mais un nom d'outil dit au milieu d'une phrase reste reconnu",
+  (() => {
+    const v = reconnaitre('on est passé sur Odoo', ref, 'erp');
+    const w = reconnaitre('on est sur Pennylane', ref, 'comptabilite');
+    return v.etat === 'reconnu' && v.logiciel.nom === 'Odoo'
+      && w.etat === 'reconnu' && w.logiciel.nom === 'Pennylane';
+  })(),
+);
+verifier(
+  "un produit dont le nom contient celui d'un autre ne rend pas la réponse ambiguë",
+  (() => {
+    // « Pipedrive » contient « Drive », « Lexoffice » contient « Office » : demander au
+    // client de choisir entre l'outil qu'il vient de nommer et un autre le déroute.
+    const a = reconnaitre('Pipedrive', ref, 'crm');
+    const b = reconnaitre('Lexoffice', ref);
+    return a.etat === 'reconnu' && a.logiciel.nom === 'Pipedrive'
+      && b.etat === 'reconnu' && b.logiciel.nom === 'Lexoffice';
+  })(),
+);
 
 // --- Ce que l'agent promet -------------------------------------------------
 const sansApi = ref.logiciels.filter((l) => porteeReelle(l) === 'navigateur');

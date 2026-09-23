@@ -207,6 +207,20 @@ function appellations(l: Logiciel): string[] {
 }
 
 /**
+ * Vrai quand `mot` apparaît dans `phrase` en mots entiers : « SAP » est dans « on est sur
+ * SAP », pas dans « sapin ». Le client parle, il ne découpe pas ses phrases pour nous.
+ */
+export function contientMot(phrase: string, mot: string): boolean {
+  if (!mot) return false;
+  for (let i = phrase.indexOf(mot); i !== -1; i = phrase.indexOf(mot, i + 1)) {
+    const avant = i === 0 || phrase[i - 1] === ' ';
+    const apres = i + mot.length === phrase.length || phrase[i + mot.length] === ' ';
+    if (avant && apres) return true;
+  }
+  return false;
+}
+
+/**
  * Ce que l'agent peut réellement faire dans l'outil. Une API officielle reste une promesse à
  * ouvrir sur le compte du client ; c'est pourquoi la phrase ne dit jamais « je suis connecté ».
  */
@@ -272,11 +286,14 @@ export function reconnaitre(dit: string, ref: Referentiel, categorie?: string): 
   if (exacts.length === 1) return { etat: 'reconnu', logiciel: exacts[0] };
   if (exacts.length > 1) return { etat: 'ambigu', candidats: exacts };
 
-  // Le client dit « on est sur Pennylane » ou « Sage » : on cherche dans les deux sens.
+  // Le client dit « on est sur Pennylane » ou « Sage » : on cherche dans les deux sens,
+  // mais sur des mots entiers. Sans cette borne, « tout est sur papier » tombe sur PAP,
+  // « Pipedrive » sur Drive et « Lexoffice » sur Office : l'agent demande alors au client
+  // de choisir entre l'outil qu'il vient de nommer et un autre qu'il n'a jamais cité.
   const partiels = pool.filter((l) =>
     appellations(l).some((a) => {
       const n = normaliser(a);
-      return d.includes(n) || n.includes(d);
+      return contientMot(d, n) || contientMot(n, d);
     })
   );
   if (partiels.length === 1) return { etat: 'reconnu', logiciel: partiels[0] };
