@@ -23,8 +23,8 @@
 //!    autres et le dit ; il n'est ni envoyé ni publié. C'est la règle de Max :
 //!    l'agent prépare, le client valide.
 //!
-//! **Ce qui n'est pas écrit** : `docx` (310 sorties), `pdf` (523), `eml` (200)
-//! et les formats d'image, de son et de vidéo. L'application n'embarque aucune
+//! **Ce qui n'est pas écrit** : `docx` (310 sorties), `pdf` (523) et les
+//! formats d'image, de son et de vidéo. L'application n'embarque aucune
 //! bibliothèque pour les produire. `format_ecrivable()` le dit en clair plutôt
 //! que d'écrire un `.docx` qui n'en serait pas un — même discipline que
 //! `diagnosticLocal()` côté dimensionnement.
@@ -37,7 +37,7 @@ use std::path::{Path, PathBuf};
 /// Du texte, rien d'autre : ce sont les seuls que `std::fs::write` suffit à
 /// écrire honnêtement. La liste s'allongera quand un écrivain existera pour de
 /// bon, pas avant.
-pub const FORMATS_ECRITS: [&str; 6] = ["md", "txt", "csv", "json", "html", "xlsx"];
+pub const FORMATS_ECRITS: [&str; 7] = ["md", "txt", "csv", "json", "html", "xlsx", "eml"];
 
 /// Les formats que le modèle rend sous forme de tableau plutôt que de texte.
 ///
@@ -52,12 +52,23 @@ pub fn est_un_tableau(format: &str) -> bool {
     FORMATS_TABLEAU.contains(&format)
 }
 
+/// Les formats que le modèle rend comme une lettre plutôt que comme un fichier.
+///
+/// 200 sorties demandent un `.eml`. Comme pour le classeur, on ne demande pas
+/// à un modèle d'écrire des en-têtes RFC 5322 : il rendrait un message
+/// plausible et mal formé. Il écrit une ligne d'objet et le corps de la
+/// lettre, l'application en fait le fichier.
+pub const FORMATS_COURRIEL: [&str; 1] = ["eml"];
+
+pub fn est_un_courriel(format: &str) -> bool {
+    FORMATS_COURRIEL.contains(&format)
+}
+
 /// Ce qu'il faudrait pour écrire les autres, dit au client plutôt que tu.
 fn ce_qui_manque(format: &str) -> &'static str {
     match format {
         "docx" => "aucun écrivain de document n'est embarqué dans l'application",
         "pdf" => "aucun écrivain de PDF n'est embarqué dans l'application",
-        "eml" => "l'envoi de courriel existe, mais pas l'écriture d'un brouillon sur le disque",
         "png" | "jpg" => "l'agent image ne tourne pas encore sur cette machine",
         "mp4" | "mp3" | "wav" => "l'agent son et vidéo ne tourne pas encore sur cette machine",
         _ => "ce format n'est pas prévu par le contrat des fiches",
@@ -183,13 +194,19 @@ pub fn nom_du_fichier(tache_id: &str, horodatage: &str, format: &str) -> Result<
 ///
 /// Écrite à la main pour ne pas ajouter une dépendance de dates à l'application :
 /// le client trie ses fichiers par nom et retrouve le dernier.
-pub fn horodatage(secondes_depuis_epoque: u64) -> String {
+/// Un instant de l'epoque Unix rendu en date civile UTC.
+///
+/// Civil-from-days, d'après l'algorithme de Howard Hinnant : pas de table de
+/// bissextiles à tenir, donc rien à corriger dans dix ans. Sorti de
+/// `horodatage` quand l'en-tête `Date:` d'un courriel a eu besoin du même
+/// calendrier : deux implémentations du même calcul finiraient par diverger.
+/// Rend (année, mois, jour, heure, minute, seconde, jour de semaine), le jour
+/// de semaine comptant 0 pour dimanche.
+pub fn civil(secondes_depuis_epoque: u64) -> (i64, i64, i64, u64, u64, u64, u64) {
     let jours = secondes_depuis_epoque / 86_400;
     let reste = secondes_depuis_epoque % 86_400;
     let (heure, minute, seconde) = (reste / 3600, (reste % 3600) / 60, reste % 60);
 
-    // Civil-from-days, d'après l'algorithme de Howard Hinnant : pas de table de
-    // bissextiles à tenir, donc rien à corriger dans dix ans.
     let z = jours as i64 + 719_468;
     let era = z.div_euclid(146_097);
     let doe = z.rem_euclid(146_097);
@@ -201,9 +218,39 @@ pub fn horodatage(secondes_depuis_epoque: u64) -> String {
     let mois = if mp < 10 { mp + 3 } else { mp - 9 };
     let annee = if mois <= 2 { y + 1 } else { y };
 
+    // Le 1er janvier 1970 était un jeudi.
+    let semaine = (jours + 4) % 7;
+    (annee, mois, jour, heure, minute, seconde, semaine)
+}
+
+pub fn horodatage(secondes_depuis_epoque: u64) -> String {
+    let (annee, mois, jour, heure, minute, seconde, _) = civil(secondes_depuis_epoque);
     format!(
         "{:04}{:02}{:02}-{:02}{:02}{:02}",
         annee, mois, jour, heure, minute, seconde
+    )
+}
+
+/// La date d'un courriel, au format qu'exige la RFC 5322.
+///
+/// En UTC, annoncé `+0000` : la machine du client peut être réglée n'importe
+/// comment, mais un brouillon daté d'une heure inventée se classe mal dans la
+/// boîte d'envoi.
+pub fn date_rfc5322(secondes_depuis_epoque: u64) -> String {
+    const JOURS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const MOIS: [&str; 12] = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    let (annee, mois, jour, heure, minute, seconde, semaine) = civil(secondes_depuis_epoque);
+    format!(
+        "{}, {:02} {} {:04} {:02}:{:02}:{:02} +0000",
+        JOURS[semaine as usize],
+        jour,
+        MOIS[(mois - 1) as usize],
+        annee,
+        heure,
+        minute,
+        seconde
     )
 }
 
@@ -353,6 +400,140 @@ pub fn poser_tableur(dossier: &Path, nom: &str, lignes: &[Vec<String>]) -> Resul
     std::fs::rename(&provisoire, &chemin)
         .map_err(|e| format!("mise en place de {} : {}", chemin.display(), e))?;
     Ok(chemin)
+}
+
+/// Sépare l'objet du corps dans ce que le modèle a rendu.
+///
+/// La consigne lui demande une première ligne `Objet : …`, puis le message.
+/// Quand il ne l'a pas fait, on prend sa première ligne comme objet plutôt que
+/// d'écrire un brouillon sans objet : une lettre sans objet se perd dans une
+/// boîte de réception, et l'objet est de toute façon relu par le client.
+pub fn objet_et_corps(texte: &str) -> (String, String) {
+    let texte = texte.trim_start_matches('\u{feff}').trim();
+    let (premiere, reste) = match texte.split_once('\n') {
+        Some((p, r)) => (p.trim(), r),
+        None => (texte, ""),
+    };
+    let sans_etiquette = premiere
+        .strip_prefix("Objet :")
+        .or_else(|| premiere.strip_prefix("Objet:"))
+        .or_else(|| premiere.strip_prefix("Subject:"));
+    match sans_etiquette {
+        Some(objet) => (objet.trim().to_string(), reste.trim().to_string()),
+        // Pas d'étiquette : la première ligne fait l'objet et reste aussi dans
+        // le corps. La perdre effacerait une phrase du message.
+        None => (premiere.to_string(), texte.to_string()),
+    }
+}
+
+/// Encode un texte en quoted-printable (RFC 2045).
+///
+/// Ni brut ni base64. Brut, une ligne de plus de 998 octets rend le message
+/// non conforme et certains serveurs le coupent ; en base64, le client qui
+/// ouvre le fichier dans un éditeur ne voit que du charabia. Le
+/// quoted-printable garde le français lisible et replie les lignes à 76.
+pub fn quoted_printable(texte: &str) -> String {
+    let mut sortie = String::new();
+    for (i, ligne) in texte.replace("\r\n", "\n").split('\n').enumerate() {
+        if i > 0 {
+            sortie.push_str("\r\n");
+        }
+        let mut colonne = 0usize;
+        let mut encodee = String::new();
+        let octets = ligne.as_bytes();
+        for (j, &o) in octets.iter().enumerate() {
+            // Un espace en fin de ligne serait mange par les serveurs : il
+            // s'encode pour survivre au transport.
+            let fin_de_ligne = j + 1 == octets.len();
+            let mot = if (33..=126).contains(&o) && o != b'=' {
+                (o as char).to_string()
+            } else if (o == b' ' || o == b'\t') && !fin_de_ligne {
+                (o as char).to_string()
+            } else {
+                format!("={:02X}", o)
+            };
+            // 76 colonnes en comptant le « = » de repli qui termine la ligne.
+            if colonne + mot.len() > 75 {
+                encodee.push_str("=\r\n");
+                colonne = 0;
+            }
+            colonne += mot.len();
+            encodee.push_str(&mot);
+        }
+        sortie.push_str(&encodee);
+    }
+    sortie
+}
+
+/// Encode un objet de courriel en mot encodé MIME (RFC 2047) s'il le faut.
+///
+/// Un objet en ASCII part tel quel ; dès qu'il porte un accent, il s'encode en
+/// base64 — sinon le client de messagerie affiche « RÃ©union » au lieu de
+/// « Réunion ».
+pub fn objet_encode(objet: &str) -> String {
+    let objet = objet.replace(['\r', '\n'], " ");
+    let objet = objet.trim();
+    if objet.is_ascii() {
+        return objet.to_string();
+    }
+    format!("=?UTF-8?B?{}?=", base64(objet.as_bytes()))
+}
+
+/// Base64 (RFC 4648), pour le seul objet du courriel.
+fn base64(octets: &[u8]) -> String {
+    const ALPHABET: &[u8; 64] =
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut sortie = String::new();
+    for bloc in octets.chunks(3) {
+        let b = [bloc[0], *bloc.get(1).unwrap_or(&0), *bloc.get(2).unwrap_or(&0)];
+        let n = ((b[0] as u32) << 16) | ((b[1] as u32) << 8) | b[2] as u32;
+        let indices = [n >> 18 & 63, n >> 12 & 63, n >> 6 & 63, n & 63];
+        for (i, idx) in indices.iter().enumerate() {
+            if i <= bloc.len() {
+                sortie.push(ALPHABET[*idx as usize] as char);
+            } else {
+                sortie.push('=');
+            }
+        }
+    }
+    sortie
+}
+
+/// Écrit un brouillon de courriel dans le dossier du client.
+///
+/// Mêmes règles que `poser` : rien n'est écrasé, mise en place par renommage.
+///
+/// **Sans destinataire, et c'est voulu.** L'agent n'a aucun moyen de connaître
+/// l'adresse de qui doit recevoir la lettre, et une adresse inventée est pire
+/// qu'une adresse absente : le client l'enverrait sans la relire. Pas
+/// d'expéditeur non plus — le compte de courrier du client est réglé ailleurs
+/// dans l'application, et le brouillon s'ouvre dans son logiciel de
+/// messagerie, qui y met le sien. `X-Unsent: 1` est ce qui fait qu'Outlook et
+/// Thunderbird l'ouvrent en rédaction et non en lecture : c'est un brouillon,
+/// pas un message reçu. Rien ne part du poste, comme partout ici.
+pub fn poser_courriel(
+    dossier: &Path,
+    nom: &str,
+    secondes_depuis_epoque: u64,
+    texte: &str,
+) -> Result<PathBuf, String> {
+    let (objet, corps) = objet_et_corps(texte);
+    if corps.trim().is_empty() {
+        return Err("le message rendu est vide : aucun brouillon n'a été écrit".to_string());
+    }
+    let message = format!(
+        "Date: {}\r\n\
+         Subject: {}\r\n\
+         MIME-Version: 1.0\r\n\
+         Content-Type: text/plain; charset=utf-8\r\n\
+         Content-Transfer-Encoding: quoted-printable\r\n\
+         X-Unsent: 1\r\n\
+         \r\n{}\r\n",
+        date_rfc5322(secondes_depuis_epoque),
+        objet_encode(&objet),
+        quoted_printable(&corps)
+    );
+    poser(dossier, nom, &message)
 }
 
 /// Les formats que l'application sait relire dans le dossier du client.
@@ -566,6 +747,13 @@ pub fn consigne_de_la_tache(
         systeme.push_str(
             "\nVous rendez un tableau. N'écrivez que ses lignes, séparées par des points-virgules, la première étant les en-têtes de colonnes. Mettez entre guillemets tout champ qui contient un point-virgule ou un retour à la ligne. Pas de préambule, pas de commentaire, pas de ligne de tirets.",
         );
+    } else if est_un_courriel(format) {
+        // Le destinataire est la seule chose que l'agent ne peut pas savoir :
+        // lui laisser l'inventer ferait un brouillon prêt à partir chez la
+        // mauvaise personne.
+        systeme.push_str(
+            "\nVous rendez un courriel. Écrivez d'abord une ligne « Objet : » suivie de l'objet, puis une ligne vide, puis le corps de la lettre. N'inventez aucun destinataire ni aucune adresse : c'est votre employeur qui les mettra. Pas de préambule, pas de commentaire sur ce que vous avez fait.",
+        );
     } else {
         systeme.push_str(&format!(
             "\nVous rendez un fichier « {} ». N'écrivez que son contenu : pas de préambule, pas de commentaire sur ce que vous avez fait.",
@@ -695,6 +883,10 @@ fn agent_installe(
 pub struct Preparation {
     pub dossier: PathBuf,
     pub nom_fichier: String,
+    /// L'instant retenu pour cette exécution. Le nom du fichier en vient, et
+    /// l'en-tête `Date:` d'un brouillon de courriel aussi : les deux doivent
+    /// dire la même heure.
+    pub epoque: u64,
     /// Le format déclaré par la tâche : il décide si le modèle rend un tableau.
     pub format: String,
     /// Les dossiers du poste où l'agent prend sa matière. Vide quand la fiche
@@ -794,6 +986,7 @@ pub fn preparer(
     Ok(Preparation {
         dossier,
         nom_fichier,
+        epoque: maintenant,
         format: tache.sortie.format.clone(),
         source_declaree: !logiques.is_empty(),
         sources,
@@ -1093,6 +1286,136 @@ mod tests {
     }
 
     /// Le fichier est posé entier ou pas du tout, et n'écrase jamais.
+    #[test]
+    fn l_objet_se_prend_a_la_ligne_qui_le_nomme() {
+        let (objet, corps) = objet_et_corps("Objet : Relance de la facture 412\n\nBonjour,\n\nSauf erreur…");
+        assert_eq!(objet, "Relance de la facture 412");
+        assert!(corps.starts_with("Bonjour,"), "{}", corps);
+        assert!(!corps.contains("Objet"), "{}", corps);
+    }
+
+    #[test]
+    fn sans_etiquette_la_premiere_ligne_sert_d_objet_et_reste_dans_le_corps() {
+        // Le modèle n'a pas suivi la consigne. Un brouillon sans objet se perd
+        // dans une boîte de réception ; effacer sa première ligne perdrait une
+        // phrase du message.
+        let (objet, corps) = objet_et_corps("Votre commande du 12 mars\n\nBonjour,");
+        assert_eq!(objet, "Votre commande du 12 mars");
+        assert!(corps.starts_with("Votre commande du 12 mars"), "{}", corps);
+        assert!(corps.contains("Bonjour,"), "{}", corps);
+    }
+
+    #[test]
+    fn un_accent_dans_l_objet_ne_part_pas_de_travers() {
+        // Sans encodage, le client de messagerie affiche « RÃ©union ».
+        assert_eq!(objet_encode("Relance facture 412"), "Relance facture 412");
+        let encode = objet_encode("Réunion du 3 février");
+        assert!(encode.starts_with("=?UTF-8?B?") && encode.ends_with("?="), "{}", encode);
+        assert_eq!(base64("Réunion".as_bytes()), "UsOpdW5pb24=");
+        assert_eq!(base64(b"a"), "YQ==");
+        assert_eq!(base64(b"ab"), "YWI=");
+        assert_eq!(base64(b"abc"), "YWJj");
+    }
+
+    #[test]
+    fn une_ligne_trop_longue_est_repliee_et_le_signe_egal_s_echappe() {
+        // Une ligne de plus de 998 octets rend le message non conforme et
+        // certains serveurs la coupent au milieu d'un mot.
+        let longue = "a".repeat(200);
+        let encode = quoted_printable(&longue);
+        assert!(
+            encode.split("\r\n").all(|l| l.len() <= 76),
+            "ligne trop longue : {:?}",
+            encode.split("\r\n").map(str::len).collect::<Vec<_>>()
+        );
+        // Le repli est doux : il ne s'ajoute rien au texte une fois décodé.
+        assert_eq!(encode.replace("=\r\n", ""), longue);
+        assert_eq!(quoted_printable("2 = 2"), "2 =3D 2");
+        assert_eq!(quoted_printable("été"), "=C3=A9t=C3=A9");
+    }
+
+    #[test]
+    fn un_espace_en_fin_de_ligne_survit_au_transport() {
+        // Les serveurs mangent les espaces de fin de ligne : encodés, ils
+        // passent. Au milieu d'une ligne, ils restent lisibles.
+        assert_eq!(quoted_printable("Bonjour "), "Bonjour=20");
+        assert_eq!(quoted_printable("Bonjour Madame"), "Bonjour Madame");
+    }
+
+    #[test]
+    fn la_date_du_courriel_dit_la_meme_heure_que_le_nom_du_fichier() {
+        assert_eq!(horodatage(0), "19700101-000000");
+        assert_eq!(date_rfc5322(0), "Thu, 01 Jan 1970 00:00:00 +0000");
+        // 2026-09-23 14:30:00 UTC, un mercredi.
+        let t = 1_790_173_800;
+        assert_eq!(horodatage(t), "20260923-143000");
+        assert_eq!(date_rfc5322(t), "Wed, 23 Sep 2026 14:30:00 +0000");
+    }
+
+    #[test]
+    fn un_brouillon_de_courriel_s_ouvre_en_redaction_et_sans_destinataire() {
+        let dossier = std::env::temp_dir().join(format!("iagent-eml-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dossier);
+
+        let chemin = poser_courriel(
+            &dossier,
+            "relance-20260923-143000.eml",
+            1_790_173_800,
+            "Objet : Relance de la facture 412\n\nMadame,\n\nSauf erreur de notre part, la facture 412 reste impayée.",
+        )
+        .expect("brouillon écrit");
+        let eml = std::fs::read_to_string(&chemin).unwrap();
+
+        assert!(eml.contains("Date: Wed, 23 Sep 2026 14:30:00 +0000"), "{}", eml);
+        assert!(eml.contains("Subject: Relance de la facture 412"), "{}", eml);
+        assert!(eml.contains("Content-Type: text/plain; charset=utf-8"), "{}", eml);
+        assert!(eml.contains("Content-Transfer-Encoding: quoted-printable"), "{}", eml);
+        // Ce qui fait qu'Outlook et Thunderbird l'ouvrent en rédaction.
+        assert!(eml.contains("X-Unsent: 1"), "{}", eml);
+        // Aucune adresse inventée, ni en expéditeur ni en destinataire : c'est
+        // le client qui les met, dans son logiciel de messagerie.
+        assert!(!eml.contains("\r\nTo:"), "{}", eml);
+        assert!(!eml.contains("\r\nFrom:"), "{}", eml);
+        // L'en-tête se sépare du corps par une ligne vide, et le corps y est.
+        let (entetes, corps) = eml.split_once("\r\n\r\n").expect("ligne vide séparatrice");
+        assert!(!entetes.contains("Madame"), "{}", entetes);
+        assert!(corps.contains("Madame,"), "{}", corps);
+        assert!(corps.contains("impay=C3=A9e"), "{}", corps);
+
+        // Rien n'est écrasé, et rien de provisoire ne reste.
+        assert!(poser_courriel(&dossier, "relance-20260923-143000.eml", 1_790_173_800, "Objet : X\n\nY").is_err());
+        let restes: Vec<_> = std::fs::read_dir(&dossier).unwrap().flatten()
+            .map(|e| e.file_name().to_string_lossy().to_string()).collect();
+        assert_eq!(restes, vec!["relance-20260923-143000.eml".to_string()]);
+
+        // Un message vide est un échec, pas un brouillon vide.
+        assert!(poser_courriel(&dossier, "vide.eml", 0, "Objet : Rien\n\n   ").is_err());
+
+        let _ = std::fs::remove_dir_all(&dossier);
+    }
+
+    #[test]
+    fn on_ne_demande_pas_d_en_tetes_au_modele() {
+        // Même règle que le classeur : un modèle à qui on demande un « fichier
+        // eml » rend des en-têtes plausibles et mal formées.
+        let p = preparer(
+            &installation(DOSSIERS),
+            &fiche("eml", true, false),
+            "Camille",
+            "AG-0001",
+            "compte-rendu",
+            0,
+            &[],
+        )
+        .expect("tâche prête");
+        assert_eq!(p.format, "eml");
+        assert!(p.nom_fichier.ends_with(".eml"));
+        assert!(!p.systeme.contains("fichier « eml »"), "{}", p.systeme);
+        assert!(p.systeme.contains("Objet :"), "{}", p.systeme);
+        assert!(p.systeme.contains("N'inventez aucun destinataire"), "{}", p.systeme);
+        assert!(est_un_courriel("eml") && !est_un_courriel("md"));
+    }
+
     #[test]
     fn le_resultat_est_pose_entier_et_n_ecrase_rien() {
         let dossier = std::env::temp_dir().join(format!("iagent-tache-{}", std::process::id()));

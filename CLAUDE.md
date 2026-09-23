@@ -315,12 +315,21 @@ par WhatsApp et email.
   un chemin relatif est refusé) ; le nom du fichier est construit ici, jamais
   proposé par le modèle. Rien ne part du poste : `validationHumaine` écrit le
   résultat et le dit, sans rien envoyer.
-- **L'application écrit `md`, `txt`, `csv`, `json`, `html` et `xlsx`** :
-  8 125 sorties sur 9 265. Il manque `pdf` (523), `docx` (310), `eml` (200) et
-  les formats d'image, de son et de vidéo — aucune bibliothèque n'est embarquée
-  pour ceux-là. `format_ecrivable()` le dit en clair plutôt que d'écrire un
-  `.docx` qui n'en serait pas un, et l'écran n'offre pas de bouton pour ces
-  tâches. La liste vit des deux côtés de la frontière (`tache.rs` et
+- **L'application écrit `md`, `txt`, `csv`, `json`, `html`, `xlsx` et `eml`** :
+  8 325 sorties sur 9 265. Il manque `pdf` (523), `docx` (310) et les formats
+  d'image, de son et de vidéo — aucune bibliothèque n'est embarquée pour
+  ceux-là. Deux formats ne se demandent pas au modèle, qui rendrait une
+  description plausible et mal formée : le classeur (il rend des lignes en
+  points-virgules) et le courriel (il rend une ligne `Objet :` et une lettre,
+  l'application écrit les en-têtes). Le brouillon `.eml` part **sans
+  destinataire ni expéditeur**, avec `X-Unsent: 1` pour qu'Outlook et
+  Thunderbird l'ouvrent en rédaction : une adresse inventée serait pire
+  qu'absente, le client l'enverrait sans relire. Vérifié au 23/09/2026 en
+  relisant le fichier produit avec un analyseur RFC 5322 indépendant (objet
+  accentué, ligne de 200 caractères, espace de fin de ligne : zéro défaut).
+  `format_ecrivable()` dit en clair ce qu'il ne sait pas écrire plutôt que
+  d'écrire un `.docx` qui n'en serait pas un, et l'écran n'offre pas de bouton
+  pour ces tâches. La liste vit des deux côtés de la frontière (`tache.rs` et
   `src/agents/travail.ts`) et `check-travail.ts` compare les deux fichiers.
 - **Un modèle ne rend pas un classeur, il rend des lignes.** Le tableur est le
   format le plus réclamé des fiches (4 100 sorties sur 9 265) : la consigne

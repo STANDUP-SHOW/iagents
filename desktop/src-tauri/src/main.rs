@@ -308,6 +308,9 @@ async fn executer_tache(
             &prep.nom_fichier,
             &tache::lignes_du_tableau(&texte),
         )?
+    } else if tache::est_un_courriel(&prep.format) {
+        // Le modèle rend un objet et une lettre ; les en-têtes, c'est nous.
+        tache::poser_courriel(&prep.dossier, &prep.nom_fichier, prep.epoque, &texte)?
     } else {
         tache::poser(&prep.dossier, &prep.nom_fichier, &texte)?
     };
