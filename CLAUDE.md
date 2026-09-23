@@ -142,6 +142,27 @@ par WhatsApp et email.
   peu sollicité se vend en mode API, pas avec du matériel. Un designer seul sur
   un bundle XL ne passe pas non plus (ratio 0,5) : les agents image et vidéo se
   vendent en bundle partagé ou en mode API, jamais seuls sur une carte dédiée.
+- **La boutique (`frontend/`) calculait ses chiffres au lieu de les lire.** Son
+  badge vert « 3x ✓ » comparait la moyenne de la fourchette de prix d'abonnement
+  à 33 % du haut de cette **même** fourchette : mathématiquement incapable de
+  rendre vrai, donc **jamais allumé sur aucune des 1 249 cartes**. Le panneau
+  « Analyse économique (ratio 3×) » posait le coût du matériel à 30 % du **prix
+  d'abonnement** et l'API à 0,00015 € l'appel (un nombre qui n'est nulle part),
+  d'où une « marge » de ~70 % identique pour tout le catalogue, et aucun ratio.
+  Depuis le 23/09 la boutique appelle `economiePour` — `dimensionnement/` ne lit
+  aucun fichier, donc tourne aussi dans le navigateur — et affiche le vrai
+  chiffre : **136 badges, comme `docs/economie.md`**.
+- **`npm run controle-boutique` : une construction verte ne prouve pas qu'une
+  page s'affiche.** `frontend/` n'a ni typage ni banc, et `vite build` ne voit
+  pas une variable qui n'existe pas : quatre références restées après une
+  correction ont passé la construction sans un mot, et la fiche détaillée aurait
+  planté à l'ouverture chez le client. Le banc (`frontend/banc/rendu.jsx`) rend
+  vraiment les composants en SSR, avec React et react-dom déjà présents, **sans
+  rien installer de plus**. Il parcourt **les quatre onglets** : l'onglet est un
+  état interne, donc un rendu par défaut ne montre que « overview » — c'est
+  précisément là que les quatre variables se cachaient, et le banc ne les a
+  vues qu'une fois `ongletInitial` ajouté pour lui. Vérifié en remettant le
+  bogue : `vite build` sort 0, le banc sort 1 en nommant la variable.
 - **`profil_risque` n'est pas `commercial.profil`, et les deux s'écrivent
   « PR-NN ».** C'est cette collision de noms qui a laissé passer l'erreur :
   `commercial.profil` vient de `catalogue.profils` (PR-01 à PR-12 :
@@ -611,14 +632,15 @@ par WhatsApp et email.
 ```bash
 npm install
 npm run controle              # banc du dimensionnement + validation des paquets
-npm run controle-application  # typage de l'interface + 81 tests Rust
+npm run controle-application  # typage React + tests Rust de l'application (176)
+npm run controle-boutique     # la boutique : rend vraiment ses pages, tous onglets
+npx tsc --noEmit
 npm run verifier -- --corriger
+npm run economie              # regénère docs/economie*.md (le banc refuse une table périmée)
 npm run generer -- --sec --refaire --ids AG-0002   # --refaire : les 1 249 existent deja
 node --experimental-strip-types outils/packs.ts   # quel agent sur quelle machine
 npm run importer-connecteurs  # relit les relevés V6 -> connecteurs/catalogue.json
 npm run verifier-connecteurs  # règle d'activation, seule ou dans npm run controle
-npx tsc --noEmit
-npm run controle-application  # typage React + tests Rust de l'application
 ```
 
 `controle-application` ne rejoint pas `controle` : il demande les modules de

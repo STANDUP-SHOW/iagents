@@ -1,3 +1,5 @@
+import { economiePour, RATIO_MINIMUM } from '../../../dimensionnement/economie.ts';
+
 // Charge les 1249 fiches JSON depuis le répertoire agents
 const agentModules = import.meta.glob('../../../agents/*.json', {
   eager: true,
@@ -72,13 +74,54 @@ export const estimateMonthlyPrice = (agent) => {
   return 0;
 };
 
-// Vérifier si l'agent passerait le test 3x
+// Vérifier si l'agent tient la règle des 3x : matériel + API résiduelle au moins
+// trois fois moins cher que l'API seule sur un an.
+//
+// Ce test comparait la moyenne de la fourchette de prix d'abonnement à 33 % du
+// haut de cette MÊME fourchette — un fait sur la forme de la fourchette, sans
+// rapport avec le coût du matériel ni celui de l'API. Il était donc
+// mathématiquement incapable de rendre vrai ((min+max)/2 <= 0,33×max exige
+// min <= -0,34×max), et le badge vert « 3x ✓ » ne s'est jamais allumé sur
+// aucune des 1 249 cartes. Le vrai calcul est dans dimensionnement/economie.ts,
+// qui ne lit aucun fichier et tourne donc aussi bien dans le navigateur.
+//
+// Calculé une fois pour toutes ici : FicheList l'appelle par carte, et refaire
+// le calcul 1 249 fois à chaque rendu n'a pas de raison d'être.
+const ratioParAgent = new Map(
+  agents.map((agent) => {
+    try {
+      return [agent.id, economiePour(agent).ratioPartage];
+    } catch {
+      // Une fiche que le calcul ne sait pas lire n'affiche pas de badge : mieux
+      // vaut ne rien promettre que promettre à tort.
+      return [agent.id, null];
+    }
+  })
+);
+
 export const passes3xTest = (agent) => {
-  if (!agent.commercial) return false;
-  const avgPrice = estimateMonthlyPrice(agent);
-  const maxPrice = agent.commercial.prixMensuel?.max || 0;
-  return avgPrice <= maxPrice * 0.33;
+  const ratio = ratioParAgent.get(agent?.id);
+  return ratio !== null && ratio !== undefined && ratio >= RATIO_MINIMUM;
 };
+
+/** Le ratio lui-même, pour l'afficher plutôt que de le résumer à un badge. */
+export const ratio3x = (agent) => ratioParAgent.get(agent?.id) ?? null;
+
+/**
+ * Le détail économique d'une fiche, tel que docs/economie.md le publie : ce que
+ * le client paierait en API seule, ce qu'il paie chez Local-Agent, et le ratio.
+ * `null` si le calcul ne sait pas lire la fiche.
+ */
+export const economieDe = (agent) => {
+  try {
+    return economiePour(agent);
+  } catch {
+    return null;
+  }
+};
+
+/** Est-ce que cet agent attend l'accord d'un humain ? Déduit de ses tâches. */
+export const attendUnAccordHumain = (agent) => (agent?.taches ?? []).some((t) => t.validationHumaine === true);
 
 // Récupérer le profil de risque
 export const getRiskProfile = (agent) => {
