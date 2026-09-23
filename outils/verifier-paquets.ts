@@ -11,7 +11,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Ajv2020 } from 'ajv/dist/2020.js';
-import { materielPour, appelsParJour } from '../dimensionnement/calculer.ts';
+import { materielPour, appelsParJourEstimes } from '../dimensionnement/calculer.ts';
 import { logicielsDesTaches, remplacement } from './logiciels-metier.ts';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -233,7 +233,7 @@ for (const f of fichiers) {
     }
   } catch (e) { faute(f, (e as Error).message); }
   if (paquet.execution) {
-    const attendu = appelsParJour(paquet.taches);
+    const attendu = appelsParJourEstimes(paquet.taches);
     if (paquet.execution.appelsParJourEstimes !== attendu) {
       if (corriger) { paquet.execution.appelsParJourEstimes = attendu; modifie = true; } else faute(f, `appelsParJourEstimes ${paquet.execution.appelsParJourEstimes} ≠ calcul ${attendu}`);
     }

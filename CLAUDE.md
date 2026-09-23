@@ -126,13 +126,37 @@ par WhatsApp et email.
   tours par exécution (navigateur, document lourd), prix Sonnet 5 et Opus 5 du
   jour, 20 % d'API résiduelle, bundle amorti sur 12 mois plus électricité,
   employé médian et SMIC chargé en face. `docs/economie.md` (npm run economie)
-  donne la table pour toutes les fiches. **Toutes les hypothèses sont dans
-  `tarifs-api.json` et doivent être remplacées par la mesure** dès qu'un agent
-  tourne (tours et jetons consignés). Résultat au 19/09 : un poste de bureau
-  passe la règle en bundle partagé (≈ 290 € d'API seule contre ≈ 90 €), un
-  designer seul sur un bundle XL ne la passe pas (ratio 0,5) : les agents
-  image et vidéo se vendent en bundle partagé ou en mode API, jamais seuls
-  sur une carte dédiée. Le banc `check-economie.ts` tient ces deux vérités.
+  donne la table pour toutes les fiches, et `check-economie.ts` **refuse une
+  table périmée** : il la regénère en mémoire et compare. Elle avait pourri
+  quatre jours sans que rien ne bronche (générée sur 126 fiches quand le dépôt
+  en portait 1 249). **Toutes les hypothèses sont dans `tarifs-api.json` et
+  doivent être remplacées par la mesure** dès qu'un agent tourne (tours et
+  jetons consignés) ; les forfaits `declencheur` (20/jour) et `a-la-demande`
+  (5/jour) sont dans `calculer.ts` et sont des hypothèses aussi : 36 % des
+  appels des fiches qui passent la règle viennent du forfait declencheur.
+  **Résultat au 23/09, sur le compte corrigé : 136 fiches sur 1 249 tiennent la
+  règle en bundle partagé (45 seules), 57 si l'on compte un poste N150 par
+  agent.** C'était 215 avant correction, et le chiffre était faux. La règle est
+  en réalité une règle de charge : au-dessous de 26 appels/jour aucune fiche ne
+  passe, au-dessus de 150 toutes passent, et la fiche médiane est à 26. Un agent
+  peu sollicité se vend en mode API, pas avec du matériel. Un designer seul sur
+  un bundle XL ne passe pas non plus (ratio 0,5) : les agents image et vidéo se
+  vendent en bundle partagé ou en mode API, jamais seuls sur une carte dédiée.
+- **La cadence d'une tâche et le champ de la fiche sont deux fonctions**
+  (`appelsParJour` fractionnaire, `appelsParJourEstimes` entier planché à 1,
+  dans `calculer.ts`). Les confondre a coûté deux fois le même jour. D'abord
+  `hebdomadaire` et `mensuelle` n'étaient pas listées du tout et tombaient dans
+  le fourre-tout `a-la-demande` : **3 407 tâches comptées à 5 appels par JOUR**
+  au lieu d'un par semaine ou par mois, sur 967 fiches des 1 249. Rien n'échouait,
+  le chiffre sortait seulement trop haut, ce qui gonflait la facture « API seule »
+  et donc flattait le ratio commercial. Puis, la correction faite, le plancher
+  `Math.max(1, …)` — juste pour le champ entier de la fiche — écrasait encore la
+  différence, parce que `economie.ts` pèse les tâches **une par une** : pesée
+  seule, une tâche hebdomadaire redonnait 1. Le banc ne l'a vu que parce qu'on a
+  changé une tâche exprès pour vérifier qu'il criait. **Un défaut silencieux sur
+  une énumération, et un plancher qui voyage hors de son usage, se paient pareil :
+  en chiffres justes en apparence.** Le banc lit maintenant les six planifications
+  dans le schéma et refuse qu'une seule ne soit pas comptée ; une inconnue lève.
 - **Les fiches sont écrites par Claude Code sur l'abonnement de Max, pas par
   l'API** (19/09/2026). Le workflow Batch reste dans le dépôt (il a servi au
   lot Administration, 24 fiches pour 0,60 $) mais ne se relance plus : les
@@ -558,7 +582,7 @@ npm install
 npm run controle              # banc du dimensionnement + validation des paquets
 npm run controle-application  # typage de l'interface + 81 tests Rust
 npm run verifier -- --corriger
-npm run generer -- --sec --ids AG-0002
+npm run generer -- --sec --refaire --ids AG-0002   # --refaire : les 1 249 existent deja
 node --experimental-strip-types outils/packs.ts   # quel agent sur quelle machine
 npm run importer-connecteurs  # relit les relevés V6 -> connecteurs/catalogue.json
 npm run verifier-connecteurs  # règle d'activation, seule ou dans npm run controle

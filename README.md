@@ -25,7 +25,8 @@ outils/           verifier-paquets.ts (contrat + cohérence), generer-fiches.ts 
 npm install
 npm run controle                         # banc du dimensionnement + validation de tous les paquets
 npm run verifier -- --corriger           # recalcule materiel / commercial / appels depuis les sources de vérité
-npm run generer -- --sec --ids AG-0002   # prépare les requêtes sans rien envoyer
+npm run generer -- --sec --refaire --ids AG-0002   # prépare les requêtes sans rien envoyer
+                                                  # --refaire est obligatoire : la fiche existe déjà
 npm run generer -- soumettre --secteur comptabilite         # un lot Anthropic (ANTHROPIC_API_KEY requis)
 npm run generer -- relever <batchId>     # écrit agents/*.json, liste les échecs à relancer
 ```

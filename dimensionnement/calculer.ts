@@ -172,24 +172,58 @@ export function agentsParMachine(machine: Machine, agent: AgentDimension): numbe
 }
 
 /**
- * Estimated calls per day, derived from task scheduling. Feeds the API-mode
- * cost warning in the desktop app. Triggered and on-demand tasks get a flat
- * allowance; the app replaces the estimate with the measured figure after a week.
+ * Calls per day, derived from task scheduling. FRACTIONAL and unfloored on
+ * purpose: a weekly task is 1/7 of a call a day, and callers that weigh tasks
+ * one by one need that to stay true. `appelsParJourEstimes` below is the
+ * rounded integer the package schema stores. Triggered and on-demand tasks get
+ * a flat allowance; the app replaces the estimate with the measured figure
+ * after a week.
+ *
+ * The six types are the six the package schema allows, and an unknown one
+ * THROWS. It used to fall into the on-demand allowance: `hebdomadaire` and
+ * `mensuelle` were never listed here, so 3 407 tasks were counted at 5 calls a
+ * DAY instead of one a week or one a month. Nothing failed — the figure just
+ * came out too high, which flattered the API-only bill and therefore the
+ * commercial ratio. A silent default on an enumeration is how that happens.
  */
-export interface TachePlanifiee { planification: { type: 'quotidienne' | 'intervalle' | 'declencheur' | 'a-la-demande'; minutes?: number }; active: boolean }
+export type TypePlanification = 'quotidienne' | 'hebdomadaire' | 'mensuelle' | 'intervalle' | 'declencheur' | 'a-la-demande';
+export interface TachePlanifiee { planification: { type: TypePlanification; minutes?: number }; active: boolean }
 export const APPELS_DECLENCHEUR_PAR_JOUR = 20;
 export const APPELS_A_LA_DEMANDE_PAR_JOUR = 5;
+/** Days in the month the sizing counts with, so a monthly task is 1/30 of a day. */
+export const JOURS_PAR_MOIS = 30;
 export function appelsParJour(taches: TachePlanifiee[]): number {
-  let total = 0;
+  let parJour = 0, parSemaine = 0, parMois = 0;
   for (const t of taches) {
     if (!t.active) continue;
     const p = t.planification;
-    if (p.type === 'quotidienne') total += 1;
-    else if (p.type === 'intervalle') total += Math.ceil(1440 / (p.minutes ?? 1440));
-    else if (p.type === 'declencheur') total += APPELS_DECLENCHEUR_PAR_JOUR;
-    else total += APPELS_A_LA_DEMANDE_PAR_JOUR;
+    switch (p.type) {
+      case 'quotidienne': parJour += 1; break;
+      case 'hebdomadaire': parSemaine += 1; break;
+      case 'mensuelle': parMois += 1; break;
+      case 'intervalle': parJour += Math.ceil(1440 / (p.minutes ?? 1440)); break;
+      case 'declencheur': parJour += APPELS_DECLENCHEUR_PAR_JOUR; break;
+      case 'a-la-demande': parJour += APPELS_A_LA_DEMANDE_PAR_JOUR; break;
+      default: throw new Error(`Planification inconnue : ${(p as { type: string }).type}`);
+    }
   }
-  return Math.max(1, total);
+  // Counted per period, then divided once: summing 1/7 seven times lands on
+  // 0.9999999999999998, and a rate that drifts is a rate compared wrong.
+  return parJour + parSemaine / 7 + parMois / JOURS_PAR_MOIS;
+}
+
+/**
+ * The same rate as the integer the package schema carries in
+ * `execution.appelsParJourEstimes`. An agent that works at all works at least
+ * once, so it rounds up rather than announce zero.
+ *
+ * It is deliberately NOT what `appelsParJour` returns. The floor and the
+ * rounding belong to the stored field, not to the rate: `economie.ts` weighs
+ * tasks ONE BY ONE, and a floor of 1 there makes a weekly task cost as much as
+ * a daily one — which is the very confusion this pair was split to end.
+ */
+export function appelsParJourEstimes(taches: TachePlanifiee[]): number {
+  return Math.max(1, Math.ceil(appelsParJour(taches)));
 }
 
 /** Load gauge for the desktop app: how full a machine is with a set of agents running locally. */

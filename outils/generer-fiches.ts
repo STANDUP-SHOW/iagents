@@ -19,7 +19,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Ajv2020 } from 'ajv/dist/2020.js';
-import { materielPour, appelsParJour } from '../dimensionnement/calculer.ts';
+import { materielPour, appelsParJourEstimes } from '../dimensionnement/calculer.ts';
 import { logicielsDesTaches } from './logiciels-metier.ts';
 
 /**
@@ -126,7 +126,7 @@ function assembler(a: any, fiche: any) {
     acces: { ...fiche.acces, logiciels: logicielsDesTaches(fiche.taches, categoriesLogiciels) }, modeles,
     execution: { modes: ['local', 'api'], defaut: 'local', bascule: 'automatique',
       api: { capacites: Object.fromEntries(Object.keys(modeles).filter((k) => k in API_CAPACITES).map((k) => [k, API_CAPACITES[k]])) },
-      appelsParJourEstimes: appelsParJour(fiche.taches) },
+      appelsParJourEstimes: appelsParJourEstimes(fiche.taches) },
     materiel: materielPour(modeles),
     commercial: { profil: p.id, priorite: p.priorite, pack: p.pack, prixMensuel: { min: p.prixCible.min, max: p.prixCible.max }, autonomie: p.autonomie, besoinHumain: p.besoinHumain, risqueReglementaire: p.risqueReglementaire },
     miseAJour: { canal: 'stable', appMinimum: '1.0.0', notes: 'Première version.' },
