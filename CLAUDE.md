@@ -137,6 +137,17 @@ par WhatsApp et email.
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,
   le client valide. Les règles qui comptent sont appliquées par le code
   (`expert.regles` → l'application), pas seulement lues par le modèle.
+- **Le navigateur intégré (`desktop/src-tauri/src/navigateur.rs`) ouvre, il
+  n'agit pas.** Le client se connecte lui-même à ses comptes dans une fenêtre
+  au profil persistant (`data_directory`), posé dans `app_local_data_dir` et
+  non à côté de l'exécutable, qui n'est pas inscriptible après un MSI. Seuls
+  `http` et `https` s'ouvrent ; la fenêtre n'est pas listée dans
+  `capabilities/default.json`, donc aucun site visité n'atteint une commande.
+  **Aucune commande n'injecte de script dans la page et aucune permission n'est
+  accordée d'office** : les deux motifs du cahier des charges
+  (`setPermissionRequestHandler` → `callback(true)`, sélecteur non échappé dans
+  `executeJavaScript`) sont refusés par construction. Cliquer et remplir vient
+  en phase C, avec validation humaine avant tout envoi.
 
 ## Commandes
 
@@ -147,6 +158,17 @@ npm run verifier -- --corriger
 npm run generer -- --sec --ids AG-0002
 node --experimental-strip-types outils/packs.ts   # quel agent sur quelle machine
 npx tsc --noEmit
+npm run controle-application  # typage React + tests Rust de l'application
+```
+
+`controle-application` ne rejoint pas `controle` : il demande les modules de
+`desktop/` et les bibliothèques système de Tauri. Sur une machine neuve, les
+poser d'abord, sinon `cargo` s'arrête sur `gdk-3.0` introuvable :
+
+```bash
+apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
+  libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev \
+  libjavascriptcoregtk-4.1-dev libasound2-dev
 ```
 
 ## Conventions
@@ -158,7 +180,7 @@ npx tsc --noEmit
 
 ## Chantier
 
-1. Application desktop iAgent (Electron + TypeScript, moteur de modèles locaux
+1. Application desktop iAgent (Tauri v2 + React + TypeScript, moteur de modèles locaux
    type Ollama, Playwright pour le navigateur) : parcours minimal installer →
    se connecter → télécharger un agent → une tâche s'exécute → résultat dans le
    dossier → conversation vocale.

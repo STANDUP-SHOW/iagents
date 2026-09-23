@@ -406,7 +406,6 @@ export function configurer(
   ref: Referentiel,
   reponses: readonly Reponse[]
 ): Configuration {
-  const parId = new Map(ref.logiciels.map((l) => [l.id, l]));
   const qualifiees = new Map<string, Qualification>();
   for (const q of fiche.qualifications?.logiciels ?? []) qualifiees.set(q.logiciel, q);
 

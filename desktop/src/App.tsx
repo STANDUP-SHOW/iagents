@@ -8,9 +8,10 @@ import Dashboard from './components/Dashboard'
 import VoiceTraining from './components/VoiceTraining'
 import AgentManager from './components/AgentManager'
 import ConnectorSetup from './components/ConnectorSetup'
+import Navigateur from './components/Navigateur'
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors' | 'navigateur'>('dashboard')
   const [agents, setAgents] = useState<any[]>([])
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
   const [isListening, setIsListening] = useState(false)
@@ -255,6 +256,12 @@ function App() {
         >
           Connectors
         </button>
+        <button
+          className={activeTab === 'navigateur' ? 'active' : ''}
+          onClick={() => setActiveTab('navigateur')}
+        >
+          Vos comptes
+        </button>
       </nav>
 
       <main className="app-main">
@@ -272,6 +279,7 @@ function App() {
         )}
         {activeTab === 'voice' && <VoiceTraining />}
         {activeTab === 'connectors' && <ConnectorSetup />}
+        {activeTab === 'navigateur' && <Navigateur />}
       </main>
     </div>
   )

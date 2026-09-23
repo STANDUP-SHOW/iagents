@@ -10,6 +10,7 @@ mod voice;
 mod fiches;
 mod courriel;
 mod journal;
+mod navigateur;
 mod agents;
 mod connectors;
 mod database;
@@ -32,6 +33,10 @@ pub struct AppState {
     telegram: Mutex<Option<TelegramCredentials>>,
     db: Arc<Mutex<Option<Database>>>,
 }
+
+/// Enrollment and verification must extract features at the same rate, or the
+/// frames do not line up and the comparison is meaningless.
+const TAUX_ECHANTILLONNAGE: u32 = 44_100;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -235,45 +240,84 @@ fn enroll_voice(
         return Err("No audio samples provided".to_string());
     }
 
-    match VoicePrintService::create_voice_print(&user_id, audio_samples, 44100) {
-        Ok(voice_print) => {
-            // Try to store in database
-            let verrou = state.db.lock().ok();
-            if let Some(db) = verrou.as_ref().and_then(|g| g.as_ref()) {
-                let mfcc_json = serde_json::to_string(&voice_print.mfcc_features)
-                    .unwrap_or_else(|_| "[]".to_string());
-                if let Err(e) = db.save_voice_print(&user_id, &mfcc_json) {
-                    eprintln!("Failed to store voice print in database: {}", e);
-                }
-            }
+    let voice_print = VoicePrintService::create_voice_print(&user_id, audio_samples, TAUX_ECHANTILLONNAGE)
+        .map_err(|e| format!("Voice enrollment failed: {}", e))?;
 
-            println!(
-                "Voice print created with {} features",
-                voice_print.mfcc_features.len()
-            );
-            Ok(format!(
-                "Voice enrollment complete. Voice print ID: {}",
-                voice_print.id
-            ))
-        }
-        Err(e) => Err(format!("Voice enrollment failed: {}", e)),
-    }
+    // An enrollment that was not persisted cannot be verified later. Reporting
+    // success on a failed write would leave the user believing their voice is
+    // known, while every verification would find nothing to compare against.
+    let mfcc_json = serde_json::to_string(&voice_print.mfcc_features)
+        .map_err(|e| format!("Voice enrollment failed: {}", e))?;
+
+    let verrou = state
+        .db
+        .lock()
+        .map_err(|_| "Voice enrollment failed: database is locked".to_string())?;
+    let db = verrou
+        .as_ref()
+        .ok_or("Voice enrollment failed: no database on this machine")?;
+    db.save_voice_print(&user_id, &mfcc_json)
+        .map_err(|e| format!("Voice enrollment failed: {}", e))?;
+
+    Ok(format!(
+        "Voice enrollment complete. Voice print ID: {}",
+        voice_print.id
+    ))
 }
 
+/// Compare a sample against the voice print enrolled for this user.
+///
+/// The score is real, but the features behind it are not a biometric: the
+/// extractor in `voiceprint.rs` computes zero-crossing rate, energy and a
+/// spectral approximation, not true MFCCs. Two different speakers in the same
+/// room score close together. **This score must not, on its own, grant access
+/// to anything.** Until the extractor is replaced by a real one and measured
+/// against a false-acceptance target, the interface says the agent answers to
+/// its first name, not to a voice.
 #[tauri::command]
 fn verify_voice(
     user_id: String,
     audio_sample: Vec<i16>,
+    state: State<AppState>,
 ) -> Result<f32, String> {
     if audio_sample.is_empty() {
         return Err("No audio sample provided".to_string());
     }
 
-    // TODO: Retrieve stored voice print from database
-    // For now, return placeholder
-    let similarity = 0.85; // Placeholder: would compute against stored voice print
+    let stocke = {
+        let verrou = state
+            .db
+            .lock()
+            .map_err(|_| "Database is locked".to_string())?;
+        let db = verrou
+            .as_ref()
+            .ok_or("No database on this machine: nothing was ever enrolled")?;
+        db.get_voice_print(&user_id)?
+    };
 
-    Ok(similarity)
+    // No enrollment means no comparison. Returning a passing score here was the
+    // whole bug: an unknown speaker scored as well as the owner.
+    let stocke = stocke.ok_or_else(|| format!("No voice print enrolled for {}", user_id))?;
+
+    let mfcc_features: Vec<Vec<f32>> = serde_json::from_str(&stocke.mfcc_data)
+        .map_err(|e| format!("Stored voice print is unreadable: {}", e))?;
+    if mfcc_features.is_empty() {
+        return Err(format!("Voice print enrolled for {} is empty", user_id));
+    }
+
+    let empreinte = VoicePrint {
+        id: stocke.id,
+        user_id: stocke.user_id,
+        mfcc_features,
+        enrollment_date: stocke.created_at,
+        is_active: true,
+    };
+
+    Ok(VoicePrintService::verify_voice(
+        &audio_sample,
+        &empreinte,
+        TAUX_ECHANTILLONNAGE,
+    ))
 }
 
 #[tauri::command]
@@ -394,6 +438,12 @@ fn main() {
             courriel::courriel_relever,
             journal::journal_lire,
             journal::journal_ajouter,
+            navigateur::navigateur_ouvrir,
+            navigateur::navigateur_fermer,
+            navigateur::navigateur_sites,
+            navigateur::navigateur_declarer_site,
+            navigateur::navigateur_oublier_site,
+            navigateur::navigateur_effacer_sessions,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
