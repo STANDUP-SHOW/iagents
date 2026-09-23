@@ -171,6 +171,8 @@ export const INTITULES: Record<string, string> = {
   'customer-success': "Le suivi de vos clients après la vente, vous le tenez où ?",
   'ordonnancement-aps': "L'ordre de passage de vos ordres de fabrication, il se décide où ?",
   'plm-donnees-produit': "Vos plans et vos nomenclatures, vous savez où est l'indice qui fait foi ?",
+  'references-bibliographiques': "Vos références et vos citations, vous les gardez dans quoi ?",
+  'bases-scientifiques': "Quand vous cherchez une source, vous allez la chercher où ?",
   sante: "Votre logiciel de cabinet ou de patientèle, c'est lequel ?",
   dentaire: "Vos fauteuils, vos devis et vos schémas dentaires sont tenus dans quoi ?",
   'laboratoire-analyses': "Vos demandes d'analyse et vos comptes rendus passent par quel logiciel ?",
