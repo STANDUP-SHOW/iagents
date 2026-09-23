@@ -173,6 +173,7 @@ export const INTITULES: Record<string, string> = {
   'plm-donnees-produit': "Vos plans et vos nomenclatures, vous savez où est l'indice qui fait foi ?",
   'references-bibliographiques': "Vos références et vos citations, vous les gardez dans quoi ?",
   'bases-scientifiques': "Quand vous cherchez une source, vous allez la chercher où ?",
+  'correction-redaction': "Avant de publier un texte, vous le faites relire par quoi ?",
   sante: "Votre logiciel de cabinet ou de patientèle, c'est lequel ?",
   dentaire: "Vos fauteuils, vos devis et vos schémas dentaires sont tenus dans quoi ?",
   'laboratoire-analyses': "Vos demandes d'analyse et vos comptes rendus passent par quel logiciel ?",
