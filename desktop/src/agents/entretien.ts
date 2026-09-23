@@ -202,6 +202,8 @@ export const INTITULES: Record<string, string> = {
   'evaluation-certification': "Vos examens et vos certifications passent par quelle plateforme ?",
   'apprentissage-langues': "Vos formations en langues se suivent sur quelle plateforme ?",
   automobile: "Votre atelier et vos ventes tournent sur quel logiciel ?",
+  'vente-vehicules': "Votre stock de véhicules et vos annonces sont tenus dans quoi ?",
+  'cycle-mobilite': "Votre boutique et votre atelier vélo tournent avec quel logiciel ?",
   agriculture: "Vos parcelles et vos interventions sont suivies dans quoi ?",
   'dechets-environnement': "Vos collectes, vos pesées et vos bordereaux de déchets passent par quoi ?",
   'production-energie': "La production de vos installations se supervise avec quel outil ?",
