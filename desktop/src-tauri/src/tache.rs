@@ -624,7 +624,7 @@ const CARACTERES_LUS_MAX: usize = 120_000;
 /// Les dossiers dont une tâche tire sa matière.
 ///
 /// Le contrat des fiches dit qu'une entrée est soit `dossier:<chemin logique>`,
-/// soit un connecteur. **8 398 tâches sur 9 233 n'ont ni l'un ni l'autre** :
+/// soit un connecteur. **4 830 tâches sur 9 233 n'ont ni l'un ni l'autre** :
 /// leurs entrées sont des mots (« pièces de référence », « messagerie du
 /// dirigeant ») qui disent à un lecteur ce dont il s'agit, mais ne désignent
 /// aucune source que l'application puisse ouvrir. C'est le prochain passage
@@ -978,7 +978,7 @@ pub struct Preparation {
     /// Le format déclaré par la tâche : il décide si le modèle rend un tableau.
     pub format: String,
     /// Les dossiers du poste où l'agent prend sa matière. Vide quand la fiche
-    /// n'en désigne aucun, ce qui est le cas de 8 398 tâches sur 9 233.
+    /// n'en désigne aucun, ce qui est le cas de 4 830 tâches sur 9 233.
     pub sources: Vec<PathBuf>,
     /// Vrai quand la fiche désignait au moins un dossier, même non choisi.
     pub source_declaree: bool,
@@ -1624,7 +1624,7 @@ mod tests {
         assert!(est_un_tableau("xlsx") && !est_un_tableau("md"));
     }
 
-    /// **Le test qui compte.** 8 398 tâches sur 9 233 ne désignent aucune source :
+    /// **Le test qui compte.** 4 830 tâches sur 9 233 ne désignent aucune source :
     /// un agent à qui on demande de contrôler des pièces sans lui donner de
     /// pièces rend un rapport vraisemblable et faux, que le client n'a aucun
     /// moyen de démentir. On lui demande donc ce qui lui manque.
@@ -1641,7 +1641,7 @@ mod tests {
         assert!(!mots.contains("ne dit pas encore"), "{}", mots);
     }
 
-    /// Une entrée est un dossier ou rien : les 8 398 autres sont des mots qui
+    /// Une entrée est un dossier ou rien : les 4 830 autres sont des mots qui
     /// disent de quoi il s'agit, pas où le prendre.
     #[test]
     fn seules_les_entrees_en_dossier_designent_une_source() {

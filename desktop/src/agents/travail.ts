@@ -32,7 +32,7 @@ export interface TacheDuJour {
   tache: Tache;
   /**
    * Vrai quand rien ne dit où l'agent prend sa matière : la tâche part quand
-   * même, mais il réclamera au lieu d'inventer. 8 398 tâches sur 9 233 sont
+   * même, mais il réclamera au lieu d'inventer. 4 830 tâches sur 9 233 sont
    * dans ce cas au 23/09/2026, le temps que les entrées des fiches nomment un
    * dossier plutôt qu'une idée.
    */
@@ -65,7 +65,7 @@ export function travailDuJour(agent: AgentInstalle): TacheDuJour[] {
     // les dossiers logiques de la fiche en sont des sous-dossiers. Ce qu'il
     // désigne l'emporte, et lui seul fait sortir l'agent de chez lui.
     // Sans dossier d'entrée déclaré, rien ne dit où l'agent prend sa matière :
-    // il réclamera au lieu d'inventer. 8 398 tâches sur 9 233 sont dans ce cas.
+    // il réclamera au lieu d'inventer. 4 830 tâches sur 9 233 sont dans ce cas.
     const sansMatiere = sources.length === 0;
     const sortie = tache.sorties[0];
     if (!sortie) {

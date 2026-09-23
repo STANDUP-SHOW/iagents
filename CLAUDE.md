@@ -406,10 +406,26 @@ par WhatsApp et email.
   vérifie l'archive ZIP et ses pièces, pas ce qu'Excel en fait.
 - **Un agent sans matière réclame, il n'invente pas.** Une entrée de tâche
   désigne une source ouvrable (`dossier:<chemin logique>` ou un connecteur) ou
-  rien : **8 398 tâches sur 9 233 n'ont ni l'un ni l'autre** au 23/09/2026,
-  leurs entrées sont des mots (« pièces de référence », « messagerie du
-  dirigeant ») qui disent de quoi il s'agit, pas où le prendre. `check-travail`
-  les compte à chaque passage. Tant que c'est le cas, la consigne le dit à
+  rien : **4 830 tâches sur 9 233 n'ont ni l'un ni l'autre** au 23/09/2026,
+  contre 8 398 le matin même. Leurs entrées sont des mots (« pièces de
+  référence », « messagerie du dirigeant ») qui disent de quoi il s'agit, pas
+  où le prendre. `check-travail` les compte à chaque passage.
+  **La moitié se déduisait de la fiche elle-même** : « écarts », « adaptations »,
+  « bénéficiaires » nommaient le dossier qu'une autre tâche de la même fiche
+  remplit — la chaîne de relais écrite en prose au lieu d'être désignée. 3 587
+  tâches rattachées, sur une règle volontairement étroite : les mots de l'entrée
+  doivent être **exactement** ceux du dernier segment d'un dossier de sortie (au
+  singulier près), un seul dossier doit convenir, et la tâche ne doit pas déjà
+  désigner un dossier. Assouplie, elle rattachait « fichiers non identifiés » à
+  `classement/identifies`, c'est-à-dire l'inverse ; **une entrée fausse est pire
+  qu'une entrée en prose**, l'agent lirait le mauvais dossier avec assurance.
+  Rien à faire côté client pour que ça marche : un dossier logique non choisi
+  retombe dans le dossier de l'agent, là même où la tâche précédente a écrit.
+  Le reste (« analyses », « suivis », « accords à obtenir ») demande un jugement
+  au cas par cas, et beaucoup ne sont pas des dossiers mais des connecteurs.
+  `verifier-paquets` refuse depuis un `dossier:` mal écrit ou déclaré deux
+  fois : ignoré en silence par l'application, il ferait travailler l'agent sans
+  matière sans que personne voie passer la faute de frappe. Tant que c'est le cas, la consigne le dit à
   l'agent : sans document, il écrit en une phrase ce qu'il lui faut. Sans cette
   phrase, un contrôle de pièces sans pièces rend un rapport vraisemblable et
   faux, que le client n'a aucun moyen de démentir. Un dossier logique que le

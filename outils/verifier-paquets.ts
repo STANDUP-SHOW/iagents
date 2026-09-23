@@ -123,6 +123,24 @@ for (const f of fichiers) {
   } else {
     for (const r of reprises) faute(f, r);
   }
+  // Un dossier d'entrée mal écrit ne fait rien échouer : l'application l'ignore
+  // et l'agent travaille sans matière, en le disant. Personne ne voit passer la
+  // faute de frappe, et le travail sort vraisemblable et vide.
+  for (const t of paquet.taches) {
+    for (const e of t.entrees ?? []) {
+      if (!e.startsWith('dossier:')) continue;
+      const chemin = e.slice('dossier:'.length);
+      if (!/^[a-z0-9-]+(\/[a-z0-9-]+)*$/.test(chemin)) {
+        faute(f, `tâche « ${t.nom} » : « ${e} » n'est pas un dossier logique (minuscules, chiffres, tirets, barres obliques)`);
+      }
+    }
+    const vues = new Set<string>();
+    for (const e of t.entrees ?? []) {
+      if (vues.has(e)) faute(f, `tâche « ${t.nom} » : l'entrée « ${e} » est déclarée deux fois`);
+      vues.add(e);
+    }
+  }
+
   // Un relais qui nomme un agent du catalogue ne réécrit pas son métier : le libellé vient
   // du catalogue, comme partout ailleurs, sinon il finira faux à l'un des deux endroits.
   if (paquet.relais) {
