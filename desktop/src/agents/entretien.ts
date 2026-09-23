@@ -162,6 +162,8 @@ export const INTITULES: Record<string, string> = {
   'cao-dao': "Vos plans et vos dessins se font dans quel logiciel ?",
   'services-a-la-personne': "Vos prestations de service à la personne sont gérées où ?",
   'proprete-nettoyage': "Vos plannings de nettoyage, vos pointages et vos contrôles qualité passent par quoi ?",
+  'pieces-detachees-auto': "Vos pièces, vous les commandez chez qui et avec quel catalogue ?",
+  'documentation-technique-auto': "Les procédures et les couples de serrage, vous les cherchez dans quelle documentation ?",
   immobilier: "Vos biens et vos mandats sont dans quel logiciel ?",
   'visite-etat-des-lieux': "Vos visites et vos états des lieux se font avec quel outil ?",
   sante: "Votre logiciel de cabinet ou de patientèle, c'est lequel ?",
