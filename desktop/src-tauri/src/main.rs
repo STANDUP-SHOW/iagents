@@ -186,7 +186,7 @@ async fn repondre(
     let (execution, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
     let offre = modele::Offre {
         locaux: modele::modeles_installes(modele::ADRESSE_LOCALE).await.ok(),
-        cle_api: std::env::var("ANTHROPIC_API_KEY").is_ok(),
+        cle_api: llm::cle_api().is_some(),
     };
     let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_API)?;
 
@@ -267,7 +267,7 @@ async fn executer_tache(
     let (execution, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
     let offre = modele::Offre {
         locaux: modele::modeles_installes(modele::ADRESSE_LOCALE).await.ok(),
-        cle_api: std::env::var("ANTHROPIC_API_KEY").is_ok(),
+        cle_api: llm::cle_api().is_some(),
     };
     let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_API)?;
 
@@ -582,6 +582,9 @@ fn main() {
             mcp::mcp_appeler,
             mcp::mcp_journal,
             modele::modele_etat,
+            llm::cle_api_ranger,
+            llm::cle_api_presente,
+            llm::cle_api_retirer,
             executer_tache,
             tache::dossier_de_travail,
             repondre,

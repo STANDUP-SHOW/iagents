@@ -396,7 +396,7 @@ pub async fn modele_etat(fiche_id: String) -> Result<Choix, String> {
     let (execution, exemples) = contexte_de_la_fiche(&fiche_id)?;
     let offre = Offre {
         locaux: modeles_installes(ADRESSE_LOCALE).await.ok(),
-        cle_api: std::env::var("ANTHROPIC_API_KEY").is_ok(),
+        cle_api: crate::llm::cle_api().is_some(),
     };
     choisir(&execution, &exemples, &offre, crate::llm::MODELE_API)
 }

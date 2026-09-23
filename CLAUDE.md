@@ -37,6 +37,17 @@ par WhatsApp et email.
   lisait. `desktop/src-tauri/src/modele.rs` est maintenant le seul endroit où la
   voie se choisit, et `choisir()` est une fonction pure qu'on éprouve sans rien
   joindre.
+- **La clé d'API du client vit dans le coffre du système, jamais ailleurs**
+  (23/09/2026). Elle ne venait que de la variable d'environnement
+  `ANTHROPIC_API_KEY` : après une installation par MSI, un client n'avait aucun
+  moyen d'en poser une, donc aucun moyen de faire travailler un agent si aucun
+  moteur local n'était installé. `llm::cle_api()` lit le trousseau
+  (`iagent-api` / `anthropic`) d'abord, l'environnement ensuite — l'environnement
+  ne reste lu que pour le développement et les bancs. Les trois endroits qui
+  décidaient de la voie sur la seule variable (`repondre`, `executer_tache`,
+  `modele_etat`) passent tous par là : en oublier un ferait dire à l'écran
+  « aucune clé n'est enregistrée » alors qu'elle l'est. L'écran la prend dans
+  l'onglet « Vos connexions » et ne la réaffiche jamais.
 - **Les agents d'une machine se relaient sur un modèle chargé une fois.** Deux
   agents sur le même palier partagent les poids, pas la charge : la mémoire se
   compte par palier distinct, la charge par agent. Le banc l'a imposé : compté

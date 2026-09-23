@@ -12,6 +12,7 @@ import Navigateur from './components/Navigateur'
 import Courriel from './components/Courriel'
 import Embauche from './components/Embauche'
 import Travail from './components/Travail'
+import CleApi from './components/CleApi'
 
 function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors' | 'navigateur' | 'courriel' | 'embauche' | 'travail'>('dashboard')
@@ -322,7 +323,12 @@ function App() {
           />
         )}
         {activeTab === 'voice' && <VoiceTraining />}
-        {activeTab === 'connectors' && <ConnectorSetup />}
+        {activeTab === 'connectors' && (
+          <>
+            <CleApi />
+            <ConnectorSetup />
+          </>
+        )}
         {activeTab === 'navigateur' && <Navigateur />}
         {activeTab === 'courriel' && <Courriel />}
         {activeTab === 'travail' && <Travail />}
