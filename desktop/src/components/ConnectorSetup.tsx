@@ -222,6 +222,15 @@ function Ligne({
 
       {ouvert && reponse.accorde && (
         <div className="etapes">
+          {/* La règle exige que le risque soit identifié, pas qu'il soit faible. Quand il est
+              lourd, le client doit le lire avant de cliquer, pas le découvrir après. */}
+          {(connecteur.risque === 'critique' || connecteur.risque === 'eleve') && (
+            <p className="alerte">
+              Connexion à {RISQUES[connecteur.risque]} : votre agent pourra{' '}
+              {connecteur.ecriture === true ? 'lire et écrire' : 'lire'} dans {connecteur.nom}.
+              Rien n'est envoyé ni publié sans que vous l'ayez validé.
+            </p>
+          )}
           <p>
             Authentification : {reponse.authentification}. Accès demandé :{' '}
             {reponse.accesRequis}.

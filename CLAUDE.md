@@ -132,6 +132,32 @@ par WhatsApp et email.
   identifiants de tâches et casse `check-agents` — qui s'arrête sur une exception,
   pas sur un message de banc. Toujours lancer `npm run controle` en entier après
   une réécriture, jamais `npm run verifier` seul.
+- **Un connecteur ne s'allume qu'après identification de son éditeur, de son
+  authentification, de ses permissions, de son coût et de son risque** (règle que
+  le référentiel V6 pose lui-même, `docs/cadrage.md` §4.3). Elle vit une seule
+  fois, dans `outils/activation.ts` ; l'import l'applique pour écrire le bloc
+  `activation`, `npm run controle` refuse toute divergence (`--corriger` répare),
+  et `demanderActivation()` la rejoue dans l'application au lieu de croire le
+  fichier — un catalogue truqué portant `activable: true` est refusé quand même.
+  Au 23/09/2026 : **4 connecteurs activables sur 137**. Il manque un coût à 133 et
+  un risque à 117. Aucun bouton « Se connecter » ne s'affiche sans passer par là.
+- **Un prix ne se devine pas.** `connecteurs/couts.json` est le seul endroit du
+  dépôt où un coût s'écrit à la main, une ligne par connecteur, chacune avec la
+  page de l'éditeur qui le dit et la date où elle a été lue. Absent du fichier =
+  `null` = refusé. Vérifié au 23/09 : Microsoft Graph (appels standards couverts
+  par la licence M365, les API « à compteur » ne le sont pas) et les API Google
+  Workspace (sans frais sous 80 M d'unités/jour pour Gmail, 400 M pour Drive —
+  **Google annonce une facturation au-delà « plus tard en 2026 », à relire**).
+- **Les fiches déclarent leurs besoins en huit mots, pas en noms de produits** :
+  voix, conversation, email, whatsapp, calendrier, fichiers, navigateur,
+  telephone. `outils/capacites.ts` fait la jointure vers le catalogue, dérivée
+  des mots du relevé et jamais de ce qu'un produit est réputé faire ; le banc
+  refuse un besoin qu'il ne connaît pas ou que personne ne sert. `voix` et
+  `navigateur` ne passent par aucun connecteur : l'application les tient
+  elle-même, et c'est écrit dans `SERVI_PAR_L_APPLICATION` pour qu'on cesse de
+  chercher. Les cinq matchs faux écartés à la relecture (Brevo en téléphonie,
+  Telegram en espace de fichiers, Zoom en canal de conversation) valaient chacun
+  une ligne de commentaire.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,
@@ -175,6 +201,8 @@ npm run controle              # banc du dimensionnement + validation des paquets
 npm run verifier -- --corriger
 npm run generer -- --sec --ids AG-0002
 node --experimental-strip-types outils/packs.ts   # quel agent sur quelle machine
+npm run importer-connecteurs  # relit les relevés V6 -> connecteurs/catalogue.json
+npm run verifier-connecteurs  # règle d'activation, seule ou dans npm run controle
 npx tsc --noEmit
 npm run controle-application  # typage React + tests Rust de l'application
 ```

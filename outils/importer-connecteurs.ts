@@ -175,6 +175,15 @@ function serveurMcp(nom: string): Ligne | undefined {
   return undefined;
 }
 
+// Les coûts vérifiés, seul endroit du dépôt où un prix s'écrit à la main.
+const couts = new Map<string, { coutMensuel: number; source: string; constate: string }>();
+for (const c of lire('connecteurs/couts.json').couts as any[]) {
+  if (typeof c.coutMensuel !== 'number' || !c.source || !c.constate) {
+    throw new Error(`coût sans chiffre, sans source ou sans date : ${c.id}`);
+  }
+  couts.set(c.id, c);
+}
+
 const SOURCES = [
   { fichier: 'catalogue/reference/connecteurs-erp-crm.json', categorie: 'metier' },
   { fichier: 'catalogue/reference/connecteurs-communication.json', categorie: 'communication' },
@@ -230,9 +239,10 @@ for (const source of SOURCES) {
       },
       risque: risque(serveur?.['Risque']),
       priorite: serveur?.['Priorité'] ?? null,
-      // Aucun relevé ne chiffre le coût d'un connecteur. Le champ existe parce que la
-      // règle d'activation l'exige ; il reste nul tant que personne ne l'a renseigné.
-      cout: null,
+      // Aucun relevé V6 ne chiffre le coût. Il vient de connecteurs/couts.json, saisi à la
+      // main une ligne à la fois, chaque chiffre avec la page de l'éditeur qui le dit et la
+      // date à laquelle elle a été lue. Absent de ce fichier : `null`, et la règle refuse.
+      cout: couts.get(e['ID connecteur'])?.coutMensuel ?? null,
       etapesClient: etapes(e['Étapes utilisateur']),
       etapesIntegrateur: etapes(e['Étapes intégrateur']),
       urlProduit: e['URL produit'] ?? '',
