@@ -40,8 +40,12 @@ export interface TacheDuJour {
    * dossier plutôt qu'une idée.
    */
   sansMatiere: boolean;
-  /** Le dossier réel où le résultat sera posé, quand il est choisi. */
-  dossier: string | null;
+  /**
+   * Où le résultat ira, dit au client : le dossier qu'il a désigné, ou le
+   * chemin chez l'agent. L'application le crée à la première écriture ; il n'a
+   * rien à choisir pour démarrer. Le chemin complet revient avec le résultat.
+   */
+  ou: string | null;
   /** Ce qui empêche de la lancer, en clair ; null quand elle peut partir. */
   empechement: string | null;
   /** Vrai quand le résultat attendra un accord avant d'être utilisé. */
@@ -60,22 +64,23 @@ export function travailDuJour(agent: AgentInstalle): TacheDuJour[] {
       .filter((e) => e.startsWith('dossier:'))
       .map((e) => e.slice('dossier:'.length))
       .filter((c) => c.length > 0);
-    const sansMatiere = sources.every((c) => !agent.dossiers[c]);
+    // Le client n'a rien à choisir : l'agent a son propre dossier de travail et
+    // les dossiers logiques de la fiche en sont des sous-dossiers. Ce qu'il
+    // désigne l'emporte, et lui seul fait sortir l'agent de chez lui.
+    // Sans dossier d'entrée déclaré, rien ne dit où l'agent prend sa matière :
+    // il réclamera au lieu d'inventer. 8 398 tâches sur 9 233 sont dans ce cas.
+    const sansMatiere = sources.length === 0;
     const sortie = tache.sorties[0];
     if (!sortie) {
-      return { tache, sansMatiere, dossier: null, validation: tache.validationHumaine,
+      return { tache, sansMatiere, ou: null, validation: tache.validationHumaine,
         empechement: "cette tâche ne dit pas où va son résultat" };
     }
-    const dossier = agent.dossiers[sortie.dossier] ?? null;
+    const ou = agent.dossiers[sortie.dossier] ?? `${agent.prenom} › ${sortie.dossier}`;
     if (!FORMATS_ECRITS.includes(sortie.format as (typeof FORMATS_ECRITS)[number])) {
-      return { tache, sansMatiere, dossier, validation: tache.validationHumaine,
+      return { tache, sansMatiere, ou, validation: tache.validationHumaine,
         empechement: CE_QUI_MANQUE[sortie.format] ?? `le format « ${sortie.format} » n'est pas prévu` };
     }
-    if (!dossier) {
-      return { tache, sansMatiere, dossier: null, validation: tache.validationHumaine,
-        empechement: `choisissez d'abord le dossier « ${sortie.dossier} »` };
-    }
-    return { tache, sansMatiere, dossier, validation: tache.validationHumaine, empechement: null };
+    return { tache, sansMatiere, ou, validation: tache.validationHumaine, empechement: null };
   });
 }
 

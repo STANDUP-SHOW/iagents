@@ -63,13 +63,13 @@ verifier(
   complet.map((t) => t.empechement).filter(Boolean).join(' | ')
 );
 
-// Le dossier non choisi : l'écran le dit avant le clic, Rust le redit après.
+// Aucun dossier désigné : l'agent travaille chez lui, rien n'est à choisir.
 const sansDossier = travailDuJour(agentAvec({}));
 verifier(
-  "sans dossier choisi, l'écran le dit avant le clic",
-  sansDossier.filter((t) => !t.empechement).length === 0 &&
-    sansDossier.some((t) => /choisissez d'abord le dossier/.test(t.empechement ?? '')),
-  sansDossier.map((t) => t.empechement).join(' | ')
+  "sans dossier désigné, l'agent travaille chez lui et rien n'est bloqué",
+  sansDossier.filter((t) => !t.empechement).length === complet.filter((t) => !t.empechement).length &&
+    sansDossier.every((t) => t.ou === null || t.ou!.startsWith('Camille › ')),
+  sansDossier.map((t) => t.ou ?? t.empechement).join(' | ')
 );
 
 // Une tâche éteinte n'est pas proposée : le client l'a retirée.
@@ -84,7 +84,7 @@ verifier(
 const avecSource = complet.filter((t) => !t.sansMatiere).length;
 verifier(
   "une tâche sans dossier d'entrée est signalée avant le clic",
-  complet.every((t) => t.sansMatiere === t.tache.entrees.filter((e) => e.startsWith('dossier:')).every((e) => !tousLesDossiers[e.slice(8)])),
+  complet.every((t) => t.sansMatiere === (t.tache.entrees.filter((e) => e.startsWith('dossier:')).length === 0)),
   `${avecSource} avec matière sur ${complet.length}`
 );
 

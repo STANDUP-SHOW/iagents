@@ -35,6 +35,7 @@ export default function Travail() {
   const [resultats, setResultats] = useState<Record<string, Resultat>>({})
   const [echecs, setEchecs] = useState<Record<string, string>>({})
   const [motif, setMotif] = useState<string | null>(null)
+  const [chezLui, setChezLui] = useState<string | null>(null)
 
   useEffect(() => {
     let vivant = true
@@ -59,6 +60,19 @@ export default function Travail() {
   }, [])
 
   const agent = useMemo(() => agents.find((a) => a.prenom === choisi) ?? null, [agents, choisi])
+
+  // Où l'agent travaille : le client doit pouvoir y déposer ce qu'il veut faire
+  // traiter et y retrouver les résultats.
+  useEffect(() => {
+    if (!agent) return
+    let vivant = true
+    invoke<string>('dossier_de_travail', { prenom: agent.prenom, ficheId: agent.fiche.id })
+      .then((d) => vivant && setChezLui(d))
+      .catch(() => vivant && setChezLui(null))
+    return () => {
+      vivant = false
+    }
+  }, [agent])
   const travail = useMemo<TacheDuJour[]>(() => (agent ? travailDuJour(agent) : []), [agent])
 
   async function lancer(t: TacheDuJour) {
@@ -116,6 +130,12 @@ export default function Travail() {
           <p className="resume">
             {agent.prenom}, {agent.fiche.nom.toLowerCase()}. {resumeDuTravail(travail)}
           </p>
+          {chezLui && (
+            <p className="chez-lui">
+              {agent.prenom} travaille dans {chezLui}. Déposez-y ce que vous voulez lui faire
+              traiter, c'est aussi là que ses résultats arrivent.
+            </p>
+          )}
 
           <ul className="taches">
             {travail.map((t) => {

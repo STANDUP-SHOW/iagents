@@ -338,6 +338,19 @@ par WhatsApp et email.
   puis les règles strictes en dernier. **Un savoir est `{titre, resume}`** : un
   premier jet cherchait un champ `texte` qui n'existe nulle part et perdait tout
   l'apprentissage de l'employeur sans rien signaler.
+- **L'agent a son dossier de travail, et n'en sort que si le client le dit.**
+  Les fiches nomment **8 724 dossiers de sortie distincts** pour 9 265 sorties,
+  à peu près un par tâche : demander au client de les choisir avant que rien ne
+  tourne, c'est l'impression de « paramétrer comme les agents du marché » que
+  Max refuse. Chaque agent travaille donc dans
+  `<personnel>/Documents/iAgent/<prénom>`, annoncé et pas demandé, et les
+  dossiers logiques de la fiche en sont des sous-dossiers créés à la première
+  écriture. `installation.json` peut porter `racine` (le dossier de l'agent) et
+  `dossiers` (un dossier logique vers un vrai dossier du client) ; ce que le
+  client désigne l'emporte. **Conséquence qui compte : par défaut l'agent ne
+  lit et n'écrit que chez lui** ; atteindre un dossier du client demande qu'il
+  l'ait désigné. Un chemin logique venu d'une fiche est revérifié (`..`, `/`,
+  majuscules refusés) : le contrat l'impose déjà, mais il arrive du disque.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,

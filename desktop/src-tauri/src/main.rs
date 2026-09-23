@@ -583,6 +583,7 @@ fn main() {
             mcp::mcp_journal,
             modele::modele_etat,
             executer_tache,
+            tache::dossier_de_travail,
             repondre,
             courriel::courriel_enregistrer_motdepasse,
             courriel::courriel_motdepasse_present,

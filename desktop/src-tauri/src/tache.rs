@@ -76,35 +76,88 @@ pub fn format_ecrivable(format: &str) -> Result<(), String> {
     ))
 }
 
+/// Le dossier de travail d'un agent, quand le client n'en a pas désigné un.
+///
+/// Les fiches nomment **8 724 dossiers de sortie distincts** pour 9 265
+/// sorties : à peu près un par tâche. Demander au client de choisir les sept
+/// dossiers d'un agent avant qu'il ne fasse quoi que ce soit, c'est exactement
+/// l'impression de « paramétrer » que Max ne veut pas. L'agent a donc son
+/// propre dossier de travail, annoncé et pas demandé, et les dossiers logiques
+/// de la fiche en sont des sous-dossiers.
+///
+/// **Conséquence qui compte : par défaut, l'agent ne lit et n'écrit que chez
+/// lui.** Atteindre un dossier du client demande que celui-ci l'ait désigné,
+/// dossier logique par dossier logique.
+pub fn dossier_par_defaut(prenom: &str) -> Result<PathBuf, String> {
+    let maison = std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .ok_or("impossible de trouver le dossier personnel sur cet ordinateur")?;
+    Ok(PathBuf::from(maison)
+        .join("Documents")
+        .join("iAgent")
+        .join(crate::journal::nom_propre(prenom)?))
+}
+
+/// Un chemin logique de fiche ne descend que vers le bas.
+///
+/// Le contrat l'impose déjà (`^[a-z0-9-]+(/[a-z0-9-]+)*$`), mais il arrive ici
+/// depuis un fichier du disque : le vérifier une seconde fois coûte trois
+/// lignes, et s'en passer ferait d'un `..` dans une fiche un accès à tout le
+/// poste.
+fn chemin_logique_sur(logique: &str) -> bool {
+    !logique.is_empty()
+        && logique.split('/').all(|p| {
+            !p.is_empty() && p.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+        })
+}
+
 /// Le vrai dossier du poste derrière le dossier logique d'une tâche.
 ///
-/// Le client choisit ses dossiers à l'installation ; la fiche n'en connaît que
-/// le nom logique. Un dossier non choisi est une question à lui poser, pas un
-/// chemin à deviner : `dossiersManquants()` côté interface pose déjà la
-/// question, et ici on refuse.
-pub fn dossier_reel(dossiers: &serde_json::Value, logique: &str) -> Result<PathBuf, String> {
-    let choisi = dossiers
+/// Ce que le client a désigné l'emporte ; sinon le dossier de travail de
+/// l'agent, dont le dossier logique devient un sous-dossier. Un chemin choisi
+/// par le client doit être complet : relatif, il se résoudrait depuis le
+/// dossier de travail de l'application et le fichier atterrirait à côté de
+/// l'exécutable sans que personne le retrouve.
+pub fn dossier_reel(
+    dossiers: &serde_json::Value,
+    racine: Option<&str>,
+    prenom: &str,
+    logique: &str,
+) -> Result<PathBuf, String> {
+    if !chemin_logique_sur(logique) {
+        return Err(format!("dossier « {} » : nom de dossier invalide dans la fiche", logique));
+    }
+
+    if let Some(choisi) = dossiers
         .get(logique)
         .and_then(serde_json::Value::as_str)
-        .filter(|s| !s.trim().is_empty())
-        .ok_or_else(|| {
-            format!(
-                "le dossier « {} » n'a pas encore été choisi sur cet ordinateur : l'agent ne sait pas où poser le résultat",
-                logique
-            )
-        })?;
-
-    let chemin = PathBuf::from(choisi);
-    // Un chemin relatif se résoudrait depuis le dossier de travail de
-    // l'application, qui n'est pas celui du client : le fichier atterrirait à
-    // côté de l'exécutable sans que personne le retrouve.
-    if !chemin.is_absolute() {
-        return Err(format!(
-            "le dossier choisi pour « {} » n'est pas un chemin complet : {}",
-            logique, choisi
-        ));
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        let chemin = PathBuf::from(choisi);
+        if !chemin.is_absolute() {
+            return Err(format!(
+                "le dossier choisi pour « {} » n'est pas un chemin complet : {}",
+                logique, choisi
+            ));
+        }
+        return Ok(chemin);
     }
-    Ok(chemin)
+
+    let racine = match racine.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(r) => {
+            let chemin = PathBuf::from(r);
+            if !chemin.is_absolute() {
+                return Err(format!(
+                    "le dossier de travail de {} n'est pas un chemin complet : {}",
+                    prenom, r
+                ));
+            }
+            chemin
+        }
+        None => dossier_par_defaut(prenom)?,
+    };
+    Ok(logique.split('/').fold(racine, |acc, p| acc.join(p)))
 }
 
 /// Le nom du fichier posé dans le dossier.
@@ -541,6 +594,22 @@ pub struct Resultat {
     pub validation_humaine: bool,
 }
 
+/// Où cet agent travaille, dit au client.
+///
+/// Il doit pouvoir y déposer ce qu'il veut faire traiter et y retrouver les
+/// résultats : un dossier de travail que personne ne nomme est un dossier que
+/// personne n'ouvre.
+#[tauri::command]
+pub fn dossier_de_travail(prenom: String, fiche_id: String) -> Result<String, String> {
+    let installation: serde_json::Value = serde_json::from_str(&crate::fiches::lire_installation()?)
+        .map_err(|e| format!("installation illisible : {}", e))?;
+    let agent = agent_installe(&installation, &prenom, &fiche_id)?;
+    match agent.get("racine").and_then(serde_json::Value::as_str).map(str::trim) {
+        Some(r) if !r.is_empty() => Ok(r.to_string()),
+        _ => Ok(dossier_par_defaut(&prenom)?.display().to_string()),
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct SortieDeclaree {
     dossier: String,
@@ -665,7 +734,13 @@ pub fn preparer(
 
     format_ecrivable(&tache.sortie.format)?;
     let vide = serde_json::json!({});
-    let dossier = dossier_reel(agent.get("dossiers").unwrap_or(&vide), &tache.sortie.dossier)?;
+    let racine = agent.get("racine").and_then(serde_json::Value::as_str);
+    let dossier = dossier_reel(
+        agent.get("dossiers").unwrap_or(&vide),
+        racine,
+        prenom,
+        &tache.sortie.dossier,
+    )?;
     let nom_fichier = nom_du_fichier(tache_id, &horodatage(maintenant), &tache.sortie.format)?;
 
     let expert = fiche
@@ -700,7 +775,7 @@ pub fn preparer(
     let logiques = dossiers_sources(&tache.entrees);
     let sources: Vec<PathBuf> = logiques
         .iter()
-        .filter_map(|l| dossier_reel(agent.get("dossiers").unwrap_or(&vide), l).ok())
+        .filter_map(|l| dossier_reel(agent.get("dossiers").unwrap_or(&vide), racine, prenom, l).ok())
         .collect();
 
     let (systeme, enonce) = consigne_de_la_tache(
@@ -824,11 +899,14 @@ mod tests {
         assert!(e.contains("éteinte"), "{}", e);
     }
 
-    /// Un dossier non choisi est une question à poser au client, pas un chemin à
-    /// deviner : le résultat n'atterrit pas « en attendant » à côté de l'exécutable.
+    /// **L'agent travaille chez lui tant que le client ne lui a rien désigné.**
+    /// Les fiches nomment 8 724 dossiers de sortie distincts : demander au
+    /// client de les choisir avant que rien ne tourne, c'est l'impression de
+    /// paramétrer que Max refuse. Et par défaut, l'agent ne sort pas de son
+    /// dossier : atteindre celui du client se demande explicitement.
     #[test]
-    fn sans_dossier_choisi_rien_n_est_ecrit_ailleurs() {
-        let e = preparer(
+    fn sans_dossier_designe_l_agent_travaille_chez_lui() {
+        let p = preparer(
             &installation("{}"),
             &fiche("md", true, false),
             "Camille",
@@ -837,8 +915,22 @@ mod tests {
             0,
             &[],
         )
-        .unwrap_err();
-        assert!(e.contains("n'a pas encore été choisi"), "{}", e);
+        .expect("l'agent a son propre dossier");
+        let attendu = dossier_par_defaut("Camille").unwrap().join("courrier").join("reponses");
+        assert_eq!(p.dossier, attendu);
+
+        // Ce que le client désigne l'emporte.
+        let p = preparer(
+            &installation(DOSSIERS),
+            &fiche("md", true, false),
+            "Camille",
+            "AG-0001",
+            "compte-rendu",
+            0,
+            &[],
+        )
+        .unwrap();
+        assert_eq!(p.dossier, PathBuf::from("/tmp/iagent-essai"));
 
         // Un chemin relatif se résoudrait depuis le dossier de l'application.
         let e = preparer(
@@ -852,6 +944,21 @@ mod tests {
         )
         .unwrap_err();
         assert!(e.contains("chemin complet"), "{}", e);
+    }
+
+    /// Un dossier logique vient d'un fichier du disque : un `..` qui passerait
+    /// ferait d'une fiche un accès à tout le poste.
+    #[test]
+    fn un_dossier_logique_ne_remonte_jamais() {
+        let vide = serde_json::json!({});
+        for mauvais in ["../..", "courrier/../../etc", "/etc/passwd", "", "Courrier", "a//b"] {
+            assert!(
+                dossier_reel(&vide, None, "Camille", mauvais).is_err(),
+                "« {} » devrait être refusé",
+                mauvais
+            );
+        }
+        assert!(dossier_reel(&vide, None, "Camille", "courrier/reponses").is_ok());
     }
 
     /// L'application doit dire ce qu'elle ne sait pas écrire, pas poser un
@@ -1176,12 +1283,12 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dossier);
     }
 
-    /// Un dossier logique que le client n'a pas encore choisi n'est pas deviné :
-    /// la tâche part sans matière et l'agent le dit, plutôt que de lire ailleurs.
+    /// La matière se cherche chez l'agent tant que le client n'a rien désigné,
+    /// jamais ailleurs sur le poste.
     #[test]
-    fn une_source_non_choisie_ne_se_devine_pas() {
+    fn la_source_se_cherche_chez_l_agent_puis_la_ou_le_client_dit() {
         let p = preparer(
-            &installation(DOSSIERS),
+            &installation("{}"),
             &fiche_avec("md", true, false, r#"["dossier:courrier/entrant"]"#),
             "Camille",
             "AG-0001",
@@ -1191,7 +1298,10 @@ mod tests {
         )
         .unwrap();
         assert!(p.source_declaree, "la fiche désigne bien un dossier");
-        assert!(p.sources.is_empty(), "mais le client ne l'a pas choisi : {:?}", p.sources);
+        assert_eq!(
+            p.sources,
+            vec![dossier_par_defaut("Camille").unwrap().join("courrier").join("entrant")]
+        );
 
         let avec = r#"{"courrier/reponses":"/tmp/iagent-essai","courrier/entrant":"/tmp/iagent-entrant"}"#;
         let p = preparer(
