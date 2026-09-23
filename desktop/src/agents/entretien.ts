@@ -172,6 +172,8 @@ export const INTITULES: Record<string, string> = {
   telephonie: "Vos appels passent par quel système ?",
   association: "Vos adhérents et vos dons sont gérés dans quel outil ?",
   transport: "Vos tournées et vos véhicules sont suivis dans quoi ?",
+  'gouvernante-hotel': "Le ménage des chambres et les demandes de dépannage passent par quoi ?",
+  'gestion-restaurant': "Vos fiches techniques et votre coût matière sont tenus dans quel outil ?",
   'location-saisonniere': "Vos logements et vos calendriers de location sont gérés dans quoi ?",
   'revenue-management': "Vos prix de chambre ou de séjour sont pilotés avec quel outil ?",
   'voyage-affaires': "Les déplacements professionnels se réservent dans quel outil ?",
