@@ -308,6 +308,28 @@ par WhatsApp et email.
   pas fait : l'authentification OAuth du protocole** (le jeton vient du
   trousseau, rangé à la main) et **aucun serveur distant d'éditeur n'a encore
   été joint**.
+- **Aucun agent n'a jamais employé un outil : la porte est murée** (constaté le
+  23/09/2026, chaîne vérifiée maillon par maillon). `mcp.rs` fait 2 387 lignes
+  et 38 bancs, et rien ne le traverse :
+  1. `llm.rs` n'envoie **aucun `tools`** dans sa requête (le corps ne porte que
+     `model`, `max_tokens`, `output_config`, `system`, `messages`) — le modèle
+     n'apprend donc jamais qu'un outil existe ;
+  2. **aucun `tool_use` ni `tool_result` n'est lu** nulle part (`llm.rs`,
+     `tache.rs`, `agents.rs` : zéro occurrence) ;
+  3. `mcp_appeler` et `mcp_outils_permis` sont des commandes Tauri enregistrées
+     que **l'écran n'appelle jamais** — elles n'apparaissent que dans
+     l'enregistrement de `main.rs`.
+  Le portier est complet et éprouvé ; c'est le passage qui manque. **Écrire la
+  boucle est petit** (`mcp_appeler` est une fonction ordinaire, sans état Tauri,
+  donc appelable depuis le crate) — ce qui n'est pas petit est la validation
+  humaine (`valide: bool`), que max exige et qu'on ne peut pas éprouver ici
+  faute d'un vrai serveur et d'un vrai compte client.
+  **Et ça n'ouvrirait presque rien aujourd'hui** : un seul serveur est à portée
+  d'un agent (`fichiers`, 13 outils, connecteur OFF029) ; `web` a
+  `connecteur: null`, donc hors de portée par construction, et ces 13 outils
+  doublent ce que l'application écrit déjà elle-même. **À faire quand les 133
+  connecteurs bloqués sur un coût seront ouverts, pas avant** : c'est cette
+  décision de max qui commande l'ordre des travaux.
 - **La liste blanche d'un agent se dérive de sa fiche, jamais de l'écran.**
   `mcp_appeler` est le seul chemin vers un outil, et rien de ce qui décide ne
   vient de l'interface : la fiche déclare un besoin, le catalogue dit quels
