@@ -167,6 +167,33 @@ par WhatsApp et email.
   pas fait : l'authentification OAuth du protocole** (le jeton vient du
   trousseau, rangé à la main) et **aucun serveur distant d'éditeur n'a encore
   été joint**.
+- **La liste blanche d'un agent se dérive de sa fiche, jamais de l'écran.**
+  `mcp_appeler` est le seul chemin vers un outil, et rien de ce qui décide ne
+  vient de l'interface : la fiche déclare un besoin, le catalogue dit quels
+  connecteurs le servent, `serveurs-mcp.json` dit quel serveur met en œuvre quel
+  connecteur, et ce serveur dit quels outils le dépôt a retenus. Un serveur sans
+  `connecteur` n'est à la portée d'aucun agent. **L'écran ne peut passer que le
+  clic de validation** — et encore doit-il nommer un agent réellement embauché
+  sur SA fiche (`est_embauche`), sinon il suffirait de présenter la fiche du
+  catalogue qui déclare le plus de besoins. Le quota
+  (`APPELS_PAR_CONVERSATION`) est un coupe-circuit, **pas** le volume attendu du
+  poste, qui est `execution.appelsParJourEstimes` : deux nombres, deux sens.
+- **Les outils d'un serveur se relèvent, ils ne se devinent pas.** La liste
+  vit dans `serveurs-mcp.json`, pas chez le serveur, pour qu'un serveur qui
+  grandit n'élargisse rien ; `declaration_recevable` refuse une liste vide,
+  parce que vide veut dire « personne ne l'a lancé », pas « tous ». Relevé le
+  23/09/2026 en lançant les deux serveurs : le serveur fichiers annonce 13
+  outils retenus (`read_file` écarté, il se dit lui-même DEPRECATED au profit de
+  `read_text_file`). **Trouvé du même coup :** la commande déclarée pour le
+  serveur web, `npx -y @modelcontextprotocol/server-fetch`, **n'existe pas au
+  registre npm** (404) — le serveur de référence est un paquet Python, `uvx
+  mcp-server-fetch`. Corrigé. Chaque appel, abouti ou refusé, s'inscrit dans
+  `config/outils-<prénom>.json` et se relit par `mcp_journal`.
+- **Affirmer qu'un outil ne modifie rien affaiblit une règle de sûreté**, donc
+  ça s'écrit avec sa raison. Sans annotation du serveur, un outil exige un clic
+  du client à chaque appel ; `lectureSeule: true` dans la déclaration l'en
+  dispense, et le banc refuse cette ligne sans un `pourquoi` qui dit ce qu'on a
+  lu de l'outil. Un seul cas aujourd'hui : `fetch`, qui n'annonce rien.
 - **Une adresse de serveur distant est chiffrée et ne porte rien.**
   `adresse_recevable()` refuse `http://` hors boucle locale (le jeton porteur
   part à chaque appel et se lirait sur le chemin), refuse un `?cle=…` et un

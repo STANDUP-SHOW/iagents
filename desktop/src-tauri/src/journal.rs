@@ -19,8 +19,9 @@ fn dossier_ressources() -> PathBuf {
 }
 
 /// Le prénom vient de l'interface : sans ce contrôle, il servirait à écrire
-/// n'importe où sur le poste.
-fn nom_de_fichier_sur(prenom: &str) -> Result<String, String> {
+/// n'importe où sur le poste. Partagé avec `mcp.rs`, qui tient son propre
+/// journal — deux fichiers par agent, un seul nettoyage de nom.
+pub(crate) fn nom_propre(prenom: &str) -> Result<String, String> {
     let propre: String = prenom
         .chars()
         .filter(|c| c.is_alphanumeric() || *c == '-')
@@ -29,7 +30,11 @@ fn nom_de_fichier_sur(prenom: &str) -> Result<String, String> {
     if propre.is_empty() || propre.len() > 64 {
         return Err(format!("prénom d'agent invalide : {}", prenom));
     }
-    Ok(format!("journal-{}.json", propre.to_lowercase()))
+    Ok(propre.to_lowercase())
+}
+
+fn nom_de_fichier_sur(prenom: &str) -> Result<String, String> {
+    Ok(format!("journal-{}.json", nom_propre(prenom)?))
 }
 
 fn chemin(prenom: &str) -> Result<PathBuf, String> {

@@ -178,6 +178,9 @@ pub struct Client {
     prochain_id: u64,
     outils: Vec<Outil>,
     delai: Duration,
+    /// Les outils que le dépôt affirme en lecture seule là où le serveur ne dit
+    /// rien. Voir `OutilDeclare::lecture_seule`.
+    lectures_seules_affirmees: Vec<String>,
 }
 
 impl Client {
@@ -197,7 +200,16 @@ impl Client {
             prochain_id: 1,
             outils: Vec::new(),
             delai: DELAI_PAR_DEFAUT,
+            lectures_seules_affirmees: Vec::new(),
         }
+    }
+
+    /// Les outils que le dépôt affirme en lecture seule, faute d'annotation du
+    /// serveur. Ils passeront sans validation du client ; c'est pour ça que la
+    /// déclaration exige d'écrire pourquoi.
+    pub fn avec_lectures_seules(mut self, noms: Vec<String>) -> Self {
+        self.lectures_seules_affirmees = noms;
+        self
     }
 
     pub fn avec_delai(mut self, delai: Duration) -> Self {
@@ -309,25 +321,36 @@ impl Client {
         self.notifier("notifications/initialized")?;
 
         let resultat = self.demander("tools/list", serde_json::json!({}))?;
+        let affirmees = self.lectures_seules_affirmees.clone();
         self.outils = resultat
             .get("tools")
             .and_then(serde_json::Value::as_array)
             .map(|outils| {
                 outils
                     .iter()
-                    .map(|o| Outil {
-                        nom: o.get("name").and_then(serde_json::Value::as_str).unwrap_or("").to_string(),
+                    .map(|o| {
+                        let nom = o
+                            .get("name")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("")
+                            .to_string();
+                        Outil {
                         description: o
                             .get("description")
                             .and_then(serde_json::Value::as_str)
                             .unwrap_or("")
                             .to_string(),
                         // Absent vaut « modifie » : on ne suppose pas l'innocuité.
+                        // Le dépôt peut affirmer le contraire, mais seulement
+                        // après avoir écrit ce que l'outil fait.
                         lecture_seule: o
                             .get("annotations")
                             .and_then(|a| a.get("readOnlyHint"))
                             .and_then(serde_json::Value::as_bool)
-                            .unwrap_or(false),
+                            .unwrap_or(false)
+                            || affirmees.contains(&nom),
+                        nom,
+                        }
                     })
                     .collect()
             })
@@ -452,6 +475,29 @@ pub struct ServeurDeclare {
     /// y en a un. C'est par lui que passe la règle d'activation.
     #[serde(default)]
     pub connecteur: Option<String>,
+    /// Les outils de ce serveur que le dépôt retient, relevés sur un serveur qui
+    /// tourne et non devinés. La liste est ici et pas chez le serveur : un
+    /// serveur qui grandit entre deux lancements n'élargit rien.
+    #[serde(default)]
+    pub outils: Vec<OutilDeclare>,
+}
+
+/// Un outil retenu, tel que le dépôt le déclare.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct OutilDeclare {
+    pub nom: String,
+    /// Affirme que cet outil ne modifie rien, quand le serveur ne l'annonce pas.
+    ///
+    /// C'est un affaiblissement d'une règle de sûreté : sans cette ligne, un
+    /// outil non annoncé exige une validation du client à chaque appel. On ne
+    /// l'écrit donc qu'après avoir lu ce que l'outil fait, et `pourquoi` porte
+    /// cette lecture — `declaration_recevable` refuse l'affirmation sans elle.
+    ///
+    /// Le fichier l'écrit `lectureSeule`, comme le reste des données du dépôt.
+    #[serde(default, rename = "lectureSeule")]
+    pub lecture_seule: Option<bool>,
+    #[serde(default)]
+    pub pourquoi: String,
 }
 
 impl ServeurDeclare {
@@ -504,6 +550,27 @@ pub fn declaration_recevable(serveur: &ServeurDeclare) -> Result<(), String> {
 
     if let Some(url) = &serveur.url {
         adresse_recevable(&serveur.nom, url)?;
+    }
+
+    // Un serveur sans outil retenu n'est utilisable par personne, et c'est voulu :
+    // la liste se remplit en lançant le serveur une fois et en lisant ce qu'il
+    // annonce. Tant qu'elle est vide, personne n'a fait ce relevé.
+    if serveur.outils.is_empty() {
+        return Err(format!(
+            "{} : aucun outil retenu. La liste se relève sur un serveur qui tourne, elle ne se devine pas.",
+            serveur.nom
+        ));
+    }
+    for outil in &serveur.outils {
+        if outil.nom.trim().is_empty() {
+            return Err(format!("{} : un outil sans nom", serveur.nom));
+        }
+        if outil.lecture_seule == Some(true) && outil.pourquoi.trim().is_empty() {
+            return Err(format!(
+                "{} : « {} » est affirmé en lecture seule sans dire pourquoi. Cette affirmation dispense le client de valider, elle ne s'écrit pas sans l'avoir lue.",
+                serveur.nom, outil.nom
+            ));
+        }
     }
 
     for variable in serveur.variables_attendues() {
@@ -1174,6 +1241,234 @@ pub fn mcp_outils_permis(
     Ok(permis)
 }
 
+// ---------------------------------------------------------------------------
+// Ce qu'un agent a le droit d'appeler, dérivé de sa fiche
+// ---------------------------------------------------------------------------
+
+/// Combien d'appels d'outils une conversation peut faire.
+///
+/// C'est un coupe-circuit, pas un budget : il existe pour qu'un agent parti en
+/// boucle s'arrête, pas pour rationner son travail. Le volume attendu d'un poste
+/// se lit ailleurs, dans `execution.appelsParJourEstimes` de sa fiche, et ces
+/// deux nombres ne veulent pas dire la même chose.
+pub const APPELS_PAR_CONVERSATION: u32 = 25;
+
+/// Les besoins que la fiche d'un agent déclare : huit mots, jamais un produit.
+fn besoins_de_la_fiche(fiche_id: &str) -> Result<Vec<String>, String> {
+    let brut = crate::fiches::lire_fiche(fiche_id.to_string())?;
+    let fiche: serde_json::Value =
+        serde_json::from_str(&brut).map_err(|e| format!("fiche {} illisible : {}", fiche_id, e))?;
+    Ok(fiche
+        .get("connecteurs")
+        .and_then(serde_json::Value::as_array)
+        .map(|v| {
+            v.iter()
+                .filter_map(serde_json::Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default())
+}
+
+/// Les connecteurs du catalogue qui servent au moins un de ces besoins.
+///
+/// C'est le champ dérivé `sert`, calculé à l'import par `outils/capacites.ts` :
+/// la jointure se fait là-bas une fois pour toutes, pas ici à chaque appel.
+fn connecteurs_servant(besoins: &[String]) -> Result<Vec<String>, String> {
+    let brut = crate::fiches::lire_referentiel("connecteurs".to_string())?;
+    let catalogue: serde_json::Value =
+        serde_json::from_str(&brut).map_err(|e| format!("catalogue illisible : {}", e))?;
+    let connecteurs = catalogue
+        .get("connecteurs")
+        .and_then(serde_json::Value::as_array)
+        .ok_or("catalogue des connecteurs vide")?;
+
+    Ok(connecteurs
+        .iter()
+        .filter(|c| {
+            c.get("sert")
+                .and_then(serde_json::Value::as_array)
+                .map(|sert| {
+                    sert.iter()
+                        .filter_map(serde_json::Value::as_str)
+                        .any(|capacite| besoins.iter().any(|b| b == capacite))
+                })
+                .unwrap_or(false)
+        })
+        .filter_map(|c| c.get("id").and_then(serde_json::Value::as_str))
+        .map(str::to_string)
+        .collect())
+}
+
+/// Ce qu'un agent a le droit d'appeler sur un serveur, dérivé de sa fiche.
+///
+/// La chaîne, de bout en bout : la fiche déclare un besoin (« fichiers »), le
+/// catalogue dit quels connecteurs le servent, la déclaration dit quel serveur
+/// met en œuvre quel connecteur, et ce serveur dit quels outils le dépôt a
+/// retenus. **Rien ne vient de l'écran** : ce que l'écran demanderait, l'écran
+/// pourrait le mentir, et la liste blanche ne serait plus une règle.
+///
+/// Un serveur sans connecteur n'est à la portée d'aucun agent. C'est voulu :
+/// tant que personne n'a dit à quel besoin il répond, personne n'en a besoin.
+fn autorisations_pour(
+    serveur: &ServeurComplet,
+    connecteurs_utiles: &[String],
+) -> Result<Autorisations, String> {
+    let Some(connecteur) = &serveur.declare.connecteur else {
+        return Err(format!(
+            "« {} » n'est rattaché à aucun besoin : aucun agent ne peut s'en servir tant que ce n'est pas écrit.",
+            serveur.declare.nom
+        ));
+    };
+
+    if !connecteurs_utiles.iter().any(|c| c == connecteur) {
+        return Err(format!(
+            "ce poste n'a pas déclaré avoir besoin de « {} » : il ne travaille pas là-dedans.",
+            serveur.declare.nom
+        ));
+    }
+
+    Ok(Autorisations {
+        outils: serveur
+            .declare
+            .outils
+            .iter()
+            .map(|o| format!("{}/{}", serveur.declare.nom, o.nom))
+            .collect(),
+        quota: APPELS_PAR_CONVERSATION,
+    })
+}
+
+/// Est-ce bien cet agent-là, et est-il seulement embauché ?
+///
+/// Sans ce contrôle, l'écran pourrait annoncer la fiche du catalogue qui déclare
+/// le plus de besoins et ouvrir des serveurs que l'agent qui parle n'a pas. La
+/// liste blanche se dérive de la fiche : encore faut-il que ce soit la sienne.
+fn est_embauche(installation: &str, prenom: &str, fiche_id: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(installation)
+        .ok()
+        .and_then(|v| v.get("agents").and_then(serde_json::Value::as_array).cloned())
+        .map(|agents| {
+            agents.iter().any(|a| {
+                a.get("prenom").and_then(serde_json::Value::as_str) == Some(prenom)
+                    && a.get("ficheId").and_then(serde_json::Value::as_str) == Some(fiche_id)
+            })
+        })
+        .unwrap_or(false)
+}
+
+/// Le journal des outils d'un agent, à côté de l'application.
+fn chemin_du_journal(prenom: &str) -> Result<std::path::PathBuf, String> {
+    Ok(crate::fiches::dossier_ressources()
+        .join("config")
+        .join(format!("outils-{}.json", crate::journal::nom_propre(prenom)?)))
+}
+
+/// Ajoute au journal ce que l'agent vient de faire des accès du client.
+///
+/// L'échec d'écriture n'annule pas l'appel : il a eu lieu, le nier serait pire.
+/// Mais il se dit, parce qu'un journal qu'on croit tenu et qui ne l'est pas vaut
+/// moins que pas de journal du tout.
+fn inscrire_au_journal(prenom: &str, appels: &[Appel]) -> Result<(), String> {
+    let chemin = chemin_du_journal(prenom)?;
+    if let Some(dossier) = chemin.parent() {
+        std::fs::create_dir_all(dossier)
+            .map_err(|e| format!("création de {} : {}", dossier.display(), e))?;
+    }
+    let mut tout: Vec<Appel> = std::fs::read_to_string(&chemin)
+        .ok()
+        .and_then(|brut| serde_json::from_str(&brut).ok())
+        .unwrap_or_default();
+    tout.extend_from_slice(appels);
+    let contenu = serde_json::to_string_pretty(&tout)
+        .map_err(|e| format!("écriture du journal : {}", e))?;
+    std::fs::write(&chemin, contenu)
+        .map_err(|e| format!("écriture de {} : {}", chemin.display(), e))
+}
+
+/// Ce que cet agent a fait des accès du client, appels refusés compris.
+#[tauri::command]
+pub fn mcp_journal(prenom: String) -> Result<Vec<Appel>, String> {
+    let chemin = chemin_du_journal(&prenom)?;
+    match std::fs::read_to_string(&chemin) {
+        Ok(brut) => serde_json::from_str(&brut).map_err(|e| format!("journal illisible : {}", e)),
+        // Pas de fichier veut dire pas encore d'appel, pas une panne.
+        Err(_) => Ok(Vec::new()),
+    }
+}
+
+/// Appelle un outil pour le compte d'un agent. C'est le seul chemin.
+///
+/// `valide` est le clic du client sur CET appel, et rien d'autre ne peut le
+/// remplacer : ni une case cochée ailleurs, ni un réglage, ni le modèle. Un
+/// outil que le serveur ne déclare pas en lecture seule — et que le dépôt
+/// n'affirme pas telle — ne part pas sans lui.
+///
+/// Le serveur est lancé pour l'appel puis arrêté. C'est plus coûteux qu'une
+/// session tenue ouverte, et c'est volontaire tant que personne n'a mesuré ce
+/// que coûte l'autre : un processus oublié derrière l'application est un défaut
+/// plus difficile à voir qu'une lenteur.
+#[tauri::command]
+pub fn mcp_appeler(
+    fiche_id: String,
+    prenom: String,
+    serveur: String,
+    outil: String,
+    arguments: serde_json::Value,
+    valide: bool,
+) -> Result<serde_json::Value, String> {
+    if !est_embauche(&crate::fiches::lire_installation()?, &prenom, &fiche_id) {
+        return Err(format!(
+            "{} ne fait pas partie de vos agents, ou ce n'est pas son poste.",
+            prenom
+        ));
+    }
+
+    let serveurs = lire_serveurs()?;
+    let trouve = serveurs
+        .iter()
+        .find(|s| s.declare.nom == serveur)
+        .ok_or_else(|| format!("aucun serveur déclaré sous le nom « {} »", serveur))?;
+
+    let besoins = besoins_de_la_fiche(&fiche_id)?;
+    let autorisations = autorisations_pour(trouve, &connecteurs_servant(&besoins)?)?;
+    let affirmees: Vec<String> = trouve
+        .declare
+        .outils
+        .iter()
+        .filter(|o| o.lecture_seule == Some(true))
+        .map(|o| o.nom.clone())
+        .collect();
+
+    let transport = ouvrir_transport(
+        &trouve.declare,
+        &secrets_du_trousseau(&trouve.declare),
+        DELAI_PAR_DEFAUT,
+    )?;
+    let mut client = Client::nouveau(
+        &serveur,
+        transport,
+        autorisations,
+        Arc::new(AtomicBool::new(false)),
+    )
+    .avec_lectures_seules(affirmees);
+
+    let ouverture = client.ouvrir();
+    let resultat = match ouverture {
+        Ok(()) => client.appeler(&prenom, &outil, arguments, valide),
+        Err(refus) => Err(refus),
+    };
+    let appels: Vec<Appel> = client.journal().appels().to_vec();
+    client.arreter();
+
+    // Le journal s'écrit dans les deux cas : un refus est justement ce que le
+    // client a le plus de raisons de vouloir relire.
+    let tenue = inscrire_au_journal(&prenom, &appels);
+    let resultat = resultat.map_err(|refus| refus.en_clair())?;
+    tenue?;
+    Ok(resultat)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1224,6 +1519,12 @@ mod tests {
         {"name":"ecrire_fichier","description":"Écrit un fichier","annotations":{"readOnlyHint":false}},
         {"name":"sans_annotation","description":"Le serveur ne dit rien de lui"}
     ]}}"#;
+
+    /// Ce qu'une déclaration de banc porte d'outils : un seul, suffisant pour
+    /// qu'elle soit recevable quand ce n'est pas la liste qu'on éprouve.
+    fn un_outil() -> Vec<OutilDeclare> {
+        vec![OutilDeclare { nom: "essai".into(), ..Default::default() }]
+    }
 
     fn client(outils: Vec<&str>, quota: u32, reponses: Vec<&str>) -> Client {
         let autorisations = Autorisations {
@@ -1436,7 +1737,8 @@ mod tests {
     fn un_fichier_de_serveurs_qui_porte_une_cle_ne_se_charge_pas() {
         // Le piège est facile : on colle la clé pour essayer, elle part au dépôt.
         let truque = r#"{"serveurs":[{"nom":"essai","commande":"npx","arguments":[],
-            "secrets":["ghp_uneVraieCleDeTest"],"role":"essai"}]}"#;
+            "secrets":["ghp_uneVraieCleDeTest"],"role":"essai",
+            "outils":[{"nom":"essai"}]}]}"#;
         let fichier: FichierServeurs = serde_json::from_str(truque).expect("JSON de banc");
         let erreur = declaration_recevable(&fichier.serveurs[0].declare).unwrap_err();
         assert!(erreur.contains("trousseau"), "message peu parlant : {}", erreur);
@@ -1448,6 +1750,7 @@ mod tests {
             nom: "essai".into(),
             commande: "npx".into(),
             secrets: vec!["sk-ant-api03-quelque-chose".into()],
+            outils: un_outil(),
             ..Default::default()
         };
         let erreur = declaration_recevable(&avec_cle).unwrap_err();
@@ -1465,6 +1768,7 @@ mod tests {
         let vide = ServeurDeclare {
             nom: "essai".into(),
             commande: "  ".into(),
+            outils: un_outil(),
             ..Default::default()
         };
         assert!(declaration_recevable(&vide).is_err());
@@ -1479,6 +1783,7 @@ mod tests {
             nom: "notion".into(),
             url: Some("https://exemple.test/mcp".into()),
             jeton: Some("ntn_1234567890abcdef".into()),
+            outils: un_outil(),
             ..Default::default()
         };
         let erreur = declaration_recevable(&avec_jeton).unwrap_err();
@@ -1501,6 +1806,7 @@ mod tests {
         let avec = |url: &str| ServeurDeclare {
             nom: "essai".into(),
             url: Some(url.into()),
+            outils: un_outil(),
             ..Default::default()
         };
 
@@ -1529,6 +1835,7 @@ mod tests {
             nom: "essai".into(),
             commande: "npx".into(),
             url: Some("https://exemple.test/mcp".into()),
+            outils: un_outil(),
             ..Default::default()
         };
         assert!(declaration_recevable(&deux).is_err());
@@ -1567,6 +1874,7 @@ mod tests {
             nom: "banc".into(),
             commande: "sh".into(),
             arguments: vec!["-c".into(), script.to_string()],
+            outils: un_outil(),
             ..Default::default()
         };
         let transport = ProcessusTransport::lancer(&serveur, &[]).expect("lancement");
@@ -1598,6 +1906,7 @@ mod tests {
             nom: "muet".into(),
             commande: "sh".into(),
             arguments: vec!["-c".into(), "sleep 30".into()],
+            outils: un_outil(),
             ..Default::default()
         };
         let transport = ProcessusTransport::lancer(&serveur, &[]).expect("lancement");
@@ -1621,6 +1930,7 @@ mod tests {
         let serveur = ServeurDeclare {
             nom: "fantome".into(),
             commande: "iagent-commande-qui-n-existe-pas".into(),
+            outils: un_outil(),
             ..Default::default()
         };
         assert!(ProcessusTransport::lancer(&serveur, &[]).is_err());
@@ -1757,6 +2067,7 @@ mod tests {
             nom: "distant".into(),
             url: Some(url.to_string()),
             jeton: Some("BANC_JETON".into()),
+            outils: un_outil(),
             ..Default::default()
         };
         let transport = HttpTransport::ouvrir(
@@ -1906,6 +2217,143 @@ mod tests {
         let messages = messages_du_flux(flux);
         assert_eq!(messages.len(), 1);
         assert!(messages[0].contains("jsonrpc"));
+    }
+
+    // -----------------------------------------------------------------------
+    // Ce qu'un agent a le droit d'appeler
+    // -----------------------------------------------------------------------
+
+    fn serveur_complet(connecteur: Option<&str>, outils: Vec<&str>) -> ServeurComplet {
+        ServeurComplet {
+            declare: ServeurDeclare {
+                nom: "fichiers".into(),
+                commande: "npx".into(),
+                connecteur: connecteur.map(str::to_string),
+                outils: outils
+                    .into_iter()
+                    .map(|n| OutilDeclare { nom: n.into(), ..Default::default() })
+                    .collect(),
+                ..Default::default()
+            },
+            role: "essai".into(),
+        }
+    }
+
+    /// La liste blanche d'un agent se dérive de sa fiche, jamais de l'écran.
+    #[test]
+    fn un_agent_n_atteint_que_les_serveurs_dont_son_poste_a_besoin() {
+        let serveur = serveur_complet(Some("OFF029"), vec!["list_directory", "write_file"]);
+
+        // Un poste qui a besoin de ce connecteur : les outils retenus, et eux seuls.
+        let permis = autorisations_pour(&serveur, &["OFF029".into(), "COM012".into()])
+            .expect("le poste a bien ce besoin");
+        assert_eq!(
+            permis.outils,
+            vec!["fichiers/list_directory", "fichiers/write_file"]
+        );
+        assert_eq!(permis.quota, APPELS_PAR_CONVERSATION);
+        assert!(permis.permet("fichiers", "list_directory"));
+        assert!(!permis.permet("fichiers", "outil_que_le_serveur_ajouterait"));
+
+        // Un poste qui n'en a pas besoin : refusé, et le refus dit pourquoi.
+        let refus = autorisations_pour(&serveur, &["CRM001".into()]).unwrap_err();
+        assert!(refus.contains("besoin"), "refus peu parlant : {}", refus);
+        assert!(refus.ends_with('.'), "refus sans point : {}", refus);
+    }
+
+    /// Un serveur qu'on n'a rattaché à aucun besoin n'est à la portée de personne.
+    #[test]
+    fn un_serveur_sans_connecteur_n_est_permis_a_aucun_agent() {
+        let orphelin = serveur_complet(None, vec!["fetch"]);
+        assert!(autorisations_pour(&orphelin, &["OFF029".into()]).is_err());
+        // Même en lui tendant tout le catalogue.
+        assert!(autorisations_pour(&orphelin, &[]).is_err());
+    }
+
+    /// Un serveur dont personne n'a relevé les outils n'est pas déclarable : la
+    /// liste vide ne veut pas dire « tous », elle veut dire « pas encore lu ».
+    #[test]
+    fn un_serveur_sans_outils_releves_est_refuse() {
+        let sans = ServeurDeclare {
+            nom: "essai".into(),
+            commande: "npx".into(),
+            ..Default::default()
+        };
+        let erreur = declaration_recevable(&sans).unwrap_err();
+        assert!(erreur.contains("relève"), "message peu parlant : {}", erreur);
+    }
+
+    /// Affirmer qu'un outil ne modifie rien dispense le client de valider. Ça ne
+    /// s'écrit pas sans avoir dit ce qu'on a lu.
+    #[test]
+    fn affirmer_la_lecture_seule_sans_raison_est_refuse() {
+        let affirme = |pourquoi: &str| ServeurDeclare {
+            nom: "essai".into(),
+            commande: "npx".into(),
+            outils: vec![OutilDeclare {
+                nom: "fetch".into(),
+                lecture_seule: Some(true),
+                pourquoi: pourquoi.into(),
+            }],
+            ..Default::default()
+        };
+        assert!(declaration_recevable(&affirme("")).is_err());
+        assert!(declaration_recevable(&affirme("relevé le 23/09 : ne touche pas au poste")).is_ok());
+    }
+
+    /// Et l'affirmation doit se voir à l'appel : sans elle, l'outil non annoncé
+    /// exige une validation ; avec elle, il part.
+    #[test]
+    fn l_affirmation_du_depot_vaut_annotation_absente() {
+        let sans_annotation: &str = r#"{"jsonrpc":"2.0","id":2,"result":{"tools":[
+            {"name":"fetch","description":"Récupère une page"}
+        ]}}"#;
+
+        let strict = client(vec!["distant/fetch"], 5, vec![INIT, sans_annotation]);
+        let mut strict = strict;
+        strict.ouvrir().expect("ouverture");
+        assert!(!strict.outils()[0].lecture_seule);
+
+        let mut souple = Client::nouveau(
+            "distant",
+            Box::new(TransportFactice::avec(vec![INIT, sans_annotation])),
+            Autorisations { outils: vec!["distant/fetch".into()], quota: 5 },
+            Arc::new(AtomicBool::new(false)),
+        )
+        .avec_lectures_seules(vec!["fetch".into()]);
+        souple.ouvrir().expect("ouverture");
+        assert!(souple.outils()[0].lecture_seule, "l'affirmation du dépôt n'a pas porté");
+    }
+
+    /// Un agent qu'on n'a pas embauché n'appelle rien, et une fiche qui n'est pas
+    /// la sienne non plus.
+    #[test]
+    fn seul_un_agent_embauche_appelle_un_outil() {
+        let installation = r#"{"agents":[
+            {"prenom":"Marie","ficheId":"AG-0001","voix":""},
+            {"prenom":"Paul","ficheId":"AG-0042","voix":""}
+        ]}"#;
+        assert!(est_embauche(installation, "Marie", "AG-0001"));
+        assert!(est_embauche(installation, "Paul", "AG-0042"));
+        // Le bon prénom sur la fiche d'un autre : refusé. C'est le cas qui
+        // compte, parce qu'il ouvrirait les besoins de l'autre poste.
+        assert!(!est_embauche(installation, "Marie", "AG-0042"));
+        assert!(!est_embauche(installation, "Inconnue", "AG-0001"));
+        assert!(!est_embauche(r#"{"agents":[]}"#, "Marie", "AG-0001"));
+        assert!(!est_embauche("pas du JSON", "Marie", "AG-0001"));
+    }
+
+    /// Le serveur `distant` de ce banc n'est pas celui du client : la liste
+    /// blanche nomme le serveur, donc un outil du bon nom sur un autre serveur
+    /// reste refusé.
+    #[test]
+    fn la_liste_blanche_nomme_le_serveur_autant_que_l_outil() {
+        let permis = Autorisations {
+            outils: vec!["fichiers/list_directory".into()],
+            quota: 5,
+        };
+        assert!(permis.permet("fichiers", "list_directory"));
+        assert!(!permis.permet("web", "list_directory"));
     }
 
     #[test]

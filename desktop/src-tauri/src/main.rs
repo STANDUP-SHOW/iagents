@@ -438,6 +438,8 @@ fn main() {
             mcp::mcp_serveurs,
             mcp::mcp_ranger_secret,
             mcp::mcp_outils_permis,
+            mcp::mcp_appeler,
+            mcp::mcp_journal,
             repondre,
             courriel::courriel_enregistrer_motdepasse,
             courriel::courriel_motdepasse_present,
