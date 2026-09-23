@@ -580,10 +580,14 @@ export function reconnaitreActivite(
 export function confirmationActivite(activite: Activite): string {
   const p = activite.pack;
   if (!p) return `${activite.nom}, d'accord. ${activite.trait}`;
+  // Les termes sont écrits en entrée de glossaire, donc avec une majuscule. Au milieu
+  // d'une phrase, cette majuscule trahit la liste déroulante derrière l'agent ; un sigle,
+  // lui, garde la sienne.
+  const enPhrase = (t: string) => (/^[A-ZÀ-Þ][a-zà-ÿ]/.test(t) ? t[0].toLowerCase() + t.slice(1) : t);
   const mots = p.vocabulaire.slice(0, 3).map((v) => v.terme);
-  const liste = mots.length > 1 ? `${mots.slice(0, -1).join(', ')} et ${mots[mots.length - 1]}` : mots[0];
+  const liste = [mots[0], ...mots.slice(1).map(enPhrase)].join(', ');
   const rythme = p.rythmes[0] ? ` ${p.rythmes[0]}` : '';
-  return `${activite.nom}, d'accord. Je sais ce que sont ${liste}.${rythme}`;
+  return `${activite.nom}, d'accord. ${liste} : ce sont vos mots, je les emploierai.${rythme}`;
 }
 
 /** Les documents de la branche, que l'agent annonce savoir reconnaître avant d'y toucher. */

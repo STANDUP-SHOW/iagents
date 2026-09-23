@@ -347,8 +347,8 @@ verifier("sans pack, l'agent dit quand même ce qu'il a compris de la branche", 
 verifier("avec un pack, l'agent emploie les mots de la branche", (() => {
   const avec = activites.activites.filter((a) => a.pack);
   return avec.every((a) => {
-    const dit = confirmationActivite(a);
-    return a.pack!.vocabulaire.slice(0, 3).every((v) => dit.includes(v.terme));
+    const dit = confirmationActivite(a).toLowerCase();
+    return a.pack!.vocabulaire.slice(0, 3).every((v) => dit.includes(v.terme.toLowerCase()));
   });
 })());
 verifier("les règles de la branche s'ajoutent à celles de la fiche, elles ne s'y substituent pas", (() => {
