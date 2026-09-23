@@ -142,6 +142,23 @@ par WhatsApp et email.
   peu sollicité se vend en mode API, pas avec du matériel. Un designer seul sur
   un bundle XL ne passe pas non plus (ratio 0,5) : les agents image et vidéo se
   vendent en bundle partagé ou en mode API, jamais seuls sur une carte dédiée.
+- **`profil_risque` n'est pas `commercial.profil`, et les deux s'écrivent
+  « PR-NN ».** C'est cette collision de noms qui a laissé passer l'erreur :
+  `commercial.profil` vient de `catalogue.profils` (PR-01 à PR-12 :
+  automatisation, présence physique, complexité d'intégration) et sert au prix ;
+  `profil_risque` dit si un humain doit approuver. Le générateur écrivait le
+  second sans jamais regarder les tâches : **1 243 fiches sur 1 249 se disaient
+  « PR-00 (autonome) », dont 245 dont CHAQUE tâche attend un accord humain.**
+  Personne ne lisait le champ, donc personne ne le voyait mentir. Il est dérivé
+  depuis le 23/09 (`profilRisqueAttendu`, dans `verifier-paquets.ts`) et le banc
+  refuse l'écart : **30 fiches sont réellement autonomes, 1 219 sont en PR-03**.
+  Deux valeurs seulement, parce que les fiches ne portent rien qui distingue
+  davantage ; PR-01, PR-02 et PR-04 restent inemployés tant que personne n'a dit
+  ce qui les produirait. **Ce qui est réellement appliqué reste
+  `validationHumaine`, tâche par tâche, dans `tache.rs`** — l'étiquette de fiche
+  le résume, elle ne le remplace pas. À dire à max : c'est une étiquette visible
+  au client, et elle passe de « autonome » à « approbation obligatoire » sur
+  presque tout le catalogue.
 - **Un champ obligatoire que personne ne lit ne protège de rien : il attend.**
   `miseAJour.appMinimum` est exigé par le schéma sur les 1 249 fiches, valait
   **« 1.0.0 » partout alors que l'application est en 0.1.0**, et aucun code ne

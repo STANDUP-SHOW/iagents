@@ -82,6 +82,33 @@ const CONNECTEURS = new Set<string>(schema.properties.connecteurs.items.enum);
 const parId = new Map<string, any>(catalogue.agents.map((a: any) => [a.id, a]));
 const profils = new Map<string, any>(catalogue.profils.map((p: any) => [p.id, p]));
 
+/**
+ * Le profil de risque d'une fiche, déduit de ses tâches.
+ *
+ * `profil_risque` est obligatoire au schéma, et il était écrit par le
+ * générateur sans jamais regarder les tâches : **1 243 fiches sur 1 249 se
+ * disaient « PR-00 (autonome) »**, dont 245 dont CHAQUE tâche attend l'accord
+ * d'un humain. Personne ne lisait le champ, donc personne ne le voyait mentir.
+ * Il ne reste que 30 fiches réellement autonomes.
+ *
+ * Attention : ce n'est PAS `commercial.profil`. Les deux s'écrivent « PR-NN » et
+ * ne veulent pas dire la même chose — l'autre vient de `catalogue.profils`
+ * (automatisation, présence physique, complexité d'intégration) et sert au prix.
+ * La collision de noms est ce qui rend l'erreur invisible à la relecture.
+ *
+ * Deux valeurs seulement, parce que les fiches ne portent rien qui distingue
+ * davantage : une tâche attend un accord, ou elle n'en attend pas.
+ * `validationHumaine` est ce qui est réellement appliqué (`tache.rs`). PR-01,
+ * PR-02 et PR-04 restent inemployés tant que personne n'a dit ce qui les
+ * produirait.
+ *
+ * Les tâches éteintes comptent : le client peut les allumer, et sur une
+ * étiquette de sûreté on se trompe du côté prudent.
+ */
+export function profilRisqueAttendu(taches: { validationHumaine?: boolean }[]): string {
+  return taches.some((t) => t.validationHumaine === true) ? 'PR-03' : 'PR-00';
+}
+
 export function commercialAttendu(profilId: string) {
   const p = profils.get(profilId);
   if (!p) throw new Error(`Profil inconnu : ${profilId}`);
@@ -254,6 +281,12 @@ for (const f of fichiers) {
     if (paquet.execution.appelsParJourEstimes !== attendu) {
       if (corriger) { paquet.execution.appelsParJourEstimes = attendu; modifie = true; } else faute(f, `appelsParJourEstimes ${paquet.execution.appelsParJourEstimes} ≠ calcul ${attendu}`);
     }
+    const risque = profilRisqueAttendu(paquet.taches);
+    if (paquet.profil_risque !== risque) {
+      if (corriger) { paquet.profil_risque = risque; modifie = true; }
+      else faute(f, `profil_risque « ${paquet.profil_risque} » ≠ ce que disent les tâches (${risque}) : ${paquet.taches.filter((t: any) => t.validationHumaine).length} tâche(s) sur ${paquet.taches.length} attendent un accord humain`);
+    }
+
     // Une fiche ne peut pas exiger une application qui n'existe pas. Les 1 249
     // demandaient « 1.0.0 » quand l'application etait en 0.1.0, et rien ne lisait
     // le champ : branche, il aurait ferme le catalogue entier (`fiches.rs`).
