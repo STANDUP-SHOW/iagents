@@ -52,8 +52,12 @@ pub fn lire_fiche(id: String) -> Result<String, String> {
         let nom = entree.file_name();
         let nom = nom.to_string_lossy();
         if nom.starts_with(&prefixe) && nom.ends_with(".json") {
-            return std::fs::read_to_string(entree.path())
-                .map_err(|e| format!("lecture de {} : {}", nom, e));
+            let contenu = std::fs::read_to_string(entree.path())
+                .map_err(|e| format!("lecture de {} : {}", nom, e))?;
+            if let Some(raison) = version_insuffisante_pour(&contenu, version_app()) {
+                return Err(raison);
+            }
+            return Ok(contenu);
         }
     }
 
@@ -177,7 +181,7 @@ pub fn catalogue_connu(nom: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{catalogue_connu, identifiant_valide, installation_recevable};
+    use super::{catalogue_connu, comparer_versions, identifiant_valide, installation_recevable, version_app, version_insuffisante_pour};
 
     #[test]
     fn accepte_un_identifiant_de_fiche() {
@@ -275,10 +279,123 @@ mod tests {
     }
 
     #[test]
+
+    #[test]
+    fn la_comparaison_de_versions_compte_les_nombres_pas_les_lettres() {
+        use std::cmp::Ordering::*;
+        // Le piege : en texte, "0.10.0" < "0.9.0". Une application en 0.10.0
+        // refuserait alors les fiches qu'elle sait tenir.
+        assert!("0.10.0" < "0.9.0", "le piege du texte existe bien");
+        assert_eq!(comparer_versions("0.10.0", "0.9.0"), Greater);
+        assert_eq!(comparer_versions("1.0.0", "0.1.0"), Greater);
+        assert_eq!(comparer_versions("0.1.0", "0.1.0"), Equal);
+        assert_eq!(comparer_versions("1.2", "1.2.0"), Equal, "une version courte se complete par des zeros");
+        assert_eq!(comparer_versions("0.1.0", "1.0.0"), Less);
+    }
+
+    #[test]
+    fn une_fiche_qui_demande_une_application_plus_recente_est_refusee_avec_le_remede() {
+        let fiche = r#"{"miseAJour":{"appMinimum":"2.0.0"}}"#;
+        let raison = version_insuffisante_pour(fiche, "0.1.0").expect("la fiche doit etre refusee");
+        assert!(raison.contains("2.0.0"), "le message nomme ce qu'elle demande : {}", raison);
+        assert!(raison.contains("0.1.0"), "le message nomme ce qu'on a : {}", raison);
+        assert!(raison.contains("mettez l'application à jour"), "le message dit quoi faire : {}", raison);
+    }
+
+    #[test]
+    fn une_fiche_de_la_version_courante_ou_plus_ancienne_passe() {
+        assert_eq!(version_insuffisante_pour(r#"{"miseAJour":{"appMinimum":"0.1.0"}}"#, "0.1.0"), None);
+        assert_eq!(version_insuffisante_pour(r#"{"miseAJour":{"appMinimum":"0.0.9"}}"#, "0.1.0"), None);
+    }
+
+    #[test]
+    fn ce_qui_ne_se_lit_pas_ne_bloque_personne() {
+        // Un controle de protection qui invente un echec est pire que pas de controle.
+        assert_eq!(version_insuffisante_pour("pas du json", "0.1.0"), None);
+        assert_eq!(version_insuffisante_pour("{}", "0.1.0"), None, "bloc miseAJour absent");
+        assert_eq!(version_insuffisante_pour(r#"{"miseAJour":{}}"#, "0.1.0"), None, "champ absent");
+        assert_eq!(version_insuffisante_pour(r#"{"miseAJour":{"appMinimum":42}}"#, "0.1.0"), None, "champ d un autre type");
+    }
+
+    #[test]
+    fn aucune_fiche_du_depot_ne_demande_une_application_que_nous_n_avons_pas() {
+        // Le piege trouve le 23/09 : les 1 249 fiches exigeaient « 1.0.0 » quand
+        // l'application etait en 0.1.0, et personne ne lisait le champ. Branche,
+        // il aurait ferme le catalogue entier. Ce banc lit les vraies fiches.
+        let dossier = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../agents");
+        let mut lues = 0;
+        let mut refusees = Vec::new();
+        for entree in std::fs::read_dir(&dossier).expect("dossier agents/").flatten() {
+            let chemin = entree.path();
+            if chemin.extension().and_then(|e| e.to_str()) != Some("json") {
+                continue;
+            }
+            let contenu = std::fs::read_to_string(&chemin).expect("lecture de la fiche");
+            lues += 1;
+            if let Some(raison) = version_insuffisante_pour(&contenu, version_app()) {
+                refusees.push(format!("{} : {}", chemin.display(), raison));
+            }
+        }
+        assert!(lues > 1000, "seulement {} fiches lues", lues);
+        assert!(refusees.is_empty(), "{} fiches sur {} seraient refusees a l ouverture :\n{}", refusees.len(), lues, refusees.join("\n"));
+    }
+
     fn une_fiche_hors_catalogue_est_refusee() {
         let hors = r#"{"agents":[{"prenom":"Marie","ficheId":"../secret","voix":"v"}]}"#;
         assert!(installation_recevable(hors).is_err());
         assert!(installation_recevable("pas du json").is_err());
         assert!(installation_recevable(r#"{"commentaire":"rien"}"#).is_err());
     }
+}
+
+/// La version de l'application, prise du manifeste : la recopier ici la ferait
+/// diverger du jour où quelqu'un publie sans y penser.
+pub fn version_app() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}
+
+/// Compare deux versions « x.y.z » par nombres, jamais par texte.
+///
+/// La comparaison de chaînes dit que « 0.10.0 » est plus ancien que « 0.9.0 »,
+/// ce qui est faux et ne se verrait pas : l'application refuserait des fiches
+/// qu'elle sait tenir, ou pire en accepterait qu'elle ne tient pas. Une partie
+/// illisible compte pour 0, et une version plus courte est complétée par des 0
+/// (« 1.2 » vaut « 1.2.0 »).
+fn comparer_versions(a: &str, b: &str) -> std::cmp::Ordering {
+    let nombres = |v: &str| -> Vec<u64> {
+        v.split('.')
+            .map(|p| p.trim().parse::<u64>().unwrap_or(0))
+            .collect()
+    };
+    let (ga, gb) = (nombres(a), nombres(b));
+    for i in 0..ga.len().max(gb.len()) {
+        let ordre = ga.get(i).copied().unwrap_or(0).cmp(&gb.get(i).copied().unwrap_or(0));
+        if ordre != std::cmp::Ordering::Equal {
+            return ordre;
+        }
+    }
+    std::cmp::Ordering::Equal
+}
+
+/// Ce que cette fiche exige de l'application, en clair, ou `None` si elle tient.
+///
+/// `miseAJour.appMinimum` était obligatoire au schéma sur les 1 249 fiches,
+/// valait « 1.0.0 » partout, et **personne ne le lisait** — alors que
+/// l'application est en 0.1.0. Le jour où on l'aurait branché, le catalogue
+/// entier aurait cessé de s'ouvrir. Un champ obligatoire que rien ne lit ne
+/// protège de rien ; il attend.
+///
+/// Ce qui ne se lit pas ne bloque pas : fiche illisible, bloc absent, champ
+/// absent — on laisse passer. Ce contrôle est là pour éviter à un client un
+/// échec incompréhensible, pas pour en inventer un.
+pub fn version_insuffisante_pour(contenu: &str, version_app: &str) -> Option<String> {
+    let json: serde_json::Value = serde_json::from_str(contenu).ok()?;
+    let exigee = json.get("miseAJour")?.get("appMinimum")?.as_str()?;
+    if comparer_versions(exigee, version_app) != std::cmp::Ordering::Greater {
+        return None;
+    }
+    Some(format!(
+        "cette fiche demande la version {} de l'application, qui est en {} : mettez l'application à jour pour l'employer",
+        exigee, version_app
+    ))
 }

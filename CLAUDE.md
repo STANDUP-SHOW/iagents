@@ -142,6 +142,20 @@ par WhatsApp et email.
   peu sollicité se vend en mode API, pas avec du matériel. Un designer seul sur
   un bundle XL ne passe pas non plus (ratio 0,5) : les agents image et vidéo se
   vendent en bundle partagé ou en mode API, jamais seuls sur une carte dédiée.
+- **Un champ obligatoire que personne ne lit ne protège de rien : il attend.**
+  `miseAJour.appMinimum` est exigé par le schéma sur les 1 249 fiches, valait
+  **« 1.0.0 » partout alors que l'application est en 0.1.0**, et aucun code ne
+  le lisait — ni Rust, ni l'écran, ni un banc. Branché tel quel, il aurait
+  refusé **le catalogue entier** ; le banc le montre (casser une seule fiche à
+  0.2.0 fait tomber les deux côtés). Depuis le 23/09 : `lire_fiche` compare
+  vraiment, avec un message en français qui nomme les deux versions et dit quoi
+  faire, et `verifier-paquets` refuse toute fiche qui exige plus que
+  `desktop/package.json`. Les 1 249 sont passées à 0.1.0, la valeur vraie.
+  **La comparaison se fait par nombres, jamais par texte** : en texte
+  « 0.10.0 » est plus ancien que « 0.9.0 », le banc l'affirme d'abord puis
+  vérifie que le code ne s'y trompe pas. Deux implémentations
+  (`comparer_versions` en Rust, `plusRecenteQue` en TS) parce que les deux
+  côtés doivent trancher pareil.
 - **La cadence d'une tâche et le champ de la fiche sont deux fonctions**
   (`appelsParJour` fractionnaire, `appelsParJourEstimes` entier planché à 1,
   dans `calculer.ts`). Les confondre a coûté deux fois le même jour. D'abord

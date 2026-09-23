@@ -12,10 +12,27 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { materielPour, appelsParJourEstimes } from '../dimensionnement/calculer.ts';
+
+
+/**
+ * Compare deux versions par nombres, jamais par texte : en texte « 0.10.0 » est
+ * plus ancien que « 0.9.0 ». Meme regle que `comparer_versions` dans fiches.rs.
+ */
+function plusRecenteQue(a: string, b: string): boolean {
+  const n = (v: string) => v.split('.').map((p) => Number.parseInt(p.trim(), 10) || 0);
+  const [ga, gb] = [n(a), n(b)];
+  for (let i = 0; i < Math.max(ga.length, gb.length); i++) {
+    const d = (ga[i] ?? 0) - (gb[i] ?? 0);
+    if (d !== 0) return d > 0;
+  }
+  return false;
+}
 import { logicielsDesTaches, remplacement } from './logiciels-metier.ts';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const schema = JSON.parse(readFileSync(join(racine, 'contrat/paquet-agent.schema.json'), 'utf8'));
+/** La version de l'application, lue a son manifeste : la recopier la ferait diverger. */
+const VERSION_APP: string = JSON.parse(readFileSync(join(racine, 'desktop/package.json'), 'utf8')).version;
 const catalogue = JSON.parse(readFileSync(join(racine, 'catalogue/catalogue.json'), 'utf8'));
 const logiciels = JSON.parse(readFileSync(join(racine, 'catalogue/logiciels.json'), 'utf8'));
 const logicielsParId = new Map<string, any>(logiciels.logiciels.map((l: any) => [l.id, l]));
@@ -237,6 +254,14 @@ for (const f of fichiers) {
     if (paquet.execution.appelsParJourEstimes !== attendu) {
       if (corriger) { paquet.execution.appelsParJourEstimes = attendu; modifie = true; } else faute(f, `appelsParJourEstimes ${paquet.execution.appelsParJourEstimes} ≠ calcul ${attendu}`);
     }
+    // Une fiche ne peut pas exiger une application qui n'existe pas. Les 1 249
+    // demandaient « 1.0.0 » quand l'application etait en 0.1.0, et rien ne lisait
+    // le champ : branche, il aurait ferme le catalogue entier (`fiches.rs`).
+    const exigee = paquet.miseAJour?.appMinimum;
+    if (typeof exigee === 'string' && plusRecenteQue(exigee, VERSION_APP)) {
+      faute(f, `miseAJour.appMinimum « ${exigee} » depasse la version de l'application (${VERSION_APP}) : l'application refuserait cette fiche`);
+    }
+
     const capsModeles = Object.keys(paquet.modeles).filter((k) => k !== 'activite').sort().join(',');
     const capsApi = Object.keys(paquet.execution.api.capacites).sort().join(',');
     if (capsModeles !== capsApi) faute(f, `execution.api.capacites (${capsApi}) ne couvre pas modeles (${capsModeles})`);
