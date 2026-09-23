@@ -116,7 +116,7 @@ fn decouper(nom: &str) -> (String, String) {
 /// La taille n'entre pas dans la comparaison, et c'est un choix : le palier dit
 /// ce qu'il faut **au moins**, et un client qui a installé plus gros l'a fait
 /// exprès. Ce qui peut mal tourner — un modèle trop gros pour la machine — se
-/// voit à l'usage et se dira à la jauge, pas au nom.
+/// voit à l'usage et se dit à la jauge (`crate::jauge`), pas au nom.
 pub fn meme_modele(installe: &str, exemple: &str) -> bool {
     let (base, _) = decouper(installe);
     !base.is_empty() && base == decouper(exemple).0

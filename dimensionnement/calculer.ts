@@ -13,7 +13,7 @@ import paliersJson from './paliers-modeles.json' with { type: 'json' };
 import machinesJson from './machines.json' with { type: 'json' };
 
 export type PalierId = keyof typeof paliersJson.paliers;
-export interface Palier { ram: number; vram: number; disque: number; chargeUnitaire: number; exemples: string[]; usage: string }
+export interface Palier { ram: number; vram: number; disque: number; chargeUnitaire: number; resident: boolean; exemples: string[]; usage: string }
 export interface Modeles { texte: PalierId; vision?: PalierId; image?: PalierId; video?: PalierId; audio?: PalierId; musique?: PalierId; embeddings?: PalierId; activite: number }
 export interface ClasseGpu { classe: string; libelle: string; capacite: number; vram: number }
 export interface Materiel { ram: number; vram: number; cpuCoeurs: number; disque: number; chargeContinue: number; gpu: { classe: string; libelle: string } }
@@ -33,8 +33,13 @@ export const CLASSES_GPU: ClasseGpu[] = [
   { classe: 'serveur',        libelle: 'plusieurs cartes ou serveur GPU (au-delà de 24 Go ou de la charge d une RTX 4090)', capacite: 99, vram: 999 },
 ];
 
-/** Tiers kept loaded at all times (they answer the voice and the mail) vs tiers loaded on demand, one at a time. */
-const PALIERS_RESIDENTS = new Set<string>(['texte-leger', 'texte-standard', 'texte-avance', 'texte-expert', 'audio-parole', 'embeddings']);
+/**
+ * Tiers kept loaded at all times (they answer the voice and the mail) vs tiers loaded
+ * on demand, one at a time. The flag lives in paliers-modeles.json, not here: the
+ * desktop app computes the same gauge from the same file, and a rule written in two
+ * languages is a rule that will disagree with itself.
+ */
+const est_resident = (id: PalierId): boolean => PALIERS[id].resident === true;
 
 /** Model memory for a set of distinct tiers: resident tiers add up, on-demand tiers count once for the largest. */
 function memoireModeles(paliers: PalierId[]): number {
@@ -42,7 +47,7 @@ function memoireModeles(paliers: PalierId[]): number {
   for (const id of paliers) {
     const p = PALIERS[id];
     const m = p.vram + (p.vram > 0 ? MEMOIRE_TRAVAIL_PAR_PALIER : 0);
-    if (PALIERS_RESIDENTS.has(id)) residents += m; else aLaDemande = Math.max(aLaDemande, m);
+    if (est_resident(id)) residents += m; else aLaDemande = Math.max(aLaDemande, m);
   }
   return Math.ceil(residents + aLaDemande);
 }
@@ -61,8 +66,11 @@ export const MACHINES: Machine[] = machinesJson.machines as Machine[];
 export const BUNDLES: Machine[] = MACHINES.filter((m) => m.role === 'bundle');
 export const POSTES: Machine[] = MACHINES.filter((m) => m.role === 'poste');
 
-/** Working memory (KV cache, activations) per LOADED TIER, in GB, on top of the weights. Agents queue on one loaded model, so it is counted per tier, not per agent. */
-export const MEMOIRE_TRAVAIL_PAR_PALIER = 0.5;
+/** Working memory (KV cache, activations) per LOADED TIER, in GB, on top of the weights. Agents queue on one loaded model, so it is counted per tier, not per agent. Read from the tier file, which the desktop app reads too. */
+export const MEMOIRE_TRAVAIL_PAR_PALIER: number = paliersJson.memoireTravailParPalier;
+
+/** On a unified-memory machine (a mini-PC with no dedicated card), the memory left to models is the RAM minus this. Same file, same reason. */
+export const RESERVE_MEMOIRE_UNIFIEE: number = paliersJson.reserveMemoireUnifiee;
 
 export function paliersDe(modeles: Modeles): PalierId[] {
   const { activite: _a, ...caps } = modeles;

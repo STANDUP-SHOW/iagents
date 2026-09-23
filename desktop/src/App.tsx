@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import './App.css'
 import { installerAgents, type Fiche, type Installation } from './agents/fiche'
+import type { Jauge } from './agents/jauge'
 import { ConversationEngine } from './engines/ConversationEngine'
 import reglages from './config/conversation-settings.json'
 import Dashboard from './components/Dashboard'
@@ -32,6 +33,7 @@ function App() {
   // paie, et ça ne se découvre pas sur la facture.
   const [voie, setVoie] = useState<string | null>(null)
   const [voieBascule, setVoieBascule] = useState(false)
+  const [jauge, setJauge] = useState<Jauge | null>(null)
 
   useEffect(() => {
     initializeApp()
@@ -112,6 +114,13 @@ function App() {
       setMoteur(m)
       setAgents(listerDepuisMoteur(m))
       setError(null)
+
+      // Ce que ces agents demandent à CETTE machine. Le calcul est en Rust, sur
+      // les mêmes chiffres que le dimensionnement ; découvrir à l'usage que la
+      // machine ne suit pas, c'est le découvrir sur des tâches en retard.
+      await invoke<Jauge>('jauge_etat')
+        .then(setJauge)
+        .catch(() => setJauge(null))
     } catch (err) {
       // Sans agents installés, la bibliothèque reste vide plutôt que de montrer
       // des exemples qui ne correspondent à aucune fiche du catalogue.
@@ -314,6 +323,11 @@ function App() {
         )}
         {voie && (
           <div className={voieBascule ? 'error-banner' : 'succes-banner'}>{voie}</div>
+        )}
+        {jauge && jauge.niveau !== 'confortable' && (
+          <div className={jauge.niveau === 'impossible' ? 'error-banner' : 'avertissement-banner'}>
+            {jauge.machine.nom} — {jauge.message}
+          </div>
         )}
         {activeTab === 'dashboard' && <Dashboard agents={agents} isListening={isListening} />}
         {activeTab === 'agents' && (

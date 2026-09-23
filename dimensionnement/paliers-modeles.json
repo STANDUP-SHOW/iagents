@@ -1,6 +1,8 @@
 {
   "version": "2026-09-18",
   "note": "Paliers de modeles LOCAUX (aucun token facture). Chiffres INDICATIFS pour une quantification 4 bits, a confirmer sur les machines LocalAgent avant toute promesse commerciale. vram=0 signifie que le palier tourne sur CPU/memoire unifiee. chargeUnitaire = part de la capacite de calcul d'un GPU de reference (classe RTX 4070 / M4 Pro) consommee par UN agent qui sollicite ce palier en continu ; un agent reel l'utilise a hauteur de son 'tauxActivite'. Les agents d'une machine se relaient sur un modele charge une fois (file d'attente) : la memoire de travail se compte par palier, pas par agent.",
+  "memoireTravailParPalier": 0.5,
+  "reserveMemoireUnifiee": 6,
   "paliers": {
     "texte-leger": {
       "exemples": [
@@ -12,7 +14,8 @@
       "vram": 0,
       "disque": 3,
       "chargeUnitaire": 0.1,
-      "usage": "tri, classement, reponses courtes ; tourne sans GPU"
+      "usage": "tri, classement, reponses courtes ; tourne sans GPU",
+      "resident": true
     },
     "texte-standard": {
       "exemples": [
@@ -24,7 +27,8 @@
       "vram": 6,
       "disque": 5,
       "chargeUnitaire": 0.2,
-      "usage": "redaction, resume, courrier, conversation : le palier de la plupart des postes"
+      "usage": "redaction, resume, courrier, conversation : le palier de la plupart des postes",
+      "resident": true
     },
     "texte-avance": {
       "exemples": [
@@ -36,7 +40,8 @@
       "vram": 10,
       "disque": 9,
       "chargeUnitaire": 0.35,
-      "usage": "analyse, raisonnement multi-etapes, juridique, financier"
+      "usage": "analyse, raisonnement multi-etapes, juridique, financier",
+      "resident": true
     },
     "texte-expert": {
       "exemples": [
@@ -47,7 +52,8 @@
       "vram": 22,
       "disque": 20,
       "chargeUnitaire": 0.7,
-      "usage": "expertise poussee, code, dossiers longs"
+      "usage": "expertise poussee, code, dossiers longs",
+      "resident": true
     },
     "vision": {
       "exemples": [
@@ -59,7 +65,8 @@
       "vram": 8,
       "disque": 6,
       "chargeUnitaire": 0.25,
-      "usage": "lire des factures, des captures, des photos produit"
+      "usage": "lire des factures, des captures, des photos produit",
+      "resident": false
     },
     "image-rapide": {
       "exemples": [
@@ -70,7 +77,8 @@
       "vram": 8,
       "disque": 12,
       "chargeUnitaire": 0.6,
-      "usage": "visuels reseaux sociaux, vignettes, mockups rapides"
+      "usage": "visuels reseaux sociaux, vignettes, mockups rapides",
+      "resident": false
     },
     "image-qualite": {
       "exemples": [
@@ -81,7 +89,8 @@
       "vram": 16,
       "disque": 25,
       "chargeUnitaire": 0.9,
-      "usage": "publicites, packaging, illustrations finales"
+      "usage": "publicites, packaging, illustrations finales",
+      "resident": false
     },
     "video": {
       "exemples": [
@@ -93,7 +102,8 @@
       "vram": 14,
       "disque": 20,
       "chargeUnitaire": 1.0,
-      "usage": "clips courts ; UN agent video sature un GPU grand public"
+      "usage": "clips courts ; UN agent video sature un GPU grand public",
+      "resident": false
     },
     "audio-parole": {
       "exemples": [
@@ -104,7 +114,8 @@
       "vram": 0,
       "disque": 4,
       "chargeUnitaire": 0.15,
-      "usage": "conversation vocale, transcription, WhatsApp audio ; whisper.cpp et Piper tournent sur CPU"
+      "usage": "conversation vocale, transcription, WhatsApp audio ; whisper.cpp et Piper tournent sur CPU",
+      "resident": true
     },
     "musique": {
       "exemples": [
@@ -115,7 +126,8 @@
       "vram": 10,
       "disque": 8,
       "chargeUnitaire": 0.7,
-      "usage": "jingles, fonds sonores"
+      "usage": "jingles, fonds sonores",
+      "resident": false
     },
     "embeddings": {
       "exemples": [
@@ -126,7 +138,8 @@
       "vram": 0,
       "disque": 2,
       "chargeUnitaire": 0.03,
-      "usage": "memoire locale des connaissances (RAG)"
+      "usage": "memoire locale des connaissances (RAG)",
+      "resident": true
     }
   },
   "systeme": {
@@ -134,5 +147,6 @@
     "disque": 15,
     "cpuCoeurs": 4,
     "note": "reserve pour l'application iAgent, le systeme et les navigateurs pilotes"
-  }
+  },
+  "noteMemoire": "memoireTravailParPalier : memoire de travail (cache KV, activations) en Go par PALIER CHARGE, en plus des poids ; les agents se relaient sur un modele charge une fois, donc ce n'est pas par agent. reserveMemoireUnifiee : sur une machine a memoire unifiee (mini-PC sans carte dediee), la memoire laissee aux modeles est la RAM moins cette reserve. resident : le palier reste charge en permanence (il repond a la voix et au courrier) ; les autres se chargent un a la fois, a la demande."
 }

@@ -28,10 +28,31 @@ par WhatsApp et email.
   validateur a attrapé dès son premier passage un profil commercial et un
   matériel recopiés faux dans un agent témoin.
 - **Local par défaut, API au choix du client, pour tous les agents** (décision
-  du 18/09/2026, bloc `execution`). L'application calcule la jauge de la machine
-  (`jaugeMachine`) et prévient avant de basculer ; sans clé d'API pour la
-  capacité manquante, l'agent s'arrête avec le motif écrit. Les clés du client
-  restent sur sa machine, jamais dans un paquet ni chez nous. **Tenu par le code depuis
+  du 18/09/2026, bloc `execution`). L'application prévient avant de basculer :
+  `modele::choisir` écrit toujours son `motif`, même quand rien ne bascule ; sans
+  clé d'API pour la capacité manquante, l'agent s'arrête avec le motif écrit. Les
+  clés du client restent sur sa machine, jamais dans un paquet ni chez nous.
+- **La jauge de la machine est calculée dans l'application** depuis le
+  23/09/2026 (`desktop/src-tauri/src/jauge.rs`), et plus seulement dans la
+  boutique : elle dit, avant qu'un agent ne parle, ce que les agents de
+  `installation.json` demandent à CETTE machine. **La mémoire se mesure, la
+  puissance non.** La mémoire totale se lit sur le système (`/proc/meminfo` sous
+  Linux, `GlobalMemoryStatusEx` sous Windows) ; ce que vaut une carte face à une
+  RTX 4070 ne se lit nulle part, et n'est connu que si `installation.json` porte
+  `machine: "<id de machines.json>"`. Sans ça la jauge rend `memoire-seule`, qui
+  n'est **pas** un `confortable` prudent : la mémoire passe, la charge n'a pas
+  été jugée, et l'écran l'affiche en ambre et non en vert. Une jauge qui
+  devinerait une capacité annoncerait « confortable » à un client dont les tâches
+  prennent du retard. Le chemin Windows est compilé par la construction du MSI à
+  chaque PR touchant `desktop/`, mais n'a **jamais tourné sur une vraie machine
+  Windows** — même réserve que pour l'installeur.
+- **La règle de mémoire vit dans `dimensionnement/paliers-modeles.json`**, pas
+  dans le code (23/09/2026) : `resident` par palier, `memoireTravailParPalier`,
+  `reserveMemoireUnifiee`. `calculer.ts` (boutique) et `jauge.rs` (application)
+  la lisent tous les deux et les deux bancs rejouent les mêmes fiches témoins.
+  Écrite deux fois, en TypeScript et en Rust, elle aurait fini par dire deux
+  choses. Vérifié en retournant `resident` sur `texte-standard` : le banc du
+  dimensionnement l'attrape aussitôt (la carte nécessaire tombe de 16 à 12 Go). **Tenu par le code depuis
   le 23/09/2026 seulement** : jusque-là l'application ne savait parler qu'à
   l'API d'Anthropic, les 1 249 fiches disaient `defaut: "local"` et rien ne les
   lisait. `desktop/src-tauri/src/modele.rs` est maintenant le seul endroit où la
