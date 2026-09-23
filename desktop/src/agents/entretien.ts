@@ -117,6 +117,8 @@ export const INTITULES: Record<string, string> = {
   pim: "Vos fiches produits sont tenues dans quel outil ?",
   marketing: "Vos campagnes et vos envois partent de quel outil ?",
   traduction: "Vos traductions passent par quel outil ou quelle agence ?",
+  developpement: "Vos développements sont suivis sur quel outil ?",
+  'hebergement-infra': "Vos applications tournent chez quel hébergeur ?",
   publicite: "Vous achetez votre publicité en ligne sur quelles plateformes ?",
   cms: "Votre site internet est géré avec quel outil ?",
   'montage-video': "Vos vidéos sont montées avec quel logiciel ?",
