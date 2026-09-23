@@ -15,6 +15,13 @@
  * apparaît sans qu'une ligne de code change.
  */
 import { manques, EXIGENCES, type Condition } from '../../../outils/activation.ts';
+import {
+  CAPACITES,
+  SERVI_PAR_L_APPLICATION,
+  type Capacite,
+} from '../../../outils/capacites.ts';
+
+export { CAPACITES, SERVI_PAR_L_APPLICATION, type Capacite };
 
 export type Trilogique = boolean | 'partiel' | 'a-confirmer';
 
@@ -57,6 +64,7 @@ export interface Connecteur {
   etapesIntegrateur: string[];
   urlProduit: string;
   urlDocumentation: string;
+  sert: Capacite[];
   activation: { activable: boolean; manques: Condition[] };
   validation: string;
   validationNote: string;
@@ -149,6 +157,33 @@ export function matrice(ref: ReferentielConnecteurs): Rubrique[] {
       })),
     };
   });
+}
+
+export interface Besoin {
+  capacite: Capacite;
+  /** Qui peut le servir. Vide quand c'est l'application elle-même — voir `parLApplication`. */
+  candidats: Connecteur[];
+  parLApplication: string | null;
+}
+
+/**
+ * Ce que réclame une fiche, traduit en connecteurs proposables. La fiche dit « email » ; le
+ * client choisit. On rend aussi les candidats non activables : le client a le droit de voir
+ * que Microsoft 365 existe et d'apprendre ce qui lui manque, plutôt qu'une liste vide.
+ */
+export function besoinsDeLaFiche(
+  ref: ReferentielConnecteurs,
+  declares: string[]
+): Besoin[] {
+  return declares
+    .filter((d): d is Capacite => (CAPACITES as readonly string[]).includes(d))
+    .map((capacite) => ({
+      capacite,
+      candidats: ref.connecteurs
+        .filter((c) => c.sert.includes(capacite))
+        .sort((a, b) => a.nom.localeCompare(b.nom, 'fr')),
+      parLApplication: SERVI_PAR_L_APPLICATION[capacite] ?? null,
+    }));
 }
 
 /** Une phrase parlée, pour l'agent qui doit dire de vive voix pourquoi il ne peut pas. */

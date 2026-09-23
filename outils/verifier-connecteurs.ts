@@ -17,6 +17,8 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { manques, CONDITIONS, EXIGENCES } from './activation.ts';
+import { sertQuoi, CAPACITES, SERVI_PAR_L_APPLICATION, type Capacite } from './capacites.ts';
+import { readdirSync } from 'node:fs';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const lire = (p: string) => JSON.parse(readFileSync(join(racine, p), 'utf8'));
@@ -81,6 +83,20 @@ for (const c of connecteurs) {
   }
 }
 
+// Les besoins de fiche : même recalcul, même refus de divergence.
+for (const c of connecteurs) {
+  const attendu = sertQuoi(c);
+  const ecrit: string[] = Array.isArray(c.sert) ? c.sert : [];
+  if (ecrit.length !== attendu.length || ecrit.some((v, i) => v !== attendu[i])) {
+    if (corriger) {
+      c.sert = attendu;
+      if (!reparations.includes(c.id)) reparations.push(c.id);
+    } else {
+      faute(`${c.nom} : bloc sert divergent — la table dit ${attendu.join(', ') || '(rien)'}`);
+    }
+  }
+}
+
 if (corriger && reparations.length) {
   writeFileSync(
     join(racine, 'connecteurs/catalogue.json'),
@@ -88,6 +104,29 @@ if (corriger && reparations.length) {
     'utf8'
   );
   console.log(`  ⟳ ${reparations.length} bloc(s) activation réécrit(s) depuis la règle`);
+}
+
+// Chaque besoin qu'une fiche déclare doit trouver quelqu'un pour le servir : un connecteur
+// du catalogue, ou l'application elle-même. Un besoin que personne ne couvre est une promesse
+// de la boutique que rien ne tient — et un mot renommé dans une fiche le ferait apparaître ici.
+const besoins = new Map<string, number>();
+const dossierAgents = join(racine, 'agents');
+const fichiers = readdirSync(dossierAgents).filter((f) => f.endsWith('.json'));
+// Un banc qui ne lit rien passe toujours. Celui-ci dit combien de fiches il a ouvertes.
+if (fichiers.length < 1000) faute(`seulement ${fichiers.length} fiche(s) lues dans agents/`);
+for (const f of fichiers) {
+  const fiche = JSON.parse(readFileSync(join(dossierAgents, f), 'utf8'));
+  for (const b of fiche.connecteurs ?? []) besoins.set(b, (besoins.get(b) ?? 0) + 1);
+}
+for (const [besoin, combien] of [...besoins].sort((a, b) => b[1] - a[1])) {
+  if (!CAPACITES.includes(besoin as Capacite)) {
+    faute(`${combien} fiche(s) déclarent « ${besoin} », que outils/capacites.ts ne connaît pas`);
+    continue;
+  }
+  const porteurs = connecteurs.filter((c) => (c.sert ?? []).includes(besoin));
+  if (porteurs.length === 0 && !(besoin in SERVI_PAR_L_APPLICATION)) {
+    faute(`${combien} fiche(s) déclarent « ${besoin} », qu'aucun connecteur ne sert`);
+  }
 }
 
 // Ce que la règle donne aujourd'hui. Ce n'est pas une faute, c'est l'état du chantier : le
@@ -102,6 +141,14 @@ for (const cond of CONDITIONS) {
   const n = compte.get(cond) ?? 0;
   if (n) console.log(`  ⟳   ${String(n).padStart(3)} sans ${EXIGENCES[cond]}`);
 }
+
+console.log(`  ⟳ besoins des fiches : ${[...besoins]
+  .sort((a, b) => b[1] - a[1])
+  .map(([b, n]) => {
+    const porteurs = connecteurs.filter((c) => (c.sert ?? []).includes(b)).length;
+    return `${b} ${n} fiche(s) → ${porteurs || SERVI_PAR_L_APPLICATION[b] ? (porteurs || "l'application") : 'personne'}`;
+  })
+  .join(' ; ')}`);
 
 console.log(`${connecteurs.length} connecteurs, ${fautes} faute(s)`);
 if (fautes) process.exit(1);

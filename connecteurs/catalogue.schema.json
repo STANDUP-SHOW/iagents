@@ -5,31 +5,68 @@
   "description": "Ce que l'application doit savoir d'un connecteur avant d'oser l'allumer. Écrit par outils/importer-connecteurs.ts depuis les relevés V6 ; jamais à la main.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["note", "source", "genere", "categories", "familles", "connecteurs"],
+  "required": [
+    "note",
+    "source",
+    "genere",
+    "categories",
+    "familles",
+    "connecteurs"
+  ],
   "properties": {
-    "note": { "type": "string", "minLength": 20 },
-    "source": { "type": "string", "minLength": 5 },
-    "genere": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "note": {
+      "type": "string",
+      "minLength": 20
+    },
+    "source": {
+      "type": "string",
+      "minLength": 5
+    },
+    "genere": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
     "categories": {
       "type": "array",
       "minItems": 1,
-      "items": { "enum": ["metier", "communication", "bureautique"] }
+      "items": {
+        "enum": [
+          "metier",
+          "communication",
+          "bureautique"
+        ]
+      }
     },
     "familles": {
       "type": "array",
       "minItems": 1,
-      "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" }
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+      }
     },
     "connecteurs": {
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/connecteur" }
+      "items": {
+        "$ref": "#/$defs/connecteur"
+      }
     }
   },
   "$defs": {
     "trilogique": {
       "description": "Oui, non, en partie, ou personne ne le sait encore. Écraser les trois derniers cas en `false` promettrait moins que la réalité ; les écraser en `true` promettrait plus.",
-      "oneOf": [{ "type": "boolean" }, { "enum": ["partiel", "a-confirmer"] }]
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "enum": [
+            "partiel",
+            "a-confirmer"
+          ]
+        }
+      ]
     },
     "connecteur": {
       "type": "object",
@@ -58,34 +95,89 @@
         "etapesIntegrateur",
         "urlProduit",
         "urlDocumentation",
+        "sert",
         "activation",
         "validation",
         "validationNote",
         "limites"
       ],
       "properties": {
-        "id": { "type": "string", "pattern": "^[A-Z]{2,4}[0-9]{3}$" },
-        "nom": { "type": "string", "minLength": 2 },
-        "categorie": { "enum": ["metier", "communication", "bureautique"] },
-        "famille": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
-        "specialite": { "type": "string" },
-        "zone": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
-        "deploiement": { "enum": ["cloud", "serveur", "serveur-et-cloud", "a-confirmer"] },
-        "api": { "$ref": "#/$defs/trilogique" },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z]{2,4}[0-9]{3}$"
+        },
+        "nom": {
+          "type": "string",
+          "minLength": 2
+        },
+        "categorie": {
+          "enum": [
+            "metier",
+            "communication",
+            "bureautique"
+          ]
+        },
+        "famille": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "specialite": {
+          "type": "string"
+        },
+        "zone": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "deploiement": {
+          "enum": [
+            "cloud",
+            "serveur",
+            "serveur-et-cloud",
+            "a-confirmer"
+          ]
+        },
+        "api": {
+          "$ref": "#/$defs/trilogique"
+        },
         "authentification": {
           "description": "En clair : « OAuth 2.0 / Entra ID » dit ce qu'aucune énumération courte ne rendrait, et c'est un intégrateur qui la lit.",
           "type": "string"
         },
-        "accesRequis": { "type": "string" },
-        "adminRequis": { "enum": ["oui", "souvent", "parfois", "non", "a-confirmer"] },
-        "lecture": { "$ref": "#/$defs/trilogique" },
-        "ecriture": { "$ref": "#/$defs/trilogique" },
-        "webhooks": { "$ref": "#/$defs/trilogique" },
-        "voieDesktop": { "type": "string" },
+        "accesRequis": {
+          "type": "string"
+        },
+        "adminRequis": {
+          "enum": [
+            "oui",
+            "souvent",
+            "parfois",
+            "non",
+            "a-confirmer"
+          ]
+        },
+        "lecture": {
+          "$ref": "#/$defs/trilogique"
+        },
+        "ecriture": {
+          "$ref": "#/$defs/trilogique"
+        },
+        "webhooks": {
+          "$ref": "#/$defs/trilogique"
+        },
+        "voieDesktop": {
+          "type": "string"
+        },
         "mcp": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["prevu", "chantier", "urgence", "transport", "statutReleve", "serveur"],
+          "required": [
+            "prevu",
+            "chantier",
+            "urgence",
+            "transport",
+            "statutReleve",
+            "serveur"
+          ],
           "properties": {
             "prevu": {
               "description": "MCP est-il la voie prévue depuis l'application. Le relevé répond « Oui » 135 fois sur 137 : c'est une intention, pas un serveur qui tourne.",
@@ -93,49 +185,149 @@
             },
             "chantier": {
               "description": "Où en est l'écriture de ce connecteur MCP. Aucune valeur ne dit « fait » : le relevé n'en connaît aucun de terminé.",
-              "enum": ["a-developper", "a-construire", "a-qualifier", "a-confirmer"]
+              "enum": [
+                "a-developper",
+                "a-construire",
+                "a-qualifier",
+                "a-confirmer"
+              ]
             },
-            "urgence": { "enum": ["prioritaire", "fondamental", null] },
-            "transport": { "enum": ["stdio", "streamable-http", "stdio-ou-http", "a-confirmer"] },
-            "statutReleve": { "type": "string" },
+            "urgence": {
+              "enum": [
+                "prioritaire",
+                "fondamental",
+                null
+              ]
+            },
+            "transport": {
+              "enum": [
+                "stdio",
+                "streamable-http",
+                "stdio-ou-http",
+                "a-confirmer"
+              ]
+            },
+            "statutReleve": {
+              "type": "string"
+            },
             "serveur": {
               "description": "Seul le relevé des 74 serveurs MCP affirme qu'un serveur existe, et il donne sa source. `null` quand le produit n'y figure pas : on n'affirme alors rien.",
               "oneOf": [
-                { "type": "null" },
+                {
+                  "type": "null"
+                },
                 {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["mode", "statut", "source"],
+                  "required": [
+                    "mode",
+                    "statut",
+                    "source"
+                  ],
                   "properties": {
-                    "mode": { "type": "string" },
-                    "statut": { "type": "string" },
-                    "source": { "type": "string" }
+                    "mode": {
+                      "type": "string"
+                    },
+                    "statut": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
                   }
                 }
               ]
             }
           }
         },
-        "risque": { "enum": ["critique", "eleve", "moyen", "faible", null] },
-        "priorite": { "enum": ["P0", "P1", "P2", null] },
+        "risque": {
+          "enum": [
+            "critique",
+            "eleve",
+            "moyen",
+            "faible",
+            null
+          ]
+        },
+        "priorite": {
+          "enum": [
+            "P0",
+            "P1",
+            "P2",
+            null
+          ]
+        },
         "cout": {
           "description": "Coût mensuel pour le client, en euros. `0` est une information : c'est gratuit. `null` n'en est pas une : personne n'a chiffré, et la règle d'activation le refuse.",
-          "oneOf": [{ "type": "number", "minimum": 0 }, { "type": "null" }]
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
-        "etapesClient": { "type": "array", "items": { "type": "string", "minLength": 2 } },
-        "etapesIntegrateur": { "type": "array", "items": { "type": "string", "minLength": 2 } },
-        "urlProduit": { "type": "string" },
-        "urlDocumentation": { "type": "string" },
+        "etapesClient": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2
+          }
+        },
+        "etapesIntegrateur": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 2
+          }
+        },
+        "urlProduit": {
+          "type": "string"
+        },
+        "urlDocumentation": {
+          "type": "string"
+        },
+        "sert": {
+          "description": "Les besoins que les fiches déclarent et que ce connecteur peut couvrir. Dérivé de outils/capacites.ts depuis les mots du relevé, jamais saisi.",
+          "type": "array",
+          "items": {
+            "enum": [
+              "voix",
+              "conversation",
+              "email",
+              "whatsapp",
+              "calendrier",
+              "fichiers",
+              "navigateur",
+              "telephone"
+            ]
+          }
+        },
         "activation": {
           "description": "Dérivé de outils/activation.ts, jamais saisi. `npm run controle` refuse toute divergence.",
           "type": "object",
           "additionalProperties": false,
-          "required": ["activable", "manques"],
+          "required": [
+            "activable",
+            "manques"
+          ],
           "properties": {
-            "activable": { "type": "boolean" },
+            "activable": {
+              "type": "boolean"
+            },
             "manques": {
               "type": "array",
-              "items": { "enum": ["editeur", "authentification", "permissions", "cout", "risque"] }
+              "items": {
+                "enum": [
+                  "editeur",
+                  "authentification",
+                  "permissions",
+                  "cout",
+                  "risque"
+                ]
+              }
             }
           }
         },
@@ -152,8 +344,12 @@
             "a-confirmer"
           ]
         },
-        "validationNote": { "type": "string" },
-        "limites": { "type": "string" }
+        "validationNote": {
+          "type": "string"
+        },
+        "limites": {
+          "type": "string"
+        }
       }
     }
   }

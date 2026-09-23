@@ -15,6 +15,9 @@ import {
   matrice,
   phraseRefus,
   resteAFaire,
+  besoinsDeLaFiche,
+  CAPACITES,
+  SERVI_PAR_L_APPLICATION,
   type ReferentielConnecteurs,
   type Connecteur,
 } from './src/agents/connecteurs.ts';
@@ -117,6 +120,39 @@ for (const r of rubriques) {
 const reste = resteAFaire(ref);
 const sansCout = reste.get('cout')?.length ?? 0;
 veut(sansCout > 0, 'aucun connecteur sans coût : le relevé en compte pourtant');
+
+// --- Ce que la fiche réclame trouve toujours quelqu'un ----------------------------------
+// Une fiche qui déclare « email » doit se voir proposer des messageries, pas une liste vide.
+const fiche = JSON.parse(
+  readFileSync(join(racine, 'agents/AG-0001-secretaire-administratif.json'), 'utf8')
+);
+const besoins = besoinsDeLaFiche(ref, fiche.connecteurs);
+veut(besoins.length === fiche.connecteurs.length, `${fiche.id} : besoin(s) perdu(s) en chemin`);
+for (const b of besoins) {
+  if (b.candidats.length === 0 && !b.parLApplication) {
+    faute(`« ${b.capacite} » : ni connecteur ni réponse de l'application`);
+  }
+  for (const c of b.candidats) {
+    if (!c.sert.includes(b.capacite)) faute(`${c.id} proposé pour « ${b.capacite} » sans le servir`);
+  }
+}
+const courriels = besoins.find((b) => b.capacite === 'email');
+veut((courriels?.candidats.length ?? 0) >= 3, 'moins de trois messageries proposées');
+veut(
+  (courriels?.candidats ?? []).some((c) => c.id === 'COM012'),
+  'le SMTP/IMAP universel ne figure pas parmi les messageries'
+);
+
+// Un besoin inventé ne doit rien proposer plutôt que n'importe quoi.
+veut(besoinsDeLaFiche(ref, ['telepathie']).length === 0, 'un besoin inconnu a reçu des candidats');
+
+// Les deux besoins que l'application tient elle-même se nomment, pour qu'on cesse de chercher.
+for (const capacite of CAPACITES) {
+  const porteurs = ref.connecteurs.filter((c) => c.sert.includes(capacite));
+  if (porteurs.length === 0 && !(capacite in SERVI_PAR_L_APPLICATION)) {
+    faute(`« ${capacite} » n'est servi par personne et l'application ne le revendique pas`);
+  }
+}
 
 const ouverts = activables(ref);
 console.log(

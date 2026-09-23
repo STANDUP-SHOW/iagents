@@ -14,6 +14,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { manques } from './activation.ts';
+import { sertQuoi } from './capacites.ts';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const lire = (p: string) => JSON.parse(readFileSync(join(racine, p), 'utf8'));
@@ -236,8 +237,10 @@ for (const source of SOURCES) {
       etapesIntegrateur: etapes(e['Étapes intégrateur']),
       urlProduit: e['URL produit'] ?? '',
       urlDocumentation: e['URL documentation'] ?? '',
-      // Dérivé, jamais saisi : la règle d'activation relit les champs ci-dessus et dit ce
-      // qui manque. Un connecteur ne s'allume pas parce qu'on a coché une case ailleurs.
+      // Dérivés, jamais saisis : `sert` dit quels besoins de fiche ce connecteur couvre, et
+      // la règle d'activation relit les champs ci-dessus pour dire ce qui manque. Un
+      // connecteur ne s'allume pas parce qu'on a coché une case ailleurs.
+      sert: [],
       activation: null,
       validation: validation(e['Statut validation']).etat,
       validationNote: validation(e['Statut validation']).note,
@@ -250,6 +253,7 @@ for (const source of SOURCES) {
 for (const c of connecteurs) {
   const absents = manques(c as never);
   c.activation = { activable: absents.length === 0, manques: absents };
+  c.sert = sertQuoi(c as never);
 }
 
 const sortie = {

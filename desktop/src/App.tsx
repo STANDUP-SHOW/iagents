@@ -256,7 +256,7 @@ function App() {
           className={activeTab === 'connectors' ? 'active' : ''}
           onClick={() => setActiveTab('connectors')}
         >
-          Connectors
+          Vos connexions
         </button>
         <button
           className={activeTab === 'navigateur' ? 'active' : ''}
