@@ -59,6 +59,9 @@ const vus = {
 
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 const valider = ajv.compile(schema);
+
+/** Les connecteurs, lus au schéma : une liste recopiée ici vieillirait à part. */
+const CONNECTEURS = new Set<string>(schema.properties.connecteurs.items.enum);
 const parId = new Map<string, any>(catalogue.agents.map((a: any) => [a.id, a]));
 const profils = new Map<string, any>(catalogue.profils.map((p: any) => [p.id, p]));
 
@@ -138,6 +141,16 @@ for (const f of fichiers) {
     for (const e of t.entrees ?? []) {
       if (vues.has(e)) faute(f, `tâche « ${t.nom} » : l'entrée « ${e} » est déclarée deux fois`);
       vues.add(e);
+    }
+    // Une entrée qui porte le nom d'un connecteur EST ce connecteur : la tâche ira
+    // lire dans la messagerie, le calendrier ou le navigateur du client. Si la fiche
+    // ne le déclare pas, l'application ne lui ouvre rien et la tâche part les mains
+    // vides — sans que personne voie passer l'oubli, puisque l'entrée a l'air remplie.
+    const declares = new Set<string>(paquet.connecteurs ?? []);
+    for (const e of t.entrees ?? []) {
+      if (CONNECTEURS.has(e) && !declares.has(e)) {
+        faute(f, `tâche « ${t.nom} » : l'entrée « ${e} » est un connecteur que la fiche ne déclare pas`);
+      }
     }
   }
 

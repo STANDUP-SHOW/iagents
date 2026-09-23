@@ -450,7 +450,15 @@ par WhatsApp et email.
   Rien à faire côté client pour que ça marche : un dossier logique non choisi
   retombe dans le dossier de l'agent, là même où la tâche précédente a écrit.
   Le reste (« analyses », « suivis », « accords à obtenir ») demande un jugement
-  au cas par cas, et beaucoup ne sont pas des dossiers mais des connecteurs.
+  au cas par cas, fiche par fiche. **Ce ne sont pas des connecteurs déguisés** :
+  compté le 23/09, **39 tâches seulement** portent en entrée le nom d'un
+  connecteur (`email`, `calendrier`, `fichiers`…) ; les 4 548 autres sont bien
+  des mots. L'hypothèse inverse traînait dans le mémo, elle est fausse.
+  Ce comptage a quand même trouvé quelque chose : **quatre fiches lisaient un
+  calendrier sans déclarer le connecteur `calendrier`**, donc l'application ne
+  leur aurait rien ouvert et la tâche serait partie les mains vides, entrée
+  remplie. `verifier-paquets` en fait une faute (la liste des connecteurs est
+  lue au schéma, pas recopiée).
   `verifier-paquets` refuse depuis un `dossier:` mal écrit ou déclaré deux
   fois : ignoré en silence par l'application, il ferait travailler l'agent sans
   matière sans que personne voie passer la faute de frappe. Tant que c'est le cas, la consigne le dit à
