@@ -139,10 +139,11 @@ pub fn installation_ecrire(contenu: String) -> Result<String, String> {
 /// Sans cette liste, le nom viendrait de la vue et servirait à lire n'importe
 /// quel fichier du poste. On ne « nettoie » pas un chemin reçu de l'extérieur :
 /// on refuse tout ce qui n'est pas dans cette liste.
-const CATALOGUES: [(&str, &str); 3] = [
+const CATALOGUES: [(&str, &str); 4] = [
     ("logiciels", "catalogue/logiciels.json"),
     ("activites", "catalogue/activites.json"),
     ("catalogue", "catalogue/catalogue.json"),
+    ("connecteurs", "connecteurs/catalogue.json"),
 ];
 
 /// Lit un des catalogues livrés avec l'application.
@@ -261,7 +262,7 @@ mod tests {
         // catalogue/logiciels.json et catalogue/activites.json sous ces noms.
         std::env::set_var("IAGENT_RESSOURCES", concat!(env!("CARGO_MANIFEST_DIR"), "/../.."));
 
-        for nom in ["logiciels", "activites", "catalogue"] {
+        for nom in ["logiciels", "activites", "catalogue", "connecteurs"] {
             let brut = super::lire_referentiel(nom.to_string())
                 .unwrap_or_else(|e| panic!("référentiel {} illisible : {}", nom, e));
             let json: serde_json::Value = serde_json::from_str(&brut)
