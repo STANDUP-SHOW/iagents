@@ -295,9 +295,16 @@ par WhatsApp et email.
 - **Ouvrir une famille sans y être qualifié, c'est ne jamais être interrogé
   dessus.** `questionsEntretien()` part de `qualifications` : une famille qu'une
   tâche ouvre mais que la fiche ne déclare pas n'est jamais demandée au client, et
-  le jour de l'embauche l'agent ne sait pas dans quel outil aller. 463 fiches au
-  23/09/2026 (`ged` 117, `bi` 84, `bureautique` 82, `comptabilite` 65,
-  `juridique` 44), comptées à chaque passage du banc. Chantier éditorial.
+  le jour de l'embauche l'agent ne sait pas dans quel outil aller. 463 fiches
+  étaient dans ce cas ; **le compte est à zéro depuis le 23/09/2026 et c'est
+  maintenant une faute du banc**, avec celle d'une fiche qui ne déclare aucun
+  logiciel. Méthode de reprise, si un lot de fiches arrive : la moitié des
+  manques n'en sont pas, c'est le mot de la tâche qui désigne autre chose
+  (`bi` pour un calcul au tableur, `ged` pour une note qu'on remet, `crm` pour
+  prévenir le client depuis l'outil métier). Le reste est un vrai produit
+  manquant, et on le choisit en relisant ce que les fiches déjà qualifiées du
+  même secteur déclarent, jamais de mémoire : un nom de logiciel inventé passe
+  le banc sans être détecté.
 - **Une tâche s'exécute et pose un fichier dans le dossier du client**
   (`desktop/src-tauri/src/tache.rs`, 23/09/2026). C'était le trou du parcours
   minimal : les fiches décrivent 9 233 tâches et aucune commande n'en exécutait
