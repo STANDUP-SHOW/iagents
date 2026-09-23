@@ -416,8 +416,12 @@ apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
    l'exécution ; un test le vérifie plutôt que d'attendre une installation
    Windows pour découvrir une faute de frappe. `IAGENT_RESSOURCES` déplace
    cette racine en développement, où l'installeur n'a rien copié.
-   **Pas encore constaté : aucun MSI n'a été produit ici** (pas de Windows en
-   session), seuls les chemins et la lecture le sont.
+   **Le MSI se construit, et sur Windows** : `build-windows-msi.yml` tourne sur
+   `windows-latest` à chaque poussée touchant `desktop/`, et dépose un artefact
+   `iagent-desktop-msi` d'environ 9 Mo (constaté le 23/09/2026, run n°246 sur
+   `phase-a`). La session, elle, n'a pas de Windows : les chemins de ressources
+   sont tenus par un test plutôt que par une installation. **Reste non
+   constaté : personne n'a encore installé ce MSI sur une machine.**
 2. Premier lot de fiches : un secteur de 25, relu, puis les 544 P1.
 3. Boutique : `drop-shipper.fr/b/iagent-agency` reste la vitrine ; les paquets
    deviennent des produits par le flux ; `iagent.agency` (OVH) à pointer dessus.
