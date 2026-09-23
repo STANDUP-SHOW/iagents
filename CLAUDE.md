@@ -553,6 +553,16 @@ par WhatsApp et email.
   contre 8 398 le matin même. Leurs entrées sont des mots (« pièces de
   référence », « messagerie du dirigeant ») qui disent de quoi il s'agit, pas
   où le prendre. `check-travail` les compte à chaque passage.
+  **Le reste ne se déduit de rien, mesuré le 23/09 pour ne pas y revenir** :
+  sur les 4 587 tâches actives concernées, **aucune** — zéro — ne nomme dans son
+  entrée un logiciel que sa fiche déclare (141 croisent un nom du référentiel,
+  par coïncidence de mots courts). Ce sont 1 412 libellés distincts, dominés par
+  des pluriels génériques : « demandes » (289 fois), « contrats » (119),
+  « dossiers » (72), « chantiers » (69). **Aucune règle automatique ne peut les
+  rattacher** : ils ne portent pas l'information. La réponse est l'entretien
+  d'embauche — l'agent demande au client où vivent « les demandes » — ce que max
+  veut de toute façon. En attendant, rien n'est cassé : sans dossier désigné,
+  l'agent travaille chez lui et le banc le dit.
   **La moitié se déduisait de la fiche elle-même** : « écarts », « adaptations »,
   « bénéficiaires » nommaient le dossier qu'une autre tâche de la même fiche
   remplit — la chaîne de relais écrite en prose au lieu d'être désignée. 3 587
