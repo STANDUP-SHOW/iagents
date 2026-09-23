@@ -156,6 +156,8 @@ export const INTITULES: Record<string, string> = {
   'bim-maquette': "Vous travaillez la maquette numérique avec quel outil ?",
   'suivi-chantier-reserves': "Vos comptes rendus de chantier et vos réserves passent par quoi ?",
   'facility-management': "Votre patrimoine bâti et vos prestataires sont suivis où ?",
+  'apport-affaires-travaux': "Vos demandes de chantier viennent de quelles plateformes ?",
+  'aides-renovation': "Vos dossiers d'aide à la rénovation passent par quoi ?",
   immobilier: "Vos biens et vos mandats sont dans quel logiciel ?",
   'visite-etat-des-lieux': "Vos visites et vos états des lieux se font avec quel outil ?",
   sante: "Votre logiciel de cabinet ou de patientèle, c'est lequel ?",
