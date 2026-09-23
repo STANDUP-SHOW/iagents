@@ -116,6 +116,7 @@ export const INTITULES: Record<string, string> = {
   'avis-clients': "Vous recueillez les avis de vos clients avec quel service ?",
   'seo-referencement': "Votre référencement naturel est suivi avec quel outil ?",
   'sourcing-fournisseurs': "Vous trouvez vos produits et vos fournisseurs sur quelle plateforme ?",
+  automatisation: "Vos échanges automatiques entre logiciels passent par quel outil ?",
   caisse: "Quelle caisse avez-vous en magasin ?",
   pim: "Vos fiches produits sont tenues dans quel outil ?",
   marketing: "Vos campagnes et vos envois partent de quel outil ?",
