@@ -166,6 +166,8 @@ export const INTITULES: Record<string, string> = {
   'documentation-technique-auto': "Les procédures et les couples de serrage, vous les cherchez dans quelle documentation ?",
   immobilier: "Vos biens et vos mandats sont dans quel logiciel ?",
   'visite-etat-des-lieux': "Vos visites et vos états des lieux se font avec quel outil ?",
+  'diagnostic-immobilier': "Vos diagnostics et vos états des risques, vous les faites établir par qui ?",
+  notariat: "L'étude avec qui vous travaillez échange ses pièces comment ?",
   sante: "Votre logiciel de cabinet ou de patientèle, c'est lequel ?",
   dentaire: "Vos fauteuils, vos devis et vos schémas dentaires sont tenus dans quoi ?",
   'laboratoire-analyses': "Vos demandes d'analyse et vos comptes rendus passent par quel logiciel ?",
