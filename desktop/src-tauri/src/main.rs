@@ -277,7 +277,16 @@ async fn executer_tache(
         ));
     }
 
-    let chemin = tache::poser(&prep.dossier, &prep.nom_fichier, &texte)?;
+    let chemin = if tache::est_un_tableau(&prep.format) {
+        // Le modèle rend des lignes ; le classeur, c'est nous.
+        tache::poser_tableur(
+            &prep.dossier,
+            &prep.nom_fichier,
+            &tache::lignes_du_tableau(&texte),
+        )?
+    } else {
+        tache::poser(&prep.dossier, &prep.nom_fichier, &texte)?
+    };
     Ok(tache::Resultat {
         fichier: chemin.display().to_string(),
         voie: match &choix.voie {

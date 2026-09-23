@@ -297,14 +297,25 @@ par WhatsApp et email.
   un chemin relatif est refusé) ; le nom du fichier est construit ici, jamais
   proposé par le modèle. Rien ne part du poste : `validationHumaine` écrit le
   résultat et le dit, sans rien envoyer.
-- **L'application n'écrit que du texte : `md`, `txt`, `csv`, `json`, `html`.**
-  4 025 sorties sur 9 265 seulement. Il manque `xlsx` (4 100 sorties), `pdf`
-  (523), `docx` (310), `eml` (200), et les formats d'image, de son et de vidéo :
-  aucune bibliothèque n'est embarquée pour les produire. `format_ecrivable()` le
-  dit en clair plutôt que d'écrire un `.xlsx` qui n'en serait pas un, et l'écran
-  n'offre pas de bouton pour ces tâches. La liste vit des deux côtés de la
-  frontière (`tache.rs` et `src/agents/travail.ts`) et `check-travail.ts` compare
-  les deux fichiers.
+- **L'application écrit `md`, `txt`, `csv`, `json`, `html` et `xlsx`** :
+  8 125 sorties sur 9 265. Il manque `pdf` (523), `docx` (310), `eml` (200) et
+  les formats d'image, de son et de vidéo — aucune bibliothèque n'est embarquée
+  pour ceux-là. `format_ecrivable()` le dit en clair plutôt que d'écrire un
+  `.docx` qui n'en serait pas un, et l'écran n'offre pas de bouton pour ces
+  tâches. La liste vit des deux côtés de la frontière (`tache.rs` et
+  `src/agents/travail.ts`) et `check-travail.ts` compare les deux fichiers.
+- **Un modèle ne rend pas un classeur, il rend des lignes.** Le tableur est le
+  format le plus réclamé des fiches (4 100 sorties sur 9 265) : la consigne
+  demande donc un tableau en lignes séparées par des points-virgules, et
+  `poser_tableur()` en fait un vrai `.xlsx` (`rust_xlsxwriter`, ajouté le
+  23/09/2026). Demander « un fichier xlsx » au modèle rendrait la description
+  d'un tableau. Le découpage suit les règles CSV usuelles — **un champ entre
+  guillemets garde ses points-virgules**, sans quoi une phrase casse la ligne en
+  deux colonnes et décale tout le tableau, ce qui ne se voit qu'en ouvrant le
+  fichier. Un nombre est écrit comme un nombre pour qu'Excel l'additionne, mais
+  **« 0012 » reste du texte** : c'est une référence, pas douze. **Non constaté :
+  aucun classeur produit ici n'a été ouvert dans un vrai tableur** ; le banc
+  vérifie l'archive ZIP et ses pièces, pas ce qu'Excel en fait.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,

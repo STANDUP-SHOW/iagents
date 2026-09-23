@@ -17,11 +17,10 @@ import type { AgentInstalle, Tache } from './fiche';
  * compare les deux fichiers, parce qu'une liste plus longue ici proposerait un
  * bouton que Rust refuserait.
  */
-export const FORMATS_ECRITS = ['md', 'txt', 'csv', 'json', 'html'] as const;
+export const FORMATS_ECRITS = ['md', 'txt', 'csv', 'json', 'html', 'xlsx'] as const;
 
 /** Pourquoi un format n'est pas écrit, dit au client et pas à nous. */
 const CE_QUI_MANQUE: Record<string, string> = {
-  xlsx: "l'application ne sait pas encore écrire un tableur",
   docx: "l'application ne sait pas encore écrire un document",
   pdf: "l'application ne sait pas encore écrire un PDF",
   eml: "l'application envoie des courriels mais n'en écrit pas le brouillon sur le disque",
