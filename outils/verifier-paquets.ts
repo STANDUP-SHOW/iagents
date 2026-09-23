@@ -4,19 +4,22 @@
  *  - id known in the catalogue, secteur matching, slug unique
  *  - commercial block equal to the catalogue profile (never invented)
  *  - materiel equal to what the sizing engine derives from `modeles`
- * Exit code 1 on any failure. `--corriger` rewrites materiel/commercial from the sources of truth.
+ *  - every business software named by a task is a category of catalogue/logiciels.json
+ * Exit code 1 on any failure. `--corriger` rewrites materiel/commercial/acces from the sources of truth.
  */
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { materielPour, appelsParJour } from '../dimensionnement/calculer.ts';
+import { logicielsDesTaches, remplacement } from './logiciels-metier.ts';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const schema = JSON.parse(readFileSync(join(racine, 'contrat/paquet-agent.schema.json'), 'utf8'));
 const catalogue = JSON.parse(readFileSync(join(racine, 'catalogue/catalogue.json'), 'utf8'));
 const logiciels = JSON.parse(readFileSync(join(racine, 'catalogue/logiciels.json'), 'utf8'));
 const logicielsParId = new Map<string, any>(logiciels.logiciels.map((l: any) => [l.id, l]));
+const categoriesLogiciels = new Set<string>(logiciels.categories);
 const corriger = process.argv.includes('--corriger');
 
 const LISTE = 'catalogue/identite-a-reecrire.json';
@@ -40,6 +43,12 @@ const GAB_RESUME: RegExp[] = (gabaritsSource.gabaritsResume as string[]).map(mot
 const GAB_CONSIGNE: RegExp[] = (gabaritsSource.gabaritsConsigne as string[]).map(motif);
 const TACHES_GENERIQUES = (gabaritsSource.tachesGeneriques as string[]).join('|');
 const restantsContenu: string[] = [];
+// Une famille qu'une tâche ouvre sans que la fiche y soit qualifiée n'est jamais demandée à
+// l'entretien d'embauche (questionsEntretien part de `qualifications`) : le jour de
+// l'embauche, l'agent ne sait pas dans quel outil aller. Compté tant que la réécriture
+// éditoriale n'a pas rattrapé les fiches concernées.
+const horsQualification = new Map<string, number>();
+let fichesHorsQualification = 0;
 // Chaque champ garde la première fiche qui l'a employé : la reprise ultérieure est la faute.
 const vus = {
   accroche: new Map<string, string>(),
@@ -147,6 +156,39 @@ for (const f of fichiers) {
     const principaux = paquet.qualifications.logiciels.filter((q: any) => q.principal).length;
     if (principaux > 3) faute(f, `qualifications : ${principaux} outils principaux, trois au plus`);
   }
+  // Un logiciel nommé par une tâche doit être une famille du référentiel, sinon la boutique
+  // affiche le mot lui-même et l'application n'a aucun produit à proposer derrière. Vingt-trois
+  // mots ne renvoyaient à rien — « tableur » 855 fois, « client-email » 332 — et rien ne le
+  // disait ; outils/logiciels-metier.ts garde ce par quoi chacun a été remplacé.
+  for (const t of paquet.taches) {
+    for (const mot of t.logiciels ?? []) {
+      if (categoriesLogiciels.has(mot)) continue;
+      const quoiFaire = remplacement(mot, paquet.id);
+      faute(f, `tâche « ${t.nom} » : « ${mot} » n'est pas une famille de catalogue/logiciels.json${quoiFaire ? ` — ${quoiFaire}` : ''}`);
+    }
+  }
+  // Ce que l'agent a le droit d'ouvrir se lit dans ce que ses tâches ouvrent : écrit à part,
+  // le bloc débordait de mots qui n'étaient plus dans aucune tâche sur 459 fiches, et en
+  // oubliait sur 202 autres — l'agent manipulait un outil qu'il n'avait pas le droit d'ouvrir.
+  const accesAttendu = logicielsDesTaches(paquet.taches, categoriesLogiciels);
+  if (JSON.stringify(accesAttendu) !== JSON.stringify(paquet.acces.logiciels)) {
+    if (corriger) { paquet.acces.logiciels = accesAttendu; modifie = true; }
+    else faute(f, `acces.logiciels ≠ ce que les tâches ouvrent : attendu ${JSON.stringify(accesAttendu)}`);
+  }
+
+  if (paquet.qualifications) {
+    const familles = new Set<string>();
+    for (const q of paquet.qualifications.logiciels) {
+      const outil = logicielsParId.get(q.logiciel);
+      if (outil) familles.add(outil.categorie);
+    }
+    const jamaisDemandees = accesAttendu.filter((c) => !familles.has(c));
+    if (jamaisDemandees.length) {
+      fichesHorsQualification++;
+      for (const c of jamaisDemandees) horsQualification.set(c, (horsQualification.get(c) ?? 0) + 1);
+    }
+  }
+
   const com = commercialAttendu(entree.profil);
   if (JSON.stringify(com) !== JSON.stringify(paquet.commercial)) {
     if (corriger) { paquet.commercial = com; modifie = true; } else faute(f, `commercial ≠ profil ${entree.profil} : attendu ${JSON.stringify(com)}`);
@@ -174,6 +216,11 @@ if (restants.length) {
 }
 if (restantsContenu.length) {
   console.log(`  ⟳ ${restantsContenu.length} fiche(s) dont le contenu reste à écrire pour son métier (gabarit du générateur).`);
+}
+if (fichesHorsQualification) {
+  const tete = [...horsQualification.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+    .map(([c, n]) => `${c} (${n})`).join(', ');
+  console.log(`  ⟳ ${fichesHorsQualification} fiche(s) ouvrent une famille de logiciels sur laquelle elles ne sont pas qualifiées : l'entretien ne la demandera pas — ${tete}`);
 }
 console.log(`${fichiers.length} paquets, ${fautes} faute(s)`);
 if (fautes) process.exit(1);

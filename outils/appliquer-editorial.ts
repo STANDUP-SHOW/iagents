@@ -2,8 +2,8 @@
  * Rewrites the fiches of one secteur from an editorial file.
  *
  * The catalogue owns the identity (id, secteur, metier, slug); the editorial file owns
- * everything the client reads (accroche, description, expert, taches, connecteurs, acces,
- * modeles). Ninety-one fiches drifted away from the catalogue because the generator lost
+ * everything the client reads (accroche, description, expert, taches, connecteurs,
+ * modeles); `acces.logiciels` is derived from the tasks, never copied. Ninety-one fiches drifted away from the catalogue because the generator lost
  * the real job titles, so their content describes a job nobody sells — rewriting them by
  * secteur is the only fix, and this tool applies one secteur at a time.
  *
@@ -11,6 +11,7 @@
  * Then:  npm run verifier -- --corriger   (materiel, commercial and appelsParJour are derived)
  */
 import { readdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
+import { logicielsDesTaches } from './logiciels-metier.ts';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -22,6 +23,9 @@ if (!secteur) {
 }
 
 const catalogue = JSON.parse(readFileSync(join(racine, 'catalogue/catalogue.json'), 'utf8'));
+const categoriesLogiciels = new Set<string>(
+  JSON.parse(readFileSync(join(racine, 'catalogue/logiciels.json'), 'utf8')).categories,
+);
 const parId = new Map<string, any>(catalogue.agents.map((a: any) => [a.id, a]));
 const editorial = JSON.parse(
   readFileSync(join(racine, 'outils/editorial', `${secteur}.json`), 'utf8')
@@ -67,7 +71,8 @@ for (const e of editorial.agents) {
   };
   paquet.taches = e.taches;
   paquet.connecteurs = e.connecteurs;
-  paquet.acces = e.acces;
+  // Ce que l'agent a le droit d'ouvrir se lit dans ses tâches : l'éditorial ne le redit pas.
+  paquet.acces = { ...e.acces, logiciels: logicielsDesTaches(e.taches, categoriesLogiciels) };
   paquet.modeles = e.modeles;
   paquet.resume_metier = e.resume_metier;
   // Le relais dit de quel poste la fiche reçoit et à quel poste elle transmet : sans lui,

@@ -264,6 +264,29 @@ par WhatsApp et email.
   chercher. Les cinq matchs faux écartés à la relecture (Brevo en téléphonie,
   Telegram en espace de fichiers, Zoom en canal de conversation) valaient chacun
   une ligne de commentaire.
+- **Un logiciel nommé par une tâche est une famille du référentiel, jamais un mot.**
+  Chaque entrée de `taches[].logiciels` doit être une `categorie` de
+  `catalogue/logiciels.json` : c'est ce qui permet à la boutique et à l'entretien
+  de nommer les vrais produits derrière (« bureautique » → Microsoft 365,
+  LibreOffice, Google Workspace). Au 23/09/2026, 23 des 146 mots employés par les
+  1 249 fiches ne renvoyaient à rien — `tableur` 855 fois, `libreoffice` 449,
+  `client-email` 332, `logiciel-cabinet` — et rien ne le signalait.
+  `outils/logiciels-metier.ts` garde par quoi chacun a été remplacé et le banc
+  refuse leur retour en disant quoi écrire. Le courrier, l'agenda, WhatsApp, le
+  téléphone et les fichiers **ne sont pas des logiciels métier** : ils sont
+  déclarés dans `connecteurs`, et le navigateur, la voix et le modèle image
+  appartiennent à l'application.
+- **`acces.logiciels` est dérivé des tâches.** Ce que l'agent a le droit d'ouvrir
+  se lit dans ce que ses tâches ouvrent. Écrit à part, il débordait de mots
+  absents de toute tâche sur 459 fiches et en oubliait sur 202 autres : l'agent
+  manipulait un outil qu'il n'avait pas le droit d'ouvrir. `--corriger` le
+  recalcule ; `appliquer-editorial` et `generer-fiches` ne le recopient plus.
+- **Ouvrir une famille sans y être qualifié, c'est ne jamais être interrogé
+  dessus.** `questionsEntretien()` part de `qualifications` : une famille qu'une
+  tâche ouvre mais que la fiche ne déclare pas n'est jamais demandée au client, et
+  le jour de l'embauche l'agent ne sait pas dans quel outil aller. 463 fiches au
+  23/09/2026 (`ged` 117, `bi` 84, `bureautique` 82, `comptabilite` 65,
+  `juridique` 44), comptées à chaque passage du banc. Chantier éditorial.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,
