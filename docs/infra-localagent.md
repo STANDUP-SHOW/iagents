@@ -2,7 +2,12 @@
 
 **Statut:** Spécification MVP (validée Phase 0)  
 **Date:** 2026-09-19  
-**Révision:** 1.0
+**Révision:** 1.1 — corrigée le 2026-09-23 sur trois points que le code du dépôt
+contredisait : la capacité d'un poste, les coûts, et une référence juridique
+inexistante. Les sections marquées « Correction du 23/09/2026 » n'ont pas été
+revalidées en Phase 0. **Tout ce qui est chiffré (machines, agents par boîtier,
+coûts) se calcule et ne s'écrit pas ici** : voir `dimensionnement/` et
+`docs/economie.md`.
 
 ---
 
@@ -238,7 +243,15 @@ LocalAgent = client Windows (Poste) + serveur Linux (Bundle) sur même réseau d
 
 ### Scalabilité
 - **1 Bundle** : jusqu'à 10 Postes (réseau LAN < 100 Mbps)
-- **1 Poste** : jusqu'à 5 agents tournant en parallèle (partagent 1 GPU intégré)
+- **1 Poste : aucun agent.** Le poste porte l'application, le navigateur, la
+  voix et les fichiers ; tout le calcul est dans le bundle (décision de Max du
+  19/09/2026, appliquée par `kitClient()` et tenue par `check-dimensionnement`).
+  Ce document disait « jusqu'à 5 agents par poste » : c'était faux deux fois,
+  un poste n'en porte aucun et le bundle AM02 cité plus haut en porte **3**
+  (postes de bureau, mesuré par `agentsParMachine`).
+- **Combien d'agents par boîtier ne s'écrit pas à la main** : `npm run controle`
+  le calcule depuis `dimensionnement/machines.json`, et
+  `node --experimental-strip-types outils/packs.ts` le montre machine par machine.
 - **Throughput** : 10 exécutions/sec si API local, 0.1 exec/sec si Anthropic API (quota)
 
 ### Latences
@@ -248,10 +261,29 @@ LocalAgent = client Windows (Poste) + serveur Linux (Bundle) sur même réseau d
 - **Tour IA local** (Ollama Mistral) : 20-60 sec (faible qualité acceptée pour filtrage)
 
 ### Coûts
-- **Hardware** : Bundle ~271€, Poste optionnelle ~150€, amortis 12-24 mois
-- **API Anthropic** : 20% executions × 12,000 tokens × €0.000002 = ~0,13€/agent/mois (AUTO-MODE) ou ~0,5€ par tour Sonnet
-- **Électricité** : Bundle 25W × 24h × 30j = 18 kWh/mois × 0,25€ = ~4,50€/mois
-- **Total mensuel** : ~5€ (hardware amorti) + API, vs ~50€ API-only pour même agent
+
+**Les coûts ne se calculent pas ici.** `dimensionnement/economie.ts` les calcule
+par fiche et `docs/economie.md` publie la table des 1 249 ; `check-economie.ts`
+refuse une table périmée. Les chiffres qui étaient écrits ici à la main étaient
+faux, et la façon dont ils l'étaient est instructive : ils annonçaient **~5 €
+contre ~50 € en API seule**, soit 10×, pour n'importe quel agent.
+
+Ce que la mesure donne au 23/09/2026 :
+
+- **Matériel** : bundle AM02 **271 €**, poste N150 **170 €** (et non 150),
+  amorti sur 12 mois — prix indicatifs AliExpress, à confirmer sur les vraies
+  machines avant toute promesse commerciale.
+- **API résiduelle** : elle dépend des exécutions par mois de la fiche, que le
+  calcul tire de la planification de ses tâches. La formule écrite ici
+  (`20 % × 12 000 jetons × 0,000002 €`) ne comptait pas les exécutions du tout,
+  donc ne pouvait donner qu'un ordre de grandeur sans rapport.
+- **Électricité** : bundle 25 W × 24 h × 30 j = 18 kWh/mois × 0,25 € ≈ **4,50 €/mois**.
+- **Le rapport réel** : le meilleur poste de bureau (secrétaire administratif,
+  2 280 exéc./mois) fait **288 € en API seule contre 71 €** chez Local-Agent,
+  soit **4,1×**. La règle des 3× de Max n'est tenue que par **136 fiches sur
+  1 249** en bundle partagé (57 en comptant un poste par agent) : c'est une
+  règle de charge, rien ne passe sous 26 appels/jour. Un agent peu sollicité se
+  vend en mode API, pas avec du matériel.
 
 ---
 
@@ -325,8 +357,19 @@ A: Anthropic logging = fait (Privacy Policy). Pour MVP, API Anthropic optionnel 
 **Q: Plusieurs agents tournent, partagent 1 GPU Radeon 780M. Faut-il paralleliser ou faire du queuing ?**  
 A: Queue + exécution séquentielle (safeguard). Scheduler déterministe : agent urgent (PR-04) saute la file.
 
-**Q: Loi RIF (Directive UE 914/2022 paiements d'ici fin 2026) — agents locaux OK ?**  
-A: Oui. Agents ne font pas paiements (PR-03 : multi-sig humain). Agents préparent fichiers de paiement, humain valide + exécute via son bank app. Conformité vient de l'humain, pas agent.
+**Q: La réglementation européenne sur les virements instantanés — agents locaux OK ?**  
+A: Oui, et pour une raison qui ne dépend pas du texte : **les agents ne font pas
+de paiements** (PR-03 : multi-signature humaine). Ils préparent les fichiers,
+l'humain valide et exécute depuis sa banque. La conformité vient de l'humain.
+
+*Correction du 23/09/2026 :* cette question citait « Loi RIF (Directive UE
+914/2022 paiements d'ici fin 2026) ». Aucun texte ne correspond. Le texte réel
+est le **règlement (UE) 2024/886** sur les virements instantanés — un règlement,
+pas une directive, et la vérification du bénéficiaire (*Verification of Payee*)
+s'applique **depuis le 9 octobre 2025**, pas « fin 2026 ». Seule la référence a
+été vérifiée ici ; **son application à notre cas reste à faire confirmer par un
+juriste** avant d'entrer dans un document remis à un investisseur ou à un
+client.
 
 ---
 
