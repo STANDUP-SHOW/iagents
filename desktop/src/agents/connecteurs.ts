@@ -71,9 +71,22 @@ export interface Connecteur {
   limites: string;
 }
 
+export interface Pack {
+  id: string;
+  secteur: string;
+  libelle: string;
+  coeur: string[];
+  optionnels: string[];
+  communication: string[];
+  bureautique: string[];
+  controle: string;
+  runtime: string;
+}
+
 export interface ReferentielConnecteurs {
   categories: string[];
   familles: string[];
+  packs: Pack[];
   connecteurs: Connecteur[];
 }
 
@@ -157,6 +170,70 @@ export function matrice(ref: ReferentielConnecteurs): Rubrique[] {
       })),
     };
   });
+}
+
+export interface Rayon {
+  titre: string;
+  /** Ce que le rayon dit au client, en une ligne. */
+  precision: string;
+  connecteurs: Connecteur[];
+}
+
+export interface PackDuMetier {
+  secteur: string;
+  libelle: string;
+  controle: string;
+  rayons: Rayon[];
+}
+
+/**
+ * Ce qu'on rencontre dans ce métier, rangé comme un client le lit.
+ *
+ * C'est le deuxième point du jalon B : la fiche déclare son secteur, l'application propose
+ * les connecteurs de son pack. Rien à saisir. Un comptable voit Pennylane, Xero, Sage et
+ * QuickBooks, pas les onze connecteurs de fichiers du catalogue.
+ *
+ * Rend `null` quand le relevé n'a pas de pack pour ce secteur — au 23/09/2026, `audit` et
+ * ses douze fiches. L'écran retombe alors sur la proposition par besoin, plus large et
+ * moins juste, plutôt que de montrer une liste vide.
+ */
+export function packDuMetier(
+  ref: ReferentielConnecteurs,
+  secteur: string
+): PackDuMetier | null {
+  const pack = (ref.packs ?? []).find((p) => p.secteur === secteur);
+  if (!pack) return null;
+
+  const par = (ids: string[]): Connecteur[] =>
+    ids
+      .map((id) => ref.connecteurs.find((c) => c.id === id))
+      .filter((c): c is Connecteur => c !== undefined)
+      .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+
+  const rayons: Rayon[] = [
+    {
+      titre: 'Le logiciel de votre métier',
+      precision: "C'est là que travaille votre agent. Sans lui, il ne fait qu'écrire des documents.",
+      connecteurs: par(pack.coeur),
+    },
+    {
+      titre: 'Ce qu\'on rencontre aussi',
+      precision: 'Moins courant dans ce métier, mais votre agent sait s\'en servir.',
+      connecteurs: par(pack.optionnels),
+    },
+    {
+      titre: 'Pour parler à vos clients et à votre équipe',
+      precision: 'Par où votre agent reçoit les demandes et donne de ses nouvelles.',
+      connecteurs: par(pack.communication),
+    },
+    {
+      titre: 'Vos documents et votre agenda',
+      precision: 'Où vivent les fichiers, les messages et les rendez-vous.',
+      connecteurs: par(pack.bureautique),
+    },
+  ].filter((r) => r.connecteurs.length > 0);
+
+  return { secteur: pack.secteur, libelle: pack.libelle, controle: pack.controle, rayons };
 }
 
 export interface Besoin {

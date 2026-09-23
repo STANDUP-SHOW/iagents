@@ -240,6 +240,20 @@ par WhatsApp et email.
   par la licence M365, les API « à compteur » ne le sont pas) et les API Google
   Workspace (sans frais sous 80 M d'unités/jour pour Gmail, 400 M pour Drive —
   **Google annonce une facturation au-delà « plus tard en 2026 », à relire**).
+- **La liste par métier vient des 43 packs sectoriels**, pas d'une saisie.
+  `catalogue/reference/packs-erp-crm.json` dit, pour chaque secteur, ses ERP/CRM
+  cœur, ses optionnels, ses canaux et sa bureautique par défaut ;
+  `outils/packs-secteurs.ts` les convertit (l'import les écrit, le banc rejoue
+  et refuse la divergence, comme pour `activation`), et `packDuMetier()` les
+  rend rangés par rôle à l'écran. Un comptable voit Pennylane, Xero, Sage et
+  QuickBooks, pas les onze connecteurs de fichiers du catalogue. 43 packs, 261
+  liens ERP/CRM, 996 liens en tout. **Piège vérifié :** les identifiants du
+  catalogue font 2 à 4 lettres (`HR001`, `ACC001`, `AUTO001`) ; un filtre qui
+  en exigeait 3 jetait les six connecteurs RH en silence et laissait le pack
+  ressources-humaines sans aucun ERP/CRM cœur. D'où le banc qui compte les
+  paniers vides. **Trou connu du relevé :** le secteur `audit` (12 fiches) n'a
+  pas de pack ; `packDuMetier` rend `null` et l'écran retombe sur la
+  proposition par besoin, plus large et moins juste.
 - **Les fiches déclarent leurs besoins en huit mots, pas en noms de produits** :
   voix, conversation, email, whatsapp, calendrier, fichiers, navigateur,
   telephone. `outils/capacites.ts` fait la jointure vers le catalogue, dérivée

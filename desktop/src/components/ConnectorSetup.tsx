@@ -4,9 +4,11 @@ import {
   demanderActivation,
   matrice,
   besoinsDeLaFiche,
+  packDuMetier,
   CAPACITES,
   type Capacite,
   type Connecteur,
+  type PackDuMetier,
   type ReferentielConnecteurs,
 } from '../agents/connecteurs'
 
@@ -54,11 +56,30 @@ export default function ConnectorSetup() {
   const [filtre, setFiltre] = useState('')
   const [ouvert, setOuvert] = useState<string | null>(null)
   const [coches, setCoches] = useState<string[]>([])
+  const [secteurs, setSecteurs] = useState<string[]>([])
 
   useEffect(() => {
     invoke<string>('lire_referentiel', { nom: 'connecteurs' })
       .then((brut) => setRef(JSON.parse(brut)))
       .catch((e) => setErreur(String(e)))
+  }, [])
+
+  // Les métiers que le client a embauchés. Rien à saisir : c'est ce qu'il a fait
+  // qui décide de ce qu'on lui montre en premier.
+  useEffect(() => {
+    invoke<string>('lire_installation')
+      .then(async (brut) => {
+        const installation: { agents?: { ficheId: string }[] } = JSON.parse(brut)
+        const fiches = await Promise.all(
+          (installation.agents ?? []).map((a) =>
+            invoke<string>('lire_fiche', { id: a.ficheId })
+              .then((f) => JSON.parse(f).secteur as string)
+              .catch(() => '')
+          )
+        )
+        setSecteurs([...new Set(fiches.filter(Boolean))])
+      })
+      .catch(() => setSecteurs([]))
   }, [])
 
   const rubriques = useMemo(() => (ref ? matrice(ref) : []), [ref])
@@ -98,6 +119,9 @@ export default function ConnectorSetup() {
   }
 
   const ouvrables = ref.connecteurs.filter((c) => demanderActivation(ref, c.id).accorde)
+  const metiers = secteurs
+    .map((s) => packDuMetier(ref, s))
+    .filter((p): p is PackDuMetier => p !== null)
   // Une fiche type sert à montrer la traduction besoin → connecteurs sans en choisir une.
   const besoins = besoinsDeLaFiche(ref, [...CAPACITES])
 
@@ -110,6 +134,32 @@ export default function ConnectorSetup() {
           ? "Aucun n'est encore ouvrable : chacun attend d'être chiffré et son risque classé avant qu'on vous propose de vous y brancher."
           : `${ouvrables.length} sont ouvrables aujourd'hui.`}
       </p>
+
+      {metiers.map((m) => (
+        <section key={m.secteur} className="metier">
+          <h3>Ce qu'on rencontre en {m.libelle.toLowerCase()}</h3>
+          <p className="precision">
+            Vous avez embauché dans ce métier. Voilà les logiciels qu'on y trouve : pas
+            la peine de chercher dans la liste entière.
+          </p>
+          {m.rayons.map((r) => (
+            <div key={r.titre} className="rayon">
+              <h4>{r.titre}</h4>
+              <p className="precision">{r.precision}</p>
+              <ul className="noms">
+                {r.connecteurs.map((c) => (
+                  <li key={c.id}>
+                    <button className="lien" onClick={() => { setRubrique(c.categorie); setOuvert(c.id) }}>
+                      {c.nom}
+                    </button>
+                    {demanderActivation(ref, c.id).accorde && <span className="servi">prêt</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      ))}
 
       <section className="besoins">
         <h3>Ce que vos agents réclament</h3>

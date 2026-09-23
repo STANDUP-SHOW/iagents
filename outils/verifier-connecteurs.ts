@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { manques, CONDITIONS, EXIGENCES } from './activation.ts';
 import { sertQuoi, CAPACITES, SERVI_PAR_L_APPLICATION, type Capacite } from './capacites.ts';
+import { convertir as convertirPacks, type Pack } from './packs-secteurs.ts';
 import { readdirSync } from 'node:fs';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -114,9 +115,42 @@ const dossierAgents = join(racine, 'agents');
 const fichiers = readdirSync(dossierAgents).filter((f) => f.endsWith('.json'));
 // Un banc qui ne lit rien passe toujours. Celui-ci dit combien de fiches il a ouvertes.
 if (fichiers.length < 1000) faute(`seulement ${fichiers.length} fiche(s) lues dans agents/`);
+const secteursDesFiches = new Map<string, number>();
 for (const f of fichiers) {
   const fiche = JSON.parse(readFileSync(join(dossierAgents, f), 'utf8'));
   for (const b of fiche.connecteurs ?? []) besoins.set(b, (besoins.get(b) ?? 0) + 1);
+  if (fiche.secteur) secteursDesFiches.set(fiche.secteur, (secteursDesFiches.get(fiche.secteur) ?? 0) + 1);
+}
+
+// --- Les packs sectoriels : recalculés, comparés, et confrontés aux fiches -------------
+const { packs: packsAttendus, inconnus } = convertirPacks(
+  lire('catalogue/reference/packs-erp-crm.json').entrees,
+  new Set(connecteurs.map((c) => c.id as string))
+);
+const packsEcrits: Pack[] = catalogue.packs ?? [];
+
+if (JSON.stringify(packsEcrits) !== JSON.stringify(packsAttendus)) {
+  if (corriger) {
+    catalogue.packs = packsAttendus;
+    reparations.push(`${packsAttendus.length} pack(s) sectoriel(s)`);
+  } else {
+    faute('les packs sectoriels écrits divergent du relevé — relancer npm run importer-connecteurs');
+  }
+}
+
+// Un pack qui cite un connecteur absent du catalogue promettrait au client un outil
+// qui n'existe pas. C'est ainsi qu'on a vu que les six connecteurs RH étaient jetés.
+for (const { secteur, id } of inconnus) {
+  faute(`le pack « ${secteur} » cite ${id}, que le catalogue ne connaît pas`);
+}
+
+// Un secteur de fiches sans pack retombe sur la proposition par besoin, plus large et
+// moins juste. Ce n'est pas une faute du code, c'est un trou du relevé : on le nomme.
+const avecPack = new Set(packsAttendus.map((p) => p.secteur));
+const secteursSansPack = [...secteursDesFiches].filter(([s]) => !avecPack.has(s));
+const packsSansFiche = packsAttendus.filter((p) => !secteursDesFiches.has(p.secteur));
+for (const p of packsSansFiche) {
+  faute(`le pack « ${p.secteur} » ne correspond à aucun secteur de fiche`);
 }
 for (const [besoin, combien] of [...besoins].sort((a, b) => b[1] - a[1])) {
   if (!CAPACITES.includes(besoin as Capacite)) {
@@ -149,6 +183,12 @@ console.log(`  ⟳ besoins des fiches : ${[...besoins]
     return `${b} ${n} fiche(s) → ${porteurs || SERVI_PAR_L_APPLICATION[b] ? (porteurs || "l'application") : 'personne'}`;
   })
   .join(' ; ')}`);
+
+console.log(
+  `  ⟳ packs sectoriels : ${packsEcrits.length} packs, ` +
+    `${packsEcrits.reduce((n, p) => n + p.coeur.length + p.optionnels.length, 0)} liens ERP/CRM ; ` +
+    `${secteursSansPack.length === 0 ? 'tous les secteurs de fiches en ont un' : secteursSansPack.map(([s, n]) => `« ${s} » (${n} fiche(s)) n'en a pas`).join(', ')}`
+);
 
 console.log(`${connecteurs.length} connecteurs, ${fautes} faute(s)`);
 if (fautes) process.exit(1);

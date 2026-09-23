@@ -15,6 +15,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { manques } from './activation.ts';
 import { sertQuoi } from './capacites.ts';
+import { convertir as convertirPacks } from './packs-secteurs.ts';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const lire = (p: string) => JSON.parse(readFileSync(join(racine, p), 'utf8'));
@@ -266,6 +267,13 @@ for (const c of connecteurs) {
   c.sert = sertQuoi(c as never);
 }
 
+// Les packs sectoriels : la conversion vit dans outils/packs-secteurs.ts, que le
+// banc rejoue pour refuser toute divergence.
+const { packs, inconnus } = convertirPacks(
+  lire('catalogue/reference/packs-erp-crm.json').entrees as Ligne[],
+  new Set(connecteurs.map((c) => c.id as string))
+);
+
 const sortie = {
   note:
     "Converti depuis les relevés V6 de catalogue/reference/ par outils/importer-connecteurs.ts. " +
@@ -275,6 +283,7 @@ const sortie = {
   genere: new Date().toISOString().slice(0, 10),
   categories: ['metier', 'communication', 'bureautique'],
   familles: [...familles].sort(),
+  packs,
   connecteurs,
 };
 
@@ -291,6 +300,14 @@ for (const c of connecteurs) {
   for (const m of (c.activation as { manques: string[] }).manques) {
     parManque.set(m, (parManque.get(m) ?? 0) + 1);
   }
+}
+console.log(
+  `${packs.length} packs sectoriels écrits ; ` +
+    `${packs.reduce((n, p) => n + p.coeur.length + p.optionnels.length, 0)} liens ERP/CRM.`
+);
+if (inconnus.length > 0) {
+  console.log('Identifiants cités par un pack mais absents du catalogue (non écrits) :');
+  for (const { secteur, id } of inconnus) console.log(`  ${secteur} : ${id}`);
 }
 console.log(
   `${connecteurs.length} connecteurs écrits, ${familles.size} familles, ` +
