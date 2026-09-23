@@ -406,7 +406,7 @@ par WhatsApp et email.
   vérifie l'archive ZIP et ses pièces, pas ce qu'Excel en fait.
 - **Un agent sans matière réclame, il n'invente pas.** Une entrée de tâche
   désigne une source ouvrable (`dossier:<chemin logique>` ou un connecteur) ou
-  rien : **4 830 tâches sur 9 233 n'ont ni l'un ni l'autre** au 23/09/2026,
+  rien : **4 547 tâches sur 9 233 n'ont ni l'un ni l'autre** au 23/09/2026,
   contre 8 398 le matin même. Leurs entrées sont des mots (« pièces de
   référence », « messagerie du dirigeant ») qui disent de quoi il s'agit, pas
   où le prendre. `check-travail` les compte à chaque passage.
@@ -419,6 +419,13 @@ par WhatsApp et email.
   désigner un dossier. Assouplie, elle rattachait « fichiers non identifiés » à
   `classement/identifies`, c'est-à-dire l'inverse ; **une entrée fausse est pire
   qu'une entrée en prose**, l'agent lirait le mauvais dossier avec assurance.
+  Un second passage, plus large, accepte que l'entrée en dise davantage que le
+  dossier (« documents contrôlés » → `dataroom/controles`) à deux conditions :
+  **aucun mot du dossier n'est jeté** — `par-poste` vaut « par » et « poste »,
+  sans quoi toute entrée parlant de postes y tombait — et **aucun mot en trop ne
+  renverse le sens** (non, sans, manquant, précédent, prévisionnel, incomplet…),
+  comparés par préfixe pour que « précédente » n'échappe pas à « précédent ».
+  283 tâches de plus, les 305 entrées relues une à une.
   Rien à faire côté client pour que ça marche : un dossier logique non choisi
   retombe dans le dossier de l'agent, là même où la tâche précédente a écrit.
   Le reste (« analyses », « suivis », « accords à obtenir ») demande un jugement
