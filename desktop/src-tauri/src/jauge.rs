@@ -689,6 +689,42 @@ mod tests {
         assert_eq!(pose, "dimensionnement/machines.json");
     }
 
+    /// Le schéma des fiches et la table des paliers doivent nommer les mêmes
+    /// paliers. Un palier que le schéma autorise et que la table ignore serait
+    /// compté pour rien ici : la jauge dirait « ça passe » en ayant oublié un
+    /// modèle entier. Le contraire (un palier de la table que plus aucune fiche
+    /// ne peut demander) ne gêne personne et n'est pas refusé.
+    #[test]
+    fn tout_palier_qu_une_fiche_peut_demander_existe_dans_la_table() {
+        let chemin = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../contrat/paquet-agent.schema.json"
+        );
+        let schema: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(chemin).expect("schéma introuvable"))
+                .expect("schéma mal formé");
+        let table = table_du_depot();
+        let champs = schema["properties"]["modeles"]["properties"]
+            .as_object()
+            .expect("le bloc modeles a perdu ses champs");
+        let mut vus = 0;
+        for (champ, regle) in champs {
+            let Some(valeurs) = regle.get("enum").and_then(serde_json::Value::as_array) else {
+                continue; // `activite` est un nombre, pas un palier.
+            };
+            for v in valeurs.iter().filter_map(serde_json::Value::as_str) {
+                assert!(
+                    table.paliers.contains_key(v),
+                    "le schéma autorise « {} » pour {} mais la table des paliers ne le connaît pas",
+                    v,
+                    champ
+                );
+                vus += 1;
+            }
+        }
+        assert!(vus >= 10, "seulement {} paliers lus au schéma", vus);
+    }
+
     #[test]
     fn la_memoire_se_lit_dans_meminfo() {
         let brut = "MemTotal:       16481980 kB\nMemFree:         6075308 kB\n";
