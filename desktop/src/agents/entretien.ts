@@ -169,6 +169,8 @@ export const INTITULES: Record<string, string> = {
   'diagnostic-immobilier': "Vos diagnostics et vos états des risques, vous les faites établir par qui ?",
   notariat: "L'étude avec qui vous travaillez échange ses pièces comment ?",
   'customer-success': "Le suivi de vos clients après la vente, vous le tenez où ?",
+  'ordonnancement-aps': "L'ordre de passage de vos ordres de fabrication, il se décide où ?",
+  'plm-donnees-produit': "Vos plans et vos nomenclatures, vous savez où est l'indice qui fait foi ?",
   sante: "Votre logiciel de cabinet ou de patientèle, c'est lequel ?",
   dentaire: "Vos fauteuils, vos devis et vos schémas dentaires sont tenus dans quoi ?",
   'laboratoire-analyses': "Vos demandes d'analyse et vos comptes rendus passent par quel logiciel ?",
