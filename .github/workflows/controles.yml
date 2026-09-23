@@ -1,0 +1,82 @@
+name: Contrôles
+
+# Le seul flux qui existait construisait le MSI et rien d'autre : aucun banc ne
+# tournait en intégration continue. Les gardes de ce dépôt — dimensionnement,
+# économie, paquets, logiciels, connecteurs, application, boutique — ne
+# protégeaient donc que la machine de qui pensait à les lancer. Un garde que
+# personne ne lance ne protège de rien.
+on:
+  # Sans filtre de chemins, volontairement : les fautes trouvées le 23/09 (un
+  # compte d'appels faux, une table d'économie périmée, une fiche exigeant une
+  # application qui n'existe pas) vivaient toutes hors de desktop/.
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: controles-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  donnees:
+    name: Données, fiches et boutique
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Installer
+        run: npm install
+
+      # Dimensionnement, économie (dont la fraîcheur de docs/economie*.md),
+      # paquets, logiciels, activités, connecteurs, agents, consignes,
+      # entretien, courriel, embauche, travail.
+      - name: Contrôle des données
+        run: npm run controle
+
+      - name: Typage à la racine
+        run: npx tsc --noEmit
+
+      # Rend réellement les pages de la boutique en SSR, tous onglets :
+      # « vite build » ne voit pas une variable qui n'existe pas.
+      - name: Contrôle de la boutique
+        run: npm run controle-boutique
+
+  application:
+    name: Application desktop
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Liste relevée sur une machine Ubuntu 24.04 où `cargo test` passe, pas
+      # écrite de mémoire. patchelf n'y est pas et n'est pas nécessaire : il ne
+      # sert qu'à l'empaquetage AppImage, que ce flux ne fait pas.
+      - name: Dépendances système de Tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libsoup-3.0-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libgtk-3-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Le chemin Windows de la jauge (GlobalMemoryStatusEx) ne se compile pas
+      # ici : c'est le flux « Build Windows MSI » qui le vérifie.
+      - name: Typage de l'interface et bancs Rust
+        run: npm run controle-application

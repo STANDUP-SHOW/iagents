@@ -180,6 +180,18 @@ par WhatsApp et email.
   le résume, elle ne le remplace pas. À dire à max : c'est une étiquette visible
   au client, et elle passe de « autonome » à « approbation obligatoire » sur
   presque tout le catalogue.
+- **Les bancs tournent en intégration continue depuis le 23/09**
+  (`.github/workflows/controles.yml`). Avant, le seul flux construisait le MSI
+  et rien d'autre : `npm run controle`, `npm run controle-application`,
+  `npx tsc --noEmit` et la boutique ne tournaient que sur la machine de qui
+  pensait à les lancer. **Un garde que personne ne lance ne protège de rien** —
+  c'est la même faute que les champs obligatoires que rien ne lit, au niveau du
+  processus. Sans filtre de chemins, délibérément : les fautes trouvées ce
+  jour-là vivaient toutes hors de `desktop/`, seul chemin que l'autre flux
+  surveille. Les dépendances système de Tauri sous Linux sont relevées sur une
+  machine où `cargo test` passe (Ubuntu 24.04 : `libwebkit2gtk-4.1-dev`,
+  `libsoup-3.0-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`,
+  `libgtk-3-dev`), pas écrites de mémoire ; `patchelf` ne sert qu'à l'AppImage.
 - **Un champ obligatoire que personne ne lit ne protège de rien : il attend.**
   `miseAJour.appMinimum` est exigé par le schéma sur les 1 249 fiches, valait
   **« 1.0.0 » partout alors que l'application est en 0.1.0**, et aucun code ne
