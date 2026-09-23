@@ -141,6 +141,20 @@ par WhatsApp et email.
   fichier — un catalogue truqué portant `activable: true` est refusé quand même.
   Au 23/09/2026 : **4 connecteurs activables sur 137**. Il manque un coût à 133 et
   un risque à 117. Aucun bouton « Se connecter » ne s'affiche sans passer par là.
+- **`desktop/src-tauri/src/mcp.rs` est le seul endroit où un outil extérieur
+  peut être appelé**, et quatre refus y sont dans le code, pas dans une consigne
+  au modèle : liste blanche par agent (un outil que le serveur ajoute entre deux
+  lancements n'élargit rien), validation explicite pour tout outil que le serveur
+  ne déclare pas en lecture seule (**annotation absente = on suppose qu'il
+  modifie**), quota par exécution, délai, et arrêt immédiat qui coupe le
+  processus. Tout appel est journalisé, abouti ou refusé, avec un motif en
+  français sans jargon — un banc vérifie qu'aucun refus ne contient « error »,
+  « null » ni « MCP ». **Le tuyau réel n'est constaté que sous Unix** (test avec
+  un vrai `sh`) ; sous Windows, cible du produit, il ne l'est pas encore.
+- **Les secrets des serveurs MCP vivent au trousseau du système**, jamais dans
+  `connecteurs/serveurs-mcp.json`, qui ne porte que des NOMS de variables.
+  `declaration_recevable()` refuse le fichier entier si une ligne ressemble à une
+  clé, et l'application ne démarre pas plutôt que de laisser circuler un secret.
 - **Un prix ne se devine pas.** `connecteurs/couts.json` est le seul endroit du
   dépôt où un coût s'écrit à la main, une ligne par connecteur, chacune avec la
   page de l'éditeur qui le dit et la date où elle a été lue. Absent du fichier =

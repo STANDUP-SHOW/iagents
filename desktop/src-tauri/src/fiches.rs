@@ -4,7 +4,7 @@ use std::path::PathBuf;
 /// Rust ne fait que les lire : l'assemblage (planning du client, prénom, sexe,
 /// dossiers) reste en TypeScript, où il est testé. Dupliquer cette logique ici
 /// la ferait diverger.
-fn dossier_ressources() -> PathBuf {
+pub fn dossier_ressources() -> PathBuf {
     // En développement, l'exécutable est dans target/debug et l'installeur n'a
     // rien copié à côté : sans cette échappatoire, l'entretien d'embauche ne
     // trouverait aucun référentiel tant que l'application n'est pas installée.

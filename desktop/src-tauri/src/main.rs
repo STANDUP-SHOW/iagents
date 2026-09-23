@@ -10,6 +10,7 @@ mod voice;
 mod fiches;
 mod courriel;
 mod journal;
+mod mcp;
 mod navigateur;
 mod agents;
 mod connectors;
@@ -434,6 +435,9 @@ fn main() {
             fiches::lire_fiche,
             fiches::installation_ecrire,
             fiches::lire_referentiel,
+            mcp::mcp_serveurs,
+            mcp::mcp_ranger_secret,
+            mcp::mcp_outils_permis,
             repondre,
             courriel::courriel_enregistrer_motdepasse,
             courriel::courriel_motdepasse_present,
