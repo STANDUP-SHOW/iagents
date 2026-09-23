@@ -491,6 +491,41 @@ fn machine_de(table: &Table, config: &serde_json::Value) -> Result<Machine, Stri
     machine_mesuree(table)
 }
 
+/// Ce que la jauge oppose à CE poste seul, sur cette machine : `None` quand rien
+/// ne s'y oppose, et la phrase en clair quand la mémoire ne suffit pas.
+///
+/// Le modèle peut être installé et la machine ne pas le porter. Avant, ça se
+/// découvrait au bout des 120 secondes d'attente du moteur local, et l'écran
+/// n'en disait qu'une supposition (« ce modèle est peut-être trop lourd »).
+///
+/// **Tout ce qui ne se lit pas rend `None`** — paliers absents, installation
+/// illisible, mémoire que ce système ne sait pas dire. Une jauge qui ne sait pas
+/// n'empêche personne de travailler : elle ne parle que de ce qu'elle a mesuré.
+pub fn memoire_insuffisante_pour(fiche_id: &str) -> Option<String> {
+    let table = table().ok()?;
+    let machine = machine_de(&table, &installation().ok()?).ok()?;
+    let brut = crate::fiches::lire_fiche(fiche_id.to_string()).ok()?;
+    let fiche: serde_json::Value = serde_json::from_str(&brut).ok()?;
+    Some(manque_de_memoire(
+        &machine,
+        &besoins(&table, &[modeles_de(fiche.get("modeles")?)]),
+    )?)
+}
+
+/// Le sens de la comparaison et la phrase, à part pour être éprouvés : l'inverse
+/// laisserait passer exactement ce que ce chemin existe pour arrêter.
+fn manque_de_memoire(machine: &Machine, b: &Besoins) -> Option<String> {
+    if b.memoire_modeles <= machine.memoire_modeles {
+        return None;
+    }
+    Some(format!(
+        "ce poste demande {} Go de mémoire pour ses modèles et {} n'en laisse que {}",
+        arrondi(b.memoire_modeles),
+        machine.nom,
+        arrondi(machine.memoire_modeles)
+    ))
+}
+
 /// La jauge de ce poste, telle que l'écran l'affiche. Rien n'est lancé.
 #[tauri::command]
 pub fn jauge_etat() -> Result<Verdict, String> {
@@ -673,6 +708,36 @@ mod tests {
         let m = machine_mesuree(&table_du_depot()).expect("machine mesurée");
         assert_eq!(m.memoire_modeles, (go - 6.0).max(0.0));
         assert_eq!(m.capacite_gpu, None, "rien ne permet d'affirmer une capacité");
+    }
+
+    /// Ce que la jauge oppose au local pour un poste seul : la phrase nomme les
+    /// deux chiffres, et le sens de la comparaison n'est pas inversé.
+    #[test]
+    fn la_memoire_qui_manque_se_dit_avec_ses_deux_chiffres() {
+        let t = table_du_depot();
+        let petite = Machine {
+            nom: "cet ordinateur".into(),
+            ram: 16.0,
+            memoire_modeles: 10.0,
+            memoire_unifiee: true,
+            capacite_gpu: None,
+            origine: "mesuré".into(),
+        };
+        // Un poste de bureau tient dans 10 Go : rien à opposer.
+        assert_eq!(manque_de_memoire(&petite, &besoins(&t, &[poste_de_bureau()])), None);
+
+        // Un designer (image qualité) n'y tient pas, et la phrase le dit.
+        let designer = agent(&["texte-standard", "image-qualite"], 0.8);
+        let raison = manque_de_memoire(&petite, &besoins(&t, &[designer]))
+            .expect("23 Go demandés sur 10 disponibles");
+        assert!(raison.contains("23 Go"), "{}", raison);
+        assert!(raison.contains("n'en laisse que 10"), "{}", raison);
+
+        // Une machine qui en laisse juste assez ne bloque pas : la limite est
+        // l'égalité, et c'est elle qui se trompe le plus facilement de sens.
+        let juste = Machine { memoire_modeles: 23.0, ..petite.clone() };
+        let designer = agent(&["texte-standard", "image-qualite"], 0.8);
+        assert_eq!(manque_de_memoire(&juste, &besoins(&t, &[designer])), None);
     }
 
     /// Une installation qui nomme des fiches absentes ne doit pas faire taire la

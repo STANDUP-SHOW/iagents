@@ -191,6 +191,7 @@ async fn repondre(
     let offre = modele::Offre {
         locaux: modele::modeles_installes(modele::ADRESSE_LOCALE).await.ok(),
         cle_api: llm::cle_api().is_some(),
+        memoire_insuffisante: jauge::memoire_insuffisante_pour(&fiche_id),
     };
     let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_API)?;
 
@@ -272,6 +273,7 @@ async fn executer_tache(
     let offre = modele::Offre {
         locaux: modele::modeles_installes(modele::ADRESSE_LOCALE).await.ok(),
         cle_api: llm::cle_api().is_some(),
+        memoire_insuffisante: jauge::memoire_insuffisante_pour(&fiche_id),
     };
     let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_API)?;
 

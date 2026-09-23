@@ -43,9 +43,16 @@ par WhatsApp et email.
   n'est **pas** un `confortable` prudent : la mémoire passe, la charge n'a pas
   été jugée, et l'écran l'affiche en ambre et non en vert. Une jauge qui
   devinerait une capacité annoncerait « confortable » à un client dont les tâches
-  prennent du retard. Le chemin Windows est compilé par la construction du MSI à
-  chaque PR touchant `desktop/`, mais n'a **jamais tourné sur une vraie machine
-  Windows** — même réserve que pour l'installeur.
+  prennent du retard. **La jauge ferme aussi la route locale** : un modèle
+  installé n'est pas un modèle qui tient, et `modele::choisir` refuse le local
+  quand la mémoire manque pour ce poste, en nommant les deux chiffres et en
+  proposant une machine plus grande plutôt qu'un modèle de plus à installer.
+  Avant, ça se découvrait au bout des 120 secondes d'attente du moteur local, et
+  l'écran n'en disait qu'une supposition. Le chemin Windows **compile et
+  s'empaquette** : MSI de
+  9 580 138 octets produit sur `271bcaa` par `build-windows-msi.yml` — mais il
+  n'a **jamais tourné sur une vraie machine Windows**, même réserve que pour
+  l'installeur lui-même.
 - **La règle de mémoire vit dans `dimensionnement/paliers-modeles.json`**, pas
   dans le code (23/09/2026) : `resident` par palier, `memoireTravailParPalier`,
   `reserveMemoireUnifiee`. `calculer.ts` (boutique) et `jauge.rs` (application)

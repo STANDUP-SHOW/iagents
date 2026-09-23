@@ -57,6 +57,10 @@ pub struct ModeleInstalle {
 pub struct Offre {
     pub locaux: Option<Vec<ModeleInstalle>>,
     pub cle_api: bool,
+    /// Ce que la jauge oppose au local pour CE poste, en clair. `None` = rien,
+    /// ou rien de mesurable. Un modèle installé ne veut pas dire un modèle qui
+    /// tient : sans ça, le trop-gros ne se voyait qu'au bout de 120 secondes.
+    pub memoire_insuffisante: Option<String>,
 }
 
 /// Par où passe cet agent.
@@ -156,6 +160,16 @@ fn a_installer(exemples: &[String]) -> String {
     format!("l'un de ces modèles : {}", exemples.join(", "))
 }
 
+/// Ce qu'il y a à faire pour que le local redevienne possible. Installer un
+/// modèle de plus ne sert à rien quand c'est la machine qui est trop petite.
+fn remede(offre: &Offre, exemples: &[String]) -> String {
+    if offre.memoire_insuffisante.is_some() {
+        "une machine qui laisse plus de mémoire aux modèles de ce poste".to_string()
+    } else {
+        format!("installer {}", a_installer(exemples))
+    }
+}
+
 /// Choisit la voie. Fonction pure : elle ne joint rien, on lui donne l'offre.
 pub fn choisir(
     execution: &Execution,
@@ -164,10 +178,16 @@ pub fn choisir(
     modele_api: &str,
 ) -> Result<Choix, String> {
     let accepte = |mode: &str| execution.modes.iter().any(|m| m == mode);
-    let local = offre
-        .locaux
-        .as_ref()
-        .and_then(|installes| modele_pour(installes, exemples));
+    // La mémoire passe avant le nom : un modèle qui ne tient pas sur la machine
+    // n'est pas un modèle disponible, même s'il est installé.
+    let local = if offre.memoire_insuffisante.is_some() {
+        None
+    } else {
+        offre
+            .locaux
+            .as_ref()
+            .and_then(|installes| modele_pour(installes, exemples))
+    };
     let api_possible = offre.cle_api && accepte("api");
 
     // Ce que la fiche demande d'abord, et ce qu'on essaie si ça ne se peut pas.
@@ -188,17 +208,17 @@ pub fn choisir(
             return Ok(Choix {
                 voie: Voie::Api { modele: modele_api.to_string() },
                 motif: format!(
-                    "Ce poste devait travailler sur votre machine. {} : il passe par l'API, qui est facturée à l'usage. Pour revenir au local, installez {}.",
+                    "Ce poste devait travailler sur votre machine. {} : il passe par l'API, qui est facturée à l'usage. Pour revenir au local, il faudrait {}.",
                     manque_local(offre),
-                    a_installer(exemples)
+                    remede(offre, exemples)
                 ),
                 bascule: true,
             });
         }
         return Err(format!(
-            "Ce poste ne peut pas travailler : {}, et aucune clé d'API n'est enregistrée. Installez {}, ou enregistrez une clé.",
+            "Ce poste ne peut pas travailler : {}, et aucune clé d'API n'est enregistrée. Il faudrait {}, ou une clé d'API.",
             manque_local(offre),
-            a_installer(exemples)
+            remede(offre, exemples)
         ));
     }
 
@@ -223,15 +243,20 @@ pub fn choisir(
         }
     }
     Err(format!(
-        "Ce poste ne peut pas travailler : aucune clé d'API n'est enregistrée, et {}. Enregistrez une clé, ou installez {}.",
+        "Ce poste ne peut pas travailler : aucune clé d'API n'est enregistrée, et {}. Il faudrait une clé d'API, ou {}.",
         manque_local(offre),
-        a_installer(exemples)
+        remede(offre, exemples)
     ))
 }
 
 /// Ce qui manque du côté local, dit sans jargon. Les deux cas ne se soignent pas
 /// pareil : un moteur absent s'installe, un modèle absent se télécharge.
 fn manque_local(offre: &Offre) -> String {
+    // Quand c'est la machine qui est trop petite, dire « aucun modèle installé ne
+    // convient » enverrait le client en installer un de plus, pour rien.
+    if let Some(raison) = &offre.memoire_insuffisante {
+        return raison.clone();
+    }
     match &offre.locaux {
         None => "aucun moteur de modèles locaux ne répond sur cet ordinateur".to_string(),
         Some(installes) if installes.is_empty() => {
@@ -397,6 +422,7 @@ pub async fn modele_etat(fiche_id: String) -> Result<Choix, String> {
     let offre = Offre {
         locaux: modeles_installes(ADRESSE_LOCALE).await.ok(),
         cle_api: crate::llm::cle_api().is_some(),
+        memoire_insuffisante: crate::jauge::memoire_insuffisante_pour(&fiche_id),
     };
     choisir(&execution, &exemples, &offre, crate::llm::MODELE_API)
 }
@@ -404,6 +430,80 @@ pub async fn modele_etat(fiche_id: String) -> Result<Choix, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Un modèle installé n'est pas un modèle qui tient. Quand la jauge dit que
+    /// la mémoire manque, le local est fermé même si le bon modèle est là, et
+    /// le motif nomme la machine, pas un modèle de plus à installer.
+    #[test]
+    fn un_modele_installe_ne_sert_a_rien_si_la_machine_ne_le_porte_pas() {
+        let fiche = Execution {
+            defaut: "local".into(),
+            modes: vec!["local".into(), "api".into()],
+        };
+        let exemples = vec!["Llama 3.1 8B".to_string()];
+        let trop_gros = Some(
+            "ce poste demande 23 Go de mémoire pour ses modèles et cet ordinateur n'en laisse que 10"
+                .to_string(),
+        );
+
+        let bascule = choisir(
+            &fiche,
+            &exemples,
+            &Offre {
+                locaux: Some(installes(&["llama3.1:8b"])),
+                cle_api: true,
+                memoire_insuffisante: trop_gros.clone(),
+            },
+            "claude-sonnet-5",
+        )
+        .expect("l'API reste possible");
+        assert!(matches!(bascule.voie, Voie::Api { .. }), "{:?}", bascule.voie);
+        assert!(bascule.bascule);
+        assert!(bascule.motif.contains("23 Go"), "{}", bascule.motif);
+        assert!(
+            bascule.motif.contains("plus de mémoire"),
+            "le remède doit parler de la machine : {}",
+            bascule.motif
+        );
+        assert!(
+            !bascule.motif.contains("installer l'un de ces modèles"),
+            "installer un modèle de plus ne réglerait rien : {}",
+            bascule.motif
+        );
+
+        // Sans clé, l'agent s'arrête, et pour la même raison.
+        let arret = choisir(
+            &fiche,
+            &exemples,
+            &Offre {
+                locaux: Some(installes(&["llama3.1:8b"])),
+                cle_api: false,
+                memoire_insuffisante: trop_gros,
+            },
+            "claude-sonnet-5",
+        )
+        .unwrap_err();
+        assert!(arret.contains("23 Go"), "{}", arret);
+        assert!(arret.contains("plus de mémoire"), "{}", arret);
+    }
+
+    /// Et l'inverse : sans rien à opposer, le même poste part en local.
+    #[test]
+    fn sans_rien_a_opposer_le_meme_poste_part_en_local() {
+        let choix = choisir(
+            &Execution { defaut: "local".into(), modes: vec!["local".into(), "api".into()] },
+            &["Llama 3.1 8B".to_string()],
+            &Offre {
+                locaux: Some(installes(&["llama3.1:8b"])),
+                cle_api: true,
+                memoire_insuffisante: None,
+            },
+            "claude-sonnet-5",
+        )
+        .expect("le local est possible");
+        assert_eq!(choix.voie, Voie::Local { modele: "llama3.1:8b".into() });
+        assert!(!choix.bascule);
+    }
 
     fn installes(noms: &[&str]) -> Vec<ModeleInstalle> {
         noms.iter().map(|n| ModeleInstalle { nom: n.to_string() }).collect()
@@ -453,7 +553,7 @@ mod tests {
         let choix = choisir(
             &poste_local(),
             &["Llama 3.1 8B".into()],
-            &Offre { locaux: Some(installes(&["llama3.1:8b"])), cle_api: true },
+            &Offre { locaux: Some(installes(&["llama3.1:8b"])), cle_api: true, memoire_insuffisante: None },
             "claude-sonnet-5",
         )
         .expect("le local est possible");
@@ -468,7 +568,7 @@ mod tests {
         let choix = choisir(
             &poste_local(),
             &["Llama 3.1 8B".into(), "Qwen2.5 7B".into()],
-            &Offre { locaux: None, cle_api: true },
+            &Offre { locaux: None, cle_api: true, memoire_insuffisante: None },
             "claude-sonnet-5",
         )
         .expect("l'API reste possible");
@@ -485,7 +585,7 @@ mod tests {
         let motif = choisir(
             &poste_local(),
             &["Llama 3.1 8B".into()],
-            &Offre { locaux: None, cle_api: false },
+            &Offre { locaux: None, cle_api: false, memoire_insuffisante: None },
             "claude-sonnet-5",
         )
         .unwrap_err();
@@ -503,7 +603,7 @@ mod tests {
         let sans_moteur = choisir(
             &poste_local(),
             &["Llama 3.1 8B".into()],
-            &Offre { locaux: None, cle_api: true },
+            &Offre { locaux: None, cle_api: true, memoire_insuffisante: None },
             "claude-sonnet-5",
         )
         .expect("bascule")
@@ -511,7 +611,7 @@ mod tests {
         let sans_modele = choisir(
             &poste_local(),
             &["Llama 3.1 8B".into()],
-            &Offre { locaux: Some(vec![]), cle_api: true },
+            &Offre { locaux: Some(vec![]), cle_api: true, memoire_insuffisante: None },
             "claude-sonnet-5",
         )
         .expect("bascule")
@@ -519,7 +619,7 @@ mod tests {
         let mauvais_modele = choisir(
             &poste_local(),
             &["Llama 3.1 8B".into()],
-            &Offre { locaux: Some(installes(&["mistral:7b"])), cle_api: true },
+            &Offre { locaux: Some(installes(&["mistral:7b"])), cle_api: true, memoire_insuffisante: None },
             "claude-sonnet-5",
         )
         .expect("bascule")
@@ -536,7 +636,7 @@ mod tests {
         let choix = choisir(
             &Execution { defaut: "api".into(), modes: vec!["local".into(), "api".into()] },
             &["Llama 3.1 8B".into()],
-            &Offre { locaux: Some(installes(&["llama3.1:8b"])), cle_api: false },
+            &Offre { locaux: Some(installes(&["llama3.1:8b"])), cle_api: false, memoire_insuffisante: None },
             "claude-sonnet-5",
         )
         .expect("le local reste possible");
@@ -550,7 +650,7 @@ mod tests {
         let motif = choisir(
             &Execution { defaut: "local".into(), modes: vec!["local".into()] },
             &["Llama 3.1 8B".into()],
-            &Offre { locaux: None, cle_api: true },
+            &Offre { locaux: None, cle_api: true, memoire_insuffisante: None },
             "claude-sonnet-5",
         )
         .unwrap_err();
