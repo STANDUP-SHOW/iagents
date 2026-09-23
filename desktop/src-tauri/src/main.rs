@@ -16,6 +16,7 @@ mod navigateur;
 mod tache;
 mod document;
 mod pdf;
+mod lecture;
 mod agents;
 mod connectors;
 mod database;

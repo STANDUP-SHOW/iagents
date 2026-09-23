@@ -360,6 +360,25 @@ par WhatsApp et email.
   d'écrire un `.docx` qui n'en serait pas un, et l'écran n'offre pas de bouton
   pour ces tâches. La liste vit des deux côtés de la frontière (`tache.rs` et
   `src/agents/travail.ts`) et `check-travail.ts` compare les deux fichiers.
+- **L'agent relit exactement ce qu'il écrit** (23/09/2026) : `xlsx`, `docx` et
+  `eml`, en plus du texte simple. Ce n'est pas une ouverture sur le monde, c'est
+  un trou fermé — les fiches disent de quel poste chacune reçoit et à quel poste
+  elle transmet, donc ce qu'un agent écrit est la matière du suivant, et écrire
+  un classeur que le suivant ne peut pas relire cassait le relais à chaque
+  passage. Aucune bibliothèque n'entre : le `.xlsx` et le `.docx` sont des
+  archives ZIP de pièces XML (le ZIP est déjà là), le `.eml` se relit avec
+  `mailparse` que le relevé du courrier emploie déjà. **Le PDF n'est pas relu**,
+  et c'est délibéré : celui qu'on écrit se relirait, mais ceux qui arrivent du
+  monde portent des polices découpées, des flux comprimés ou du texte scanné qui
+  n'en est pas. Le banc qui compte est l'aller-retour : écrire puis relire rend
+  le même texte. Trois pièges tenus par un banc — une cellule absente laisse son
+  champ vide au lieu de décaler la colonne suivante sous la mauvaise en-tête ;
+  une date est un nombre de jours que seule la feuille de styles signale, et le
+  format compte un 29 février 1900 qui n'a jamais existé ; `<w:p>` ne doit pas
+  ramasser `<w:pPr>`. Seule la première feuille d'un classeur est lue, et
+  l'agent apprend le nom des autres. **Constat au passage** : `poser_tableur`
+  écrit « 4 250,00 » comme le nombre 4250, donc la valeur est juste et
+  l'affichage perd les centimes tant que la cellule n'a pas de format.
 - **Un modèle ne rend pas un classeur, il rend des lignes.** Le tableur est le
   format le plus réclamé des fiches (4 100 sorties sur 9 265) : la consigne
   demande donc un tableau en lignes séparées par des points-virgules, et

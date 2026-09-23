@@ -560,12 +560,21 @@ pub fn poser_courriel(
     poser(dossier, nom, &message)
 }
 
-/// Les formats que l'application sait relire dans le dossier du client.
+/// Les formats que l'application relit tels quels : du texte.
+const FORMATS_LUS: [&str; 6] = ["md", "txt", "csv", "json", "html", "log"];
+
+/// Ceux qu'elle relit en les convertissant d'abord (`lecture.rs`).
 ///
-/// Du texte, comme à l'écriture. Un PDF, un classeur ou une image présents dans
-/// le dossier sont nommés à l'agent sans être ouverts : savoir qu'ils sont là et
-/// ne pas pouvoir les lire vaut mieux que ne pas savoir.
-const FORMATS_LUS: [&str; 7] = ["md", "txt", "csv", "json", "html", "eml", "log"];
+/// Ce sont exactement les formats qu'elle écrit : un agent reçoit du précédent
+/// de la chaîne, et écrire un classeur que le suivant ne peut pas relire casse
+/// le relais. Le `.eml` en fait partie parce que relu brut, son corps se lit en
+/// quoted-printable : l'agent y voyait « impay=C3=A9e » et le recopiait.
+///
+/// Le PDF n'y est pas : celui-ci s'écrit, mais ceux qui arrivent du monde
+/// portent des polices découpées, des flux comprimés ou du texte scanné qui
+/// n'est pas du texte. Une image reste nommée sans être ouverte : savoir qu'un
+/// fichier est là sans pouvoir le lire vaut mieux que ne pas le savoir.
+const FORMATS_CONVERTIS: [&str; 3] = ["xlsx", "docx", "eml"];
 
 /// Au-delà, on ne charge plus : un dossier de travail peut contenir des années
 /// d'archives, et les verser toutes au modèle coûterait cher pour un résultat
@@ -638,7 +647,8 @@ pub fn lire_matiere(dossier: &Path) -> Matiere {
             .extension()
             .map(|e| e.to_string_lossy().to_lowercase())
             .unwrap_or_default();
-        if !FORMATS_LUS.contains(&extension.as_str()) {
+        let converti = FORMATS_CONVERTIS.contains(&extension.as_str());
+        if !converti && !FORMATS_LUS.contains(&extension.as_str()) {
             m.non_lus.push(format!("{} (l'application ne sait pas l'ouvrir)", nom));
             continue;
         }
@@ -646,14 +656,25 @@ pub fn lire_matiere(dossier: &Path) -> Matiere {
             m.tronque = true;
             continue;
         }
-        match std::fs::read_to_string(&chemin) {
+        let lu = if converti {
+            std::fs::read(&chemin)
+                .map_err(|e| e.to_string())
+                .and_then(|octets| match extension.as_str() {
+                    "xlsx" => crate::lecture::lire_classeur(&octets),
+                    "docx" => crate::lecture::lire_document_word(&octets),
+                    _ => crate::lecture::lire_courriel(&octets),
+                })
+        } else {
+            std::fs::read_to_string(&chemin).map_err(|e| e.to_string())
+        };
+        match lu {
             Ok(contenu) => {
                 caracteres += contenu.chars().count();
                 m.textes.push((nom, contenu));
             }
-            // Un fichier binaire portant une extension de texte, ou un droit
-            // refusé : on le nomme plutôt que de le taire.
-            Err(_) => m.non_lus.push(format!("{} (illisible)", nom)),
+            // Un fichier abîmé, un droit refusé, une archive qui n'en est pas
+            // une : on nomme le fichier ET la raison, plutôt que de le taire.
+            Err(motif) => m.non_lus.push(format!("{} ({})", nom, motif)),
         }
     }
     m
@@ -1617,6 +1638,46 @@ mod tests {
         assert!(mots.contains("facture.pdf"), "{}", mots);
         assert!(!mots.contains("N'inventez rien"), "il a de la matière : {}", mots);
 
+        let _ = std::fs::remove_dir_all(&dossier);
+    }
+
+    /// Ce qu'un agent écrit est la matière du suivant : les fiches disent de
+    /// quel poste chacune reçoit et à quel poste elle transmet. Un classeur ou
+    /// un document qu'on écrit sans savoir le relire casse le relais.
+    #[test]
+    fn ce_que_l_agent_ecrit_se_relit_depuis_son_dossier() {
+        let dossier = std::env::temp_dir().join(format!("iagent-relais-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dossier);
+        poser_tableur(
+            &dossier,
+            "depenses.xlsx",
+            &lignes_du_tableau("Poste;Montant\nLoyer;4250"),
+        )
+        .unwrap();
+        crate::document::poser_document(&dossier, "note.docx", "# Note\n\nÀ relancer.").unwrap();
+        poser_courriel(
+            &dossier,
+            "relance.eml",
+            1_790_173_800,
+            "Objet : Facture 412\n\nLa facture 412 reste impayée.",
+        )
+        .unwrap();
+        // Celui-là s'écrit mais ne se relit pas, et l'agent doit l'apprendre.
+        crate::pdf::poser_pdf(&dossier, "rapport.pdf", 1_790_173_800, "# Rapport\n\nTexte.").unwrap();
+
+        let m = lire_matiere(&dossier);
+        let lus: Vec<&str> = m.textes.iter().map(|(n, _)| n.as_str()).collect();
+        assert_eq!(lus, vec!["depenses.xlsx", "note.docx", "relance.eml"], "{:?}", m);
+        let mots = matiere_en_mots(&m, true);
+        assert!(mots.contains("Poste;Montant"), "le classeur n'est pas relu : {}", mots);
+        assert!(mots.contains("# Note"), "le document n'est pas relu : {}", mots);
+        assert!(mots.contains("reste impayée"), "le courriel n'est pas relu : {}", mots);
+        assert!(!mots.contains("=C3="), "le courriel garde son encodage : {}", mots);
+        assert!(
+            m.non_lus.iter().any(|n| n.starts_with("rapport.pdf")),
+            "le PDF doit être nommé sans être ouvert : {:?}",
+            m.non_lus
+        );
         let _ = std::fs::remove_dir_all(&dossier);
     }
 
