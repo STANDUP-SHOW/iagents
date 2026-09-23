@@ -120,6 +120,7 @@ export const INTITULES: Record<string, string> = {
   'data-plateforme': "Vos données sont regroupées dans quel entrepôt ou quelle plateforme ?",
   'gouvernance-donnees': "Vous tenez le catalogue et la qualité de vos données avec quel outil ?",
   'annotation-donnees': "Vos jeux de données sont annotés avec quel outil ?",
+  'analytique-produit': "Vous suivez l'usage de votre produit ou de votre site avec quel outil ?",
   traduction: "Vos traductions passent par quel outil ou quelle agence ?",
   developpement: "Vos développements sont suivis sur quel outil ?",
   'hebergement-infra': "Vos applications tournent chez quel hébergeur ?",
