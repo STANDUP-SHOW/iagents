@@ -112,6 +112,7 @@ export const INTITULES: Record<string, string> = {
   tresorerie: "Votre trésorerie et vos comptes bancaires, c'est quel outil ?",
   'note-de-frais': "Les notes de frais passent par quoi ?",
   achats: "Vos commandes fournisseurs se passent dans quel outil ?",
+  'conformite-fournisseurs': "Les attestations et le risque de vos fournisseurs sont contrôlés avec quoi ?",
   ecommerce: "Votre boutique en ligne tourne sur quelle plateforme ?",
   'avis-clients': "Vous recueillez les avis de vos clients avec quel service ?",
   'seo-referencement': "Votre référencement naturel est suivi avec quel outil ?",
