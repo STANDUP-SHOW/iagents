@@ -151,6 +151,13 @@ par WhatsApp et email.
   français sans jargon — un banc vérifie qu'aucun refus ne contient « error »,
   « null » ni « MCP ». **Le tuyau réel n'est constaté que sous Unix** (test avec
   un vrai `sh`) ; sous Windows, cible du produit, il ne l'est pas encore.
+- **Les champs d'une structure Rust traversent vers l'écran avec LEURS noms**
+  (`declare_le`, pas `declareLe`) : le dépôt n'emploie pas `rename_all`. Écrire le
+  champ en camelCase côté React ne fait échouer ni le compilateur ni l'exécution,
+  ça rend `undefined` — un panneau vide que personne ne comprend. **En revanche
+  les ARGUMENTS d'une commande sont bien convertis par Tauri** : `nomDeVariable`
+  en JavaScript arrive en `nom_de_variable` en Rust. `check-connecteurs.ts` relit
+  les deux fichiers et compare les noms de champs.
 - **Les secrets des serveurs MCP vivent au trousseau du système**, jamais dans
   `connecteurs/serveurs-mcp.json`, qui ne porte que des NOMS de variables.
   `declaration_recevable()` refuse le fichier entier si une ligne ressemble à une

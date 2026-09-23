@@ -130,6 +130,8 @@ export default function ConnectorSetup() {
         </ul>
       </section>
 
+      <Outillage />
+
       <nav className="rubriques">
         {ref.categories.map((c) => (
           <button
@@ -175,6 +177,93 @@ export default function ConnectorSetup() {
         </section>
       ))}
     </div>
+  )
+}
+
+interface ServeurVisible {
+  nom: string
+  commande: string
+  role: string
+  connecteur: string | null
+  secrets_attendus: string[]
+  pret: boolean
+}
+
+/**
+ * Ce que les agents savent faire, en dehors des logiciels du client.
+ *
+ * Volontairement écrit du point de vue de l'employeur et pas de l'intégrateur :
+ * il lit ce que l'outil permet et ce qu'il lui reste à fournir, pas une commande
+ * ni un protocole. Quand un serveur ne se lance pas, la raison s'affiche telle
+ * quelle plutôt que de laisser croire à une panne de l'application.
+ */
+function Outillage() {
+  const [serveurs, setServeurs] = useState<ServeurVisible[]>([])
+  const [erreur, setErreur] = useState('')
+  const [secret, setSecret] = useState<Record<string, string>>({})
+  const [dit, setDit] = useState('')
+
+  useEffect(() => {
+    invoke<ServeurVisible[]>('mcp_serveurs')
+      .then(setServeurs)
+      .catch((e) => setErreur(String(e)))
+  }, [])
+
+  const ranger = async (nom: string) => {
+    setErreur('')
+    try {
+      setDit(await invoke<string>('mcp_ranger_secret', { nomDeVariable: nom, valeur: secret[nom] ?? '' }))
+      setSecret((v) => ({ ...v, [nom]: '' }))
+      setServeurs(await invoke<ServeurVisible[]>('mcp_serveurs'))
+    } catch (e) {
+      setErreur(String(e))
+    }
+  }
+
+  if (erreur && serveurs.length === 0) {
+    return (
+      <section className="besoins">
+        <h3>Ce que vos agents savent faire</h3>
+        <p className="refus">{erreur}</p>
+      </section>
+    )
+  }
+
+  return (
+    <section className="besoins">
+      <h3>Ce que vos agents savent faire</h3>
+      {dit && <p className="servi">{dit}</p>}
+      {erreur && <p className="refus">{erreur}</p>}
+      <ul>
+        {serveurs.map((s) => (
+          <li key={s.nom}>
+            <strong>{s.role}</strong>
+            {s.secrets_attendus.length > 0 && !s.pret && (
+              <span className="etapes">
+                {s.secrets_attendus.map((nom) => (
+                  <span key={nom}>
+                    <input
+                      type="password"
+                      placeholder={`Votre ${nom.toLowerCase().replace(/_/g, ' ')}`}
+                      value={secret[nom] ?? ''}
+                      onChange={(e) => setSecret((v) => ({ ...v, [nom]: e.target.value }))}
+                    />
+                    <button className="setup-btn" onClick={() => ranger(nom)}>
+                      Ranger dans le coffre
+                    </button>
+                  </span>
+                ))}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="context">
+        Ce que vous rangez ici va dans le coffre de votre ordinateur, jamais dans un fichier
+        ni chez nous. Un agent ne se sert que des outils que vous lui avez confiés, et rien
+        qui modifie quelque chose ne part sans que vous l'ayez validé.
+      </p>
+    </section>
   )
 }
 

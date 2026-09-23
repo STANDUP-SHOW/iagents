@@ -154,6 +154,36 @@ for (const capacite of CAPACITES) {
   }
 }
 
+// --- Les noms de champs traversent Rust puis TypeScript sans se perdre ----------------
+// Une structure Rust arrive en JavaScript avec SES noms : `declare_le`, pas `declareLe`.
+// Écrire le champ en camelCase côté écran ne fait échouer ni le compilateur ni l'exécution,
+// ça rend juste `undefined` — un panneau vide que personne ne comprend. Ce banc relit les
+// deux fichiers et compare. (Les ARGUMENTS d'une commande, eux, sont bien convertis par
+// Tauri : `nomDeVariable` en JavaScript arrive en `nom_de_variable` en Rust.)
+const rust = readFileSync(join(racine, 'desktop/src-tauri/src/mcp.rs'), 'utf8');
+const tsx = readFileSync(join(racine, 'desktop/src/components/ConnectorSetup.tsx'), 'utf8');
+
+const champsRust = (nom: string, source: string): string[] => {
+  const bloc = source.match(new RegExp(`struct ${nom} \\{([\\s\\S]*?)\\n\\}`));
+  if (!bloc) return [];
+  return [...bloc[1].matchAll(/^\s*pub ([a-z_0-9]+):/gm)].map((m) => m[1]);
+};
+const champsTs = (nom: string, source: string): string[] => {
+  const bloc = source.match(new RegExp(`interface ${nom} \\{([\\s\\S]*?)\\n\\}`));
+  if (!bloc) return [];
+  return [...bloc[1].matchAll(/^\s*([A-Za-z_0-9]+)[?]?:/gm)].map((m) => m[1]);
+};
+
+const cote = champsRust('ServeurVisible', rust);
+const ecran = champsTs('ServeurVisible', tsx);
+veut(cote.length > 0, "la structure ServeurVisible est introuvable côté Rust");
+veut(ecran.length > 0, "l'interface ServeurVisible est introuvable côté écran");
+for (const champ of ecran) {
+  if (!cote.includes(champ)) {
+    faute(`l'écran lit « ${champ} » que Rust n'envoie pas (il envoie : ${cote.join(', ')})`);
+  }
+}
+
 const ouverts = activables(ref);
 console.log(
   `  ⟳ ${ouverts.length} connecteur(s) activable(s) sur ${ref.connecteurs.length} ; ` +
