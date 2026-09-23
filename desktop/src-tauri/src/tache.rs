@@ -440,35 +440,82 @@ pub fn matiere_en_mots(matiere: &Matiere, avait_une_source: bool) -> String {
     texte
 }
 
-/// Ce que l'agent reçoit pour faire le travail : sa consigne, puis la tâche.
+/// Un savoir de la fiche ou de l'employeur : un titre et son résumé.
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct Savoir {
+    #[serde(default)]
+    pub titre: String,
+    #[serde(default)]
+    pub resume: String,
+}
+
+/// Ce que l'agent reçoit pour faire le travail.
 ///
-/// Le métier vient de la fiche et les procédures de l'employeur des compétences
-/// ajoutées à l'embauche ; l'énoncé, lui, ne dit que la tâche du jour.
+/// Même ordre que le prompt de la conversation (`ConversationEngine`) : le
+/// métier, puis ce que l'employeur a appris, puis ce qu'il a déjà repris, puis
+/// les règles strictes en dernier. **Les règles ne sont pas décoratives** : ce
+/// sont les limites dures des fiches — ne jamais se prononcer sur les droits
+/// d'une personne, ne jamais soumettre un formulaire à sa place, ne jamais
+/// reprendre une source non officielle. Elles étaient dans la conversation et
+/// pas dans l'exécution d'une tâche, qui produit pourtant le document que le
+/// client utilisera.
 pub fn consigne_de_la_tache(
     consigne_fiche: &str,
-    competences: &[String],
+    prenom: &str,
+    connaissances: &[Savoir],
+    competences: &[Savoir],
+    repris: &[String],
+    regles: &[String],
     tache_nom: &str,
     tache_description: &str,
     format: &str,
     validation_humaine: bool,
 ) -> (String, String) {
-    let mut systeme = consigne_fiche.trim().to_string();
-    if !competences.is_empty() {
-        systeme.push_str("\n\nCe que votre employeur vous a appris :\n");
-        for c in competences {
-            systeme.push_str(&format!("- {}\n", c));
+    let bloc = |titre: &str, savoirs: &[Savoir]| -> String {
+        if savoirs.is_empty() {
+            return String::new();
         }
+        let lignes: Vec<String> = savoirs
+            .iter()
+            .map(|s| format!("- {} : {}", s.titre, s.resume))
+            .collect();
+        format!("\n{}\n{}\n", titre, lignes.join("\n"))
+    };
+
+    let mut systeme = consigne_fiche.trim().to_string();
+    systeme.push_str(&format!("\n\nVous vous appelez {}.\n", prenom.trim()));
+    systeme.push_str(&bloc("Ce que vous savez de votre métier :", connaissances));
+    // Ce que l'employeur a appris l'emporte : il connaît sa maison mieux que le
+    // savoir général du métier.
+    systeme.push_str(&bloc(
+        "Ce que votre employeur vous a appris, et qui prime sur le savoir général :",
+        competences,
+    ));
+    // Ce qui lui a déjà été reproché passe en dernier et prime : c'est la
+    // correction la plus récente.
+    if !repris.is_empty() {
+        systeme.push_str(&format!(
+            "\nCe que votre employeur vous a déjà repris, et que vous ne refaites pas :\n{}\n",
+            repris.iter().map(|r| format!("- {}", r)).collect::<Vec<_>>().join("\n")
+        ));
     }
+    if !regles.is_empty() {
+        systeme.push_str(&format!(
+            "\nRègles strictes à respecter :\n{}\n",
+            regles.iter().map(|r| format!("- {}", r)).collect::<Vec<_>>().join("\n")
+        ));
+    }
+
     if est_un_tableau(format) {
         // Un modèle ne produit pas un classeur : il produit un tableau que
         // l'application met en classeur. Lui demander un « fichier xlsx »
         // rendrait une description de tableau, pas des lignes.
         systeme.push_str(
-            "\n\nVous rendez un tableau. N'écrivez que ses lignes, séparées par des points-virgules, la première étant les en-têtes de colonnes. Mettez entre guillemets tout champ qui contient un point-virgule ou un retour à la ligne. Pas de préambule, pas de commentaire, pas de ligne de tirets.",
+            "\nVous rendez un tableau. N'écrivez que ses lignes, séparées par des points-virgules, la première étant les en-têtes de colonnes. Mettez entre guillemets tout champ qui contient un point-virgule ou un retour à la ligne. Pas de préambule, pas de commentaire, pas de ligne de tirets.",
         );
     } else {
         systeme.push_str(&format!(
-            "\n\nVous rendez un fichier « {} ». N'écrivez que son contenu : pas de préambule, pas de commentaire sur ce que vous avez fait.",
+            "\nVous rendez un fichier « {} ». N'écrivez que son contenu : pas de préambule, pas de commentaire sur ce que vous avez fait.",
             format
         ));
     }
@@ -598,6 +645,7 @@ pub fn preparer(
     fiche_id: &str,
     tache_id: &str,
     maintenant: u64,
+    repris: &[String],
 ) -> Result<Preparation, String> {
     let installation: serde_json::Value = serde_json::from_str(installation)
         .map_err(|e| format!("installation illisible : {}", e))?;
@@ -620,30 +668,35 @@ pub fn preparer(
     let dossier = dossier_reel(agent.get("dossiers").unwrap_or(&vide), &tache.sortie.dossier)?;
     let nom_fichier = nom_du_fichier(tache_id, &horodatage(maintenant), &tache.sortie.format)?;
 
-    let consigne = fiche
+    let expert = fiche
         .get("expert")
-        .and_then(|e| e.get("consigne"))
+        .ok_or("la fiche ne porte pas de métier : l'agent ne saurait pas comment travailler")?;
+    let consigne = expert
+        .get("consigne")
         .and_then(serde_json::Value::as_str)
         .ok_or("la fiche ne porte pas de consigne : l'agent ne saurait pas comment travailler")?;
-    let competences: Vec<String> = agent
-        .get("competences")
+    let savoirs = |source: Option<&serde_json::Value>| -> Vec<Savoir> {
+        source
+            .cloned()
+            .and_then(|v| serde_json::from_value::<Vec<Savoir>>(v).ok())
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|s| !s.titre.is_empty() || !s.resume.is_empty())
+            .collect()
+    };
+    let connaissances = savoirs(expert.get("connaissances"));
+    let competences = savoirs(agent.get("competences"));
+    // Les limites dures des fiches : elles étaient dans la conversation et pas
+    // dans l'exécution, qui produit pourtant le document que le client utilise.
+    let regles: Vec<String> = expert
+        .get("regles")
         .and_then(serde_json::Value::as_array)
-        .map(|v| {
-            v.iter()
-                .filter_map(|c| {
-                    c.get("texte")
-                        .or_else(|| c.get("contenu"))
-                        .and_then(serde_json::Value::as_str)
-                        .or_else(|| c.as_str())
-                        .map(str::to_string)
-                })
-                .collect()
-        })
+        .map(|v| v.iter().filter_map(|r| r.as_str().map(str::to_string)).collect())
         .unwrap_or_default();
 
     // La matière se lit dans les dossiers du client, jamais ailleurs : un
     // dossier logique que le client n'a pas encore choisi est ignoré, pas
-    // deviné. L'agent est prévenu qu'il travaille sans, plus bas.
+    // deviné. L'agent est prévenu qu'il travaille sans, au moment de l'énoncé.
     let logiques = dossiers_sources(&tache.entrees);
     let sources: Vec<PathBuf> = logiques
         .iter()
@@ -652,7 +705,11 @@ pub fn preparer(
 
     let (systeme, enonce) = consigne_de_la_tache(
         consigne,
+        prenom,
+        &connaissances,
         &competences,
+        repris,
+        &regles,
         &tache.nom,
         &tache.description,
         &tache.sortie.format,
@@ -710,6 +767,7 @@ mod tests {
             "AG-0001",
             "compte-rendu",
             1_758_585_600,
+            &[],
         )
         .expect("la tâche devrait être prête");
         assert_eq!(p.dossier, PathBuf::from("/tmp/iagent-essai"));
@@ -732,6 +790,7 @@ mod tests {
             "AG-0001",
             "compte-rendu",
             0,
+            &[],
         )
         .unwrap_err();
         assert!(e.contains("n'est pas embauché"), "{}", e);
@@ -743,6 +802,7 @@ mod tests {
             "AG-0002",
             "compte-rendu",
             0,
+            &[],
         )
         .unwrap_err();
         assert!(e.contains("n'est pas embauché"), "{}", e);
@@ -758,6 +818,7 @@ mod tests {
             "AG-0001",
             "compte-rendu",
             0,
+            &[],
         )
         .unwrap_err();
         assert!(e.contains("éteinte"), "{}", e);
@@ -774,6 +835,7 @@ mod tests {
             "AG-0001",
             "compte-rendu",
             0,
+            &[],
         )
         .unwrap_err();
         assert!(e.contains("n'a pas encore été choisi"), "{}", e);
@@ -786,6 +848,7 @@ mod tests {
             "AG-0001",
             "compte-rendu",
             0,
+            &[],
         )
         .unwrap_err();
         assert!(e.contains("chemin complet"), "{}", e);
@@ -803,6 +866,7 @@ mod tests {
                 "AG-0001",
                 "compte-rendu",
                 0,
+                &[],
             )
             .unwrap_err();
             assert!(e.contains(format) && e.contains(mot), "{} : {}", format, e);
@@ -851,6 +915,7 @@ mod tests {
             "AG-0001",
             "compte-rendu",
             0,
+            &[],
         )
         .unwrap();
         assert!(p.validation_humaine);
@@ -858,16 +923,66 @@ mod tests {
     }
 
     /// Ce que l'employeur a appris à son agent s'ajoute au métier de la fiche,
-    /// il ne le remplace pas.
+    /// il ne le remplace pas — et il est lu dans la forme qu'il a vraiment,
+    /// `{titre, resume}` : un premier jet cherchait un champ « texte » qui
+    /// n'existe nulle part et perdait silencieusement tout l'apprentissage.
     #[test]
     fn les_competences_de_l_employeur_s_ajoutent_a_la_fiche() {
         let inst = r#"{"agents":[{"prenom":"Camille","ficheId":"AG-0001",
             "dossiers":{"courrier/reponses":"/tmp/iagent-essai"},
-            "competences":[{"texte":"Nos devis partent toujours en PDF."}]}]}"#;
-        let p = preparer(inst, &fiche("md", true, false), "Camille", "AG-0001", "compte-rendu", 0)
+            "competences":[{"titre":"Nos devis","resume":"ils partent toujours en PDF."}]}]}"#;
+        let p = preparer(inst, &fiche("md", true, false), "Camille", "AG-0001", "compte-rendu", 0, &[])
             .unwrap();
         assert!(p.systeme.contains("Vous tenez le secrétariat."));
-        assert!(p.systeme.contains("Nos devis partent toujours en PDF."));
+        assert!(p.systeme.contains("Nos devis : ils partent toujours en PDF."), "{}", p.systeme);
+        assert!(p.systeme.contains("prime sur le savoir général"), "{}", p.systeme);
+    }
+
+    /// **Les limites dures de la fiche doivent suivre l'agent dans ce qu'il
+    /// rend, pas seulement dans ce qu'il dit.** Une fiche immigration interdit
+    /// de se prononcer sur les droits d'une personne ; la conversation portait
+    /// cette règle, l'exécution d'une tâche ne la portait pas — et c'est elle
+    /// qui produit le document que le client utilisera.
+    #[test]
+    fn les_regles_strictes_de_la_fiche_suivent_le_travail_ecrit() {
+        let f = r#"{"id":"AG-0001","expert":{"consigne":"Vous tenez le secrétariat.",
+            "connaissances":[{"titre":"Courrier administratif","resume":"les formules d'appel."}],
+            "regles":["L'agent ne se prononce jamais sur les droits d'une personne.",
+                      "Aucun formulaire n'est soumis à la place de quelqu'un."]},
+            "taches":[{"id":"compte-rendu","nom":"Compte rendu","description":"Résumer.",
+              "entrees":[],"sorties":[{"dossier":"courrier/reponses","format":"md"}],
+              "validationHumaine":false,"active":true}]}"#;
+        let p = preparer(&installation(DOSSIERS), f, "Camille", "AG-0001", "compte-rendu", 0, &[])
+            .unwrap();
+        assert!(p.systeme.contains("Règles strictes"), "{}", p.systeme);
+        assert!(p.systeme.contains("jamais sur les droits d'une personne"), "{}", p.systeme);
+        assert!(p.systeme.contains("Aucun formulaire n'est soumis"), "{}", p.systeme);
+        assert!(p.systeme.contains("Courrier administratif : les formules d'appel."), "{}", p.systeme);
+        assert!(p.systeme.contains("Vous vous appelez Camille."), "{}", p.systeme);
+        // Les règles passent après le métier : c'est la dernière chose lue.
+        assert!(
+            p.systeme.find("Règles strictes").unwrap() > p.systeme.find("Courrier administratif").unwrap()
+        );
+    }
+
+    /// Ce que l'employeur a déjà repris suit l'agent dans son travail écrit :
+    /// une correction qui ne vaut que pour ce qu'il dit, il la refait dans ce
+    /// qu'il rend.
+    #[test]
+    fn ce_qui_a_ete_repris_suit_l_agent_dans_ce_qu_il_rend() {
+        let repris = vec!["Ne jamais écrire « Cher Monsieur » à une mairie.".to_string()];
+        let p = preparer(
+            &installation(DOSSIERS),
+            &fiche("md", true, false),
+            "Camille",
+            "AG-0001",
+            "compte-rendu",
+            0,
+            &repris,
+        )
+        .unwrap();
+        assert!(p.systeme.contains("déjà repris"), "{}", p.systeme);
+        assert!(p.systeme.contains("Cher Monsieur"), "{}", p.systeme);
     }
 
     /// Le fichier est posé entier ou pas du tout, et n'écrase jamais.
@@ -978,6 +1093,7 @@ mod tests {
             "AG-0001",
             "compte-rendu",
             0,
+            &[],
         )
         .unwrap();
         assert_eq!(p.format, "xlsx");
@@ -1071,6 +1187,7 @@ mod tests {
             "AG-0001",
             "compte-rendu",
             0,
+            &[],
         )
         .unwrap();
         assert!(p.source_declaree, "la fiche désigne bien un dossier");
@@ -1084,6 +1201,7 @@ mod tests {
             "AG-0001",
             "compte-rendu",
             0,
+            &[],
         )
         .unwrap();
         assert_eq!(p.sources, vec![PathBuf::from("/tmp/iagent-entrant")]);
@@ -1099,6 +1217,7 @@ mod tests {
             "AG-0001",
             "autre-chose",
             0,
+            &[],
         )
         .unwrap_err();
         assert!(e.contains("autre-chose"), "{}", e);

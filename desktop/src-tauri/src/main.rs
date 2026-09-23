@@ -237,7 +237,17 @@ async fn executer_tache(
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let prep = tache::preparer(&installation, &fiche, &prenom, &fiche_id, &tache_id, maintenant)?;
+    // Ce que l'employeur a déjà repris à cet agent le suit dans son travail
+    // écrit, pas seulement dans la conversation : une correction qui ne vaut
+    // que pour ce qu'il dit, il la refait dans ce qu'il rend.
+    let repris: Vec<String> = journal::journal_lire(prenom.clone())
+        .unwrap_or_default()
+        .into_iter()
+        .map(|e| e.raison)
+        .collect();
+    let prep = tache::preparer(
+        &installation, &fiche, &prenom, &fiche_id, &tache_id, maintenant, &repris,
+    )?;
 
     // La matière d'abord : un agent à qui on ne donne rien produit un résultat
     // vraisemblable et faux, que le client n'a aucun moyen de démentir.

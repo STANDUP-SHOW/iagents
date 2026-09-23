@@ -328,6 +328,16 @@ par WhatsApp et email.
   client n'a pas choisi n'est jamais deviné ; la lecture s'arrête à un niveau,
   à 20 fichiers et 120 000 caractères, et l'agent sait ce qu'il n'a pas vu et
   quels fichiers l'application n'a pas su ouvrir.
+- **Les limites dures de la fiche suivent l'agent dans ce qu'il rend, pas
+  seulement dans ce qu'il dit.** `expert.regles` allait au modèle par
+  `ConversationEngine` et manquait à l'exécution d'une tâche, qui produit
+  pourtant le document que le client utilisera : une fiche immigration interdit
+  de se prononcer sur les droits d'une personne, et la tâche l'ignorait.
+  `consigne_de_la_tache()` reprend le même ordre que la conversation — métier,
+  ce que l'employeur a appris, ce qu'il a déjà repris (`journal-<prenom>.json`),
+  puis les règles strictes en dernier. **Un savoir est `{titre, resume}`** : un
+  premier jet cherchait un champ `texte` qui n'existe nulle part et perdait tout
+  l'apprentissage de l'employeur sans rien signaler.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,
