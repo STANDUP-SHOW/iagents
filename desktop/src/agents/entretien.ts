@@ -165,6 +165,8 @@ export const INTITULES: Record<string, string> = {
   'pieces-detachees-auto': "Vos pièces, vous les commandez chez qui et avec quel catalogue ?",
   'documentation-technique-auto': "Les procédures et les couples de serrage, vous les cherchez dans quelle documentation ?",
   'conception-cuisine-bain': "Vos implantations de cuisine et de salle de bains, vous les dessinez avec quoi ?",
+  'cao-fao-usinage': "Vos programmes d'usinage, vous les sortez depuis quel logiciel ?",
+  'prepresse-impression': "Vos fichiers avant impression, vous les préparez et les suivez dans quoi ?",
   immobilier: "Vos biens et vos mandats sont dans quel logiciel ?",
   'visite-etat-des-lieux': "Vos visites et vos états des lieux se font avec quel outil ?",
   'diagnostic-immobilier': "Vos diagnostics et vos états des risques, vous les faites établir par qui ?",
