@@ -10,6 +10,9 @@ import { INTENSITES, REPARTITIONS } from '../dimensionnement/intensite.ts';
 import {
   questionsCadre,
   reconnaitreActivite,
+  confirmationActivite,
+  reglesDeLaBranche,
+  documentsDeLaBranche,
   horairesDeLaFiche,
   dossiersDeLaFiche,
   questionsEntretien,
@@ -333,6 +336,32 @@ verifier(
   "chaque activité dit ce qui caractérise la branche, pas seulement son nom",
   activites.activites.every((a) => a.trait.length >= 40),
 );
+
+// Le pack d'activité est ce qui fait la différence entre un agent générique et un agent qui
+// connaît la branche du client. Tant qu'il n'est pas écrit, l'agent doit rester correct :
+// il redit ce qui caractérise la branche au lieu de réciter des mots qu'il n'a pas.
+verifier("sans pack, l'agent dit quand même ce qu'il a compris de la branche", (() => {
+  const sans = activites.activites.find((a) => !a.pack);
+  return !sans || confirmationActivite(sans).includes(sans.trait);
+})());
+verifier("avec un pack, l'agent emploie les mots de la branche", (() => {
+  const avec = activites.activites.filter((a) => a.pack);
+  return avec.every((a) => {
+    const dit = confirmationActivite(a);
+    return a.pack!.vocabulaire.slice(0, 3).every((v) => dit.includes(v.terme));
+  });
+})());
+verifier("les règles de la branche s'ajoutent à celles de la fiche, elles ne s'y substituent pas", (() => {
+  const avec = activites.activites.filter((a) => a.pack);
+  return avec.every((a) => reglesDeLaBranche(a).length >= 2 && documentsDeLaBranche(a).length >= 3);
+})());
+verifier("les outils de la branche s'ajoutent aux propositions sans ouvrir de famille inutile", (() => {
+  const avec = activites.activites.find((a) => a.pack);
+  if (!avec) return true;
+  const sansPack = questionsEntretien(pleine, ref);
+  const avecPack = questionsEntretien(pleine, ref, avec);
+  return avecPack.length === sansPack.length;
+})());
 
 // Une catégorie sans question écrite retombe sur une phrase fabriquée à partir de son
 // identifiant (« Quel outil utilisez-vous pour note de frais ? ») : lue à voix haute, elle

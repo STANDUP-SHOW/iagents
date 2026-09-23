@@ -295,8 +295,18 @@ export function phrasePortee(l: Logiciel): string {
   }
 }
 
-/** Les familles d'outils dont l'agent a besoin, les indispensables d'abord. */
-export function questionsEntretien(fiche: FicheQualifiee, ref: Referentiel): Question[] {
+/**
+ * Les familles d'outils dont l'agent a besoin, les indispensables d'abord. Quand le client
+ * a nommé son activité et que le pack de la branche est écrit, les outils qu'on y rencontre
+ * s'ajoutent aux propositions : l'agent nomme les outils de la branche au lieu de demander
+ * « quel outil utilisez-vous ». Il n'ouvre pas pour autant de famille dont sa fiche n'a pas
+ * l'usage : une question qui ne change pas son travail ne se pose pas.
+ */
+export function questionsEntretien(
+  fiche: FicheQualifiee,
+  ref: Referentiel,
+  activite?: Activite
+): Question[] {
   const parId = new Map(ref.logiciels.map((l) => [l.id, l]));
   const familles = new Map<string, { noms: string[]; principale: boolean }>();
   for (const q of fiche.qualifications?.logiciels ?? []) {
@@ -306,6 +316,12 @@ export function questionsEntretien(fiche: FicheQualifiee, ref: Referentiel): Que
     f.noms.push(l.nom);
     if (q.principal) f.principale = true;
     familles.set(l.categorie, f);
+  }
+  for (const id of activite?.pack?.logiciels ?? []) {
+    const l = parId.get(id);
+    const f = l && familles.get(l.categorie);
+    if (!l || !f) continue;
+    if (!f.noms.some((n) => n.toLowerCase() === l.nom.toLowerCase())) f.noms.push(l.nom);
   }
   const ordre = [...familles.entries()].sort((a, b) => {
     if (a[1].principale !== b[1].principale) return a[1].principale ? -1 : 1;
@@ -464,12 +480,37 @@ export function resumeParle(config: Configuration): string[] {
 // tirée de la fiche ; le client confirme ou corrige, il ne saisit rien.
 // ---------------------------------------------------------------------------
 
+/**
+ * Le contenu d'un pack d'activité : ce que l'agent apprend de la branche du client. Max,
+ * 22/09/2026 : « il doit sentir qu'il a affaire à un professionnel de son métier ». Un
+ * professionnel de la quincaillerie de gros dit « une référence », pas « un article », et
+ * sait que le mois d'août ne ressemble pas au mois de mars. C'est ce que porte le pack.
+ */
+export interface PackActivite {
+  /** Les mots de la branche et ce qu'ils désignent, pour que l'agent parle comme la maison. */
+  vocabulaire: { terme: string; sens: string }[];
+  /** Les documents propres à la branche, que l'agent doit reconnaître avant de les traiter. */
+  documents: { nom: string; role: string }[];
+  /** Les unités dans lesquelles la branche compte réellement. */
+  unites: { unite: string; emploi: string }[];
+  /** Les rythmes et les saisons : quand la branche est chargée, quand elle ne l'est pas. */
+  rythmes: string[];
+  /** Les interlocuteurs types de la branche et ce que chacun attend. */
+  interlocuteurs: { role: string; attend: string }[];
+  /** Les règles de la branche, appliquées par l'application et pas seulement lues. */
+  regles: string[];
+  /** Les logiciels qu'on rencontre dans cette branche, par identifiant du référentiel. */
+  logiciels: string[];
+}
+
 export interface Activite {
   id: string;
   nom: string;
   famille: string;
   alias: string[];
   trait: string;
+  /** Absent tant que le pack de cette branche n'est pas écrit. */
+  pack?: PackActivite;
 }
 
 export interface ReferentielActivites {
@@ -528,6 +569,35 @@ export function reconnaitreActivite(
   if (partiels.length === 1) return { etat: 'reconnu', activite: partiels[0] };
   if (partiels.length > 1) return { etat: 'ambigu', candidats: partiels.slice(0, 6) };
   return { etat: 'inconnu', dit };
+}
+
+/**
+ * Ce que l'agent répond une fois la branche reconnue. Sans pack il redit ce qui la
+ * caractérise, ce qui est déjà mieux que « noté ». Avec le pack il emploie les mots de la
+ * maison et nomme la saison : en une phrase, c'est la seule preuve qu'on puisse donner
+ * qu'on connaît le métier du client plutôt que le sien.
+ */
+export function confirmationActivite(activite: Activite): string {
+  const p = activite.pack;
+  if (!p) return `${activite.nom}, d'accord. ${activite.trait}`;
+  const mots = p.vocabulaire.slice(0, 3).map((v) => v.terme);
+  const liste = mots.length > 1 ? `${mots.slice(0, -1).join(', ')} et ${mots[mots.length - 1]}` : mots[0];
+  const rythme = p.rythmes[0] ? ` ${p.rythmes[0]}` : '';
+  return `${activite.nom}, d'accord. Je sais ce que sont ${liste}.${rythme}`;
+}
+
+/** Les documents de la branche, que l'agent annonce savoir reconnaître avant d'y toucher. */
+export function documentsDeLaBranche(activite: Activite): string[] {
+  return (activite.pack?.documents ?? []).map((d) => d.nom);
+}
+
+/**
+ * Les règles de la branche, à joindre à celles de la fiche. Elles sont appliquées par
+ * l'application, pas seulement lues par le modèle : une règle qui ne tient qu'à la bonne
+ * volonté du modèle n'est pas une règle.
+ */
+export function reglesDeLaBranche(activite: Activite): string[] {
+  return activite.pack?.regles ?? [];
 }
 
 /** Les heures que la fiche prévoit déjà : la première et la dernière de la journée. */
