@@ -9,9 +9,10 @@ import VoiceTraining from './components/VoiceTraining'
 import AgentManager from './components/AgentManager'
 import ConnectorSetup from './components/ConnectorSetup'
 import Navigateur from './components/Navigateur'
+import Courriel from './components/Courriel'
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors' | 'navigateur'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors' | 'navigateur' | 'courriel'>('dashboard')
   const [agents, setAgents] = useState<any[]>([])
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
   const [isListening, setIsListening] = useState(false)
@@ -262,6 +263,12 @@ function App() {
         >
           Vos comptes
         </button>
+        <button
+          className={activeTab === 'courriel' ? 'active' : ''}
+          onClick={() => setActiveTab('courriel')}
+        >
+          Courrier
+        </button>
       </nav>
 
       <main className="app-main">
@@ -280,6 +287,7 @@ function App() {
         {activeTab === 'voice' && <VoiceTraining />}
         {activeTab === 'connectors' && <ConnectorSetup />}
         {activeTab === 'navigateur' && <Navigateur />}
+        {activeTab === 'courriel' && <Courriel />}
       </main>
     </div>
   )

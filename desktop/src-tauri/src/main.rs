@@ -436,6 +436,8 @@ fn main() {
             courriel::courriel_enregistrer_motdepasse,
             courriel::courriel_motdepasse_present,
             courriel::courriel_relever,
+            courriel::courriel_envoyer,
+            courriel::courriel_envois,
             journal::journal_lire,
             journal::journal_ajouter,
             navigateur::navigateur_ouvrir,

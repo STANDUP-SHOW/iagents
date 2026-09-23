@@ -137,6 +137,15 @@ par WhatsApp et email.
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,
   le client valide. Les règles qui comptent sont appliquées par le code
   (`expert.regles` → l'application), pas seulement lues par le modèle.
+- **Rien ne part par courriel sans que le client ait relu le texte exact.**
+  L'interface calcule une empreinte du brouillon affiché
+  (`desktop/src/agents/courriel.ts`), `courriel_envoyer` la recalcule et refuse
+  si elle a changé : un brouillon régénéré entre la relecture et le clic ne
+  peut pas partir à la place de celui qui a été lu. Les deux implémentations
+  doivent rester identiques — `desktop/check-courriel.ts`, lancé par
+  `npm run controle`, s'arrête sur la moindre divergence. Ce n'est pas une
+  signature (tout tourne dans le même processus), c'est un contrôle de
+  cohérence. Chaque envoi est consigné dans `config/courriels-envoyes.json`.
 - **Le navigateur intégré (`desktop/src-tauri/src/navigateur.rs`) ouvre, il
   n'agit pas.** Le client se connecte lui-même à ses comptes dans une fenêtre
   au profil persistant (`data_directory`), posé dans `app_local_data_dir` et
