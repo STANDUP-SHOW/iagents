@@ -45,11 +45,9 @@ const TACHES_GENERIQUES = (gabaritsSource.tachesGeneriques as string[]).join('|'
 const restantsContenu: string[] = [];
 // Une famille qu'une tâche ouvre sans que la fiche y soit qualifiée n'est jamais demandée à
 // l'entretien d'embauche (questionsEntretien part de `qualifications`) : le jour de
-// l'embauche, l'agent ne sait pas dans quel outil aller. Compté tant que la réécriture
-// éditoriale n'a pas rattrapé les fiches concernées.
-const horsQualification = new Map<string, number>();
-let fichesHorsQualification = 0;
-const sansQualification: string[] = [];
+// l'embauche, l'agent ne sait pas dans quel outil aller. C'était un simple compte
+// tant que la réécriture éditoriale n'avait pas rattrapé les 463 fiches concernées ;
+// elles le sont toutes depuis le 23/09/2026, donc c'est une faute.
 // Chaque champ garde la première fiche qui l'a employé : la reprise ultérieure est la faute.
 const vus = {
   accroche: new Map<string, string>(),
@@ -177,14 +175,11 @@ for (const f of fichiers) {
     else faute(f, `acces.logiciels ≠ ce que les tâches ouvrent : attendu ${JSON.stringify(accesAttendu)}`);
   }
 
-  // Une fiche sans qualifications échappait au compte ci-dessous : c'est pourtant
-  // le pire cas — elle ouvre des familles et n'est qualifiée sur aucune. Les 40
-  // qui étaient dans ce cas ont été écrites le 23/09/2026 ; le compte est là pour
-  // qu'une nouvelle fiche ne réapparaisse pas en silence.
+  // Une fiche sans qualifications échappait au contrôle ci-dessous : c'est pourtant
+  // le pire cas — elle ouvre des familles et n'est qualifiée sur aucune.
   if (!paquet.qualifications?.logiciels?.length) {
-    sansQualification.push(`${paquet.id} ${paquet.nom}`);
-  }
-  if (paquet.qualifications) {
+    faute(f, `aucun logiciel déclaré : l'entretien ne demandera rien et la boutique ne peut pas filtrer la fiche`);
+  } else {
     const familles = new Set<string>();
     for (const q of paquet.qualifications.logiciels) {
       const outil = logicielsParId.get(q.logiciel);
@@ -192,8 +187,7 @@ for (const f of fichiers) {
     }
     const jamaisDemandees = accesAttendu.filter((c) => !familles.has(c));
     if (jamaisDemandees.length) {
-      fichesHorsQualification++;
-      for (const c of jamaisDemandees) horsQualification.set(c, (horsQualification.get(c) ?? 0) + 1);
+      faute(f, `ouvre ${jamaisDemandees.join(', ')} sans savoir tenir un outil de ces familles : l'entretien ne posera jamais la question`);
     }
   }
 
@@ -224,14 +218,6 @@ if (restants.length) {
 }
 if (restantsContenu.length) {
   console.log(`  ⟳ ${restantsContenu.length} fiche(s) dont le contenu reste à écrire pour son métier (gabarit du générateur).`);
-}
-if (sansQualification.length) {
-  console.log(`  ⟳ ${sansQualification.length} fiche(s) ne savent tenir aucun logiciel : l'entretien ne demandera rien et la boutique ne peut pas les filtrer — ${sansQualification.slice(0, 5).join(', ')}`);
-}
-if (fichesHorsQualification) {
-  const tete = [...horsQualification.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
-    .map(([c, n]) => `${c} (${n})`).join(', ');
-  console.log(`  ⟳ ${fichesHorsQualification} fiche(s) ouvrent une famille de logiciels sur laquelle elles ne sont pas qualifiées : l'entretien ne la demandera pas — ${tete}`);
 }
 console.log(`${fichiers.length} paquets, ${fautes} faute(s)`);
 if (fautes) process.exit(1);
