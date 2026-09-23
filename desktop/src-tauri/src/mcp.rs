@@ -428,12 +428,23 @@ impl Client {
 /// est lue dans le trousseau du système au lancement. Une clé écrite dans un
 /// fichier de configuration se retrouverait dans une sauvegarde, dans un
 /// journal, ou dans le dépôt.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ServeurDeclare {
     pub nom: String,
+    /// La commande qui lance un serveur sur le poste. Vide pour un serveur
+    /// distant, qui porte une `url` à la place.
+    #[serde(default)]
     pub commande: String,
     #[serde(default)]
     pub arguments: Vec<String>,
+    /// L'adresse d'un serveur distant, en « Streamable HTTP ». C'est l'autre
+    /// façon d'avoir un serveur : ou bien on le lance, ou bien on le joint.
+    #[serde(default)]
+    pub url: Option<String>,
+    /// Le NOM de la variable dont la valeur, lue au trousseau, sert de jeton
+    /// porteur vers un serveur distant. Jamais le jeton lui-même.
+    #[serde(default)]
+    pub jeton: Option<String>,
     /// Les NOMS des variables d'environnement à remplir depuis le trousseau.
     #[serde(default)]
     pub secrets: Vec<String>,
@@ -443,7 +454,26 @@ pub struct ServeurDeclare {
     pub connecteur: Option<String>,
 }
 
-/// Refuse une déclaration qui porterait une valeur de secret plutôt qu'un nom.
+impl ServeurDeclare {
+    /// Tous les noms de variables que ce serveur attend : ses secrets, et son
+    /// jeton s'il en faut un. Une seule liste, pour que le trousseau, l'écran et
+    /// la vérification de recevabilité ne finissent pas par en connaître trois.
+    pub fn variables_attendues(&self) -> Vec<String> {
+        let mut noms = self.secrets.clone();
+        if let Some(jeton) = &self.jeton {
+            noms.push(jeton.clone());
+        }
+        noms
+    }
+
+    /// Un serveur qu'on joint par le réseau plutôt qu'en le lançant.
+    pub fn est_distant(&self) -> bool {
+        self.url.is_some()
+    }
+}
+
+/// Refuse une déclaration qui porterait une valeur de secret plutôt qu'un nom,
+/// ou une adresse par laquelle un jeton traverserait le réseau en clair.
 ///
 /// Le piège est facile : on écrit `"secrets": ["sk-ant-..."]` pour essayer, et la
 /// clé part au dépôt. Un nom de variable n'a ni tiret ni point ni espace.
@@ -451,20 +481,89 @@ pub fn declaration_recevable(serveur: &ServeurDeclare) -> Result<(), String> {
     if serveur.nom.trim().is_empty() {
         return Err("un serveur sans nom ne peut pas être appelé".to_string());
     }
-    if serveur.commande.trim().is_empty() {
-        return Err(format!("{} : aucune commande à lancer", serveur.nom));
+
+    // Ou bien on lance le serveur, ou bien on le joint : pas les deux, et jamais
+    // ni l'un ni l'autre. Les deux ensemble laisseraient le choix du transport à
+    // l'ordre des conditions plutôt qu'à la déclaration.
+    let a_commande = !serveur.commande.trim().is_empty();
+    match (&serveur.url, a_commande) {
+        (None, false) => {
+            return Err(format!(
+                "{} : ni commande à lancer, ni adresse à joindre",
+                serveur.nom
+            ))
+        }
+        (Some(_), true) => {
+            return Err(format!(
+                "{} : une commande et une adresse à la fois, on ne sait pas lequel des deux serveurs vous voulez",
+                serveur.nom
+            ))
+        }
+        _ => {}
     }
-    for secret in &serveur.secrets {
-        let nom_de_variable = !secret.is_empty()
-            && secret
+
+    if let Some(url) = &serveur.url {
+        adresse_recevable(&serveur.nom, url)?;
+    }
+
+    for variable in serveur.variables_attendues() {
+        let nom_de_variable = !variable.is_empty()
+            && variable
                 .chars()
                 .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_');
         if !nom_de_variable {
             return Err(format!(
                 "{} : « {} » n'est pas un nom de variable. Les secrets se lisent dans le trousseau du système, ils ne s'écrivent pas ici.",
-                serveur.nom, secret
+                serveur.nom, variable
             ));
         }
+    }
+    Ok(())
+}
+
+/// Ce qu'une adresse de serveur distant a le droit d'être.
+///
+/// Deux refus, pour la même raison : un jeton porteur part avec chaque appel.
+///   - **le lien doit être chiffré.** En clair, le jeton se lit sur le chemin.
+///     La boucle locale est la seule exception, parce qu'elle ne sort pas de la
+///     machine — c'est aussi ce que la spécification du protocole admet.
+///   - **rien avant l'hôte, rien après le chemin.** Un `?cle=...` ou un
+///     `https://jeton@serveur` mettrait un secret dans un fichier du dépôt,
+///     exactement ce que `secrets` interdit par ailleurs.
+fn adresse_recevable(nom: &str, url: &str) -> Result<(), String> {
+    let reste = if let Some(r) = url.strip_prefix("https://") {
+        r
+    } else if let Some(r) = url.strip_prefix("http://") {
+        let hote = r.split(['/', ':']).next().unwrap_or("");
+        if hote != "127.0.0.1" && hote != "localhost" && hote != "[::1]" {
+            return Err(format!(
+                "{} : « {} » n'est pas chiffré. Le jeton d'accès du client partirait en clair à chaque appel.",
+                nom, url
+            ));
+        }
+        r
+    } else {
+        return Err(format!(
+            "{} : « {} » n'est pas une adresse web. Un serveur distant se joint en https.",
+            nom, url
+        ));
+    };
+
+    if reste.contains('?') {
+        return Err(format!(
+            "{} : l'adresse porte des paramètres. Ce qui est secret se range au trousseau du système, pas dans une adresse écrite en clair.",
+            nom
+        ));
+    }
+    let avant_le_chemin = reste.split('/').next().unwrap_or("");
+    if avant_le_chemin.contains('@') {
+        return Err(format!(
+            "{} : l'adresse porte un identifiant. Ce qui est secret se range au trousseau du système, pas dans une adresse écrite en clair.",
+            nom
+        ));
+    }
+    if avant_le_chemin.is_empty() {
+        return Err(format!("{} : l'adresse ne nomme aucun serveur", nom));
     }
     Ok(())
 }
@@ -577,6 +676,343 @@ impl Drop for ProcessusTransport {
 }
 
 // ---------------------------------------------------------------------------
+// Le transport distant : une adresse, du JSON-RPC par-dessus HTTP
+// ---------------------------------------------------------------------------
+
+/// La marge laissée au fil pour rendre son propre message de délai.
+///
+/// Les deux attentes se superposent : celle du client HTTP, qui sait combien de
+/// secondes il a patienté, et celle du canal. Sans marge, c'est le canal qui
+/// expire le premier et le client perd la raison exacte au profit d'un silence.
+const MARGE_DU_CANAL: Duration = Duration::from_secs(5);
+
+/// Parle à un serveur MCP distant, en « Streamable HTTP ».
+///
+/// C'est le transport de la grande majorité du catalogue : 109 connecteurs sur
+/// 137 l'annoncent, contre 9 en processus local. Sans lui, le client MCP de
+/// l'application ne joint presque rien de ce que la boutique propose.
+///
+/// Le travail se fait sur un fil dédié qui porte sa propre boucle d'exécution,
+/// pour la même raison que les tuyaux d'un processus : l'application ne doit
+/// jamais attendre un serveur. Un appel réseau posé au milieu de l'interface la
+/// figerait le temps que le serveur réponde, ou ne réponde pas.
+///
+/// Ce qui n'est PAS fait ici, et qu'il faudra : l'authentification OAuth du
+/// protocole. Le jeton porteur vient du trousseau, rangé à la main par le
+/// client. Un serveur qui exige le parcours d'autorisation complet ne se
+/// connectera pas encore.
+pub struct HttpTransport {
+    /// Fermer cet envoi termine le fil. `None` veut dire « lien coupé ».
+    requetes: Option<std::sync::mpsc::Sender<String>>,
+    retours: std::sync::mpsc::Receiver<Result<Vec<String>, String>>,
+    /// Une réponse peut porter plusieurs messages ; le client les lit un à un.
+    attente: std::collections::VecDeque<String>,
+}
+
+/// Défait un corps de réponse en messages JSON-RPC.
+///
+/// Un serveur a le droit de répondre à plusieurs messages d'un coup, dans un
+/// tableau. On défait le lot ici : laissé entier, il passerait pour une réponse
+/// unique que le client ne reconnaîtrait pas, et il attendrait la sienne
+/// indéfiniment.
+fn messages_du_corps(corps: &str) -> Vec<String> {
+    match serde_json::from_str::<serde_json::Value>(corps) {
+        Ok(serde_json::Value::Array(lot)) => lot.iter().map(|m| m.to_string()).collect(),
+        // Illisible : on le transmet tel quel, c'est le client qui dira pourquoi.
+        _ => vec![corps.to_string()],
+    }
+}
+
+/// Extrait les messages d'un flux d'événements.
+///
+/// Seules les lignes `data:` portent du JSON-RPC ; `event:`, `id:`, `retry:` et
+/// les commentaires sont le cadre du flux et ne nous concernent pas. Un
+/// événement peut tenir sur plusieurs lignes `data:`, qui se recollent avec un
+/// saut de ligne, et une ligne vide le termine.
+fn messages_du_flux(corps: &str) -> Vec<String> {
+    let mut messages = Vec::new();
+    let mut courant = String::new();
+    for ligne in corps.lines() {
+        if let Some(reste) = ligne.strip_prefix("data:") {
+            if !courant.is_empty() {
+                courant.push('\n');
+            }
+            courant.push_str(reste.strip_prefix(' ').unwrap_or(reste));
+        } else if ligne.is_empty() && !courant.is_empty() {
+            messages.extend(messages_du_corps(&std::mem::take(&mut courant)));
+        }
+    }
+    if !courant.is_empty() {
+        messages.extend(messages_du_corps(&courant));
+    }
+    messages
+}
+
+/// Le nom d'hôte seul, pour le dire au client sans recopier l'adresse entière.
+fn hote(url: &str) -> String {
+    url.split("://")
+        .nth(1)
+        .and_then(|r| r.split('/').next())
+        .unwrap_or(url)
+        .to_string()
+}
+
+impl HttpTransport {
+    /// Ouvre le lien. `jeton` est la valeur lue au trousseau par l'appelant :
+    /// ce module ne va pas la chercher, ne la journalise pas, et ne la remet
+    /// jamais dans un message d'erreur.
+    pub fn ouvrir(
+        serveur: &ServeurDeclare,
+        jeton: Option<String>,
+        delai: Duration,
+    ) -> Result<Self, String> {
+        declaration_recevable(serveur)?;
+        let adresse = serveur
+            .url
+            .clone()
+            .ok_or_else(|| format!("{} : aucune adresse à joindre", serveur.nom))?;
+
+        let (envoi_requetes, requetes) = std::sync::mpsc::channel::<String>();
+        let (envoi_retours, retours) = std::sync::mpsc::channel::<Result<Vec<String>, String>>();
+
+        std::thread::spawn(move || {
+            Self::servir(adresse, jeton, delai, requetes, envoi_retours);
+        });
+
+        Ok(HttpTransport {
+            requetes: Some(envoi_requetes),
+            retours,
+            attente: std::collections::VecDeque::new(),
+        })
+    }
+
+    /// La boucle du fil : une requête entre, un aller-retour HTTP, des messages
+    /// ressortent. Elle s'arrête quand le client ferme son envoi.
+    fn servir(
+        adresse: String,
+        jeton: Option<String>,
+        delai: Duration,
+        requetes: std::sync::mpsc::Receiver<String>,
+        retours: std::sync::mpsc::Sender<Result<Vec<String>, String>>,
+    ) {
+        let execution = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+            Ok(e) => e,
+            Err(_) => {
+                let _ = retours.send(Err("le réseau n'est pas disponible sur ce poste".to_string()));
+                return;
+            }
+        };
+        let client = match reqwest::Client::builder().timeout(delai).build() {
+            Ok(c) => c,
+            Err(_) => {
+                let _ = retours.send(Err("le réseau n'est pas disponible sur ce poste".to_string()));
+                return;
+            }
+        };
+
+        let mut session: Option<String> = None;
+
+        while let Ok(ligne) = requetes.recv() {
+            // Une notification n'a pas d'identifiant, donc pas de réponse à
+            // attendre. On ne renvoie rien au client pour elle : un message posé
+            // dans le canal serait pris pour la réponse de l'appel suivant.
+            // Sauf si elle échoue — là il faut bien que quelqu'un l'apprenne.
+            let attend_reponse = serde_json::from_str::<serde_json::Value>(&ligne)
+                .map(|v| v.get("id").is_some())
+                .unwrap_or(true);
+
+            let resultat = execution.block_on(Self::aller_retour(
+                &client, &adresse, &jeton, &session, delai, ligne,
+            ));
+
+            match resultat {
+                Ok((nouvelle_session, messages)) => {
+                    if session.is_none() {
+                        session = nouvelle_session;
+                    }
+                    if attend_reponse && retours.send(Ok(messages)).is_err() {
+                        break;
+                    }
+                }
+                Err(motif) => {
+                    if retours.send(Err(motif)).is_err() {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Le client est parti. On prévient le serveur que la session peut être
+        // oubliée, sans quoi elle reste ouverte chez lui jusqu'à son propre
+        // délai. C'est une politesse : son échec ne regarde personne, et on ne
+        // l'attend que deux secondes.
+        if let Some(s) = session {
+            let _ = execution.block_on(async {
+                tokio::time::timeout(
+                    Duration::from_secs(2),
+                    client
+                        .delete(&adresse)
+                        .header("Mcp-Session-Id", s)
+                        .header("MCP-Protocol-Version", VERSION_PROTOCOLE)
+                        .send(),
+                )
+                .await
+            });
+        }
+    }
+
+    /// Un aller-retour HTTP. Rend l'identifiant de session que le serveur vient
+    /// d'attribuer, s'il en attribue un, et les messages qu'il a renvoyés.
+    async fn aller_retour(
+        client: &reqwest::Client,
+        adresse: &str,
+        jeton: &Option<String>,
+        session: &Option<String>,
+        delai: Duration,
+        ligne: String,
+    ) -> Result<(Option<String>, Vec<String>), String> {
+        let mut demande = client
+            .post(adresse)
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            // Les deux types doivent figurer, et dans un seul en-tête : un
+            // serveur qui n'en voit qu'un répond 406 et rien ne se connecte. Sur
+            // les clients MCP c'est le travers le plus souvent rapporté.
+            .header(
+                reqwest::header::ACCEPT,
+                "application/json, text/event-stream",
+            )
+            .header("MCP-Protocol-Version", VERSION_PROTOCOLE);
+        if let Some(s) = session {
+            demande = demande.header("Mcp-Session-Id", s.as_str());
+        }
+        if let Some(j) = jeton {
+            demande = demande.bearer_auth(j);
+        }
+
+        let reponse = demande.body(ligne).send().await.map_err(|e| {
+            // On dit la nature de la panne, pas le message de la bibliothèque :
+            // il recopie l'adresse entière, et une adresse peut porter ce qu'on
+            // ne veut voir ni dans un journal ni à l'écran.
+            if e.is_timeout() {
+                format!("délai de {} s dépassé", delai.as_secs())
+            } else if e.is_connect() {
+                format!("{} n'a pas répondu à la connexion", hote(adresse))
+            } else {
+                format!("l'échange avec {} a échoué", hote(adresse))
+            }
+        })?;
+
+        let statut = reponse.status();
+        let nouvelle_session = reponse
+            .headers()
+            .get("mcp-session-id")
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_string);
+
+        if !statut.is_success() {
+            return Err(match statut.as_u16() {
+                401 | 403 => format!(
+                    "{} a refusé l'accès. Le jeton rangé au trousseau est absent, périmé, ou ne porte pas les droits demandés.",
+                    hote(adresse)
+                ),
+                // Le 404 sur une session ouverte veut dire que le serveur l'a
+                // oubliée : ce n'est pas une adresse fausse, c'est une session
+                // expirée, et la relance repart d'une poignée de main.
+                404 if session.is_some() => {
+                    format!("la session avec {} a expiré, il faut se reconnecter", hote(adresse))
+                }
+                404 => format!("{} ne propose rien à cette adresse", hote(adresse)),
+                _ => format!("{} a répondu {}", hote(adresse), statut.as_u16()),
+            });
+        }
+
+        let type_contenu = reponse
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_lowercase();
+
+        let corps = reponse
+            .text()
+            .await
+            .map_err(|_| format!("la réponse de {} s'est interrompue", hote(adresse)))?;
+
+        let messages = if type_contenu.contains("text/event-stream") {
+            messages_du_flux(&corps)
+        } else if corps.trim().is_empty() {
+            // 202 : le serveur a pris la notification et n'a rien à dire.
+            Vec::new()
+        } else {
+            messages_du_corps(&corps)
+        };
+
+        Ok((nouvelle_session, messages))
+    }
+}
+
+impl Transport for HttpTransport {
+    fn envoyer(&mut self, ligne: &str) -> Result<(), String> {
+        let requetes = self
+            .requetes
+            .as_ref()
+            .ok_or("le lien avec le serveur est coupé")?;
+        requetes
+            .send(ligne.to_string())
+            .map_err(|_| "le lien avec le serveur est coupé".to_string())
+    }
+
+    fn lire(&mut self, delai: Duration) -> Result<String, String> {
+        if let Some(message) = self.attente.pop_front() {
+            return Ok(message);
+        }
+        match self.retours.recv_timeout(delai + MARGE_DU_CANAL) {
+            Ok(Ok(messages)) => {
+                self.attente.extend(messages);
+                self.attente
+                    .pop_front()
+                    .ok_or_else(|| "le serveur n'a rien répondu".to_string())
+            }
+            Ok(Err(motif)) => Err(motif),
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                Err(format!("délai de {} s dépassé", delai.as_secs()))
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                Err("le serveur s'est arrêté".to_string())
+            }
+        }
+    }
+
+    fn couper(&mut self) {
+        // Fermer l'envoi suffit : le fil sort de sa boucle, dit au serveur que la
+        // session est finie, et s'arrête. On ne l'attend pas — « arrêt immédiat »
+        // veut dire immédiat, et ce dernier message n'intéresse que le serveur.
+        self.requetes = None;
+        self.attente.clear();
+    }
+}
+
+/// Choisit le transport d'après la déclaration : une commande se lance, une
+/// adresse se joint. C'est le seul endroit du code où ce choix se fait.
+pub fn ouvrir_transport(
+    serveur: &ServeurDeclare,
+    secrets: &[(String, String)],
+    delai: Duration,
+) -> Result<Box<dyn Transport>, String> {
+    if serveur.est_distant() {
+        let jeton = serveur.jeton.as_ref().and_then(|nom| {
+            secrets
+                .iter()
+                .find(|(n, _)| n == nom)
+                .map(|(_, valeur)| valeur.clone())
+        });
+        Ok(Box::new(HttpTransport::ouvrir(serveur, jeton, delai)?))
+    } else {
+        Ok(Box::new(ProcessusTransport::lancer(serveur, secrets)?))
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Ce que l'application expose
 // ---------------------------------------------------------------------------
 
@@ -585,12 +1021,17 @@ impl Drop for ProcessusTransport {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServeurVisible {
     pub nom: String,
+    /// La commande lancée sur le poste, vide pour un serveur distant.
     pub commande: String,
+    /// L'adresse jointe par le réseau, absente pour un serveur local.
+    pub adresse: Option<String>,
+    /// `local` ou `distant` : ce que l'écran dit au client, en un mot.
+    pub voie: String,
     pub role: String,
     pub connecteur: Option<String>,
     /// Les noms des variables attendues. Leur valeur reste au trousseau.
     pub secrets_attendus: Vec<String>,
-    /// `true` quand chaque secret attendu est effectivement au trousseau.
+    /// `true` quand chaque variable attendue est effectivement au trousseau.
     pub pret: bool,
 }
 
@@ -606,13 +1047,13 @@ fn trousseau(nom_de_variable: &str) -> Result<keyring::Entry, String> {
 /// avec le message du serveur plutôt qu'avec le nôtre.
 fn secrets_du_trousseau(serveur: &ServeurDeclare) -> Vec<(String, String)> {
     serveur
-        .secrets
-        .iter()
+        .variables_attendues()
+        .into_iter()
         .filter_map(|nom| {
-            trousseau(nom)
+            trousseau(&nom)
                 .ok()
                 .and_then(|e| e.get_password().ok())
-                .map(|valeur| (nom.clone(), valeur))
+                .map(|valeur| (nom, valeur))
         })
         .collect()
 }
@@ -659,14 +1100,17 @@ pub fn mcp_serveurs() -> Result<Vec<ServeurVisible>, String> {
     Ok(lire_serveurs()?
         .into_iter()
         .map(|s| {
+            let attendues = s.declare.variables_attendues();
             let presents = secrets_du_trousseau(&s.declare).len();
             ServeurVisible {
-                pret: presents == s.declare.secrets.len(),
+                pret: presents == attendues.len(),
+                voie: if s.declare.est_distant() { "distant" } else { "local" }.to_string(),
                 nom: s.declare.nom,
                 commande: s.declare.commande,
+                adresse: s.declare.url,
                 role: s.role,
                 connecteur: s.declare.connecteur,
-                secrets_attendus: s.declare.secrets,
+                secrets_attendus: attendues,
             }
         })
         .collect())
@@ -683,7 +1127,7 @@ pub fn mcp_ranger_secret(nom_de_variable: String, valeur: String) -> Result<Stri
     }
     let attendu = lire_serveurs()?
         .iter()
-        .any(|s| s.declare.secrets.contains(&nom_de_variable));
+        .any(|s| s.declare.variables_attendues().contains(&nom_de_variable));
     if !attendu {
         return Err(format!(
             "aucun serveur déclaré n'attend « {} »",
@@ -712,11 +1156,15 @@ pub fn mcp_outils_permis(
         .find(|s| s.declare.nom == serveur)
         .ok_or_else(|| format!("aucun serveur déclaré sous le nom « {} »", serveur))?;
 
-    let transport = ProcessusTransport::lancer(&trouve.declare, &secrets_du_trousseau(&trouve.declare))?;
+    let transport = ouvrir_transport(
+        &trouve.declare,
+        &secrets_du_trousseau(&trouve.declare),
+        DELAI_PAR_DEFAUT,
+    )?;
     let autorisations = Autorisations { outils: outils_autorises, quota: 0 };
     let mut client = Client::nouveau(
         &serveur,
-        Box::new(transport),
+        transport,
         autorisations,
         Arc::new(AtomicBool::new(false)),
     );
@@ -999,9 +1447,8 @@ mod tests {
         let avec_cle = ServeurDeclare {
             nom: "essai".into(),
             commande: "npx".into(),
-            arguments: vec![],
             secrets: vec!["sk-ant-api03-quelque-chose".into()],
-            connecteur: None,
+            ..Default::default()
         };
         let erreur = declaration_recevable(&avec_cle).unwrap_err();
         assert!(erreur.contains("trousseau"));
@@ -1018,11 +1465,73 @@ mod tests {
         let vide = ServeurDeclare {
             nom: "essai".into(),
             commande: "  ".into(),
-            arguments: vec![],
-            secrets: vec![],
-            connecteur: None,
+            ..Default::default()
         };
         assert!(declaration_recevable(&vide).is_err());
+    }
+
+    /// Le jeton d'un serveur distant suit la même règle que les autres secrets :
+    /// un NOM de variable, jamais la valeur. Le chemin est différent (`jeton` et
+    /// non `secrets`), la règle est la même, et c'est ce test qui le tient.
+    #[test]
+    fn un_jeton_ecrit_en_clair_est_refuse_comme_un_secret() {
+        let avec_jeton = ServeurDeclare {
+            nom: "notion".into(),
+            url: Some("https://exemple.test/mcp".into()),
+            jeton: Some("ntn_1234567890abcdef".into()),
+            ..Default::default()
+        };
+        let erreur = declaration_recevable(&avec_jeton).unwrap_err();
+        assert!(erreur.contains("trousseau"), "message peu parlant : {}", erreur);
+
+        let propre = ServeurDeclare {
+            jeton: Some("NOTION_TOKEN".into()),
+            ..avec_jeton
+        };
+        assert!(declaration_recevable(&propre).is_ok());
+        // Le jeton compte parmi les variables attendues : sans ça, l'écran
+        // annoncerait « prêt » à un serveur auquel il manque de quoi entrer.
+        assert_eq!(propre.variables_attendues(), vec!["NOTION_TOKEN".to_string()]);
+    }
+
+    /// Un jeton porteur part avec chaque appel : l'adresse qui le transporte doit
+    /// être chiffrée, et ne doit rien porter elle-même.
+    #[test]
+    fn une_adresse_qui_laisserait_fuir_le_jeton_est_refusee() {
+        let avec = |url: &str| ServeurDeclare {
+            nom: "essai".into(),
+            url: Some(url.into()),
+            ..Default::default()
+        };
+
+        for mauvaise in [
+            "http://mcp.exemple.test/mcp",              // en clair sur le réseau
+            "ftp://exemple.test/mcp",                   // pas une adresse web
+            "https://exemple.test/mcp?cle=secrete",     // un secret dans le dépôt
+            "https://jeton@exemple.test/mcp",           // un identifiant dans le dépôt
+        ] {
+            let erreur = declaration_recevable(&avec(mauvaise)).unwrap_err();
+            assert!(!erreur.is_empty(), "adresse acceptée à tort : {}", mauvaise);
+        }
+
+        assert!(declaration_recevable(&avec("https://mcp.exemple.test/mcp")).is_ok());
+        // La boucle locale ne sort pas de la machine : c'est la seule exception,
+        // et c'est elle qui rend le banc ci-dessous possible.
+        assert!(declaration_recevable(&avec("http://127.0.0.1:8931/mcp")).is_ok());
+        assert!(declaration_recevable(&avec("http://localhost:8931/mcp")).is_ok());
+    }
+
+    /// Ou bien on lance le serveur, ou bien on le joint. Les deux à la fois
+    /// laisseraient le choix du transport à l'ordre des conditions.
+    #[test]
+    fn une_declaration_qui_veut_les_deux_transports_est_refusee() {
+        let deux = ServeurDeclare {
+            nom: "essai".into(),
+            commande: "npx".into(),
+            url: Some("https://exemple.test/mcp".into()),
+            ..Default::default()
+        };
+        assert!(declaration_recevable(&deux).is_err());
     }
 
     /// Le tuyau, pour de vrai.
@@ -1058,8 +1567,7 @@ mod tests {
             nom: "banc".into(),
             commande: "sh".into(),
             arguments: vec!["-c".into(), script.to_string()],
-            secrets: vec![],
-            connecteur: None,
+            ..Default::default()
         };
         let transport = ProcessusTransport::lancer(&serveur, &[]).expect("lancement");
         let autorisations = Autorisations {
@@ -1090,8 +1598,7 @@ mod tests {
             nom: "muet".into(),
             commande: "sh".into(),
             arguments: vec!["-c".into(), "sleep 30".into()],
-            secrets: vec![],
-            connecteur: None,
+            ..Default::default()
         };
         let transport = ProcessusTransport::lancer(&serveur, &[]).expect("lancement");
         let mut c = Client::nouveau(
@@ -1114,11 +1621,291 @@ mod tests {
         let serveur = ServeurDeclare {
             nom: "fantome".into(),
             commande: "iagent-commande-qui-n-existe-pas".into(),
-            arguments: vec![],
-            secrets: vec![],
-            connecteur: None,
+            ..Default::default()
         };
         assert!(ProcessusTransport::lancer(&serveur, &[]).is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // Le transport distant, pour de vrai
+    // -----------------------------------------------------------------------
+
+    /// Une requête telle que le serveur de banc l'a reçue.
+    struct RequeteRecue {
+        methode: String,
+        entetes: Vec<(String, String)>,
+        corps: String,
+    }
+
+    impl RequeteRecue {
+        fn entete(&self, nom: &str) -> Option<&str> {
+            self.entetes
+                .iter()
+                .find(|(n, _)| n == nom)
+                .map(|(_, v)| v.as_str())
+        }
+    }
+
+    /// Un serveur HTTP de banc, minuscule : il lit une requête, la note, et rend
+    /// la réponse suivante de la pile.
+    ///
+    /// Écrit à la main plutôt qu'avec une bibliothèque, pour que le banc ne
+    /// dépende de rien de plus que ce qui est déjà dans le dépôt — et pour qu'il
+    /// tourne sous Windows, ce que le banc du processus local ne fait pas.
+    fn serveur_de_banc(reponses: Vec<String>) -> (String, std::sync::Arc<std::sync::Mutex<Vec<RequeteRecue>>>) {
+        let ecoute = std::net::TcpListener::bind("127.0.0.1:0").expect("écoute locale");
+        let port = ecoute.local_addr().expect("adresse").port();
+        let recues = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let journal = recues.clone();
+
+        std::thread::spawn(move || {
+            let mut restantes = reponses.into_iter();
+            for flux in ecoute.incoming() {
+                let Ok(mut flux) = flux else { break };
+                let Some(requete) = lire_requete(&mut flux) else { continue };
+                // Le DELETE de fin de session ne consomme pas de réponse : il
+                // arrive après tout le reste et on ne veut pas qu'il décale la pile.
+                let fin = requete.methode == "DELETE";
+                journal.lock().expect("journal").push(requete);
+                let reponse = if fin {
+                    "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_string()
+                } else {
+                    restantes.next().unwrap_or_else(|| {
+                        "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_string()
+                    })
+                };
+                use std::io::Write;
+                let _ = flux.write_all(reponse.as_bytes());
+                let _ = flux.flush();
+                if fin {
+                    break;
+                }
+            }
+        });
+
+        (format!("http://127.0.0.1:{}/mcp", port), recues)
+    }
+
+    fn lire_requete(flux: &mut std::net::TcpStream) -> Option<RequeteRecue> {
+        use std::io::{BufRead, BufReader, Read};
+        let mut lecteur = BufReader::new(flux.try_clone().ok()?);
+        let mut premiere = String::new();
+        lecteur.read_line(&mut premiere).ok()?;
+        if premiere.trim().is_empty() {
+            return None;
+        }
+        let methode = premiere.split_whitespace().next()?.to_string();
+
+        let mut entetes = Vec::new();
+        let mut taille = 0usize;
+        loop {
+            let mut ligne = String::new();
+            if lecteur.read_line(&mut ligne).ok()? == 0 || ligne.trim().is_empty() {
+                break;
+            }
+            if let Some((nom, valeur)) = ligne.split_once(':') {
+                let nom = nom.trim().to_lowercase();
+                let valeur = valeur.trim().to_string();
+                if nom == "content-length" {
+                    taille = valeur.parse().unwrap_or(0);
+                }
+                entetes.push((nom, valeur));
+            }
+        }
+
+        let mut corps = vec![0u8; taille];
+        if taille > 0 {
+            lecteur.read_exact(&mut corps).ok()?;
+        }
+        Some(RequeteRecue {
+            methode,
+            entetes,
+            corps: String::from_utf8_lossy(&corps).to_string(),
+        })
+    }
+
+    fn reponse_json(corps: &str, session: Option<&str>) -> String {
+        let mut entetes = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n",
+            corps.len()
+        );
+        if let Some(s) = session {
+            entetes.push_str(&format!("Mcp-Session-Id: {}\r\n", s));
+        }
+        format!("{}\r\n{}", entetes, corps)
+    }
+
+    /// Le 202 d'une notification : le serveur a pris, il n'a rien à dire.
+    fn reponse_acceptee() -> String {
+        "HTTP/1.1 202 Accepted\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_string()
+    }
+
+    fn reponse_flux(evenements: &[&str]) -> String {
+        let corps: String = evenements
+            .iter()
+            .map(|e| format!("event: message\ndata: {}\n\n", e))
+            .collect();
+        format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            corps.len(),
+            corps
+        )
+    }
+
+    fn client_distant(url: &str, outils: Vec<&str>, quota: u32, delai: Duration) -> Client {
+        let serveur = ServeurDeclare {
+            nom: "distant".into(),
+            url: Some(url.to_string()),
+            jeton: Some("BANC_JETON".into()),
+            ..Default::default()
+        };
+        let transport = HttpTransport::ouvrir(
+            &serveur,
+            Some("jeton-de-banc".to_string()),
+            delai,
+        )
+        .expect("ouverture du lien");
+        Client::nouveau(
+            "distant",
+            Box::new(transport),
+            Autorisations {
+                outils: outils.into_iter().map(String::from).collect(),
+                quota,
+            },
+            Arc::new(AtomicBool::new(false)),
+        )
+        .avec_delai(delai)
+    }
+
+    /// L'aller-retour complet contre un vrai serveur HTTP : poignée de main,
+    /// notification, liste des outils, appel. C'est le pendant du banc des
+    /// tuyaux, pour les 109 connecteurs du catalogue qui sont distants.
+    #[test]
+    fn un_vrai_serveur_http_repond_et_la_session_le_suit() {
+        let (url, recues) = serveur_de_banc(vec![
+            reponse_json(
+                r#"{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18"}}"#,
+                Some("session-de-banc"),
+            ),
+            reponse_acceptee(),
+            reponse_json(
+                r#"{"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"lire_note","description":"d","annotations":{"readOnlyHint":true}}]}}"#,
+                None,
+            ),
+            reponse_json(
+                r#"{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"bonjour"}]}}"#,
+                None,
+            ),
+        ]);
+
+        let mut c = client_distant(&url, vec!["distant/lire_note"], 5, Duration::from_secs(10));
+        c.ouvrir().expect("poignée de main sur un vrai serveur");
+        assert_eq!(c.outils().len(), 1);
+        let r = c
+            .appeler("Marie", "lire_note", serde_json::json!({}), false)
+            .expect("appel");
+        assert_eq!(r["content"][0]["text"], "bonjour");
+
+        let journal = recues.lock().expect("journal");
+        assert_eq!(journal.len(), 4, "quatre échanges attendus");
+
+        // Les deux types doivent figurer dans le même en-tête : c'est ce que les
+        // serveurs vérifient, et l'oublier vaut un 406 avant le premier outil.
+        let accept = journal[0].entete("accept").expect("en-tête accept");
+        assert!(accept.contains("application/json"), "accept : {}", accept);
+        assert!(accept.contains("text/event-stream"), "accept : {}", accept);
+        assert_eq!(journal[0].entete("mcp-protocol-version"), Some(VERSION_PROTOCOLE));
+
+        // La session est attribuée à la poignée de main et suit tout le reste,
+        // la notification comprise : un serveur qui ne la voit pas repart de zéro.
+        assert_eq!(journal[0].entete("mcp-session-id"), None);
+        for echange in journal.iter().skip(1) {
+            assert_eq!(
+                echange.entete("mcp-session-id"),
+                Some("session-de-banc"),
+                "session absente de : {}",
+                echange.corps
+            );
+        }
+        assert_eq!(journal[1].entete("authorization"), Some("Bearer jeton-de-banc"));
+        assert!(journal[1].corps.contains("notifications/initialized"));
+    }
+
+    /// Un serveur a le droit de répondre en flux d'événements, et d'y glisser ses
+    /// propres messages avant le nôtre. On doit retrouver le nôtre quand même.
+    #[test]
+    fn une_reponse_en_flux_d_evenements_se_lit() {
+        let (url, _) = serveur_de_banc(vec![
+            reponse_flux(&[r#"{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18"}}"#]),
+            reponse_acceptee(),
+            reponse_flux(&[
+                r#"{"jsonrpc":"2.0","method":"notifications/message","params":{"level":"info"}}"#,
+                r#"{"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"lire_note","description":"d","annotations":{"readOnlyHint":true}}]}}"#,
+            ]),
+        ]);
+
+        let mut c = client_distant(&url, vec![], 0, Duration::from_secs(10));
+        c.ouvrir().expect("poignée de main en flux");
+        assert_eq!(c.outils().len(), 1);
+        assert_eq!(c.outils()[0].nom, "lire_note");
+    }
+
+    /// Un serveur qui accepte la connexion et se tait ne fige pas l'application.
+    #[test]
+    fn un_serveur_distant_muet_rend_la_main_au_delai() {
+        let ecoute = std::net::TcpListener::bind("127.0.0.1:0").expect("écoute locale");
+        let port = ecoute.local_addr().expect("adresse").port();
+        std::thread::spawn(move || {
+            // On accepte, et on garde la connexion sans rien répondre.
+            let mut ouvertes = Vec::new();
+            for flux in ecoute.incoming() {
+                match flux {
+                    Ok(f) => ouvertes.push(f),
+                    Err(_) => break,
+                }
+            }
+        });
+
+        let url = format!("http://127.0.0.1:{}/mcp", port);
+        let mut c = client_distant(&url, vec![], 0, Duration::from_secs(1));
+        let debut = std::time::Instant::now();
+        let refus = c.ouvrir().expect_err("un serveur muet ne peut pas aboutir");
+        assert!(matches!(refus, Refus::DelaiDepasse { .. }), "refus inattendu : {:?}", refus);
+        // Le délai est tenu, pas subi.
+        assert!(debut.elapsed() < Duration::from_secs(8));
+    }
+
+    /// Un refus d'accès se dit au client dans ses mots, et lui dit où regarder.
+    #[test]
+    fn un_acces_refuse_se_dit_en_clair() {
+        let (url, _) = serveur_de_banc(vec![
+            "HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_string(),
+        ]);
+        let mut c = client_distant(&url, vec![], 0, Duration::from_secs(10));
+        let refus = c.ouvrir().expect_err("401 ne peut pas aboutir");
+        let phrase = refus.en_clair();
+        assert!(phrase.contains("trousseau"), "phrase peu utile : {}", phrase);
+        assert!(!phrase.contains("401"), "code technique à l'écran : {}", phrase);
+    }
+
+    /// Un lot de réponses dans un seul corps se défait : sinon le client attend
+    /// une réponse qu'il a déjà reçue sans la reconnaître.
+    #[test]
+    fn un_lot_de_messages_se_defait() {
+        let messages = messages_du_corps(
+            r#"[{"jsonrpc":"2.0","id":1,"result":{}},{"jsonrpc":"2.0","id":2,"result":{}}]"#,
+        );
+        assert_eq!(messages.len(), 2);
+        assert!(messages[1].contains("\"id\":2"));
+    }
+
+    /// Le cadre du flux n'est pas du JSON-RPC : seules les lignes `data:` comptent.
+    #[test]
+    fn le_cadre_du_flux_ne_passe_pas_pour_un_message() {
+        let flux = ": un commentaire\nevent: message\nid: 7\nretry: 100\ndata: {\"jsonrpc\":\"2.0\",\"id\":1}\n\n";
+        let messages = messages_du_flux(flux);
+        assert_eq!(messages.len(), 1);
+        assert!(messages[0].contains("jsonrpc"));
     }
 
     #[test]

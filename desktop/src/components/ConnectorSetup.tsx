@@ -183,10 +183,21 @@ export default function ConnectorSetup() {
 interface ServeurVisible {
   nom: string
   commande: string
+  adresse: string | null
+  voie: string
   role: string
   connecteur: string | null
   secrets_attendus: string[]
   pret: boolean
+}
+
+/**
+ * Où tourne l'outil. Ça compte pour le client : un outil local ne fait rien
+ * sortir de chez lui, un outil distant parle à un serveur de l'éditeur.
+ */
+const VOIES: Record<string, string> = {
+  local: 'sur votre ordinateur',
+  distant: "chez l'éditeur, par internet",
 }
 
 /**
@@ -238,6 +249,7 @@ function Outillage() {
         {serveurs.map((s) => (
           <li key={s.nom}>
             <strong>{s.role}</strong>
+            <span className="precision">{VOIES[s.voie] ?? s.voie}</span>
             {s.secrets_attendus.length > 0 && !s.pret && (
               <span className="etapes">
                 {s.secrets_attendus.map((nom) => (

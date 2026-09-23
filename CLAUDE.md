@@ -149,8 +149,30 @@ par WhatsApp et email.
   modifie**), quota par exécution, délai, et arrêt immédiat qui coupe le
   processus. Tout appel est journalisé, abouti ou refusé, avec un motif en
   français sans jargon — un banc vérifie qu'aucun refus ne contient « error »,
-  « null » ni « MCP ». **Le tuyau réel n'est constaté que sous Unix** (test avec
-  un vrai `sh`) ; sous Windows, cible du produit, il ne l'est pas encore.
+  « null » ni « MCP ». **Le tuyau d'un processus local n'est constaté que sous
+  Unix** (test avec un vrai `sh`) ; sous Windows, cible du produit, il ne l'est
+  pas encore.
+- **Un serveur MCP se lance OU se joint, jamais les deux.** `ServeurDeclare`
+  porte une `commande` (processus local, tuyaux) ou une `url` (serveur distant,
+  « Streamable HTTP »), et `ouvrir_transport()` est le seul endroit qui choisit.
+  C'est le transport de la grande majorité du catalogue : **109 connecteurs sur
+  137 sont distants, 9 seulement sont locaux** — sans lui le client ne joint
+  presque rien. Trois pièges tenus par des bancs qui échouent si on les défait :
+  l'en-tête `Accept` doit porter `application/json` **et** `text/event-stream`
+  (un seul des deux vaut 406 avant le premier outil), l'identifiant de session
+  rendu à la poignée de main doit repartir sur **tout** le reste y compris la
+  notification, et une notification n'attend pas de réponse — en attendre une
+  décale toutes les suivantes. Le banc parle à un vrai serveur HTTP écrit à la
+  main sur la boucle locale, donc il tourne aussi sous Windows. **Ce qui n'est
+  pas fait : l'authentification OAuth du protocole** (le jeton vient du
+  trousseau, rangé à la main) et **aucun serveur distant d'éditeur n'a encore
+  été joint**.
+- **Une adresse de serveur distant est chiffrée et ne porte rien.**
+  `adresse_recevable()` refuse `http://` hors boucle locale (le jeton porteur
+  part à chaque appel et se lirait sur le chemin), refuse un `?cle=…` et un
+  `https://jeton@hote` (ce serait un secret dans le dépôt). Les messages
+  d'erreur du réseau ne recopient jamais l'adresse, seulement son hôte, pour la
+  même raison que `stderr` du processus fils part au néant.
 - **Les champs d'une structure Rust traversent vers l'écran avec LEURS noms**
   (`declare_le`, pas `declareLe`) : le dépôt n'emploie pas `rename_all`. Écrire le
   champ en camelCase côté React ne fait échouer ni le compilateur ni l'exécution,
@@ -159,7 +181,8 @@ par WhatsApp et email.
   en JavaScript arrive en `nom_de_variable` en Rust. `check-connecteurs.ts` relit
   les deux fichiers et compare les noms de champs.
 - **Les secrets des serveurs MCP vivent au trousseau du système**, jamais dans
-  `connecteurs/serveurs-mcp.json`, qui ne porte que des NOMS de variables.
+  `connecteurs/serveurs-mcp.json`, qui ne porte que des NOMS de variables
+  (`secrets`, et `jeton` pour un serveur distant — même règle, même banc).
   `declaration_recevable()` refuse le fichier entier si une ligne ressemble à une
   clé, et l'application ne démarre pas plutôt que de laisser circuler un secret.
 - **Un prix ne se devine pas.** `connecteurs/couts.json` est le seul endroit du
