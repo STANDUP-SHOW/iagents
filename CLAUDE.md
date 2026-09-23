@@ -503,6 +503,19 @@ par WhatsApp et email.
   lit et n'écrit que chez lui** ; atteindre un dossier du client demande qu'il
   l'ait désigné. Un chemin logique venu d'une fiche est revérifié (`..`, `/`,
   majuscules refusés) : le contrat l'impose déjà, mais il arrive du disque.
+- **Ce que l'application attend du poste est écrit à un seul endroit**
+  (`desktop/src-tauri/src/ressources.rs`, 23/09/2026) : rôle en clair, chemin
+  cherché, variable qui le déplace, livrée ou non par l'installeur, et le remède
+  quand elle manque. Deux bancs refusent l'écart **dans les deux sens** — une
+  ressource déclarée livrée que `tauri.conf.json` ne pose pas, et une ressource
+  déclarée absente qu'il pose quand même. Ce qui a fait écrire la règle :
+  `voice.rs` affirmait « le binaire et la voix sont livrés avec l'application »
+  et l'installeur ne livrait **ni l'un ni l'autre** ; sur un poste installé, la
+  conversation vocale — la dernière étape du parcours minimal — ne pouvait pas
+  démarrer, et l'écran n'en disait que « Failed to initialize voice », en
+  anglais. La voix demande quatre pièces (moteur Piper, voix `.onnx`, ses
+  réglages `.onnx.json`, modèle d'écoute) ; le README dit où les prendre.
+  **Écouter et parler ne demandent pas les mêmes pièces** et se disent à part.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,

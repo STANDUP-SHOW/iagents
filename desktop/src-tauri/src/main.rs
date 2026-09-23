@@ -16,6 +16,7 @@ mod navigateur;
 mod tache;
 mod document;
 mod jauge;
+mod ressources;
 mod pdf;
 mod lecture;
 mod agents;
@@ -52,16 +53,26 @@ fn greet(name: &str) -> String {
 
 #[tauri::command]
 fn init_voice(state: State<AppState>) -> Result<String, String> {
-    // Initialize voice with default model path (typically bundled)
-    let model_path = voice::chemin_modele_ecoute();
+    // Ce qui manque se dit AVANT d'essayer. whisper-rs rend « failed to load
+    // model », qui ne nomme ni le fichier ni ce que le client peut y faire, et
+    // l'écran le montrait tel quel, en anglais, à un client francophone.
+    if let Some(manque) = ressources::manque_pour_ecouter() {
+        return Err(manque);
+    }
 
+    let model_path = voice::chemin_modele_ecoute();
     match VoiceState::new(&model_path) {
         Ok(voice_state) => {
             let mut voice = state.voice.lock().unwrap();
             *voice = Some(voice_state);
-            Ok("Voice module initialized".to_string())
+            Ok("Écoute prête.".to_string())
         }
-        Err(e) => Err(format!("Failed to initialize voice: {}", e))
+        // Le fichier est là et ne se charge pas : ce n'est plus le même problème,
+        // et renvoyer au README enverrait le client retélécharger pour rien.
+        Err(e) => Err(format!(
+            "Le modèle d'écoute est bien là mais n'a pas pu être chargé : {}",
+            e
+        )),
     }
 }
 
@@ -72,7 +83,7 @@ fn start_voice_recognition(state: State<AppState>) -> Result<String, String> {
     if let Some(voice) = voice_guard.as_ref() {
         voice.start_listening()
     } else {
-        Err("Voice not initialized. Call init_voice first.".to_string())
+        Err("L'écoute n'est pas prête sur ce poste.".to_string())
     }
 }
 
@@ -83,7 +94,7 @@ fn stop_voice_recognition(state: State<AppState>) -> Result<String, String> {
     if let Some(voice) = voice_guard.as_ref() {
         voice.stop_listening()
     } else {
-        Err("Voice not initialized".to_string())
+        Err("L'écoute n'est pas prête sur ce poste.".to_string())
     }
 }
 
@@ -94,7 +105,7 @@ fn process_voice_audio(audio_data: Vec<i16>, state: State<AppState>) -> Result<O
     if let Some(voice) = voice_guard.as_ref() {
         voice.process_audio(&audio_data)
     } else {
-        Err("Voice not initialized".to_string())
+        Err("L'écoute n'est pas prête sur ce poste.".to_string())
     }
 }
 
@@ -105,7 +116,7 @@ fn get_partial_result(state: State<AppState>) -> Result<Option<String>, String> 
     if let Some(voice) = voice_guard.as_ref() {
         voice.get_partial_result().map(Some)
     } else {
-        Err("Voice not initialized".to_string())
+        Err("L'écoute n'est pas prête sur ce poste.".to_string())
     }
 }
 
@@ -490,7 +501,7 @@ fn train_voice(utterances: Vec<String>, state: State<AppState>) -> Result<String
             "Voice training prepared. Use enroll_voice with audio samples to complete."
         ))
     } else {
-        Err("Voice not initialized".to_string())
+        Err("L'écoute n'est pas prête sur ce poste.".to_string())
     }
 }
 

@@ -233,8 +233,9 @@ fn ressource(variable: &str, defaut: &str) -> std::path::PathBuf {
 }
 
 /// Piper : synthèse neurone sur CPU, c'est ce que le palier « audio-parole »
-/// du dimensionnement chiffre. Le binaire et la voix sont livrés avec
-/// l'application ; aucun interpréteur tiers n'est requis sur le poste.
+/// du dimensionnement chiffre. Aucun interpréteur tiers n'est requis sur le
+/// poste — mais le binaire et la voix **ne sont pas encore livrés avec
+/// l'application** : `crate::ressources` dit ce qui manque et où le prendre.
 fn chemin_piper() -> std::path::PathBuf {
     ressource(
         "IAGENT_PIPER",
@@ -259,14 +260,14 @@ pub async fn text_to_speech(text: &str) -> Result<String, String> {
         return Ok("rien à prononcer".to_string());
     }
 
+    // Les trois pièces d'un coup : le moteur, la voix et ses réglages. Piper lit
+    // les réglages tout seul à côté du modèle, donc leur absence ne se voyait
+    // qu'à un échec sans message une fois le processus lancé.
+    if let Some(manque) = crate::ressources::manque_pour_parler() {
+        return Err(manque);
+    }
     let binaire = chemin_piper();
     let voix = chemin_voix();
-    if !binaire.exists() {
-        return Err(format!("moteur de voix introuvable : {}", binaire.display()));
-    }
-    if !voix.exists() {
-        return Err(format!("voix introuvable : {}", voix.display()));
-    }
 
     let sortie_wav = std::env::temp_dir().join(format!("iagent-{}.wav", std::process::id()));
 
