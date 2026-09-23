@@ -137,6 +137,15 @@ par WhatsApp et email.
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,
   le client valide. Les règles qui comptent sont appliquées par le code
   (`expert.regles` → l'application), pas seulement lues par le modèle.
+- **Le parcours d'embauche ne fait remplir que ce que l'agent ne peut pas
+  demander** : quelle fiche, quel prénom, quel genre, quel visage. Tout le
+  reste, c'est l'agent qui le demande, avec une proposition tirée de sa fiche
+  que le client confirme ou corrige (décision de Max, 22/09/2026 : pas
+  l'impression de paramétrer). Le cadrage parlait de neuf écrans à remplir ;
+  quatre suffisent, l'entretien fait les cinq autres.
+  `desktop/check-embauche.ts` vérifie la forme des données que l'écran lit :
+  un champ du catalogue renommé viderait la liste des postes sans rien casser
+  de visible.
 - **Rien ne part par courriel sans que le client ait relu le texte exact.**
   L'interface calcule une empreinte du brouillon affiché
   (`desktop/src/agents/courriel.ts`), `courriel_envoyer` la recalcule et refuse
