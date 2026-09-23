@@ -49,6 +49,7 @@ const restantsContenu: string[] = [];
 // éditoriale n'a pas rattrapé les fiches concernées.
 const horsQualification = new Map<string, number>();
 let fichesHorsQualification = 0;
+const sansQualification: string[] = [];
 // Chaque champ garde la première fiche qui l'a employé : la reprise ultérieure est la faute.
 const vus = {
   accroche: new Map<string, string>(),
@@ -176,6 +177,13 @@ for (const f of fichiers) {
     else faute(f, `acces.logiciels ≠ ce que les tâches ouvrent : attendu ${JSON.stringify(accesAttendu)}`);
   }
 
+  // Une fiche sans qualifications échappait au compte ci-dessous : c'est pourtant
+  // le pire cas — elle ouvre des familles et n'est qualifiée sur aucune. Les 40
+  // qui étaient dans ce cas ont été écrites le 23/09/2026 ; le compte est là pour
+  // qu'une nouvelle fiche ne réapparaisse pas en silence.
+  if (!paquet.qualifications?.logiciels?.length) {
+    sansQualification.push(`${paquet.id} ${paquet.nom}`);
+  }
   if (paquet.qualifications) {
     const familles = new Set<string>();
     for (const q of paquet.qualifications.logiciels) {
@@ -216,6 +224,9 @@ if (restants.length) {
 }
 if (restantsContenu.length) {
   console.log(`  ⟳ ${restantsContenu.length} fiche(s) dont le contenu reste à écrire pour son métier (gabarit du générateur).`);
+}
+if (sansQualification.length) {
+  console.log(`  ⟳ ${sansQualification.length} fiche(s) ne savent tenir aucun logiciel : l'entretien ne demandera rien et la boutique ne peut pas les filtrer — ${sansQualification.slice(0, 5).join(', ')}`);
 }
 if (fichesHorsQualification) {
   const tete = [...horsQualification.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
