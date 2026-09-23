@@ -175,6 +175,8 @@ export const INTITULES: Record<string, string> = {
   'bases-scientifiques': "Quand vous cherchez une source, vous allez la chercher où ?",
   'correction-redaction': "Avant de publier un texte, vous le faites relire par quoi ?",
   'donnees-recherche': "Vos jeux de données, vous les déposez où et avec quel plan ?",
+  'gestion-patrimoine': "Les dossiers de vos clients et leurs contrats, vous les tenez dans quoi ?",
+  'kyc-lcb-ft': "Avant d'entrer en relation, vous vérifiez l'identité et les listes avec quoi ?",
   sante: "Votre logiciel de cabinet ou de patientèle, c'est lequel ?",
   dentaire: "Vos fauteuils, vos devis et vos schémas dentaires sont tenus dans quoi ?",
   'laboratoire-analyses': "Vos demandes d'analyse et vos comptes rendus passent par quel logiciel ?",
