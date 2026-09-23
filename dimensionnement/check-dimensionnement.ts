@@ -1,7 +1,7 @@
 // Bench for the sizing engine against the REAL machine catalogue (AliExpress mini-PCs, iGPU only).
 // Expectations are written by hand, never derived from the code under test.
 import assert from 'node:assert/strict';
-import { materielPour, machinesPourPack, agentsParMachine, appelsParJour, jaugeMachine, diagnosticLocal, kitClient, MACHINES, BUNDLES, POSTES, type AgentDimension } from './calculer.ts';
+import { materielPour, machinesPourPack, agentsParMachine, appelsParJour, jaugeMachine, diagnosticLocal, kitClient, MACHINES, BUNDLES, POSTES, RESERVE_MEMOIRE_UNIFIEE, type AgentDimension } from './calculer.ts';
 
 const bureau: AgentDimension = { id: 'bureau', modeles: { texte: 'texte-standard', audio: 'audio-parole', embeddings: 'embeddings', activite: 0.15 } };
 const analyste: AgentDimension = { id: 'analyste', modeles: { texte: 'texte-avance', audio: 'audio-parole', embeddings: 'embeddings', activite: 0.3 } };
@@ -133,5 +133,22 @@ assert.equal(kit.postes.machine.role, 'poste');
 assert.equal(kit.prixKit, kit.prixTotal + 5 * POSTES[0].prixIndicatif);
 assert.ok(kit.machines.every((m) => m.machine.role === 'bundle'));
 ok('un kit client = bundles cerveau + postes ; un poste ne porte jamais d agent');
+
+// 16. Unified memory is not a free field: on a mini-PC the memory left to models is
+// the RAM minus the reserve, and a poste carries no agent so it carries no model.
+// Written by hand in machines.json, so a new reference can enter with a wrong figure
+// and every placement below it would be wrong without a single error.
+const unifiees = MACHINES.filter((m) => m.memoireUnifiee);
+assert.ok(unifiees.length >= 25, `${unifiees.length} machines a memoire unifiee, c est trop peu pour un relevé`);
+for (const m of unifiees) {
+  const attendu = m.role === 'poste' ? 0 : m.ram - RESERVE_MEMOIRE_UNIFIEE;
+  assert.equal(m.vram, attendu, `${m.id} : ${m.ram} Go de RAM, ${m.vram} Go annonces aux modeles, ${attendu} attendus`);
+}
+// A dedicated card carries its own memory, which is not derived from anything.
+assert.ok(
+  MACHINES.filter((m) => !m.memoireUnifiee).every((m) => m.vram > 0 && m.vram !== m.ram - RESERVE_MEMOIRE_UNIFIEE),
+  'une machine a carte dediee dont la memoire suivrait la regle unifiee est une machine mal classee'
+);
+ok(`${unifiees.length} machines a memoire unifiee : la memoire des modeles suit la RAM moins ${RESERVE_MEMOIRE_UNIFIEE} Go`);
 
 console.log(`\n${n} attentes tenues — dimensionnement ok`);

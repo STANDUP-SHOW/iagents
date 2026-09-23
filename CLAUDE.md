@@ -99,7 +99,12 @@ par WhatsApp et email.
   qu'il n'est jamais retenu sur le prix. À réserver à qui exige une appliance
   silencieuse basse consommation. `capaciteGpu` = bande passante / 504 Go/s.
 - **Les mini-PC du comparatif n'ont aucun GPU dédié.** Mémoire unifiée : la
-  mémoire des modèles, c'est la RAM moins 6 Go de réserve ; un Radeon 780M vaut
+  mémoire des modèles, c'est la RAM moins 6 Go de réserve — `vram` est écrit à
+  la main dans `machines.json` mais **`check-dimensionnement` refuse depuis le
+  23/09 toute machine unifiée qui s'en écarte** (et 0 pour un poste, qui ne
+  porte aucun agent) : une référence entrée avec un chiffre faux rendrait faux
+  tous les placements sans une seule erreur. La réserve est
+  `reserveMemoireUnifiee` du fichier des paliers, jamais un 6 recopié ; un Radeon 780M vaut
   ~0,20 d'une carte de bureau (bande passante mémoire). Conséquence mesurée par
   `outils/packs.ts` : **3 postes de bureau par Firebat AM02 Ryzen 7 (~271 €)**,
   un poste d'analyse (14B) exige 24 Go ou plus, et **les agents image, vidéo,
