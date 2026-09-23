@@ -11,9 +11,10 @@ import ConnectorSetup from './components/ConnectorSetup'
 import Navigateur from './components/Navigateur'
 import Courriel from './components/Courriel'
 import Embauche from './components/Embauche'
+import Travail from './components/Travail'
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors' | 'navigateur' | 'courriel' | 'embauche'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors' | 'navigateur' | 'courriel' | 'embauche' | 'travail'>('dashboard')
   const [agents, setAgents] = useState<any[]>([])
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
   const [isListening, setIsListening] = useState(false)
@@ -292,6 +293,12 @@ function App() {
           Courrier
         </button>
         <button
+          className={activeTab === 'travail' ? 'active' : ''}
+          onClick={() => setActiveTab('travail')}
+        >
+          Le travail du jour
+        </button>
+        <button
           className={activeTab === 'embauche' ? 'active' : ''}
           onClick={() => setActiveTab('embauche')}
         >
@@ -318,6 +325,7 @@ function App() {
         {activeTab === 'connectors' && <ConnectorSetup />}
         {activeTab === 'navigateur' && <Navigateur />}
         {activeTab === 'courriel' && <Courriel />}
+        {activeTab === 'travail' && <Travail />}
         {activeTab === 'embauche' && <Embauche />}
       </main>
     </div>

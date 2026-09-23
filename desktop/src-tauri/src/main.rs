@@ -13,6 +13,7 @@ mod journal;
 mod mcp;
 mod modele;
 mod navigateur;
+mod tache;
 mod agents;
 mod connectors;
 mod database;
@@ -211,6 +212,81 @@ async fn repondre(
     };
 
     Ok(ReponseAgent { texte, motif: choix.motif, bascule: choix.bascule })
+}
+
+/// Exécute une tâche de l'agent et pose le résultat dans le dossier du client.
+///
+/// Le parcours minimal du cadrage s'arrêtait ici : les fiches décrivent
+/// 9 233 tâches et aucune ne pouvait s'exécuter. Ce qui décide — l'agent est-il
+/// embauché, la tâche est-elle allumée, le dossier a-t-il été choisi, le format
+/// est-il seulement écrivable — est dans `tache::preparer`, éprouvé à part ;
+/// cette commande ne fait que le suivre, appeler le modèle par la même route que
+/// la conversation, et écrire.
+///
+/// Rien ne part du poste : un résultat qui attend un accord est écrit et le dit.
+#[tauri::command]
+async fn executer_tache(
+    prenom: String,
+    fiche_id: String,
+    tache_id: String,
+    state: State<'_, AppState>,
+) -> Result<tache::Resultat, String> {
+    let installation = fiches::lire_installation()?;
+    let fiche = fiches::lire_fiche(fiche_id.clone())?;
+    let maintenant = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let prep = tache::preparer(&installation, &fiche, &prenom, &fiche_id, &tache_id, maintenant)?;
+
+    let (execution, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
+    let offre = modele::Offre {
+        locaux: modele::modeles_installes(modele::ADRESSE_LOCALE).await.ok(),
+        cle_api: std::env::var("ANTHROPIC_API_KEY").is_ok(),
+    };
+    let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_API)?;
+
+    let texte = match &choix.voie {
+        modele::Voie::Local { modele: nom } => {
+            modele::repondre_en_local(modele::ADRESSE_LOCALE, nom, &prep.systeme, &prep.enonce)
+                .await?
+        }
+        modele::Voie::Api { .. } => {
+            let llm_service = {
+                let llm = state.llm.lock().unwrap();
+                llm.as_ref()
+                    .ok_or("aucune cle d API n est enregistree sur cet ordinateur")?
+                    .clone()
+            };
+            let persona = AgentPersona {
+                id: prenom.clone(),
+                name: prenom.clone(),
+                role: String::new(),
+                system_prompt: prep.systeme.clone(),
+            };
+            llm_service.call_agent_llm(&persona, &prep.enonce).await?
+        }
+    };
+
+    // Un fichier vide serait pire qu'une erreur : le client croirait le travail
+    // fait. Le modèle qui n'a rien rendu est un échec, pas un résultat.
+    if texte.trim().is_empty() {
+        return Err(format!(
+            "{} n'a rien rendu pour cette tâche : aucun fichier n'a été écrit",
+            prenom
+        ));
+    }
+
+    let chemin = tache::poser(&prep.dossier, &prep.nom_fichier, &texte)?;
+    Ok(tache::Resultat {
+        fichier: chemin.display().to_string(),
+        voie: match &choix.voie {
+            modele::Voie::Local { .. } => "local".to_string(),
+            modele::Voie::Api { .. } => "api".to_string(),
+        },
+        motif: choix.motif,
+        validation_humaine: prep.validation_humaine,
+    })
 }
 
 #[tauri::command]
@@ -473,6 +549,7 @@ fn main() {
             mcp::mcp_appeler,
             mcp::mcp_journal,
             modele::modele_etat,
+            executer_tache,
             repondre,
             courriel::courriel_enregistrer_motdepasse,
             courriel::courriel_motdepasse_present,

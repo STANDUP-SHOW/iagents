@@ -287,6 +287,24 @@ par WhatsApp et email.
   le jour de l'embauche l'agent ne sait pas dans quel outil aller. 463 fiches au
   23/09/2026 (`ged` 117, `bi` 84, `bureautique` 82, `comptabilite` 65,
   `juridique` 44), comptées à chaque passage du banc. Chantier éditorial.
+- **Une tâche s'exécute et pose un fichier dans le dossier du client**
+  (`desktop/src-tauri/src/tache.rs`, 23/09/2026). C'était le trou du parcours
+  minimal : les fiches décrivent 9 233 tâches et aucune commande n'en exécutait
+  une. Quatre refus tenus par le code, pas par une consigne au modèle : l'agent
+  doit être embauché sur cette fiche d'après `installation.json` ; la tâche doit
+  être allumée par le client ; le dossier de sortie est celui qu'il a choisi (un
+  dossier non choisi ne s'écrit pas « en attendant » à côté de l'exécutable, et
+  un chemin relatif est refusé) ; le nom du fichier est construit ici, jamais
+  proposé par le modèle. Rien ne part du poste : `validationHumaine` écrit le
+  résultat et le dit, sans rien envoyer.
+- **L'application n'écrit que du texte : `md`, `txt`, `csv`, `json`, `html`.**
+  4 025 sorties sur 9 265 seulement. Il manque `xlsx` (4 100 sorties), `pdf`
+  (523), `docx` (310), `eml` (200), et les formats d'image, de son et de vidéo :
+  aucune bibliothèque n'est embarquée pour les produire. `format_ecrivable()` le
+  dit en clair plutôt que d'écrire un `.xlsx` qui n'en serait pas un, et l'écran
+  n'offre pas de bouton pour ces tâches. La liste vit des deux côtés de la
+  frontière (`tache.rs` et `src/agents/travail.ts`) et `check-travail.ts` compare
+  les deux fichiers.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,
@@ -327,6 +345,7 @@ par WhatsApp et email.
 ```bash
 npm install
 npm run controle              # banc du dimensionnement + validation des paquets
+npm run controle-application  # typage de l'interface + 81 tests Rust
 npm run verifier -- --corriger
 npm run generer -- --sec --ids AG-0002
 node --experimental-strip-types outils/packs.ts   # quel agent sur quelle machine

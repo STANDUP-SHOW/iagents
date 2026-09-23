@@ -2189,13 +2189,21 @@ mod tests {
     /// Un refus d'accès se dit au client dans ses mots, et lui dit où regarder.
     #[test]
     fn un_acces_refuse_se_dit_en_clair() {
-        let (url, _) = serveur_de_banc(vec![
-            "HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_string(),
-        ]);
+        // Un serveur qui refuse un jeton le refuse à chaque fois : le banc ne
+        // doit pas rendre un 500 à la deuxième requête, sinon ce test mesure le
+        // nombre de requêtes du client au lieu de mesurer ce qu'il dit au client.
+        let refus_repete =
+            "HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_string();
+        let (url, recues) = serveur_de_banc(vec![refus_repete; 4]);
         let mut c = client_distant(&url, vec![], 0, Duration::from_secs(10));
         let refus = c.ouvrir().expect_err("401 ne peut pas aboutir");
         let phrase = refus.en_clair();
-        assert!(phrase.contains("trousseau"), "phrase peu utile : {}", phrase);
+        let vues = recues.lock().expect("journal").len();
+        assert!(
+            phrase.contains("trousseau"),
+            "phrase peu utile : {} | refus : {:?} | requêtes reçues : {}",
+            phrase, refus, vues
+        );
         assert!(!phrase.contains("401"), "code technique à l'écran : {}", phrase);
     }
 
