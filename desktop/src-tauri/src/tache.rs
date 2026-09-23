@@ -36,8 +36,8 @@ use std::path::{Path, PathBuf};
 /// Du texte, rien d'autre : ce sont les seuls que `std::fs::write` suffit à
 /// écrire honnêtement. La liste s'allongera quand un écrivain existera pour de
 /// bon, pas avant.
-pub const FORMATS_ECRITS: [&str; 8] =
-    ["md", "txt", "csv", "json", "html", "xlsx", "eml", "docx"];
+pub const FORMATS_ECRITS: [&str; 9] =
+    ["md", "txt", "csv", "json", "html", "xlsx", "eml", "docx", "pdf"];
 
 /// Les formats que le modèle rend sous forme de tableau plutôt que de texte.
 ///
@@ -66,11 +66,12 @@ pub fn est_un_courriel(format: &str) -> bool {
 
 /// Les formats que le modèle rend comme un texte mis en forme.
 ///
-/// 310 sorties demandent un document. Comme le classeur et le courriel, il
-/// n'écrit pas l'OOXML : il rend ses titres en `#`, ses puces en `-` et son
-/// gras en `**`, conventions qu'il écrit déjà tous les jours, et
-/// `document.rs` en fait le fichier.
-pub const FORMATS_DOCUMENT: [&str; 1] = ["docx"];
+/// 833 sorties demandent un document : 310 en `.docx`, 523 en `.pdf`. Comme le
+/// classeur et le courriel, le modèle n'écrit ni l'OOXML ni le PDF : il rend
+/// ses titres en `#`, ses puces en `-` et son gras en `**`, conventions qu'il
+/// écrit déjà tous les jours. Une seule consigne, une seule lecture des
+/// marques (`document.rs`), et l'écrivain change selon la boîte demandée.
+pub const FORMATS_DOCUMENT: [&str; 2] = ["docx", "pdf"];
 
 pub fn est_un_document(format: &str) -> bool {
     FORMATS_DOCUMENT.contains(&format)
@@ -79,7 +80,6 @@ pub fn est_un_document(format: &str) -> bool {
 /// Ce qu'il faudrait pour écrire les autres, dit au client plutôt que tu.
 fn ce_qui_manque(format: &str) -> &'static str {
     match format {
-        "pdf" => "aucun écrivain de PDF n'est embarqué dans l'application",
         "png" | "jpg" => "l'agent image ne tourne pas encore sur cette machine",
         "mp4" | "mp3" | "wav" => "l'agent son et vidéo ne tourne pas encore sur cette machine",
         _ => "ce format n'est pas prévu par le contrat des fiches",
@@ -262,6 +262,19 @@ pub fn date_rfc5322(secondes_depuis_epoque: u64) -> String {
         heure,
         minute,
         seconde
+    )
+}
+
+/// La date au format que le PDF attend : `D:AAAAMMJJhhmmss+00'00'`.
+///
+/// Même horloge que le courriel et que le nom du fichier : un document daté
+/// d'une autre heure que le fichier qui le porte est un document qu'on relit
+/// deux fois.
+pub fn date_pdf(secondes_depuis_epoque: u64) -> String {
+    let (annee, mois, jour, heure, minute, seconde, _) = civil(secondes_depuis_epoque);
+    format!(
+        "D:{:04}{:02}{:02}{:02}{:02}{:02}+00'00'",
+        annee, mois, jour, heure, minute, seconde
     )
 }
 
@@ -1173,7 +1186,7 @@ mod tests {
     /// `.docx` qui n'en est pas un.
     #[test]
     fn un_format_non_ecrit_se_dit_au_lieu_de_s_inventer() {
-        for (format, mot) in [("pdf", "PDF"), ("png", "image"), ("mp4", "vidéo")] {
+        for (format, mot) in [("png", "image"), ("jpg", "image"), ("mp4", "vidéo")] {
             let e = preparer(
                 &installation(DOSSIERS),
                 &fiche(format, true, false),
@@ -1191,6 +1204,7 @@ mod tests {
         assert!(format_ecrivable("xlsx").is_ok());
         assert!(format_ecrivable("eml").is_ok());
         assert!(format_ecrivable("docx").is_ok());
+        assert!(format_ecrivable("pdf").is_ok());
     }
 
     /// Le nom du fichier ne vient jamais de ce que le modèle propose : il est
@@ -1202,7 +1216,7 @@ mod tests {
         assert!(nom_du_fichier("compte rendu", "20250923-000000", "md").is_err());
         assert!(nom_du_fichier("Compte-Rendu", "20250923-000000", "md").is_err());
         assert!(nom_du_fichier("", "20250923-000000", "md").is_err());
-        assert!(nom_du_fichier("compte-rendu", "20250923-000000", "pdf").is_err());
+        assert!(nom_du_fichier("compte-rendu", "20250923-000000", "png").is_err());
         assert_eq!(
             nom_du_fichier("compte-rendu", "20250923-000000", "md").unwrap(),
             "compte-rendu-20250923-000000.md"

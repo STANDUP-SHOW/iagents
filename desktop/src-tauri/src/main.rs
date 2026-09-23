@@ -15,6 +15,7 @@ mod modele;
 mod navigateur;
 mod tache;
 mod document;
+mod pdf;
 mod agents;
 mod connectors;
 mod database;
@@ -313,9 +314,13 @@ async fn executer_tache(
         // Le modèle rend un objet et une lettre ; les en-têtes, c'est nous.
         tache::poser_courriel(&prep.dossier, &prep.nom_fichier, prep.epoque, &texte)?
     } else if tache::est_un_document(&prep.format) {
-        // Le modèle rend du texte avec ses titres et ses puces ; l'OOXML,
-        // c'est nous.
-        document::poser_document(&prep.dossier, &prep.nom_fichier, &texte)?
+        // Le modèle rend du texte avec ses titres et ses puces ; la boîte,
+        // c'est nous — le même texte part en OOXML ou en PDF.
+        if prep.format == "pdf" {
+            pdf::poser_pdf(&prep.dossier, &prep.nom_fichier, prep.epoque, &texte)?
+        } else {
+            document::poser_document(&prep.dossier, &prep.nom_fichier, &texte)?
+        }
     } else {
         tache::poser(&prep.dossier, &prep.nom_fichier, &texte)?
     };

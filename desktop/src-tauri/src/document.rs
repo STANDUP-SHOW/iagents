@@ -42,16 +42,24 @@ fn echapper_xml(texte: &str) -> String {
 
 /// Découpe une ligne en segments de texte, gras et italique.
 ///
-/// `**gras**` puis `*italique*`, l'ordre compte : lire l'italique d'abord
-/// couperait chaque gras en deux italiques vides. Une étoile qui ne ferme rien
-/// reste du texte — un modèle qui écrit « 3 * 4 » ne doit pas mettre la moitié
-/// du paragraphe en italique.
-fn segments(ligne: &str) -> Vec<(String, bool, bool)> {
+/// `***les deux***`, puis `**gras**`, puis `*italique*` : l'ordre compte. Lire
+/// l'italique d'abord couperait chaque gras en deux italiques vides, et lire le
+/// gras avant les trois étoiles laisserait une étoile en clair au milieu de la
+/// phrase — vue sur un rapport relu par Poppler avant qu'elle ne sorte.
+/// Une étoile qui ne ferme rien reste du texte : un modèle qui écrit « 3 * 4 »
+/// ne doit pas mettre la moitié du paragraphe en italique.
+pub(crate) fn segments(ligne: &str) -> Vec<(String, bool, bool)> {
     let mut sortie: Vec<(String, bool, bool)> = Vec::new();
     let mut reste = ligne;
     let mut courant = String::new();
     while !reste.is_empty() {
-        let pris = if let Some(t) = entre(reste, "**") {
+        let pris = if let Some(t) = entre(reste, "***") {
+            if !courant.is_empty() {
+                sortie.push((std::mem::take(&mut courant), false, false));
+            }
+            sortie.push((t.0.to_string(), true, true));
+            Some(t.1)
+        } else if let Some(t) = entre(reste, "**") {
             if !courant.is_empty() {
                 sortie.push((std::mem::take(&mut courant), false, false));
             }
@@ -141,32 +149,64 @@ fn paragraphe(style: Option<&str>, ligne: &str) -> String {
     format!("<w:p>{}{}</w:p>", proprietes, runs)
 }
 
-/// Le corps du document, converti depuis ce que le modèle a rendu.
-pub fn corps_docx(texte: &str) -> String {
+/// Ce qu'une ligne du texte rendu est, une fois ses marques lues.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Style {
+    Titre1,
+    Titre2,
+    Titre3,
+    Puce,
+    Paragraphe,
+}
+
+/// Lit le texte rendu par le modèle et rend ses lignes avec leur style.
+///
+/// Le `.docx` et le `.pdf` partent du même texte et de la même convention :
+/// une seule lecture des marques, deux écrivains. La dédoubler, c'est se
+/// garantir qu'un jour un titre sera un titre dans l'un et un paragraphe dans
+/// l'autre.
+pub fn lignes_du_document(texte: &str) -> Vec<(Style, &str)> {
     let texte = texte.trim_start_matches('\u{feff}');
-    let mut corps = String::new();
+    let mut lues = Vec::new();
     for ligne in texte.lines() {
-        let ligne = ligne.trim_end();
-        let nu = ligne.trim_start();
+        let nu = ligne.trim_end().trim_start();
         if nu.is_empty() {
             // Une ligne vide sépare deux paragraphes, elle n'en fait pas un
             // troisième : un document ne se remplit pas de blancs.
             continue;
         }
-        let (style, contenu) = if let Some(t) = nu.strip_prefix("### ") {
-            (Some("Heading3"), t)
+        lues.push(if let Some(t) = nu.strip_prefix("### ") {
+            (Style::Titre3, t)
         } else if let Some(t) = nu.strip_prefix("## ") {
-            (Some("Heading2"), t)
+            (Style::Titre2, t)
         } else if let Some(t) = nu.strip_prefix("# ") {
-            (Some("Heading1"), t)
+            (Style::Titre1, t)
         } else if let Some(t) = nu.strip_prefix("- ").or_else(|| nu.strip_prefix("* ")) {
-            (Some("ListParagraph"), t)
+            (Style::Puce, t)
         } else {
-            (None, nu)
-        };
-        corps.push_str(&paragraphe(style, contenu));
+            (Style::Paragraphe, nu)
+        });
     }
-    corps
+    lues
+}
+
+/// Le nom OOXML du style, ou rien pour un paragraphe courant.
+fn style_ooxml(style: Style) -> Option<&'static str> {
+    match style {
+        Style::Titre1 => Some("Heading1"),
+        Style::Titre2 => Some("Heading2"),
+        Style::Titre3 => Some("Heading3"),
+        Style::Puce => Some("ListParagraph"),
+        Style::Paragraphe => None,
+    }
+}
+
+/// Le corps du document, converti depuis ce que le modèle a rendu.
+pub fn corps_docx(texte: &str) -> String {
+    lignes_du_document(texte)
+        .into_iter()
+        .map(|(style, contenu)| paragraphe(style_ooxml(style), contenu))
+        .collect()
 }
 
 const TYPES: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

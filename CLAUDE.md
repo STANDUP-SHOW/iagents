@@ -315,14 +315,18 @@ par WhatsApp et email.
   un chemin relatif est refusé) ; le nom du fichier est construit ici, jamais
   proposé par le modèle. Rien ne part du poste : `validationHumaine` écrit le
   résultat et le dit, sans rien envoyer.
-- **L'application écrit `md`, `txt`, `csv`, `json`, `html`, `xlsx`, `eml` et
-  `docx`** : 8 635 sorties sur 9 265. Il manque `pdf` (523) et les formats
-  d'image, de son et de vidéo — aucune bibliothèque n'est embarquée pour
-  ceux-là. Trois formats ne se demandent pas au modèle, qui rendrait une
-  description plausible et mal formée : le classeur (il rend des lignes en
-  points-virgules), le courriel (il rend une ligne `Objet :` et une lettre,
-  l'application écrit les en-têtes) et le document (il rend `#`, `-` et `**`,
-  `document.rs` en fait l'OOXML). Le brouillon `.eml` part **sans
+- **L'application écrit `md`, `txt`, `csv`, `json`, `html`, `xlsx`, `eml`,
+  `docx` et `pdf`** : 9 158 sorties sur 9 265. Ne manquent plus que les formats
+  d'image, de son et de vidéo (107 sorties) — ceux-là demandent un agent
+  d'image ou de son, pas un écrivain. Trois familles ne se demandent pas au
+  modèle, qui rendrait une description plausible et mal formée : le classeur
+  (il rend des lignes en points-virgules), le courriel (il rend une ligne
+  `Objet :` et une lettre, l'application écrit les en-têtes) et le document
+  (il rend `#`, `-` et `**`).
+  **Un document est un document, quelle que soit sa boîte** : `docx` et `pdf`
+  partagent la consigne et la lecture des marques (`lignes_du_document` dans
+  `document.rs`), et seul l'écrivain change. Les dédoubler, c'est se garantir
+  qu'un jour un titre sera un titre dans l'un et un paragraphe dans l'autre. Le brouillon `.eml` part **sans
   destinataire ni expéditeur**, avec `X-Unsent: 1` pour qu'Outlook et
   Thunderbird l'ouvrent en rédaction : une adresse inventée serait pire
   qu'absente, le client l'enverrait sans relire. Vérifié au 23/09/2026 en
@@ -337,6 +341,21 @@ par WhatsApp et email.
   numérotation existante. Le ZIP était déjà compilé dans le binaire par
   `rust_xlsxwriter` : ce qui manquait n'était pas une bibliothèque, c'était la
   conversion.
+  **Le PDF n'a demandé aucune bibliothèque non plus** (23/09/2026) : c'est une
+  suite d'objets numérotés et une table de leurs positions, et les quatre
+  Helvetica employées sont celles que tout lecteur porte déjà, donc rien n'est
+  embarqué — un rapport d'une page pèse 3,4 ko, sept pages 30 ko. Les deux
+  pièges : la table des positions, où un octet de décalage fait refuser le
+  fichier en bloc (un banc rejoue ce que fait le lecteur, va à chaque position
+  annoncée et vérifie que l'objet s'y trouve) ; et les largeurs de caractères,
+  **engendrées depuis la table WinAnsi de la spécification et les métriques AFM
+  publiées par Adobe**, jamais saisies à la main — une largeur fausse ne casse
+  rien, elle coupe les lignes au mauvais endroit et personne ne le voit avant
+  d'ouvrir le document. Vérifié en relisant le fichier produit avec `qpdf
+  --check` (aucune faute de syntaxe) et avec Poppler, qui rend les accents,
+  l'euro, les guillemets et les puces, et mesure le texte à 533,6 points pour
+  une marge à 538,6 — donc les largeurs sont bonnes. `pdftotext -bbox` est le
+  moyen de le revérifier après coup.
   `format_ecrivable()` dit en clair ce qu'il ne sait pas écrire plutôt que
   d'écrire un `.docx` qui n'en serait pas un, et l'écran n'offre pas de bouton
   pour ces tâches. La liste vit des deux côtés de la frontière (`tache.rs` et
