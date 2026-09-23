@@ -376,9 +376,22 @@ par WhatsApp et email.
   une date est un nombre de jours que seule la feuille de styles signale, et le
   format compte un 29 février 1900 qui n'a jamais existé ; `<w:p>` ne doit pas
   ramasser `<w:pPr>`. Seule la première feuille d'un classeur est lue, et
-  l'agent apprend le nom des autres. **Constat au passage** : `poser_tableur`
-  écrit « 4 250,00 » comme le nombre 4250, donc la valeur est juste et
-  l'affichage perd les centimes tant que la cellule n'a pas de format.
+  l'agent apprend le nom des autres.
+  **Un aller-retour ne prouve que la cohérence avec soi-même** : il passerait
+  même si l'écrivain et le lecteur se trompaient de la même façon. D'où
+  `desktop/src-tauri/temoins/`, des fichiers écrits par d'autres outils et
+  gardés au dépôt, avec de quoi les refaire. Le premier, un classeur d'openpyxl,
+  porte exprès ce qui se lit mal : accents, esperluette échappée, date et
+  date-heure en numéros de jour, booléens, guillemets, point-virgule dans un
+  champ, cellule vide en début de ligne, deuxième feuille.
+- **Une cellule de nombre sans format s'affiche brute** : « 4 250,00 » devenait
+  « 4250 » et le client lisait une facture sans ses centimes. La valeur était
+  juste, la lecture non. `format_du_champ()` reporte ce que le modèle a montré
+  — des décimales, une séparation des milliers — et rien d'autre : un
+  identifiant ou une année ne prennent pas de séparateur. L'écriture du format
+  est celle du tableur, indépendante du pays (`#,##0.00`), c'est le lecteur qui
+  y met les séparateurs de sa langue. Vérifié le 23/09/2026 en relisant le
+  fichier avec openpyxl : valeur 4250, format `#,##0.00`, en-tête en gras.
 - **Un modèle ne rend pas un classeur, il rend des lignes.** Le tableur est le
   format le plus réclamé des fiches (4 100 sorties sur 9 265) : la consigne
   demande donc un tableau en lignes séparées par des points-virgules, et

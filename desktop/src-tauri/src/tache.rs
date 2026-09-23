@@ -383,6 +383,35 @@ pub fn nombre_du_champ(champ: &str) -> Option<f64> {
     net.parse::<f64>().ok()
 }
 
+/// Comment afficher ce nombre, d'après la façon dont le modèle l'a écrit.
+///
+/// Une cellule sans format s'affiche brute : « 4 250,00 » devient « 4250 »,
+/// et le client lit une facture sans ses centimes. La valeur était juste, la
+/// lecture non. Le modèle dit ce qu'il veut montrer par la façon dont il
+/// l'écrit — des décimales, une séparation des milliers — et c'est ça qu'on
+/// reporte, sans rien inventer d'autre.
+///
+/// L'écriture du format est celle du tableur, indépendante du pays : le `,` y
+/// marque la place des milliers et le `.` celle des décimales, et c'est le
+/// lecteur qui y met les séparateurs de sa langue.
+pub fn format_du_champ(champ: &str) -> Option<String> {
+    nombre_du_champ(champ)?;
+    let net = champ.replace([' ', '\u{a0}'], "").replace(',', ".");
+    let decimales = net
+        .rsplit_once('.')
+        .map(|(_, apres)| apres.len())
+        .filter(|n| (1..=4).contains(n));
+    let milliers = champ
+        .as_bytes()
+        .windows(3)
+        .any(|f| f[0].is_ascii_digit() && (f[1] == b' ' || f[1] == 0xa0) && f[2].is_ascii_digit());
+    match (decimales, milliers) {
+        (Some(n), _) => Some(format!("#,##0.{}", "0".repeat(n))),
+        (None, true) => Some("#,##0".to_string()),
+        (None, false) => None,
+    }
+}
+
 /// Écrit un vrai classeur dans le dossier du client.
 ///
 /// Mêmes règles que `poser` : rien n'est écrasé, et le fichier est mis en place
@@ -408,7 +437,17 @@ pub fn poser_tableur(dossier: &Path, nom: &str, lignes: &[Vec<String>]) -> Resul
             let ecrit = if i == 0 {
                 feuille.write_string_with_format(r, c, champ, &entete).map(|_| ())
             } else if let Some(n) = nombre_du_champ(champ) {
-                feuille.write_number(r, c, n).map(|_| ())
+                match format_du_champ(champ) {
+                    Some(f) => feuille
+                        .write_number_with_format(
+                            r,
+                            c,
+                            n,
+                            &rust_xlsxwriter::Format::new().set_num_format(f),
+                        )
+                        .map(|_| ()),
+                    None => feuille.write_number(r, c, n).map(|_| ()),
+                }
             } else {
                 feuille.write_string(r, c, champ).map(|_| ())
             };

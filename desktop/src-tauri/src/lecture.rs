@@ -585,6 +585,42 @@ mod tests {
         let _ = std::fs::remove_dir_all(&d);
     }
 
+    #[test]
+    fn un_montant_garde_ses_centimes_a_l_affichage() {
+        // Une cellule sans format s'affiche brute : « 4 250,00 » devenait
+        // « 4250 », et le client lisait une facture sans ses centimes. La
+        // valeur était juste, la lecture non.
+        use crate::tache::format_du_champ;
+        assert_eq!(format_du_champ("4 250,00").as_deref(), Some("#,##0.00"));
+        assert_eq!(format_du_champ("1204.88").as_deref(), Some("#,##0.00"));
+        assert_eq!(format_du_champ("0,5").as_deref(), Some("#,##0.0"));
+        assert_eq!(format_du_champ("18 940").as_deref(), Some("#,##0"));
+        // Sans décimale ni séparation, on n'invente rien : un identifiant ou
+        // une année ne prennent pas de séparateur de milliers.
+        assert_eq!(format_du_champ("2026"), None);
+        assert_eq!(format_du_champ("12345678"), None);
+        // Et ce qui n'est pas un nombre n'a pas de format.
+        assert_eq!(format_du_champ("+3 %"), None);
+        assert_eq!(format_du_champ("Loyer"), None);
+
+        // Le format est écrit dans le classeur, et la valeur reste la valeur.
+        let d = dossier("centimes");
+        crate::tache::poser_tableur(
+            &d,
+            "facture.xlsx",
+            &crate::tache::lignes_du_tableau("Poste;Montant\nLoyer;4 250,00"),
+        )
+        .unwrap();
+        let octets = std::fs::read(d.join("facture.xlsx")).unwrap();
+        let styles = piece(&octets, "xl/styles.xml").unwrap();
+        assert!(
+            styles.contains("#,##0.00"),
+            "le format des centimes n'est pas dans le classeur"
+        );
+        assert_eq!(lire_classeur(&octets).unwrap(), "Poste;Montant\nLoyer;4250");
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
     /// Un classeur monté à la main, pour les cas qu'on n'écrit pas soi-même.
     fn classeur(pieces: &[(&str, &str)]) -> Vec<u8> {
         let mut archive = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
@@ -595,6 +631,32 @@ mod tests {
             archive.write_all(contenu.as_bytes()).unwrap();
         }
         archive.finish().unwrap().into_inner()
+    }
+
+    /// Un aller-retour ne prouve que la cohérence avec soi-même : il passerait
+    /// même si l'écrivain et le lecteur se trompaient de la même façon. Ce
+    /// témoin vient d'un autre outil (voir `temoins/README.md`).
+    #[test]
+    fn un_classeur_ecrit_par_un_autre_outil_se_relit_entier() {
+        let chemin = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("temoins/classeur-d-un-autre-outil.xlsx");
+        let relu = lire_classeur(&std::fs::read(chemin).unwrap()).unwrap();
+        let lignes: Vec<&str> = relu.lines().collect();
+        assert_eq!(lignes[0], "Poste;Montant;Échéance;Payé;Note");
+        // L'esperluette arrive échappée en `&amp;` dans le XML.
+        assert_eq!(
+            lignes[1],
+            "Loyer & charges;4250;30/09/2026;VRAI;\"Avec \"\"guillemets\"\"\""
+        );
+        // Une date-heure garde son heure ; un point-virgule dans un champ le
+        // fait passer entre guillemets, sinon le tableau gagne une colonne.
+        assert_eq!(
+            lignes[2],
+            "Énergie;1204.88;15/10/2026 09:30;FAUX;\"point-virgule ; dedans\""
+        );
+        // La cellule A4 est absente du fichier : son champ reste vide.
+        assert_eq!(lignes[3], ";7;;;fin");
+        assert!(relu.contains("Budget"), "la feuille non lue doit être nommée");
     }
 
     #[test]
@@ -726,3 +788,4 @@ mod tests {
         assert_eq!(colonne("AB3"), 27);
     }
 }
+
