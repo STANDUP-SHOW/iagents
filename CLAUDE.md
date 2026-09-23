@@ -193,6 +193,13 @@ apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
    type Ollama, Playwright pour le navigateur) : parcours minimal installer →
    se connecter → télécharger un agent → une tâche s'exécute → résultat dans le
    dossier → conversation vocale.
+   Fiches, catalogues et configuration partent avec l'installeur
+   (`bundle.resources` de `tauri.conf.json`) et se lisent à la même place à
+   l'exécution ; un test le vérifie plutôt que d'attendre une installation
+   Windows pour découvrir une faute de frappe. `IAGENT_RESSOURCES` déplace
+   cette racine en développement, où l'installeur n'a rien copié.
+   **Pas encore constaté : aucun MSI n'a été produit ici** (pas de Windows en
+   session), seuls les chemins et la lecture le sont.
 2. Premier lot de fiches : un secteur de 25, relu, puis les 544 P1.
 3. Boutique : `drop-shipper.fr/b/iagent-agency` reste la vitrine ; les paquets
    deviennent des produits par le flux ; `iagent.agency` (OVH) à pointer dessus.

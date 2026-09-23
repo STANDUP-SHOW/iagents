@@ -432,6 +432,8 @@ fn main() {
             send_telegram_message,
             fiches::lire_installation,
             fiches::lire_fiche,
+            fiches::installation_ecrire,
+            fiches::lire_referentiel,
             repondre,
             courriel::courriel_enregistrer_motdepasse,
             courriel::courriel_motdepasse_present,
