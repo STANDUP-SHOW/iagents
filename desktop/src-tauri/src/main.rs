@@ -14,6 +14,7 @@ mod mcp;
 mod modele;
 mod navigateur;
 mod tache;
+mod document;
 mod agents;
 mod connectors;
 mod database;
@@ -311,6 +312,10 @@ async fn executer_tache(
     } else if tache::est_un_courriel(&prep.format) {
         // Le modèle rend un objet et une lettre ; les en-têtes, c'est nous.
         tache::poser_courriel(&prep.dossier, &prep.nom_fichier, prep.epoque, &texte)?
+    } else if tache::est_un_document(&prep.format) {
+        // Le modèle rend du texte avec ses titres et ses puces ; l'OOXML,
+        // c'est nous.
+        document::poser_document(&prep.dossier, &prep.nom_fichier, &texte)?
     } else {
         tache::poser(&prep.dossier, &prep.nom_fichier, &texte)?
     };

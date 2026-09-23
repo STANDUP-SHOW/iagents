@@ -27,8 +27,17 @@ function fiche(id: string): Fiche {
 // ici proposerait un bouton que Rust refuserait après le clic ; plus courte,
 // elle cacherait une tâche qui marche. Les deux fichiers sont donc comparés.
 const rust = readFileSync(join(ici, 'src-tauri/src/tache.rs'), 'utf8');
-const declares = rust.match(/pub const FORMATS_ECRITS: \[&str; \d+\] = \[([^\]]+)\]/);
+// `\s*` autour du `=` : la déclaration passe à la ligne dès que la liste
+// s'allonge, et un motif collé au `=` rendait alors une liste vide.
+const declares = rust.match(/pub const FORMATS_ECRITS: \[&str; \d+\]\s*=\s*\[([^\]]+)\]/);
 const cotesRust = (declares?.[1] ?? '').match(/"([a-z0-9]+)"/g)?.map((s) => s.replace(/"/g, '')) ?? [];
+// Une liste vide n'est pas une divergence, c'est un banc qui ne sait plus lire
+// le fichier qu'il compare : le dire, sinon deux listes vides se vaudraient.
+verifier(
+  'la liste des formats se lit encore dans tache.rs',
+  cotesRust.length > 0,
+  'aucun format lu : la déclaration de FORMATS_ECRITS a changé de forme'
+);
 verifier(
   'les formats écrivables sont les mêmes dans l\'écran et dans le code qui écrit',
   cotesRust.length > 0 && cotesRust.join(',') === [...FORMATS_ECRITS].join(','),

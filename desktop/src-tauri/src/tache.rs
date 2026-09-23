@@ -23,9 +23,8 @@
 //!    autres et le dit ; il n'est ni envoyé ni publié. C'est la règle de Max :
 //!    l'agent prépare, le client valide.
 //!
-//! **Ce qui n'est pas écrit** : `docx` (310 sorties), `pdf` (523) et les
-//! formats d'image, de son et de vidéo. L'application n'embarque aucune
-//! bibliothèque pour les produire. `format_ecrivable()` le dit en clair plutôt
+//! **Ce qui n'est pas écrit** : `pdf` (523) et les formats d'image, de son et
+//! de vidéo. L'application n'embarque aucune bibliothèque pour les produire. `format_ecrivable()` le dit en clair plutôt
 //! que d'écrire un `.docx` qui n'en serait pas un — même discipline que
 //! `diagnosticLocal()` côté dimensionnement.
 
@@ -37,7 +36,8 @@ use std::path::{Path, PathBuf};
 /// Du texte, rien d'autre : ce sont les seuls que `std::fs::write` suffit à
 /// écrire honnêtement. La liste s'allongera quand un écrivain existera pour de
 /// bon, pas avant.
-pub const FORMATS_ECRITS: [&str; 7] = ["md", "txt", "csv", "json", "html", "xlsx", "eml"];
+pub const FORMATS_ECRITS: [&str; 8] =
+    ["md", "txt", "csv", "json", "html", "xlsx", "eml", "docx"];
 
 /// Les formats que le modèle rend sous forme de tableau plutôt que de texte.
 ///
@@ -64,10 +64,21 @@ pub fn est_un_courriel(format: &str) -> bool {
     FORMATS_COURRIEL.contains(&format)
 }
 
+/// Les formats que le modèle rend comme un texte mis en forme.
+///
+/// 310 sorties demandent un document. Comme le classeur et le courriel, il
+/// n'écrit pas l'OOXML : il rend ses titres en `#`, ses puces en `-` et son
+/// gras en `**`, conventions qu'il écrit déjà tous les jours, et
+/// `document.rs` en fait le fichier.
+pub const FORMATS_DOCUMENT: [&str; 1] = ["docx"];
+
+pub fn est_un_document(format: &str) -> bool {
+    FORMATS_DOCUMENT.contains(&format)
+}
+
 /// Ce qu'il faudrait pour écrire les autres, dit au client plutôt que tu.
 fn ce_qui_manque(format: &str) -> &'static str {
     match format {
-        "docx" => "aucun écrivain de document n'est embarqué dans l'application",
         "pdf" => "aucun écrivain de PDF n'est embarqué dans l'application",
         "png" | "jpg" => "l'agent image ne tourne pas encore sur cette machine",
         "mp4" | "mp3" | "wav" => "l'agent son et vidéo ne tourne pas encore sur cette machine",
@@ -747,6 +758,10 @@ pub fn consigne_de_la_tache(
         systeme.push_str(
             "\nVous rendez un tableau. N'écrivez que ses lignes, séparées par des points-virgules, la première étant les en-têtes de colonnes. Mettez entre guillemets tout champ qui contient un point-virgule ou un retour à la ligne. Pas de préambule, pas de commentaire, pas de ligne de tirets.",
         );
+    } else if est_un_document(format) {
+        systeme.push_str(
+            "\nVous rendez un document. Écrivez-le en texte simple : un titre sur sa propre ligne précédée de « # » (« ## » pour un sous-titre), un paragraphe par bloc séparé par une ligne vide, une puce par ligne commençant par « - », et **deux étoiles** autour de ce qui doit ressortir en gras. Pas de préambule, pas de commentaire sur ce que vous avez fait.",
+        );
     } else if est_un_courriel(format) {
         // Le destinataire est la seule chose que l'agent ne peut pas savoir :
         // lui laisser l'inventer ferait un brouillon prêt à partir chez la
@@ -1158,7 +1173,7 @@ mod tests {
     /// `.docx` qui n'en est pas un.
     #[test]
     fn un_format_non_ecrit_se_dit_au_lieu_de_s_inventer() {
-        for (format, mot) in [("docx", "document"), ("pdf", "PDF"), ("png", "image")] {
+        for (format, mot) in [("pdf", "PDF"), ("png", "image"), ("mp4", "vidéo")] {
             let e = preparer(
                 &installation(DOSSIERS),
                 &fiche(format, true, false),
@@ -1174,6 +1189,8 @@ mod tests {
         assert!(format_ecrivable("md").is_ok());
         assert!(format_ecrivable("csv").is_ok());
         assert!(format_ecrivable("xlsx").is_ok());
+        assert!(format_ecrivable("eml").is_ok());
+        assert!(format_ecrivable("docx").is_ok());
     }
 
     /// Le nom du fichier ne vient jamais de ce que le modèle propose : il est
@@ -1185,7 +1202,7 @@ mod tests {
         assert!(nom_du_fichier("compte rendu", "20250923-000000", "md").is_err());
         assert!(nom_du_fichier("Compte-Rendu", "20250923-000000", "md").is_err());
         assert!(nom_du_fichier("", "20250923-000000", "md").is_err());
-        assert!(nom_du_fichier("compte-rendu", "20250923-000000", "docx").is_err());
+        assert!(nom_du_fichier("compte-rendu", "20250923-000000", "pdf").is_err());
         assert_eq!(
             nom_du_fichier("compte-rendu", "20250923-000000", "md").unwrap(),
             "compte-rendu-20250923-000000.md"
