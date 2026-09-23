@@ -316,6 +316,18 @@ par WhatsApp et email.
   **« 0012 » reste du texte** : c'est une référence, pas douze. **Non constaté :
   aucun classeur produit ici n'a été ouvert dans un vrai tableur** ; le banc
   vérifie l'archive ZIP et ses pièces, pas ce qu'Excel en fait.
+- **Un agent sans matière réclame, il n'invente pas.** Une entrée de tâche
+  désigne une source ouvrable (`dossier:<chemin logique>` ou un connecteur) ou
+  rien : **8 398 tâches sur 9 233 n'ont ni l'un ni l'autre** au 23/09/2026,
+  leurs entrées sont des mots (« pièces de référence », « messagerie du
+  dirigeant ») qui disent de quoi il s'agit, pas où le prendre. `check-travail`
+  les compte à chaque passage. Tant que c'est le cas, la consigne le dit à
+  l'agent : sans document, il écrit en une phrase ce qu'il lui faut. Sans cette
+  phrase, un contrôle de pièces sans pièces rend un rapport vraisemblable et
+  faux, que le client n'a aucun moyen de démentir. Un dossier logique que le
+  client n'a pas choisi n'est jamais deviné ; la lecture s'arrête à un niveau,
+  à 20 fichiers et 120 000 caractères, et l'agent sait ce qu'il n'a pas vu et
+  quels fichiers l'application n'a pas su ouvrir.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,

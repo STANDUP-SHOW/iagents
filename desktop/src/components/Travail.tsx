@@ -135,6 +135,12 @@ export default function Travail() {
                     )}
                   </div>
                   <p className="quoi">{t.tache.description}</p>
+                  {t.sansMatiere && !resultat && (
+                    <p className="controle">
+                      Rien ne dit où {agent.prenom} prend sa matière : il vous dira ce qu'il lui
+                      faut plutôt que de l'inventer.
+                    </p>
+                  )}
                   {t.validation && !resultat && (
                     <p className="controle">Vous relirez le résultat avant qu'il serve.</p>
                   )}

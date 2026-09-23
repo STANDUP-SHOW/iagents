@@ -33,6 +33,13 @@ const CE_QUI_MANQUE: Record<string, string> = {
 
 export interface TacheDuJour {
   tache: Tache;
+  /**
+   * Vrai quand rien ne dit où l'agent prend sa matière : la tâche part quand
+   * même, mais il réclamera au lieu d'inventer. 8 398 tâches sur 9 233 sont
+   * dans ce cas au 23/09/2026, le temps que les entrées des fiches nomment un
+   * dossier plutôt qu'une idée.
+   */
+  sansMatiere: boolean;
   /** Le dossier réel où le résultat sera posé, quand il est choisi. */
   dossier: string | null;
   /** Ce qui empêche de la lancer, en clair ; null quand elle peut partir. */
@@ -49,21 +56,26 @@ export interface TacheDuJour {
  */
 export function travailDuJour(agent: AgentInstalle): TacheDuJour[] {
   return agent.planning.filter((t) => t.active).map((tache) => {
+    const sources = tache.entrees
+      .filter((e) => e.startsWith('dossier:'))
+      .map((e) => e.slice('dossier:'.length))
+      .filter((c) => c.length > 0);
+    const sansMatiere = sources.every((c) => !agent.dossiers[c]);
     const sortie = tache.sorties[0];
     if (!sortie) {
-      return { tache, dossier: null, validation: tache.validationHumaine,
+      return { tache, sansMatiere, dossier: null, validation: tache.validationHumaine,
         empechement: "cette tâche ne dit pas où va son résultat" };
     }
     const dossier = agent.dossiers[sortie.dossier] ?? null;
     if (!FORMATS_ECRITS.includes(sortie.format as (typeof FORMATS_ECRITS)[number])) {
-      return { tache, dossier, validation: tache.validationHumaine,
+      return { tache, sansMatiere, dossier, validation: tache.validationHumaine,
         empechement: CE_QUI_MANQUE[sortie.format] ?? `le format « ${sortie.format} » n'est pas prévu` };
     }
     if (!dossier) {
-      return { tache, dossier: null, validation: tache.validationHumaine,
+      return { tache, sansMatiere, dossier: null, validation: tache.validationHumaine,
         empechement: `choisissez d'abord le dossier « ${sortie.dossier} »` };
     }
-    return { tache, dossier, validation: tache.validationHumaine, empechement: null };
+    return { tache, sansMatiere, dossier, validation: tache.validationHumaine, empechement: null };
   });
 }
 

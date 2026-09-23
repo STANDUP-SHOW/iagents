@@ -302,6 +302,144 @@ pub fn poser_tableur(dossier: &Path, nom: &str, lignes: &[Vec<String>]) -> Resul
     Ok(chemin)
 }
 
+/// Les formats que l'application sait relire dans le dossier du client.
+///
+/// Du texte, comme à l'écriture. Un PDF, un classeur ou une image présents dans
+/// le dossier sont nommés à l'agent sans être ouverts : savoir qu'ils sont là et
+/// ne pas pouvoir les lire vaut mieux que ne pas savoir.
+const FORMATS_LUS: [&str; 7] = ["md", "txt", "csv", "json", "html", "eml", "log"];
+
+/// Au-delà, on ne charge plus : un dossier de travail peut contenir des années
+/// d'archives, et les verser toutes au modèle coûterait cher pour un résultat
+/// moins bon. L'agent est prévenu de ce qu'il n'a pas vu.
+const FICHIERS_LUS_MAX: usize = 20;
+const CARACTERES_LUS_MAX: usize = 120_000;
+
+/// Les dossiers dont une tâche tire sa matière.
+///
+/// Le contrat des fiches dit qu'une entrée est soit `dossier:<chemin logique>`,
+/// soit un connecteur. **8 398 tâches sur 9 233 n'ont ni l'un ni l'autre** :
+/// leurs entrées sont des mots (« pièces de référence », « messagerie du
+/// dirigeant ») qui disent à un lecteur ce dont il s'agit, mais ne désignent
+/// aucune source que l'application puisse ouvrir. C'est le prochain passage
+/// éditorial ; en attendant, ces tâches travaillent sans matière et l'agent doit
+/// le savoir, sinon il l'invente.
+pub fn dossiers_sources(entrees: &[String]) -> Vec<String> {
+    entrees
+        .iter()
+        .filter_map(|e| e.strip_prefix("dossier:"))
+        .filter(|c| !c.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// Ce que l'agent a sous les yeux : le contenu des fichiers qu'on sait lire, et
+/// le nom de ceux qu'on ne sait pas.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Matiere {
+    pub textes: Vec<(String, String)>,
+    /// Les fichiers présents mais non lus, et pourquoi en un mot.
+    pub non_lus: Vec<String>,
+    /// Vrai quand le dossier contenait plus que ce qu'on a chargé.
+    pub tronque: bool,
+}
+
+impl Matiere {
+    pub fn vide(&self) -> bool {
+        self.textes.is_empty() && self.non_lus.is_empty()
+    }
+}
+
+/// Lit ce qu'il y a dans un dossier du client, sans s'y enfoncer.
+///
+/// Un seul niveau : un sous-dossier est nommé, pas parcouru. Le client range
+/// comme il veut, et descendre tout un arbre chargerait des archives entières
+/// sans que personne l'ait demandé.
+pub fn lire_matiere(dossier: &Path) -> Matiere {
+    let mut m = Matiere::default();
+    let Ok(entrees) = std::fs::read_dir(dossier) else {
+        return m;
+    };
+    let mut noms: Vec<PathBuf> = entrees.flatten().map(|e| e.path()).collect();
+    noms.sort();
+
+    let mut caracteres = 0usize;
+    for chemin in noms {
+        let nom = chemin
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+        if nom.starts_with('.') {
+            continue;
+        }
+        if chemin.is_dir() {
+            m.non_lus.push(format!("{} (un dossier, non ouvert)", nom));
+            continue;
+        }
+        let extension = chemin
+            .extension()
+            .map(|e| e.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+        if !FORMATS_LUS.contains(&extension.as_str()) {
+            m.non_lus.push(format!("{} (l'application ne sait pas l'ouvrir)", nom));
+            continue;
+        }
+        if m.textes.len() >= FICHIERS_LUS_MAX || caracteres >= CARACTERES_LUS_MAX {
+            m.tronque = true;
+            continue;
+        }
+        match std::fs::read_to_string(&chemin) {
+            Ok(contenu) => {
+                caracteres += contenu.chars().count();
+                m.textes.push((nom, contenu));
+            }
+            // Un fichier binaire portant une extension de texte, ou un droit
+            // refusé : on le nomme plutôt que de le taire.
+            Err(_) => m.non_lus.push(format!("{} (illisible)", nom)),
+        }
+    }
+    m
+}
+
+/// Met la matière dans les mots de l'agent, ou lui dit qu'il n'en a pas.
+///
+/// **La phrase qui compte est celle du dossier vide.** Un agent à qui on demande
+/// de contrôler des pièces sans lui donner de pièces produit un rapport
+/// vraisemblable et faux, et le client n'a aucun moyen de s'en apercevoir. On
+/// lui demande donc de dire ce qui lui manque.
+pub fn matiere_en_mots(matiere: &Matiere, avait_une_source: bool) -> String {
+    if matiere.textes.is_empty() {
+        let mut texte = String::from(
+            "\n\nVous n'avez reçu aucun document pour cette tâche. N'inventez rien : dites en une phrase ce qu'il vous faut et où le déposer.",
+        );
+        if !avait_une_source {
+            texte.push_str(" La fiche ne dit pas encore dans quel dossier prendre votre matière.");
+        }
+        if !matiere.non_lus.is_empty() {
+            texte.push_str(&format!(
+                "\nLe dossier contient {} mais l'application ne sait pas les ouvrir.",
+                matiere.non_lus.join(", ")
+            ));
+        }
+        return texte;
+    }
+
+    let mut texte = String::from("\n\nVoici ce que vous avez reçu.\n");
+    for (nom, contenu) in &matiere.textes {
+        texte.push_str(&format!("\n--- {} ---\n{}\n", nom, contenu.trim_end()));
+    }
+    if !matiere.non_lus.is_empty() {
+        texte.push_str(&format!(
+            "\nEt, sans pouvoir les ouvrir : {}. Dites-le si votre réponse en dépend.\n",
+            matiere.non_lus.join(", ")
+        ));
+    }
+    if matiere.tronque {
+        texte.push_str("\nLe dossier en contenait davantage : vous n'avez pas tout vu.\n");
+    }
+    texte
+}
+
 /// Ce que l'agent reçoit pour faire le travail : sa consigne, puis la tâche.
 ///
 /// Le métier vient de la fiche et les procédures de l'employeur des compétences
@@ -366,6 +504,7 @@ struct SortieDeclaree {
 struct TacheLue {
     nom: String,
     description: String,
+    entrees: Vec<String>,
     sortie: SortieDeclaree,
     validation_humaine: bool,
     active: bool,
@@ -394,6 +533,11 @@ fn lire_tache(fiche: &serde_json::Value, tache_id: &str) -> Result<TacheLue, Str
             .and_then(serde_json::Value::as_str)
             .unwrap_or_default()
             .to_string(),
+        entrees: t
+            .get("entrees")
+            .and_then(serde_json::Value::as_array)
+            .map(|v| v.iter().filter_map(|e| e.as_str().map(str::to_string)).collect())
+            .unwrap_or_default(),
         sortie: serde_json::from_value(sorties.clone())
             .map_err(|e| format!("sortie illisible pour « {} » : {}", tache_id, e))?,
         validation_humaine: t
@@ -437,6 +581,11 @@ pub struct Preparation {
     pub nom_fichier: String,
     /// Le format déclaré par la tâche : il décide si le modèle rend un tableau.
     pub format: String,
+    /// Les dossiers du poste où l'agent prend sa matière. Vide quand la fiche
+    /// n'en désigne aucun, ce qui est le cas de 8 398 tâches sur 9 233.
+    pub sources: Vec<PathBuf>,
+    /// Vrai quand la fiche désignait au moins un dossier, même non choisi.
+    pub source_declaree: bool,
     pub systeme: String,
     pub enonce: String,
     pub validation_humaine: bool,
@@ -492,6 +641,15 @@ pub fn preparer(
         })
         .unwrap_or_default();
 
+    // La matière se lit dans les dossiers du client, jamais ailleurs : un
+    // dossier logique que le client n'a pas encore choisi est ignoré, pas
+    // deviné. L'agent est prévenu qu'il travaille sans, plus bas.
+    let logiques = dossiers_sources(&tache.entrees);
+    let sources: Vec<PathBuf> = logiques
+        .iter()
+        .filter_map(|l| dossier_reel(agent.get("dossiers").unwrap_or(&vide), l).ok())
+        .collect();
+
     let (systeme, enonce) = consigne_de_la_tache(
         consigne,
         &competences,
@@ -505,6 +663,8 @@ pub fn preparer(
         dossier,
         nom_fichier,
         format: tache.sortie.format.clone(),
+        source_declaree: !logiques.is_empty(),
+        sources,
         systeme,
         enonce,
         validation_humaine: tache.validation_humaine,
@@ -523,13 +683,17 @@ mod tests {
     }
 
     fn fiche(format: &str, active: bool, validation: bool) -> String {
+        fiche_avec(format, active, validation, "[]")
+    }
+
+    fn fiche_avec(format: &str, active: bool, validation: bool, entrees: &str) -> String {
         format!(
             r#"{{"id":"AG-0001","expert":{{"consigne":"Vous tenez le secrétariat."}},
                "taches":[{{"id":"compte-rendu","nom":"Compte rendu du soir",
-                 "description":"Résumer la journée.",
+                 "description":"Résumer la journée.","entrees":{},
                  "sorties":[{{"dossier":"courrier/reponses","format":"{}"}}],
                  "validationHumaine":{},"active":{}}}]}}"#,
-            format, validation, active
+            entrees, format, validation, active
         )
     }
 
@@ -821,6 +985,108 @@ mod tests {
         assert!(p.systeme.contains("points-virgules"), "{}", p.systeme);
         assert!(!p.systeme.contains("fichier « xlsx »"), "{}", p.systeme);
         assert!(est_un_tableau("xlsx") && !est_un_tableau("md"));
+    }
+
+    /// **Le test qui compte.** 8 398 tâches sur 9 233 ne désignent aucune source :
+    /// un agent à qui on demande de contrôler des pièces sans lui donner de
+    /// pièces rend un rapport vraisemblable et faux, que le client n'a aucun
+    /// moyen de démentir. On lui demande donc ce qui lui manque.
+    #[test]
+    fn sans_matiere_l_agent_doit_reclamer_au_lieu_d_inventer() {
+        let mots = matiere_en_mots(&Matiere::default(), false);
+        assert!(mots.contains("N'inventez rien"), "{}", mots);
+        assert!(mots.contains("ce qu'il vous faut"), "{}", mots);
+        assert!(mots.contains("ne dit pas encore dans quel dossier"), "{}", mots);
+
+        // Quand la fiche désignait bien un dossier, on ne lui reproche pas.
+        let mots = matiere_en_mots(&Matiere::default(), true);
+        assert!(mots.contains("N'inventez rien"), "{}", mots);
+        assert!(!mots.contains("ne dit pas encore"), "{}", mots);
+    }
+
+    /// Une entrée est un dossier ou rien : les 8 398 autres sont des mots qui
+    /// disent de quoi il s'agit, pas où le prendre.
+    #[test]
+    fn seules_les_entrees_en_dossier_designent_une_source() {
+        let entrees: Vec<String> = ["dossier:courrier/entrant", "pièces de référence", "calendrier", "dossier:"]
+            .iter().map(|s| s.to_string()).collect();
+        assert_eq!(dossiers_sources(&entrees), vec!["courrier/entrant".to_string()]);
+    }
+
+    /// L'agent doit voir ce que le client a déposé, et savoir ce qu'il n'a pas pu
+    /// ouvrir : un PDF présent dont il ne sait rien fausserait sa réponse.
+    #[test]
+    fn la_matiere_du_dossier_arrive_a_l_agent_avec_ses_trous() {
+        let dossier = std::env::temp_dir().join(format!("iagent-matiere-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dossier);
+        std::fs::create_dir_all(&dossier).unwrap();
+        std::fs::write(dossier.join("note.md"), "Relancer Dupont.").unwrap();
+        std::fs::write(dossier.join("facture.pdf"), b"%PDF-1.7 pas du texte").unwrap();
+        std::fs::write(dossier.join(".cache"), "invisible").unwrap();
+        std::fs::create_dir_all(dossier.join("archives")).unwrap();
+
+        let m = lire_matiere(&dossier);
+        assert_eq!(m.textes.len(), 1, "seul le texte est lu : {:?}", m);
+        assert_eq!(m.textes[0].0, "note.md");
+        assert!(m.textes[0].1.contains("Relancer Dupont"));
+        assert!(m.non_lus.iter().any(|n| n.starts_with("facture.pdf")), "{:?}", m.non_lus);
+        assert!(m.non_lus.iter().any(|n| n.starts_with("archives")), "{:?}", m.non_lus);
+        assert!(!m.non_lus.iter().any(|n| n.starts_with(".cache")), "un fichier caché n'est pas du travail");
+        assert!(!m.tronque);
+
+        let mots = matiere_en_mots(&m, true);
+        assert!(mots.contains("Voici ce que vous avez reçu"), "{}", mots);
+        assert!(mots.contains("Relancer Dupont"), "{}", mots);
+        assert!(mots.contains("facture.pdf"), "{}", mots);
+        assert!(!mots.contains("N'inventez rien"), "il a de la matière : {}", mots);
+
+        let _ = std::fs::remove_dir_all(&dossier);
+    }
+
+    /// Un dossier de travail peut porter des années d'archives : on ne les verse
+    /// pas toutes au modèle, et l'agent sait qu'il n'a pas tout vu.
+    #[test]
+    fn un_dossier_trop_plein_est_borne_et_l_agent_le_sait() {
+        let dossier = std::env::temp_dir().join(format!("iagent-plein-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dossier);
+        std::fs::create_dir_all(&dossier).unwrap();
+        for i in 0..(FICHIERS_LUS_MAX + 5) {
+            std::fs::write(dossier.join(format!("note-{:03}.md", i)), "un mot").unwrap();
+        }
+        let m = lire_matiere(&dossier);
+        assert_eq!(m.textes.len(), FICHIERS_LUS_MAX);
+        assert!(m.tronque);
+        assert!(matiere_en_mots(&m, true).contains("vous n'avez pas tout vu"));
+        let _ = std::fs::remove_dir_all(&dossier);
+    }
+
+    /// Un dossier logique que le client n'a pas encore choisi n'est pas deviné :
+    /// la tâche part sans matière et l'agent le dit, plutôt que de lire ailleurs.
+    #[test]
+    fn une_source_non_choisie_ne_se_devine_pas() {
+        let p = preparer(
+            &installation(DOSSIERS),
+            &fiche_avec("md", true, false, r#"["dossier:courrier/entrant"]"#),
+            "Camille",
+            "AG-0001",
+            "compte-rendu",
+            0,
+        )
+        .unwrap();
+        assert!(p.source_declaree, "la fiche désigne bien un dossier");
+        assert!(p.sources.is_empty(), "mais le client ne l'a pas choisi : {:?}", p.sources);
+
+        let avec = r#"{"courrier/reponses":"/tmp/iagent-essai","courrier/entrant":"/tmp/iagent-entrant"}"#;
+        let p = preparer(
+            &installation(avec),
+            &fiche_avec("md", true, false, r#"["dossier:courrier/entrant"]"#),
+            "Camille",
+            "AG-0001",
+            "compte-rendu",
+            0,
+        )
+        .unwrap();
+        assert_eq!(p.sources, vec![PathBuf::from("/tmp/iagent-entrant")]);
     }
 
     /// Une tâche que la fiche ne porte pas ne s'invente pas.

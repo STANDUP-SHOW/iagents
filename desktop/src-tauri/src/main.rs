@@ -239,6 +239,21 @@ async fn executer_tache(
         .unwrap_or(0);
     let prep = tache::preparer(&installation, &fiche, &prenom, &fiche_id, &tache_id, maintenant)?;
 
+    // La matière d'abord : un agent à qui on ne donne rien produit un résultat
+    // vraisemblable et faux, que le client n'a aucun moyen de démentir.
+    let mut matiere = tache::Matiere::default();
+    for source in &prep.sources {
+        let lue = tache::lire_matiere(source);
+        matiere.textes.extend(lue.textes);
+        matiere.non_lus.extend(lue.non_lus);
+        matiere.tronque |= lue.tronque;
+    }
+    let enonce = format!(
+        "{}{}",
+        prep.enonce,
+        tache::matiere_en_mots(&matiere, prep.source_declaree)
+    );
+
     let (execution, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
     let offre = modele::Offre {
         locaux: modele::modeles_installes(modele::ADRESSE_LOCALE).await.ok(),
@@ -248,8 +263,7 @@ async fn executer_tache(
 
     let texte = match &choix.voie {
         modele::Voie::Local { modele: nom } => {
-            modele::repondre_en_local(modele::ADRESSE_LOCALE, nom, &prep.systeme, &prep.enonce)
-                .await?
+            modele::repondre_en_local(modele::ADRESSE_LOCALE, nom, &prep.systeme, &enonce).await?
         }
         modele::Voie::Api { .. } => {
             let llm_service = {
@@ -264,7 +278,7 @@ async fn executer_tache(
                 role: String::new(),
                 system_prompt: prep.systeme.clone(),
             };
-            llm_service.call_agent_llm(&persona, &prep.enonce).await?
+            llm_service.call_agent_llm(&persona, &enonce).await?
         }
     };
 
