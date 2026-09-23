@@ -203,6 +203,7 @@ export const INTITULES: Record<string, string> = {
   'apprentissage-langues': "Vos formations en langues se suivent sur quelle plateforme ?",
   automobile: "Votre atelier et vos ventes tournent sur quel logiciel ?",
   agriculture: "Vos parcelles et vos interventions sont suivies dans quoi ?",
+  'sport-club-salle': "Vos adhérents, vos abonnements et vos plannings de cours sont tenus dans quoi ?",
   elevage: "Votre troupeau et vos lots sont suivis dans quel logiciel ?",
   'viticulture-cave': "Vos cuves et vos registres de cave sont tenus dans quoi ?",
   'peche-conchyliculture': "Vos sorties, vos captures et vos lots se déclarent avec quoi ?",
