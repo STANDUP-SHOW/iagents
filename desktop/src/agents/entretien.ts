@@ -148,6 +148,7 @@ export const INTITULES: Record<string, string> = {
   expedition: "Vos expéditions partent avec quel transporteur ou quelle plateforme ?",
   btp: "Vos chantiers et vos devis sont gérés dans quel logiciel ?",
   immobilier: "Vos biens et vos mandats sont dans quel logiciel ?",
+  'visite-etat-des-lieux': "Vos visites et vos états des lieux se font avec quel outil ?",
   sante: "Votre logiciel de cabinet ou de patientèle, c'est lequel ?",
   juridique: "Vos dossiers sont suivis dans quel logiciel de cabinet ?",
   'clm-contrats': "Vos contrats sont rédigés et suivis dans quel outil ?",
