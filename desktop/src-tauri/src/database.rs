@@ -95,7 +95,7 @@ impl Database {
             .map_err(|_| "Failed to acquire database lock".to_string())?;
 
         let user_id = Uuid::new_v4().to_string();
-        let now = chrono::Local::now().to_rfc3339();
+        let now = horodatage();
 
         conn.execute(
             "INSERT OR IGNORE INTO users (id, username, email, created_at) VALUES (?1, ?2, ?3, ?4)",
@@ -115,7 +115,7 @@ impl Database {
             .map_err(|_| "Failed to acquire database lock".to_string())?;
 
         let id = Uuid::new_v4().to_string();
-        let now = chrono::Local::now().to_rfc3339();
+        let now = horodatage();
 
         conn.execute(
             "INSERT OR REPLACE INTO voice_prints (id, user_id, mfcc_data, created_at) VALUES (?1, ?2, ?3, ?4)",
@@ -162,42 +162,18 @@ impl Database {
     // c'est là que le prochain branchement ira le chercher.
 }
 
-// Simple datetime formatting for RFC3339
-mod chrono {
-    use std::time::SystemTime;
-
-    pub struct Local;
-
-    impl Local {
-        pub fn now() -> DateTime {
-            DateTime {
-                timestamp: SystemTime::now(),
-            }
-        }
-    }
-
-    pub struct DateTime {
-        timestamp: SystemTime,
-    }
-
-    impl DateTime {
-        pub fn to_rfc3339(&self) -> String {
-            use std::time::UNIX_EPOCH;
-
-            let duration = self.timestamp
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default();
-
-            let secs = duration.as_secs();
-            let millis = duration.subsec_millis();
-
-            // Simple ISO 8601 format (YYYY-MM-DDTHH:MM:SS.fffZ)
-            // For MVP, use a placeholder with current unix timestamp
-            format!("2026-09-19T{:02}:{:02}:{:02}Z",
-                (secs % 86400) / 3600,
-                (secs % 3600) / 60,
-                secs % 60
-            )
-        }
-    }
+/// L'heure du poste, au format qu'on range en base.
+///
+/// Il y avait ici un faux module `chrono` dont `to_rfc3339` écrivait
+/// `2026-09-19T<hh>:<mm>:<ss>Z` : la date en dur, seule l'heure calculée. Tout
+/// ce que cette base a daté jusqu'ici dit donc le 19 septembre 2026. Le
+/// calendrier vit une seule fois, dans `tache::civil`, qui le dit lui-même :
+/// deux implémentations du même calcul finissent par diverger.
+fn horodatage() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let secondes = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    crate::tache::date_rfc3339(secondes)
 }
