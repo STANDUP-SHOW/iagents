@@ -21,6 +21,9 @@ concurrency:
 jobs:
   build-windows:
     runs-on: windows-latest
+    # Écrire une Release sur une étiquette ; rien d'autre n'écrit dans le dépôt.
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -102,9 +105,29 @@ jobs:
           if-no-files-found: ignore
           retention-days: 90
 
+      # Noms stables : le bouton de iagent.agency pointe sur
+      #   https://github.com/STANDUP-SHOW/iagents/releases/latest/download/iagent-desktop-setup.exe
+      #   https://github.com/STANDUP-SHOW/iagents/releases/latest/download/iagent-desktop.msi
+      # et, pour les postes, .../releases/latest/download/latest.json.
+      - name: Prepare release files
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          mkdir -p publication
+          cp desktop/src-tauri/target/release/bundle/msi/*.msi publication/iagent-desktop.msi
+          cp desktop/src-tauri/target/release/bundle/nsis/*-setup.exe publication/iagent-desktop-setup.exe
+          if [ -d desktop/mise-a-jour ]; then cp desktop/mise-a-jour/* publication/; fi
+          ls -l publication
+
+      # Une Release publiée est publique : le dépôt l'est. Tant que la variable
+      # du dépôt IAGENT_PUBLIER_RELEASES ne vaut pas « oui », la Release reste
+      # un brouillon que personne d'autre ne voit, et releases/latest ne la
+      # sert pas. La passer à « oui » est la décision de rendre le produit
+      # téléchargeable par tout visiteur.
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: desktop/src-tauri/target/release/bundle/msi/*.msi
-          draft: true
+          files: publication/*
+          draft: ${{ vars.IAGENT_PUBLIER_RELEASES != 'oui' }}
+          make_latest: true

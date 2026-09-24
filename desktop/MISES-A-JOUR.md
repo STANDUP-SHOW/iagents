@@ -40,10 +40,21 @@ publique et l'adresse ne sont pas secrètes.
 
 1. Étiqueter : `git tag v0.2.0 && git push origin v0.2.0`. Le numéro de
    l'étiquette devient celui de l'application.
-2. Le flux construit l'installeur signé et dépose l'artefact
-   `iagent-desktop-mise-a-jour` : `latest.json` et `iagent-desktop-0.2.0-setup.exe`.
-3. Déposer ces deux fichiers à côté l'un de l'autre, à l'adresse de
-   `IAGENT_MAJ_ADRESSE`. Les postes les trouvent à leur prochain regard.
+2. Le flux construit l'installeur et le joint à une Release GitHub sous des
+   noms stables : `iagent-desktop-setup.exe`, `iagent-desktop.msi`, et, si la
+   clé est posée, `latest.json` avec l'installeur signé.
+3. **Tant que la variable du dépôt `IAGENT_PUBLIER_RELEASES` ne vaut pas
+   `oui`, cette Release reste un brouillon** : personne d'autre ne la voit.
+   Le dépôt est public, donc une Release publiée l'est aussi : passer la
+   variable à `oui`, c'est rendre l'application téléchargeable par tout
+   visiteur.
+
+Une fois publiée, les adresses ne changent plus d'une version à l'autre :
+
+- bouton du site : `https://github.com/STANDUP-SHOW/iagents/releases/latest/download/iagent-desktop-setup.exe`
+  (ou `iagent-desktop.msi` pour un parc d'entreprise) ;
+- `IAGENT_MAJ_ADRESSE`, si les mises à jour vivent au même endroit :
+  `https://github.com/STANDUP-SHOW/iagents/releases/latest/download/latest.json`.
 
 ## Ce qui est vérifié, et ce qui ne l'est pas
 
