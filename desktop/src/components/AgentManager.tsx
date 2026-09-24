@@ -17,8 +17,12 @@ export default function AgentManager({ agents, onToggleAgent }: any) {
 
   return (
     <div className="agent-manager">
-      <h2>Agent Manager</h2>
-      <p className="subtitle">Select agents to activate on this machine</p>
+      <h2>Vos agents</h2>
+      <p className="subtitle">Activez les agents qui travaillent sur ce poste. Un agent actif écoute son prénom.</p>
+
+      {agents.length === 0 && (
+        <p className="vide">Aucun agent installé pour l'instant. Passez par « Embaucher ».</p>
+      )}
 
       <div className="agents-grid">
         {agents.map((agent: any) => (
@@ -34,8 +38,8 @@ export default function AgentManager({ agents, onToggleAgent }: any) {
               disabled={loading === agent.id}
             >
               {loading === agent.id
-                ? 'Loading...'
-                : agent.status === 'active' ? 'Deactivate' : 'Activate'}
+                ? 'Un instant…'
+                : agent.status === 'active' ? 'Désactiver' : 'Activer'}
             </button>
           </div>
         ))}

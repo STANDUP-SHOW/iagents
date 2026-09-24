@@ -1,11 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import './App.css'
-import { installerAgents, type Fiche, type Installation } from './agents/fiche'
+import './centre.css'
+import { installerAgents, type AgentInstalle, type Fiche, type Installation } from './agents/fiche'
 import type { Jauge } from './agents/jauge'
 import { ConversationEngine } from './engines/ConversationEngine'
 import reglages from './config/conversation-settings.json'
-import Dashboard from './components/Dashboard'
+import Dashboard, { Icone, TITRES, type Onglet } from './components/Dashboard'
+import Machine from './components/Machine'
+import { BandeauChiffres, ETAT_DEMO, tiret, useLectures, useTravail, type Chiffre, type Etat } from './components/Chiffres'
+import logo from './assets/marque/logo-iagent.png'
 import VoiceTraining from './components/VoiceTraining'
 import AgentManager from './components/AgentManager'
 import ConnectorSetup from './components/ConnectorSetup'
@@ -16,6 +20,20 @@ import Travail from './components/Travail'
 import CleApi from './components/CleApi'
 import InstallerVoix from './components/InstallerVoix'
 import MiseAJour from './components/MiseAJour'
+import Equipe from './components/Equipe'
+import {
+  comprendreDemande,
+  contexteDuTeamHolder,
+  estTeamHolder,
+  rassemblerContexte,
+  type Proposition,
+} from './agents/team-holder'
+
+/** `voix_ecoute_etat` et `voix_ecoute_basculer`, noms de champs figés par un banc Rust. */
+interface EcouteEtat {
+  active: boolean
+  ou_en_est: 'dormante' | 'eveillee'
+}
 
 
 /** Un agent tel que la bibliothèque le montre : ni prénom brut ni fiche. */
@@ -27,7 +45,7 @@ interface AgentAffiche {
 }
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors' | 'navigateur' | 'courriel' | 'embauche' | 'travail'>('dashboard')
+  const [activeTab, setActiveTab] = useState<Onglet>('dashboard')
   /**
    * Ce que la bibliothèque affiche. Le type est écrit, et pas `any[]` : c'est
    * `any[]` qui a laissé passer un `find` sur un champ que cette liste n'a pas,
@@ -35,9 +53,10 @@ function App() {
    */
   const [agents, setAgents] = useState<AgentAffiche[]>([])
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
-  const [isListening, setIsListening] = useState(false)
   // Le mot de réveil a été entendu, on attend le prénom d'un agent.
   const [reveillee, setReveillee] = useState(false)
+  // Ce que Rust dit de l'écoute : micro allumé ou non, mot de réveil entendu ou non.
+  const [ecoute, setEcoute] = useState<EcouteEtat>({ active: false, ou_en_est: 'dormante' })
   const [partialResult, setPartialResult] = useState<string>('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState<string>('')
@@ -52,13 +71,71 @@ function App() {
   const [voie, setVoie] = useState<string | null>(null)
   const [voieBascule, setVoieBascule] = useState(false)
   const [jauge, setJauge] = useState<Jauge | null>(null)
+  const [installes, setInstalles] = useState<readonly AgentInstalle[]>([])
+  // Ce que le Team Holder a proposé de changer, en attente du oui du client.
+  // Gardé aussi dans une ref : la boucle d'écoute lit processVoiceCommand tel
+  // qu'il était à son démarrage, et verrait sinon une proposition périmée.
+  const [proposition, setPropositionEtat] = useState<Proposition | null>(null)
+  const propositionRef = useRef<Proposition | null>(null)
+  const setProposition = (p: Proposition | null) => {
+    propositionRef.current = p
+    setPropositionEtat(p)
+  }
+  const [versionEquipe, setVersionEquipe] = useState(0)
+  const luReel = useLectures(activeTab)
+  const travailReel = useTravail(installes)
+  // Le mode démo montre un cabinet d'exemple, pour une démonstration client ou
+  // un contrôle sans rien installer. Retenu d'une ouverture à l'autre.
+  const [demo, setDemo] = useState(() => {
+    try {
+      return localStorage.getItem('iagent-demo') === '1'
+    } catch {
+      return false
+    }
+  })
+  const basculerDemo = () =>
+    setDemo((d) => {
+      try {
+        localStorage.setItem('iagent-demo', d ? '0' : '1')
+      } catch {
+        /* sans stockage, le mode vaut pour cette ouverture */
+      }
+      return !d
+    })
+  const etat: Etat = demo
+    ? ETAT_DEMO
+    : {
+        embauches: installes.filter((a) => !estTeamHolder(a)).length,
+        teamHolder: installes.find((a) => estTeamHolder(a))?.prenom ?? null,
+        actifs: agents.filter((a) => a.status === 'active').length,
+        travail: travailReel,
+        lu: luReel,
+        jauge,
+      }
+  const { lu, travail } = etat
 
   useEffect(() => {
     initializeApp()
   }, [])
 
+  // L'état de l'écoute se relit chaque seconde : le réveil retombe tout seul
+  // quand personne ne dit de prénom, et l'écran doit le voir retomber.
   useEffect(() => {
-    if (!isListening) {
+    let vivant = true
+    const lire = () =>
+      invoke<EcouteEtat>('voix_ecoute_etat')
+        .then((e) => vivant && setEcoute(e))
+        .catch(() => {})
+    lire()
+    const minuterie = setInterval(lire, 1000)
+    return () => {
+      vivant = false
+      clearInterval(minuterie)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!ecoute.active) {
       setPartialResult('')
       return
     }
@@ -93,7 +170,7 @@ function App() {
       clearInterval(interval)
       if (silenceTimeout) clearTimeout(silenceTimeout)
     }
-  }, [isListening, activeAgent, agents])
+  }, [ecoute.active, activeAgent, agents])
 
   /**
    * Prépare l'écoute, et dit en clair ce qui manque quand elle ne peut pas.
@@ -140,6 +217,7 @@ function App() {
 
       const m = new ConversationEngine(installerAgents(fiches, installation.agents), reglages)
       setMoteur(m)
+      setInstalles(m.getAllAgents())
       setAgents(listerDepuisMoteur(m))
       setError(null)
 
@@ -153,6 +231,7 @@ function App() {
       // Sans agents installés, la bibliothèque reste vide plutôt que de montrer
       // des exemples qui ne correspondent à aucune fiche du catalogue.
       setAgents([])
+      setInstalles([])
       setError(
         "Aucun agent installé n'a pu être chargé. Vérifier config/installation.json " +
           'et le dossier agents/ à côté de l\'application. Détail : ' + String(err)
@@ -198,19 +277,9 @@ function App() {
       setVoieBascule(false)
     }
 
-    if (active) {
-      try {
-        await invoke('start_voice_recognition')
-        setIsListening(true)
-        setError(null)
-      } catch (err) {
-        setIsListening(false)
-        setError("Agent activé, mais l'écoute est indisponible. " + (motifEcoute ?? String(err)))
-      }
-    } else {
-      setIsListening(false)
-      await invoke('stop_voice_recognition').catch(() => {})
-    }
+    // Le micro ne dépend plus d'un agent : il écoute dès le lancement, et
+    // seul le mot de réveil le fait parler (voix_entendu). Le bouton VOICE le
+    // coupe ou le rallume.
   }
 
   const processVoiceCommand = async (command: string) => {
@@ -258,13 +327,48 @@ function App() {
       if (!agent) return
       const utterance = reaction.demande
       setActiveAgent(agent.fiche.id)
+      const equipe = moteur!.getAllAgents()
+      let promptSysteme = moteur!.formatSystemPrompt(agent.fiche.id)
+
+      if (estTeamHolder(agent)) {
+        // Une proposition attend : « oui » l'applique, « non » l'écarte.
+        const attente = propositionRef.current
+        if (attente && utterance) {
+          const reponseCourte = utterance.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+          if (/^(oui|ok|d accord|d'accord|vas-y|allez-y|fais-le|faites-le)\b/.test(reponseCourte)) {
+            await accepterProposition()
+            return
+          }
+          if (/^non\b/.test(reponseCourte)) {
+            setProposition(null)
+            await dire("D'accord, je ne change rien.")
+            return
+          }
+        }
+        if (utterance) {
+          const compris = comprendreDemande(utterance, equipe)
+          if ('proposition' in compris) {
+            setProposition(compris.proposition)
+            await dire(compris.proposition.phrase)
+            return
+          }
+          if ('deja' in compris) {
+            await dire(compris.deja)
+            return
+          }
+          // Une question sur le réglage, ou pas un réglage du tout : il répond
+          // en conversation, avec ce qu'il a lu de son équipe.
+        }
+        const { lectures, changements } = await rassemblerContexte(invoke, equipe)
+        promptSysteme += contexteDuTeamHolder(equipe, lectures, changements)
+      }
 
       const reponse = await invoke<{ texte: string; motif: string; bascule: boolean }>(
         'repondre',
         {
           prenom: agent.prenom,
           ficheId: agent.fiche.id,
-          promptSysteme: moteur!.formatSystemPrompt(agent.fiche.id),
+          promptSysteme,
           enonce: utterance || command,
         }
       )
@@ -291,133 +395,266 @@ function App() {
     }
   }
 
+  // Ce que l'application dit à voix haute, affiché aussi pour qui ne l'entend pas.
+  const dire = async (texte: string) => {
+    setLastResponse(texte)
+    await invoke('text_to_speech', { text: texte }).catch(() => {})
+  }
+
+  // Le client a dit oui (à voix haute ou sur l'écran « Votre équipe ») : le
+  // réglage passe par Rust, qui le refuse s'il sort des trois permis.
+  const accepterProposition = async () => {
+    const p = propositionRef.current
+    const chef = installes.find((a) => estTeamHolder(a)) ?? moteur?.getAllAgents().find((a) => estTeamHolder(a))
+    if (!p || !chef) return
+    try {
+      await invoke('equipe_regler', {
+        par: chef.prenom,
+        agent: p.agent,
+        tacheId: p.tacheId,
+        reglage: p.reglage,
+        valeur: p.valeur,
+      })
+      setProposition(null)
+      setVersionEquipe((v) => v + 1)
+      // Le planning en mémoire est celui d'avant : on relit l'installation.
+      await chargerAgentsInstalles()
+      await dire("C'est fait.")
+    } catch (err) {
+      setProposition(null)
+      await dire(`Je n'ai pas pu le faire : ${String(err)}`)
+    }
+  }
+
+  const refuserProposition = () => {
+    setProposition(null)
+    setLastResponse("D'accord, je ne change rien.")
+  }
+
+  const onglets = Object.keys(TITRES) as Exclude<Onglet, 'dashboard'>[]
+
+
+  // Le bouton VOICE. Rust allume et coupe le micro lui-même
+  // (voix_ecoute_basculer) ; le vert et le rouge viennent de voix_ecoute_etat,
+  // seul état de l'écoute, jamais d'un état tenu ici.
+  const basculerVoix = async () => {
+    try {
+      setEcoute(await invoke<EcouteEtat>('voix_ecoute_basculer', { active: !ecoute.active }))
+      setError(null)
+    } catch (err) {
+      setError("L'écoute n'a pas pu changer d'état. " + (motifEcoute ?? String(err)))
+    }
+  }
+
+  // Les chiffres en tête de chaque page : lus, jamais supposés (tiret si la lecture échoue).
+  const bandeau = (onglet: Onglet): Chiffre[] => {
+    const actifs = etat.actifs
+    switch (onglet) {
+      case 'agents':
+        return [
+          { valeur: tiret(etat.embauches), libelle: installes.length > 1 ? 'agents embauchés' : 'agent embauché' },
+          { valeur: tiret(actifs), libelle: actifs > 1 ? 'actifs' : 'actif' },
+        ]
+      case 'travail':
+        return [
+          { valeur: `${tiret(travail.pretes)} / ${tiret(travail.total)}`, libelle: 'tâches prêtes' },
+          {
+            valeur: tiret(travail.total - travail.pretes),
+            libelle: 'à compléter avant de lancer',
+            ton: travail.total > travail.pretes ? 'alerte' : undefined,
+          },
+          { valeur: tiret(travail.sansMatiere), libelle: 'sans dossier désigné' },
+        ]
+      case 'embauche':
+        return [
+          { valeur: tiret(lu.metiers), libelle: 'métiers au catalogue' },
+          { valeur: tiret(lu.secteurs), libelle: 'secteurs' },
+          { valeur: tiret(lu.activites), libelle: 'activités' },
+          { valeur: tiret(etat.embauches), libelle: 'déjà embauchés' },
+        ]
+      case 'connectors':
+        return [
+          {
+            valeur: lu.serveurs ? `${lu.serveurs.prets} / ${lu.serveurs.total}` : '—',
+            libelle: 'outils prêts',
+          },
+          {
+            valeur: lu.cle == null ? '—' : lu.cle ? 'Posée' : 'Aucune',
+            libelle: "clé d'API",
+            ton: lu.cle ? 'succes' : undefined,
+          },
+        ]
+      case 'navigateur':
+        return [{ valeur: tiret(lu.sites), libelle: lu.sites === 1 ? 'compte connecté' : 'comptes connectés' }]
+      case 'equipe':
+        return [
+          { valeur: etat.teamHolder ?? '—', libelle: 'Team Holder' },
+          { valeur: tiret(etat.embauches), libelle: 'agents qu’il tient' },
+          {
+            valeur: proposition && !demo ? '1' : '0',
+            libelle: 'réglage à confirmer',
+            ton: proposition && !demo ? 'alerte' : undefined,
+          },
+        ]
+      case 'courriel':
+        return [{ valeur: tiret(lu.envois), libelle: lu.envois === 1 ? 'envoi consigné' : 'envois consignés' }]
+      case 'voice':
+        return [
+          {
+            valeur: motifEcoute ? 'Indisponible' : ecoute.active ? 'Active' : 'Coupée',
+            libelle: 'écoute',
+            ton: motifEcoute ? 'danger' : undefined,
+          },
+        ]
+      default:
+        return []
+    }
+  }
+
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🤖 iAgent Desktop</h1>
+        <button className="marque" onClick={() => setActiveTab('dashboard')} title="Revenir au centre">
+          <img src={logo} alt="iAgent" />
+        </button>
+        <button
+          className={`bouton-demo${demo ? ' demo-actif' : ''}`}
+          onClick={basculerDemo}
+          aria-pressed={demo}
+          title="Chiffres d'exemple, pour une démonstration ou un contrôle"
+        >
+          Démo {demo ? 'activée' : 'coupée'}
+        </button>
         <div className="status-bar">
-          {isListening ? (
-            <span className="listening">🎤 Listening...</span>
+          {isProcessing ? (
+            <span className="listening">Réflexion…</span>
+          ) : ecoute.ou_en_est === 'eveillee' ? (
+            <span className="listening">Quel agent ?</span>
+          ) : ecoute.active ? (
+            <span className="listening">À l'écoute</span>
           ) : (
-            <span className="idle">Ready</span>
+            <span className="idle">Prêt</span>
           )}
           <MiseAJour />
         </div>
       </header>
 
-      {isListening && (partialResult || isProcessing || lastResponse) && (
+      {demo && (
+        <div className="ruban-demo" role="status">
+          Mode démo : les chiffres affichés sont un exemple, pas ceux de ce poste.
+        </div>
+      )}
+
+      {ecoute.active && (partialResult || isProcessing || lastResponse || reveillee || ecoute.ou_en_est === 'eveillee') && (
         <div className="voice-display">
           {partialResult && (
             <div className="transcription-display">
-              <span className="transcription-label">Hearing:</span>
+              <span className="transcription-label">J'entends :</span>
               <span className="transcription-text">{partialResult}</span>
             </div>
           )}
           {/* Le mot de réveil a été entendu : sans ce signe, le client ne sait
               pas si l'application l'a pris et redit « Voice » par-dessus. */}
-          {reveillee && !isProcessing && (
-            <div className="processing-display">
+          {(reveillee || ecoute.ou_en_est === 'eveillee') && !isProcessing && (
+            <div className="processing-display reveil-display">
+              <span className="reveil-point" aria-hidden="true" />
               <span className="processing-label">J'écoute. Quel agent ?</span>
             </div>
           )}
           {isProcessing && (
             <div className="processing-display">
-              <span className="processing-spinner">⏳</span>
-              <span className="processing-label">Thinking...</span>
+              <span className="processing-spinner" aria-hidden="true" />
+              <span className="processing-label">Réflexion…</span>
             </div>
           )}
           {lastResponse && !isProcessing && (
             <div className="response-display">
-              <span className="response-label">Response:</span>
+              <span className="response-label">Réponse :</span>
               <span className="response-text">{lastResponse}</span>
             </div>
           )}
         </div>
       )}
 
-      <nav className="app-nav">
-        <button
-          className={activeTab === 'dashboard' ? 'active' : ''}
-          onClick={() => setActiveTab('dashboard')}
-        >
-          Dashboard
-        </button>
-        <button
-          className={activeTab === 'agents' ? 'active' : ''}
-          onClick={() => setActiveTab('agents')}
-        >
-          Agents
-        </button>
-        <button
-          className={activeTab === 'voice' ? 'active' : ''}
-          onClick={() => setActiveTab('voice')}
-        >
-          Voice Training
-        </button>
-        <button
-          className={activeTab === 'connectors' ? 'active' : ''}
-          onClick={() => setActiveTab('connectors')}
-        >
-          Vos connexions
-        </button>
-        <button
-          className={activeTab === 'navigateur' ? 'active' : ''}
-          onClick={() => setActiveTab('navigateur')}
-        >
-          Vos comptes
-        </button>
-        <button
-          className={activeTab === 'courriel' ? 'active' : ''}
-          onClick={() => setActiveTab('courriel')}
-        >
-          Courrier
-        </button>
-        <button
-          className={activeTab === 'travail' ? 'active' : ''}
-          onClick={() => setActiveTab('travail')}
-        >
-          Le travail du jour
-        </button>
-        <button
-          className={activeTab === 'embauche' ? 'active' : ''}
-          onClick={() => setActiveTab('embauche')}
-        >
-          Embaucher
-        </button>
-      </nav>
+      {activeTab !== 'dashboard' && (
+        <nav className="app-nav">
+          <button className="retour-centre" onClick={() => setActiveTab('dashboard')}>
+            <svg className="icone" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" />
+              <circle cx="12" cy="12" r="8.5" />
+            </svg>
+            Centre
+          </button>
+          {onglets.map((o) => (
+            <button key={o} className={activeTab === o ? 'active' : ''} onClick={() => setActiveTab(o)}>
+              <Icone onglet={o} />
+              {TITRES[o]}
+            </button>
+          ))}
+        </nav>
+      )}
 
-      <main className="app-main">
-        {error && <div className="error-banner">{error}</div>}
-        {motifEcoute && (
-          <div className="error-banner">Écoute indisponible — {motifEcoute}</div>
-        )}
-        {voie && (
-          <div className={voieBascule ? 'error-banner' : 'succes-banner'}>{voie}</div>
-        )}
-        {jauge && jauge.niveau !== 'confortable' && (
-          <div className={jauge.niveau === 'impossible' ? 'error-banner' : 'avertissement-banner'}>
-            {jauge.machine.nom} — {jauge.message}
-          </div>
-        )}
-        {activeTab === 'dashboard' && <Dashboard agents={agents} isListening={isListening} />}
-        {activeTab === 'agents' && (
-          <AgentManager
-            agents={agents}
-            onToggleAgent={toggleAgentStatus}
-          />
-        )}
-        {activeTab === 'voice' && <VoiceTraining />}
-        {activeTab === 'connectors' && (
+      <main className={activeTab === 'dashboard' ? 'app-main app-main-centre' : 'app-main'}>
+        {!demo && (
           <>
-            <CleApi />
-            <InstallerVoix apresInstallation={demarrerEcoute} />
-            <ConnectorSetup />
+            {error && <div className="error-banner">{error}</div>}
+            {motifEcoute && (
+              <div className="error-banner">Écoute indisponible — {motifEcoute}</div>
+            )}
+            {voie && (
+              <div className={voieBascule ? 'error-banner' : 'succes-banner'}>{voie}</div>
+            )}
+            {jauge && jauge.niveau !== 'confortable' && (
+              <div className={jauge.niveau === 'impossible' ? 'error-banner' : 'avertissement-banner'}>
+                {jauge.machine.nom} — {jauge.message}
+              </div>
+            )}
           </>
         )}
-        {activeTab === 'navigateur' && <Navigateur />}
-        {activeTab === 'courriel' && <Courriel />}
-        {activeTab === 'travail' && <Travail />}
-        {activeTab === 'embauche' && <Embauche />}
+        {activeTab === 'dashboard' && (
+          <Dashboard
+            etat={etat}
+            isProcessing={isProcessing}
+            motifEcoute={motifEcoute}
+            voixActive={ecoute.active}
+            eveillee={ecoute.ou_en_est === 'eveillee' || reveillee}
+            onBasculerVoix={basculerVoix}
+            onOuvrir={setActiveTab}
+          />
+        )}
+        {activeTab !== 'dashboard' && (
+          <div className="page-cadre">
+            <BandeauChiffres chiffres={bandeau(activeTab)} />
+            {activeTab === 'machine' && <Machine jauge={etat.jauge} />}
+            {activeTab === 'agents' && (
+              <AgentManager
+                agents={agents}
+                onToggleAgent={toggleAgentStatus}
+              />
+            )}
+            {activeTab === 'voice' && <VoiceTraining />}
+            {activeTab === 'connectors' && (
+              <>
+                <CleApi />
+                <InstallerVoix apresInstallation={demarrerEcoute} />
+                <ConnectorSetup />
+              </>
+            )}
+            {activeTab === 'navigateur' && <Navigateur />}
+            {activeTab === 'courriel' && <Courriel />}
+            {activeTab === 'travail' && <Travail />}
+            {activeTab === 'embauche' && <Embauche />}
+            {activeTab === 'equipe' && (
+              <Equipe
+                installes={demo ? [] : installes}
+                proposition={demo ? null : proposition}
+                onAccepter={accepterProposition}
+                onRefuser={refuserProposition}
+                version={versionEquipe}
+              />
+            )}
+          </div>
+        )}
       </main>
     </div>
   )
