@@ -60,6 +60,7 @@ export interface Connecteur {
   risque: 'critique' | 'eleve' | 'moyen' | 'faible' | null;
   priorite: 'P0' | 'P1' | 'P2' | null;
   cout: number | null;
+  coutPourLeClient: string | null;
   etapesClient: string[];
   etapesIntegrateur: string[];
   urlProduit: string;
@@ -98,6 +99,8 @@ export type Reponse =
       connecteur: Connecteur;
       authentification: string;
       accesRequis: string;
+      /** Ce que ça coûte au client, en une phrase qu'il lit avant de cliquer. */
+      cout: string;
       etapesClient: string[];
       etapesIntegrateur: string[];
     };
@@ -136,6 +139,10 @@ export function demanderActivation(ref: ReferentielConnecteurs, id: string): Rep
     connecteur: c,
     authentification: c.authentification,
     accesRequis: c.accesRequis,
+    // La règle a exigé qu'une phrase accompagne tout montant, donc à ce point elle est là
+    // dès qu'il y a quelque chose à payer. Le repli ne sert qu'au cas gratuit sans phrase,
+    // et il ne promet rien de plus que ce que le chiffre dit.
+    cout: c.coutPourLeClient ?? 'Sans frais en plus de votre abonnement.',
     etapesClient: c.etapesClient,
     etapesIntegrateur: c.etapesIntegrateur,
   };

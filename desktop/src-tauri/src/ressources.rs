@@ -37,15 +37,23 @@ pub struct Ressource {
     pub remede: &'static str,
 }
 
-/// Le remède des trois pièces de la voix, écrit une fois.
+/// Le remède des pièces que l'installeur ne pose pas.
+///
+/// Depuis le 24/09/2026 l'application va chercher elle-même celles qui sont
+/// déclarées dans `sources-ressources.json` — c'est le choix de max. Le moteur
+/// Piper n'y est pas encore (voir `aDeclarer` dans ce fichier), donc le remède
+/// distingue les deux cas : réclamer un clic pour ce qui se télécharge, et
+/// renvoyer au README pour ce qui reste à poser à la main.
+const REMEDE_TELECHARGEABLE: &str =
+    "l'application peut l'installer pour vous : onglet « Vos connexions », « Installer la voix »";
 const REMEDE_VOIX: &str =
-    "la voix n'est pas encore livrée avec l'application : voir « Ce que l'installeur ne livre pas » dans le README du dépôt";
+    "cette pièce n'est pas encore livrée ni téléchargeable : voir « Ce que l'installeur ne livre pas » dans le README du dépôt";
 
 /// Tout ce que l'application va chercher dehors.
 ///
 /// L'ordre est celui du parcours : d'abord ce qui fait travailler un agent,
 /// ensuite ce qui le fait parler.
-pub const RESSOURCES: [Ressource; 9] = [
+pub const RESSOURCES: [Ressource; 10] = [
     Ressource {
         role: "les fiches des 1 249 postes",
         chemin: "agents",
@@ -102,13 +110,20 @@ pub const RESSOURCES: [Ressource; 9] = [
         livree: true,
         remede: "",
     },
+    Ressource {
+        role: "d'où viennent les pièces que l'installeur ne pose pas",
+        chemin: "sources-ressources.json",
+        variable: "",
+        livree: true,
+        remede: "",
+    },
     // La voix. Trois pièces, et il en manque une seule pour que rien ne parle.
     Ressource {
         role: "le modèle d'écoute, qui transcrit ce que le client dit",
-        chemin: "modeles/ggml-medium-fr.bin",
+        chemin: "modeles/ggml-small-q5_1.bin",
         variable: "IAGENT_MODELE_ECOUTE",
         livree: false,
-        remede: REMEDE_VOIX,
+        remede: REMEDE_TELECHARGEABLE,
     },
 ];
 
@@ -121,14 +136,18 @@ pub fn ressources_de_la_voix() -> Vec<Ressource> {
             chemin: if cfg!(windows) { "piper/piper.exe" } else { "piper/piper" },
             variable: "IAGENT_PIPER",
             livree: false,
-            remede: REMEDE_VOIX,
+            // Téléchargeable sous Windows depuis le 24/09/2026, et là
+            // seulement : l'éditeur publie un .tar.gz pour Linux, que le
+            // binaire ne sait pas ouvrir. Promettre le bouton ailleurs
+            // enverrait le client le chercher là où il n'est pas.
+            remede: if cfg!(windows) { REMEDE_TELECHARGEABLE } else { REMEDE_VOIX },
         },
         Ressource {
             role: "la voix française",
             chemin: "modeles/fr_FR-siwis-medium.onnx",
             variable: "IAGENT_VOIX",
             livree: false,
-            remede: REMEDE_VOIX,
+            remede: REMEDE_TELECHARGEABLE,
         },
         // Piper lit ce fichier de réglages à côté du modèle, sans qu'on le lui
         // donne : absent, le moteur démarre puis échoue sans rien dire d'utile.
@@ -137,7 +156,7 @@ pub fn ressources_de_la_voix() -> Vec<Ressource> {
             chemin: "modeles/fr_FR-siwis-medium.onnx.json",
             variable: "",
             livree: false,
-            remede: REMEDE_VOIX,
+            remede: REMEDE_TELECHARGEABLE,
         },
     ]
 }
@@ -280,11 +299,11 @@ mod tests {
         }
     }
 
-    /// Le constat du jour, écrit noir sur blanc : la voix n'est pas livrée.
-    /// Le jour où elle le sera, ce banc tombera et il faudra le réécrire —
-    /// c'est voulu, c'est comme ça qu'on saura que la situation a changé.
+    /// Le constat, écrit noir sur blanc : la voix n'est toujours pas DANS
+    /// l'installeur. Le jour où elle y sera, ce banc tombera et il faudra le
+    /// réécrire — c'est voulu, c'est comme ça qu'on saura que ça a changé.
     #[test]
-    fn la_voix_n_est_pas_encore_livree_avec_l_application() {
+    fn la_voix_n_est_pas_livree_avec_l_installeur() {
         let voix: Vec<Ressource> = toutes()
             .into_iter()
             .filter(|r| r.chemin.starts_with("modeles/") || r.chemin.starts_with("piper/"))
@@ -292,6 +311,65 @@ mod tests {
         assert_eq!(voix.len(), 4, "trois pièces de voix et le modèle d'écoute");
         assert!(voix.iter().all(|r| !r.livree));
         assert!(voix.iter().all(|r| !r.remede.is_empty()), "chacune dit quoi faire");
+    }
+
+    /// **Le banc qui compte pour le téléchargement.** Une pièce déclarée dans
+    /// `sources-ressources.json` se pose à un chemin ; si ce chemin n'est pas
+    /// exactement celui que le code va chercher, l'application télécharge
+    /// consciencieusement un modèle de 190 Mo à côté de là où elle le lira, et
+    /// continue d'annoncer qu'il manque. Rien n'échouerait, le client
+    /// recommencerait, et ça ne se verrait que chez lui.
+    #[test]
+    fn chaque_piece_telechargeable_se_pose_la_ou_le_code_la_cherche() {
+        let (declarees, refus) = crate::telechargement::sources_de(include_str!(
+            "../sources-ressources.json"
+        ));
+        assert!(refus.is_empty(), "lignes écartées : {:?}", refus);
+        let connus: Vec<&str> = toutes().iter().map(|r| r.chemin).collect();
+        // Une archive se pose dans un DOSSIER : ce que le code cherche est un
+        // fichier dedans, pas le dossier lui-même. Comparer les deux tels quels
+        // dirait que le moteur se télécharge là où personne ne le lit.
+        let couvre = |d: &crate::telechargement::Source, chemin: &str| -> bool {
+            d.chemin == chemin
+                || (d.archive.is_some() && chemin.starts_with(&format!("{}/", d.chemin)))
+        };
+        for d in &declarees {
+            assert!(
+                connus.iter().any(|c| couvre(d, c)),
+                "« {} » se téléchargerait vers {}, que le code ne lit nulle part",
+                d.role,
+                d.chemin
+            );
+        }
+        // Et l'inverse, pour les trois qui doivent l'être : une pièce qu'on a
+        // cessé de déclarer redeviendrait un fichier à poser à la main sans que
+        // personne le remarque, puisque l'écran proposerait toujours le bouton.
+        for r in toutes().iter().filter(|r| r.remede == REMEDE_TELECHARGEABLE) {
+            assert!(
+                declarees.iter().any(|d| couvre(d, r.chemin)),
+                "« {} » promet un téléchargement mais n'est plus déclarée",
+                r.role
+            );
+        }
+        assert_eq!(declarees.len(), 4, "quatre pièces se téléchargent aujourd'hui");
+    }
+
+    /// Ce banc disait, jusqu'au 24/09/2026, que le moteur Piper restait à poser
+    /// à la main. Il est tombé le jour où l'archive a été déclarée, et c'était
+    /// son but. Il dit maintenant l'état d'après : téléchargé sous Windows,
+    /// posé à la main ailleurs, faute d'un lecteur de .tar.gz dans le binaire.
+    #[test]
+    fn le_moteur_piper_se_telecharge_sous_windows_et_pas_ailleurs() {
+        let moteur = toutes()
+            .into_iter()
+            .find(|r| r.chemin.starts_with("piper/"))
+            .expect("le moteur de voix a disparu de la table");
+        if cfg!(windows) {
+            assert_eq!(moteur.remede, REMEDE_TELECHARGEABLE, "il se télécharge");
+        } else {
+            assert_eq!(moteur.remede, REMEDE_VOIX, "ailleurs, il se pose à la main");
+        }
+        assert!(!moteur.livree, "il n'est toujours pas dans l'installeur");
     }
 
     /// Chaque chemin que le code cherche est nommé une seule fois : deux entrées
@@ -313,10 +391,18 @@ mod tests {
     /// chemin tout seul.
     #[test]
     fn la_phrase_dit_ce_qui_manque_et_quoi_en_faire() {
+        // La voix se télécharge depuis le 24/09 : la phrase doit donc renvoyer
+        // au bouton et non plus au README, sinon le client ira chercher à la
+        // main un fichier que l'application sait installer.
         let voix = ressources_de_la_voix();
         let phrase = en_clair(&voix[1]);
         assert!(phrase.contains("la voix française"), "{}", phrase);
-        assert!(phrase.contains("README"), "{}", phrase);
+        assert!(phrase.contains("Installer la voix"), "{}", phrase);
+
+        // Le moteur, lui, reste à poser à la main : sa phrase doit le dire.
+        let moteur = en_clair(&voix[0]);
+        assert!(moteur.contains("moteur de voix"), "{}", moteur);
+        assert!(moteur.contains("README"), "{}", moteur);
 
         let fiches = en_clair(&RESSOURCES[0]);
         assert!(fiches.contains("réinstallez"), "{}", fiches);
@@ -332,13 +418,19 @@ mod tests {
         // Si un jour ces fichiers sont là, il n'y a rien à dire, et c'est bien.
         if let Some(e) = &ecouter {
             assert!(e.contains("modèle d'écoute"), "{}", e);
-            assert!(e.contains("README"), "{}", e);
+            // Écouter ne tient qu'à une pièce, et elle se télécharge.
+            assert!(e.contains("Installer la voix"), "{}", e);
             assert!(!e.contains("la voix française"), "écouter ne demande pas la voix : {}", e);
         }
         if let Some(p) = &parler {
             assert!(p.contains("moteur de voix"), "{}", p);
             assert!(p.contains("réglages"), "les trois pièces de Piper sont nommées : {}", p);
             assert!(!p.contains("modèle d'écoute"), "parler ne demande pas l'écoute : {}", p);
+            // Parler bute encore sur le moteur, qui ne se télécharge pas : le
+            // remède affiché est celui de la PREMIÈRE pièce absente, et c'est
+            // le moteur. Promettre le bouton ici enverrait le client cliquer
+            // sur quelque chose qui ne réglerait pas son problème.
+            assert!(p.contains("README"), "{}", p);
         }
         assert!(
             ecouter.is_some() || parler.is_some(),

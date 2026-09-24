@@ -54,6 +54,7 @@ export interface Connecteur {
   lecture?: unknown;
   ecriture?: unknown;
   cout?: unknown;
+  coutPourLeClient?: unknown;
   risque?: unknown;
 }
 
@@ -86,7 +87,14 @@ export function manques(c: Connecteur): Condition[] {
 
   // Le coût : `null` veut dire « personne n'a chiffré », et c'est le cas des 137 aujourd'hui.
   // Un connecteur gratuit se déclare `0`, ce qui est une information ; `null` n'en est pas une.
-  if (typeof c.cout !== 'number' || c.cout < 0) absents.push('cout');
+  //
+  // Et un coût identifié par nous n'est pas un coût connu du client : un connecteur à 25 €
+  // par mois passerait la règle (25 ≥ 0) et le client cliquerait « Se connecter » sans avoir
+  // rien lu. Dès qu'il y a un montant, la phrase qui le lui dit est exigée avec lui — c'est
+  // la raison d'être de la condition, pas une formalité de plus.
+  const chiffre = typeof c.cout === 'number' && c.cout >= 0;
+  const phrase = typeof c.coutPourLeClient === 'string' && c.coutPourLeClient.trim() !== '';
+  if (!chiffre || (typeof c.cout === 'number' && c.cout > 0 && !phrase)) absents.push('cout');
 
   if (vide(c.risque) || indecis(c.risque)) absents.push('risque');
 

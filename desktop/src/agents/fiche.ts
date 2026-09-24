@@ -194,8 +194,19 @@ export function planningDuClient(fiche: Fiche, planning: Planning = {}): Tache[]
     (planning.ajustements ?? []).map((a) => [a.tacheId, a])
   );
 
-  // L'agent travaille seul par défaut : on ne vend pas un employé dont il faut
-  // relire chaque geste. Le contrôle est une décision du client, tâche par tâche.
+  // Règle de max : l'agent va seul, sauf si le client met une tâche sous
+  // contrôle. On ne vend pas un employé dont il faut relire chaque geste.
+  //
+  // Le `validationHumaine` de la fiche n'est donc PAS appliqué ici : c'est une
+  // proposition de l'expert, celle que l'agent énonce à l'entretien
+  // (`questionsEntretien`, sujet « autonomie » : « il y en a N où j'attends
+  // votre accord, je garde ça ou vous voulez en relâcher ? »). Ce que le client
+  // répond devient un ajustement, et c'est l'ajustement qui décide. Les mêmes
+  // trois lignes vivent dans `accord_attendu` côté Rust, qui les ignorait
+  // jusqu'au 24/09/2026 : il appliquait la fiche pendant que cet écran
+  // appliquait l'autonomie, et le client lisait l'un ou l'autre selon l'écran.
+  // `check-travail.ts` rejoue les témoins de `temoins-planning.json` des deux
+  // côtés pour qu'ils ne puissent plus se séparer.
   const taches = fiche.taches.map((tache) => {
     const a = ajuste.get(tache.id);
     if (!a) return { ...tache, validationHumaine: false };
@@ -218,6 +229,8 @@ export function planningDuClient(fiche: Fiche, planning: Planning = {}): Tache[]
       entrees: ajoutee.entrees ?? [],
       sorties: ajoutee.sorties ?? [],
       logiciels: ajoutee.logiciels ?? [],
+      // Même règle : le client qui ajoute une tâche lui-même n'a pas demandé à
+      // la relire. S'il le veut, il le dit dans la tâche qu'il ajoute.
       validationHumaine: ajoutee.validationHumaine ?? false,
       active: true,
     });

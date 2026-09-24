@@ -17,10 +17,11 @@ mod tache;
 mod document;
 mod jauge;
 mod ressources;
+mod reveil;
+mod telechargement;
 mod pdf;
 mod lecture;
 mod agents;
-mod connectors;
 mod database;
 mod llm;
 mod voiceprint;
@@ -31,7 +32,6 @@ use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
 use llm::{LLMService, AgentPersona};
 use voiceprint::{VoicePrintService, VoicePrint};
-use telegram::{TelegramService, TelegramCredentials};
 use database::Database;
 use std::sync::Arc;
 
@@ -39,8 +39,118 @@ pub struct AppState {
     voice: Mutex<Option<VoiceState>>,
     agents: Mutex<AgentRouter>,
     llm: Mutex<Option<LLMService>>,
-    telegram: Mutex<Option<TelegramCredentials>>,
     db: Arc<Mutex<Option<Database>>>,
+    /// Ou en est le mot de reveil, et si l'ecoute est allumee. L'etat vit ici
+    /// et pas a l'ecran : c'est le code qui doit tenir la regle de max, pas une
+    /// variable React qu'un rechargement de page remettrait a zero.
+    ecoute: Mutex<Ecoute>,
+}
+
+/// L'ecoute telle que le bouton VOICE la montre, et telle que le mot de reveil
+/// la fait avancer.
+struct Ecoute {
+    /// Vert ou rouge : le client peut couper le micro d'un clic. Eteinte, plus
+    /// rien n'est ecoute, meme pas le mot de reveil.
+    active: bool,
+    ou_en_est: reveil::Etat,
+}
+
+impl Default for Ecoute {
+    fn default() -> Self {
+        // Allumee par defaut : le produit se vend sur le fait qu'on lui parle.
+        Ecoute { active: true, ou_en_est: reveil::Etat::Dormante }
+    }
+}
+
+/// Ce que l'ecran lit pour peindre le bouton VOICE et le noyau anime.
+#[derive(serde::Serialize)]
+struct EcouteVue {
+    active: bool,
+    ou_en_est: reveil::Etat,
+}
+
+/// L'etat de l'ecoute, pour le bouton VOICE (vert = actif, rouge = inactif).
+#[tauri::command]
+fn voix_ecoute_etat(state: State<'_, AppState>) -> EcouteVue {
+    let e = state.ecoute.lock().unwrap();
+    EcouteVue { active: e.active, ou_en_est: e.ou_en_est.clone() }
+}
+
+/// Allume ou coupe l'ecoute. Couper rendort aussi le mot de reveil : sinon
+/// l'ecoute reprendrait la ou elle en etait, et le client qui a coupe pour
+/// parler tranquillement retrouverait un agent qui attend son prenom.
+#[tauri::command]
+fn voix_ecoute_basculer(active: bool, state: State<'_, AppState>) -> Result<EcouteVue, String> {
+    // Le micro suit le bouton ICI, et pas a l'ecran. Il y avait deux etats pour
+    // une seule chose — `isListening` en React et `active` en Rust — ce qui est
+    // la garantie qu'un jour le bouton serait vert pendant que l'ecoute est
+    // morte. Un bouton rouge doit vouloir dire que le micro est coupe, pas
+    // seulement que le mot de reveil est ignore.
+    //
+    // Le micro d'abord, l'etat ensuite, et les deux sens ne se valent pas :
+    //
+    // Allumer qui echoue ne s'enregistre pas. La version precedente posait
+    // `active = true` puis jetait l'echec de `micro()` — exactement le bouton
+    // vert sur ecoute morte que le commentaire ci-dessus dit vouloir eviter, et
+    // pas en theorie : `micro()` echoue des que la voix n'est pas prete sur ce
+    // poste, ce qui est le cas de toute installation ou les fichiers de voix
+    // n'ont pas ete poses. L'echec remonte donc a l'ecran, qui garde le bouton
+    // rouge et affiche le motif.
+    //
+    // Couper qui echoue s'enregistre quand meme : le client a demande a couper,
+    // et couper a echoue faute d'ecoute prete, ce qui revient au meme.
+    if active {
+        micro(&state, true)?;
+    } else {
+        let _ = micro(&state, false);
+    }
+    let mut e = state.ecoute.lock().unwrap();
+    e.active = active;
+    e.ou_en_est = reveil::Etat::Dormante;
+    Ok(EcouteVue { active: e.active, ou_en_est: e.ou_en_est.clone() })
+}
+
+/// Allume ou coupe le micro. `Err` quand l'ecoute n'est pas prete sur ce poste
+/// (modele absent) : l'appelant decide si c'est une faute chez lui.
+fn micro(state: &State<'_, AppState>, allume: bool) -> Result<String, String> {
+    let voice_guard = state.voice.lock().unwrap();
+    let Some(voice) = voice_guard.as_ref() else {
+        return Err("L'écoute n'est pas prête sur ce poste.".to_string());
+    };
+    if allume { voice.start_listening() } else { voice.stop_listening() }
+}
+
+/// Ce que l'ecoute conclut de ce qu'elle vient d'entendre.
+///
+/// L'ecran transcrit et passe le texte ici ; c'est Rust qui decide, parce que
+/// c'est la regle de max et qu'une regle tenue par l'ecran se perd au premier
+/// rechargement. Les prenoms viennent de `installation.json`, jamais de
+/// l'ecran : un agent qu'on n'a pas embauche ne repond pas.
+#[tauri::command]
+fn voix_entendu(texte: String, state: State<'_, AppState>) -> reveil::Reaction {
+    let mut e = state.ecoute.lock().unwrap();
+    if !e.active {
+        return reveil::Reaction::Rien;
+    }
+    let prenoms = prenoms_embauches();
+    let (apres, reaction) = reveil::entendu(&e.ou_en_est, &texte, &prenoms);
+    e.ou_en_est = apres;
+    reaction
+}
+
+/// Les prenoms que ce client a donnes a SES agents. Une installation illisible
+/// ne fait repondre personne, ce qui est le bon sens de l'echec ici.
+fn prenoms_embauches() -> Vec<String> {
+    crate::fiches::lire_installation()
+        .ok()
+        .and_then(|c| serde_json::from_str::<serde_json::Value>(&c).ok())
+        .and_then(|c| c.get("agents")?.as_array().cloned())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.get("prenom")?.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// Enrollment and verification must extract features at the same rate, or the
@@ -64,8 +174,29 @@ fn init_voice(state: State<AppState>) -> Result<String, String> {
     let model_path = voice::chemin_modele_ecoute();
     match VoiceState::new(&model_path) {
         Ok(voice_state) => {
-            let mut voice = state.voice.lock().unwrap();
-            *voice = Some(voice_state);
+            {
+                let mut voice = state.voice.lock().unwrap();
+                *voice = Some(voice_state);
+            }
+            // « L'application est toujours a l'ecoute » (max, 24/09/2026) : le
+            // micro demarre donc seul, sans que le client ait a cliquer. Ce qui
+            // rend ca acceptable est le mot de reveil — rien n'est ecoute POUR
+            // etre suivi tant que « Voice » n'a pas ete prononce (`reveil.rs`).
+            // S'il a coupe le bouton, on respecte son choix.
+            let demarre = state.ecoute.lock().unwrap().active;
+            if demarre {
+                // Meme regle qu'au bouton : le modele charge ne prouve pas que
+                // le micro tourne. Jeter cet echec laissait `active` a vrai, et
+                // `voix_ecoute_etat` repondait « allumee » a un ecran qui
+                // venait de lire « Écoute prête. ».
+                if let Err(motif) = micro(&state, true) {
+                    state.ecoute.lock().unwrap().active = false;
+                    return Err(format!(
+                        "Le modèle d'écoute est chargé mais le micro n'a pas démarré : {}",
+                        motif
+                    ));
+                }
+            }
             Ok("Écoute prête.".to_string())
         }
         // Le fichier est là et ne se charge pas : ce n'est plus le même problème,
@@ -199,8 +330,17 @@ async fn repondre(
     }
 
     // La fiche dit ou ce poste travaille. Jusqu'ici personne ne le lisait et
-    // tout passait par l'API, quoi qu'elle dise.
-    let (execution, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
+    // tout passait par l'API, quoi qu'elle dise. Ce que le client a repondu a
+    // l'entretien restreint ensuite ce que la fiche permet : il l'a choisi en
+    // connaissant la facture, et la question le lui promettait.
+    let (fiche_dit, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
+    let execution = modele::selon_le_client(
+        &fiche_dit,
+        crate::fiches::lire_installation()
+            .ok()
+            .and_then(|c| modele::repartition_du_client(&c, &prenom))
+            .as_deref(),
+    );
     let offre = modele::Offre {
         locaux: modele::modeles_installes(modele::ADRESSE_LOCALE).await.ok(),
         cle_api: llm::cle_api().is_some(),
@@ -283,7 +423,17 @@ async fn executer_tache(
         tache::matiere_en_mots(&matiere, prep.source_declaree)
     );
 
-    let (execution, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
+    // Meme regle qu'en conversation : la fiche d'abord, le choix du client
+    // ensuite. Les deux chemins doivent trancher pareil, sinon l'agent parlerait
+    // en local et travaillerait par l'API.
+    let (fiche_dit, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
+    let execution = modele::selon_le_client(
+        &fiche_dit,
+        crate::fiches::lire_installation()
+            .ok()
+            .and_then(|c| modele::repartition_du_client(&c, &prenom))
+            .as_deref(),
+    );
     let offre = modele::Offre {
         locaux: modele::modeles_installes(modele::ADRESSE_LOCALE).await.ok(),
         cle_api: llm::cle_api().is_some(),
@@ -493,69 +643,35 @@ fn verify_voice(
     ))
 }
 
-#[tauri::command]
-fn train_voice(utterances: Vec<String>, state: State<AppState>) -> Result<String, String> {
-    let voice_guard = state.voice.lock().unwrap();
+/// Ce que répond `train_voice`, et pourquoi il ne répond que ça.
+///
+/// La reconnaissance du propriétaire se fait sur du son, pas sur des phrases
+/// écrites : `enroll_voice` calcule les MFCC de vrais échantillons et les range
+/// en base, `verify_voice` s'y compare. Du texte n'apprend rien à personne.
+const APPRENTISSAGE_PAR_LE_SON: &str = "La voix ne s'apprend pas sur des phrases écrites : \
+il faut enregistrer de vrais échantillons de son. Rien n'a été appris.";
 
-    if voice_guard.is_some() {
-        println!("Training voice with {} utterances", utterances.len());
-        // Voice training now done via enroll_voice with actual audio samples
-        Ok(format!(
-            "Voice training prepared. Use enroll_voice with audio samples to complete."
-        ))
-    } else {
-        Err("L'écoute n'est pas prête sur ce poste.".to_string())
-    }
+/// Restait de l'époque où l'on croyait pouvoir apprendre une voix sur du texte.
+///
+/// Elle jetait ses `utterances`, en imprimait le nombre sur la sortie standard,
+/// et rendait `Ok("Voice training prepared…")` — un succès que personne n'avait
+/// gagné, sur une commande que Tauri expose. C'est la même faute que
+/// `telegram.rs` : le premier écran qui l'aurait appelée aurait annoncé au
+/// client que sa voix était apprise. Elle refuse maintenant, en français et en
+/// disant par où passer, plutôt que de disparaître d'un coup du carnet de
+/// commandes où l'interface pourrait encore la chercher.
+#[tauri::command]
+fn train_voice(utterances: Vec<String>) -> Result<String, String> {
+    // Le nom de l'argument reste `utterances` : Tauri en fait la clef
+    // attendue cote interface, et la renommer rendrait une erreur de
+    // desserialisation illisible au lieu du refus en francais.
+    let _ = utterances;
+    Err(APPRENTISSAGE_PAR_LE_SON.to_string())
 }
 
 #[tauri::command]
 async fn text_to_speech(text: String) -> Result<String, String> {
     voice::text_to_speech(&text).await
-}
-
-#[tauri::command]
-async fn connect_telegram(
-    bot_token: String,
-    chat_id: String,
-    state: State<'_, AppState>,
-) -> Result<String, String> {
-    if bot_token.is_empty() || chat_id.is_empty() {
-        return Err("Token and Chat ID cannot be empty".to_string());
-    }
-
-    match TelegramService::connect_telegram(bot_token, chat_id).await {
-        Ok(credentials) => {
-            // Le jeton du bot reste en mémoire, jamais sur le disque : il était
-            // écrit en clair dans le SQLite du poste et jamais relu. Le jour où
-            // la connexion devra survivre à un redémarrage, elle passera par le
-            // coffre du système (Credential Manager, Trousseau), pas par cette base.
-            let mut telegram = state.telegram.lock().unwrap();
-            *telegram = Some(credentials);
-            Ok("Telegram connected successfully".to_string())
-        }
-        Err(e) => Err(format!("Failed to connect Telegram: {}", e)),
-    }
-}
-
-#[tauri::command]
-fn get_telegram_instructions() -> Result<String, String> {
-    Ok(TelegramService::get_connection_instructions())
-}
-
-#[tauri::command]
-async fn send_telegram_message(
-    text: String,
-    state: State<'_, AppState>,
-) -> Result<String, String> {
-    let credentials = {
-        let telegram = state.telegram.lock().unwrap();
-        telegram.clone()
-    };
-
-    match credentials {
-        Some(credentials) => TelegramService::send_message(&credentials, &text).await,
-        None => Err("Telegram not connected. Call connect_telegram first.".to_string()),
-    }
 }
 
 fn main() {
@@ -577,8 +693,8 @@ fn main() {
         voice: Mutex::new(None),
         agents: Mutex::new(AgentRouter::new()),
         llm: Mutex::new(None),
-        telegram: Mutex::new(None),
         db: Arc::new(Mutex::new(db)),
+        ecoute: Mutex::new(Ecoute::default()),
     };
 
     tauri::Builder::default()
@@ -605,9 +721,12 @@ fn main() {
             activate_agent,
             deactivate_agent,
             train_voice,
-            connect_telegram,
-            get_telegram_instructions,
-            send_telegram_message,
+            telegram::telegram_brancher,
+            telegram::telegram_branche,
+            telegram::telegram_debrancher,
+            telegram::telegram_envoyer,
+            telegram::telegram_relever,
+            telegram::telegram_mode_d_emploi,
             fiches::lire_installation,
             fiches::lire_fiche,
             fiches::installation_ecrire,
@@ -619,6 +738,11 @@ fn main() {
             mcp::mcp_journal,
             modele::modele_etat,
             jauge::jauge_etat,
+            voix_ecoute_etat,
+            voix_ecoute_basculer,
+            voix_entendu,
+            telechargement::voix_a_installer,
+            telechargement::voix_installer,
             llm::cle_api_ranger,
             llm::cle_api_presente,
             llm::cle_api_retirer,

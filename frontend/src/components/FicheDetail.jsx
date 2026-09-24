@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import AgentSimulator from './AgentSimulator.jsx';
-import { estimateMonthlyPrice, getRiskProfile, economieDe, attendUnAccordHumain } from '../data/loader.js';
+import { estimateMonthlyPrice, getRiskProfile, economieDe, tachesAReliretConseillees } from '../data/loader.js';
 
 /** Les onglets, nommes une seule fois : le banc les parcourt tous. */
 export const ONGLETS = ['overview', 'taches', 'connecteurs', 'economie'];
@@ -23,7 +23,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'overview'
   // soient. Le vrai calcul est dans dimensionnement/economie.ts, et ses
   // hypothèses sont dans tarifs-api.json.
   const eco = economieDe(agent);
-  const accordHumain = attendUnAccordHumain(agent);
+  const conseillees = tachesAReliretConseillees(agent);
   const apiCallsPerDay = agent.execution?.appelsParJourEstimes ?? 0;
 
   return (
@@ -252,8 +252,13 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'overview'
                     <p className="text-slate-300">
                       Validation:{' '}
                       <span className="font-bold text-slate-200">
-                        {accordHumain ? "attend l'accord d'un humain" : 'travaille seul'}
+                        travaille seul
                       </span>
+                      {conseillees > 0 && (
+                        <span className="text-slate-400 text-sm">
+                          {' '}— {conseillees} tâche{conseillees > 1 ? 's' : ''} que l'expert conseille de relire, à votre choix
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>

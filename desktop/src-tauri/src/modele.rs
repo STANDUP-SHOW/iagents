@@ -360,6 +360,63 @@ pub async fn repondre_en_local(
 // ---------------------------------------------------------------------------
 
 /// Le bloc `execution` d'une fiche et les modèles de son palier de texte.
+/// Ce que le client a répondu à l'entretien sur l'endroit où l'agent calcule.
+/// Les trois libellés sont ceux que l'écran propose (`REPARTITION_*` dans
+/// `src/agents/entretien.ts`) ; `check-entretien` refuse qu'ils divergent.
+pub const CLIENT_TOUT_LOCAL: &str = "Tout sur votre machine";
+pub const CLIENT_MIXTE: &str = "Surtout local, une part par API";
+pub const CLIENT_TOUT_API: &str = "Tout par API";
+
+/// La fiche, restreinte par ce que le client a demandé à l'embauche.
+///
+/// L'entretien promet au client : « je peux tout faire tourner sur votre
+/// machine, sans rien payer au jeton — mais ce qu'elle ne tient pas, je ne le
+/// ferai pas ». Jusqu'au 24/09/2026 cette promesse n'était tenue par rien : la
+/// réponse n'était pas même écrite, et `choisir` ne lisait que la fiche. Un
+/// client qui demandait « tout sur ma machine » voyait partir ses jetons.
+///
+/// **Le client restreint, il n'étend jamais.** Ce que la fiche ne permet pas
+/// reste impossible : c'est le poste qui dit ce qu'il sait faire, pas l'acheteur.
+/// D'où l'intersection plutôt qu'un remplacement. Et quand l'intersection est
+/// vide — la fiche n'accepte que l'API, le client a demandé tout local — la
+/// fiche l'emporte telle quelle : `choisir` dira ensuite, dans son motif, ce
+/// qu'il a fait et pourquoi. Rendre des modes vides ferait échouer l'agent sur
+/// un message qui ne nommerait ni la fiche ni le choix du client.
+///
+/// Un libellé inconnu ne change rien non plus : on ne devine pas ce qu'un
+/// client a voulu dire.
+pub fn selon_le_client(fiche: &Execution, dit: Option<&str>) -> Execution {
+    let garder = |mode: &str, defaut: &str| -> Execution {
+        let modes: Vec<String> =
+            fiche.modes.iter().filter(|m| m.as_str() == mode).cloned().collect();
+        if modes.is_empty() {
+            return fiche.clone();
+        }
+        Execution { defaut: defaut.to_string(), modes }
+    };
+    match dit.map(str::trim) {
+        Some(CLIENT_TOUT_LOCAL) => garder("local", "local"),
+        Some(CLIENT_TOUT_API) => garder("api", "api"),
+        // « Surtout local, une part par API » EST ce que la fiche dit déjà
+        // (local par défaut, API au choix) : rien à restreindre.
+        _ => fiche.clone(),
+    }
+}
+
+/// Ce que ce client a réglé pour CET agent, par son prénom. Absent = rien de
+/// réglé, et la fiche s'applique telle quelle.
+pub fn repartition_du_client(installation: &str, prenom: &str) -> Option<String> {
+    let config: serde_json::Value = serde_json::from_str(installation).ok()?;
+    config
+        .get("agents")?
+        .as_array()?
+        .iter()
+        .find(|a| a.get("prenom").and_then(serde_json::Value::as_str) == Some(prenom))?
+        .get("repartition")?
+        .as_str()
+        .map(str::to_string)
+}
+
 pub fn contexte_de_la_fiche(fiche_id: &str) -> Result<(Execution, Vec<String>), String> {
     let brut = crate::fiches::lire_fiche(fiche_id.to_string())?;
     let fiche: serde_json::Value =
@@ -540,6 +597,79 @@ mod tests {
         assert_eq!(gros, Some("llama3.1:70b".to_string()));
 
         assert_eq!(modele_pour(&installes(&["mistral:7b"]), &["Llama 3.1 8B".into()]), None);
+    }
+
+    // --- Ce que le client a choisi a l'entretien ------------------------------
+
+    fn poste(defaut: &str, modes: &[&str]) -> Execution {
+        Execution {
+            defaut: defaut.into(),
+            modes: modes.iter().map(|m| (*m).to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn sans_reponse_du_client_la_fiche_s_applique_telle_quelle() {
+        let fiche = poste("local", &["local", "api"]);
+        let vu = selon_le_client(&fiche, None);
+        assert_eq!(vu.defaut, "local");
+        assert_eq!(vu.modes, vec!["local".to_string(), "api".to_string()]);
+    }
+
+    #[test]
+    fn tout_sur_ma_machine_ferme_la_voie_de_l_api() {
+        // La question le promet en toutes lettres : « ce qu'elle ne tient pas,
+        // je ne le ferai pas ». Sans ca, un client qui demande le tout-local
+        // voit partir ses jetons.
+        let vu = selon_le_client(&poste("local", &["local", "api"]), Some(CLIENT_TOUT_LOCAL));
+        assert_eq!(vu.modes, vec!["local".to_string()]);
+        assert_eq!(vu.defaut, "local");
+    }
+
+    #[test]
+    fn tout_par_api_ferme_la_voie_locale() {
+        let vu = selon_le_client(&poste("local", &["local", "api"]), Some(CLIENT_TOUT_API));
+        assert_eq!(vu.modes, vec!["api".to_string()]);
+        assert_eq!(vu.defaut, "api");
+    }
+
+    #[test]
+    fn surtout_local_est_deja_ce_que_dit_la_fiche() {
+        let vu = selon_le_client(&poste("local", &["local", "api"]), Some(CLIENT_MIXTE));
+        assert_eq!(vu.modes, vec!["local".to_string(), "api".to_string()]);
+        assert_eq!(vu.defaut, "local");
+    }
+
+    #[test]
+    fn le_client_restreint_mais_n_etend_jamais() {
+        // Un poste que la fiche reserve a l'API ne devient pas local parce que
+        // l'acheteur le demande : c'est le poste qui dit ce qu'il sait faire.
+        // La fiche l'emporte, et `choisir` expliquera ensuite dans son motif.
+        let fiche = poste("api", &["api"]);
+        let vu = selon_le_client(&fiche, Some(CLIENT_TOUT_LOCAL));
+        assert_eq!(vu.modes, vec!["api".to_string()]);
+        assert_eq!(vu.defaut, "api");
+    }
+
+    #[test]
+    fn un_libelle_inconnu_ne_devine_rien() {
+        let fiche = poste("local", &["local", "api"]);
+        let vu = selon_le_client(&fiche, Some("comme vous voulez"));
+        assert_eq!(vu.modes, fiche.modes);
+        assert_eq!(vu.defaut, fiche.defaut);
+    }
+
+    #[test]
+    fn le_reglage_se_retrouve_par_le_prenom_de_l_agent() {
+        let config = r#"{"agents":[
+            {"prenom":"Carla","ficheId":"AG-0179","voix":"fr"},
+            {"prenom":"Robert","ficheId":"AG-0196","voix":"fr","repartition":"Tout par API"}
+        ]}"#;
+        assert_eq!(repartition_du_client(config, "Robert").as_deref(), Some(CLIENT_TOUT_API));
+        // Un agent sans reglage n'herite pas de celui du voisin.
+        assert_eq!(repartition_du_client(config, "Carla"), None);
+        assert_eq!(repartition_du_client(config, "Personne"), None);
+        assert_eq!(repartition_du_client("pas du json", "Robert"), None);
     }
 
     fn poste_local() -> Execution {

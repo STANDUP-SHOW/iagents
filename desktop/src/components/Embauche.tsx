@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import {
   configurer,
+  planningDepuisAutonomie,
+  reglagesDepuisEntretien,
   questionsCadre,
   questionsEntretien,
   reconnaitreActivite,
@@ -136,6 +138,32 @@ export default function Embauche() {
       const nouveau: Record<string, unknown> = { prenom: prenom.trim(), ficheId, voix }
       if (sexe) nouveau.sexe = sexe
       if (photo.trim()) nouveau.photo = photo.trim()
+
+      // Ce que le client a répondu sur l'autonomie devient son planning, sans
+      // quoi il n'a aucun moyen de mettre une tâche sous contrôle : l'agent va
+      // seul sauf s'il le demande, et c'est ici qu'il le demande. Le `??` reprend
+      // la proposition affichée : le select montre le défaut sans rien écrire
+      // dans l'état tant qu'on n'y touche pas, et une proposition qu'on accepte
+      // sans la toucher est une réponse.
+      const surAutonomie = cadre.find((q) => q.sujet === 'autonomie')
+      const planning = surAutonomie
+        ? planningDepuisAutonomie(
+            fiche?.taches ?? [],
+            reponsesCadre.autonomie ?? surAutonomie.defaut,
+            (t) => (t as { id?: string }).id ?? ''
+          )
+        : undefined
+      if (planning) nouveau.planning = planning
+
+      // Les cinq autres réponses tombaient par terre exactement comme
+      // l'autonomie : l'agent demandait au client son activité, ses horaires,
+      // son rythme, où calculer et où sont ses dossiers, et rien ne l'écrivait.
+      // Ce que le client apprend à l'agent devient des compétences, que
+      // `tache.rs` et la conversation lisent déjà ; où l'agent calcule devient
+      // un réglage que `modele::choisir` applique.
+      const regle = reglagesDepuisEntretien(cadre, reponsesCadre)
+      if (regle.competences.length) nouveau.competences = regle.competences
+      if (regle.repartition) nouveau.repartition = regle.repartition
 
       const contenu = JSON.stringify(
         { ...existant, agents: [...agents, nouveau] },

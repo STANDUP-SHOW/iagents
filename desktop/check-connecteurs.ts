@@ -212,8 +212,22 @@ veut(packDuMetier(ref, 'secteur-qui-n-existe-pas') === null, 'un secteur inconnu
 // ça rend juste `undefined` — un panneau vide que personne ne comprend. Ce banc relit les
 // deux fichiers et compare. (Les ARGUMENTS d'une commande, eux, sont bien convertis par
 // Tauri : `nomDeVariable` en JavaScript arrive en `nom_de_variable` en Rust.)
-const rust = readFileSync(join(racine, 'desktop/src-tauri/src/mcp.rs'), 'utf8');
-const tsx = readFileSync(join(racine, 'desktop/src/components/ConnectorSetup.tsx'), 'utf8');
+// Une seule ligne par structure qui traverse : ajouter une paire ici suffit. Le
+// premier garde ne regardait que ServeurVisible ; AManquer traversait depuis le
+// 24/09 sans que rien ne la relise, exactement le trou que ce banc existe pour
+// fermer.
+const TRAVERSENT: { nom: string; rust: string; ecran: string }[] = [
+  {
+    nom: 'ServeurVisible',
+    rust: 'desktop/src-tauri/src/mcp.rs',
+    ecran: 'desktop/src/components/ConnectorSetup.tsx',
+  },
+  {
+    nom: 'AManquer',
+    rust: 'desktop/src-tauri/src/telechargement.rs',
+    ecran: 'desktop/src/components/InstallerVoix.tsx',
+  },
+];
 
 const champsRust = (nom: string, source: string): string[] => {
   const bloc = source.match(new RegExp(`struct ${nom} \\{([\\s\\S]*?)\\n\\}`));
@@ -226,13 +240,41 @@ const champsTs = (nom: string, source: string): string[] => {
   return [...bloc[1].matchAll(/^\s*([A-Za-z_0-9]+)[?]?:/gm)].map((m) => m[1]);
 };
 
-const cote = champsRust('ServeurVisible', rust);
-const ecran = champsTs('ServeurVisible', tsx);
-veut(cote.length > 0, "la structure ServeurVisible est introuvable côté Rust");
-veut(ecran.length > 0, "l'interface ServeurVisible est introuvable côté écran");
-for (const champ of ecran) {
-  if (!cote.includes(champ)) {
-    faute(`l'écran lit « ${champ} » que Rust n'envoie pas (il envoie : ${cote.join(', ')})`);
+for (const { nom, rust, ecran } of TRAVERSENT) {
+  const cote = champsRust(nom, readFileSync(join(racine, rust), 'utf8'));
+  const vus = champsTs(nom, readFileSync(join(racine, ecran), 'utf8'));
+  veut(cote.length > 0, `la structure ${nom} est introuvable côté Rust`);
+  veut(vus.length > 0, `l'interface ${nom} est introuvable côté écran`);
+  for (const champ of vus) {
+    if (!cote.includes(champ)) {
+      faute(
+        `l'écran lit « ${champ} » sur ${nom}, que Rust n'envoie pas ` +
+          `(il envoie : ${cote.join(', ')})`
+      );
+    }
+  }
+}
+
+// Le coût atteint-il l'écran ? Ce dépôt a déjà payé trois fois le champ obligatoire que
+// personne ne lit — appMinimum, profil_risque, les badges de la boutique. Celui-ci décide
+// si le client sait qu'il sera facturé : écrit dans couts.json, porté au catalogue et
+// jamais affiché, il ne protégerait de rien. On vérifie donc qu'il traverse, des deux
+// côtés : la réponse d'activation le rend, et l'écran le pose.
+const activationTs = readFileSync(join(racine, 'desktop/src/agents/connecteurs.ts'), 'utf8');
+const ecranTs = readFileSync(join(racine, 'desktop/src/components/ConnectorSetup.tsx'), 'utf8');
+veut(
+  /coutPourLeClient/.test(activationTs),
+  "demanderActivation ne lit pas coutPourLeClient : le coût s'arrête au catalogue"
+);
+veut(
+  /reponse\.cout/.test(ecranTs),
+  "l'écran des connecteurs n'affiche pas reponse.cout : le client cliquerait sans savoir ce qu'il paie"
+);
+// Et le catalogue le porte vraiment pour chaque connecteur ouvert : un activable sans
+// phrase ferait afficher le repli, qui promet la gratuité.
+for (const c of activables(ref)) {
+  if (c.cout !== 0 && !c.coutPourLeClient) {
+    faute(`${c.nom} est activable à ${c.cout} € sans phrase pour le client`);
   }
 }
 

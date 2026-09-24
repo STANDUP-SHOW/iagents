@@ -170,16 +170,39 @@ par WhatsApp et email.
   `profil_risque` dit si un humain doit approuver. Le générateur écrivait le
   second sans jamais regarder les tâches : **1 243 fiches sur 1 249 se disaient
   « PR-00 (autonome) », dont 245 dont CHAQUE tâche attend un accord humain.**
-  Personne ne lisait le champ, donc personne ne le voyait mentir. Il est dérivé
-  depuis le 23/09 (`profilRisqueAttendu`, dans `verifier-paquets.ts`) et le banc
-  refuse l'écart : **30 fiches sont réellement autonomes, 1 219 sont en PR-03**.
-  Deux valeurs seulement, parce que les fiches ne portent rien qui distingue
-  davantage ; PR-01, PR-02 et PR-04 restent inemployés tant que personne n'a dit
-  ce qui les produirait. **Ce qui est réellement appliqué reste
-  `validationHumaine`, tâche par tâche, dans `tache.rs`** — l'étiquette de fiche
-  le résume, elle ne le remplace pas. À dire à max : c'est une étiquette visible
-  au client, et elle passe de « autonome » à « approbation obligatoire » sur
-  presque tout le catalogue.
+  Personne ne lisait le champ, donc personne ne le voyait mentir. Dérivé le
+  23/09 des tâches, il mettait 1 219 fiches sur 1 249 en PR-03 (« approbation
+  obligatoire ») ; **max l'a refusé le 24/09** — « l'agent peut fonctionner de
+  manière autonome si l'utilisateur le souhaite » — et il a raison : c'était
+  écrire sur la carte du client une contrainte que le produit n'applique pas et
+  qu'il peut de toute façon lever. **PR-00 sur les 1 249 depuis**, parce que
+  l'étiquette décrit l'agent tel qu'il est vendu, avant tout réglage, et que ce
+  que l'application applique alors est l'autonomie. Conséquence à assumer : le
+  champ dit désormais la même chose partout, donc il ne porte plus rien, et il
+  n'est **affiché nulle part** (ni boutique ni application — vérifié). Ce qui
+  porte l'information, et qui varie vraiment, c'est `validationHumaine` tâche
+  par tâche : **30 fiches sans aucune tâche à relire, 973 avec une partie, 246
+  avec toutes**. C'est ce compte-là qu'une carte afficherait honnêtement, le
+  jour où la boutique aura où le dire.
+- **L'agent va seul, sauf si le client met une tâche sous contrôle** (règle de
+  max, tenue par `accord_attendu` dans `tache.rs` et `planningDuClient` dans
+  `src/agents/fiche.ts`). Le `validationHumaine` de la fiche n'est donc **pas**
+  appliqué : c'est la proposition de l'expert, celle que l'agent énonce à
+  l'entretien d'embauche (« il y en a N où j'attends votre accord, je garde ça
+  ou vous voulez en relâcher ? »), et c'est la réponse du client qui devient un
+  réglage de son planning. Écrite deux fois, la règle disait déjà deux choses le
+  24/09 : l'écran forçait l'autonomie sur toutes les tâches pendant que
+  `lire_tache` appliquait la fiche, donc l'onglet du travail annonçait « part
+  seule » et l'agent recevait la consigne « votre travail sera relu ». Pire,
+  Rust ne lisait **pas du tout** le `planning` du client : une tâche qu'il avait
+  éteinte restait exécutable et une tâche qu'il avait ajoutée était introuvable,
+  alors que `installation.json` livré avec l'application porte les deux cas.
+  `desktop/temoins-planning.json` est maintenant rejoué des deux côtés (un test
+  Rust par `include_str!`, `check-travail.ts` en TypeScript) pour qu'ils ne
+  puissent plus se séparer. **Ce que `validationHumaine` fait vraiment est
+  étroit** : il ajoute une phrase à la consigne du modèle et lève un drapeau sur
+  le résultat. Il n'autorise rien et ne retient rien — de toute façon rien ne
+  part du poste, et le courriel a sa propre empreinte de relecture.
 - **Les bancs tournent en intégration continue depuis le 23/09**
   (`.github/workflows/controles.yml`). Avant, le seul flux construisait le MSI
   et rien d'autre : `npm run controle`, `npm run controle-application`,
@@ -280,8 +303,62 @@ par WhatsApp et email.
   `activation`, `npm run controle` refuse toute divergence (`--corriger` répare),
   et `demanderActivation()` la rejoue dans l'application au lieu de croire le
   fichier — un catalogue truqué portant `activable: true` est refusé quand même.
-  Au 23/09/2026 : **4 connecteurs activables sur 137**. Il manque un coût à 133 et
-  un risque à 117. Aucun bouton « Se connecter » ne s'affiche sans passer par là.
+  Au 24/09/2026 : **9 connecteurs activables sur 137** (4 la veille). Il manque un
+  coût à 128 et un risque à 117. Les cinq ouverts le 24/09 après lecture de la
+  page de l'éditeur : Microsoft Teams (la plupart des API Teams ne sont plus
+  facturées à l'usage depuis le 25/08/2025 ; restent payants les insights de
+  réunion, les PATCH DLP et le contenu des enregistrements au-delà de 600
+  min/mois), HubSpot (compris dans l'abonnement, option payante pour élargir le
+  quota), WooCommerce (auto-hébergé, rien en plus), GitHub et GitLab (API
+  ouverte à tous les paliers, bornée par un quota). **Twilio est resté dehors
+  exprès, sa page lue** : son coût est réel mais c'est du paiement à l'usage
+  (0,0083 $ le message aux États-Unis, ≥ 1,15 $/mois le numéro), et `couts.json`
+  ne sait exprimer qu'un montant mensuel fixe — y écrire 1,15 sous-estimerait la
+  facture du client dès le premier envoi. Le champ manquant se décide avant
+  d'ouvrir COM010. **Ce qui bloque les neuf autres n'est pas l'accès au web mais
+  la page** : leurs pages de quotas s'ouvrent et aucune n'énonce le coût ; c'est
+  la page tarifaire qu'il faut, et elle vit sur un autre hôte. Aucun bouton « Se connecter » ne s'affiche sans passer par là.
+  **Au 24/09 au soir : 15 activables** (Asana et ClickUp ajoutés ; ce qui a fait
+  trancher et manquait aux trois autres, c'est un quota CHIFFRÉ en face de
+  l'offre gratuite, qui dit que l'API y est ouverte). Notion reste dehors parce
+  que sa page de tarifs s'est lue deux fois différemment — une page qui se
+  contredit ne chiffre rien.
+- **« 122 connecteurs attendent un prix » n'est pas le chiffre à porter**
+  (mesuré le 24/09/2026). Sur les 137, **39 seulement servent un besoin déclaré
+  par une fiche** ; les 98 autres (SAP, Workday, Epic, Procore…) ne sont
+  atteignables par aucun agent, donc les ouvrir ne change rien pour un client.
+  Et sur ces 39, ce qui est ouvert couvre **quatre besoins sur six** : Microsoft
+  365 et Google Workspace font à eux deux le courrier, l'agenda, les fichiers et
+  la conversation. **Les deux trous sont `whatsapp` (212 fiches) et `telephone`
+  (210), et ce n'est pas une question de prix : il n'y a pas de code.**
+  L'application ne sait ni envoyer ni recevoir un message WhatsApp, et ne sait
+  pas téléphoner — vérifié maillon par maillon. Chiffrer COM001 ou COM010
+  allumerait un bouton « Se connecter » vers une capacité inexistante. Le prix de
+  COM001 est d'ailleurs lu et **nul pour ce qu'un agent fait** : Meta ne facture
+  ni le message qu'un utilisateur envoie à l'entreprise, ni la réponse hors
+  modèle dans la fenêtre de service ouverte. **Et recevoir ne peut pas marcher
+  sur la machine du client** : Meta ne livre un entrant qu'en le poussant vers
+  une adresse publique et n'offre aucune relève, donc il faudrait un relais
+  hébergé — question posée à max le 24/09.
+- **Pire qu'un champ que personne ne lit : du code qui rend `Ok` sans avoir
+  agi.** Le premier attend, le second ment au client dès qu'on l'appelle. Trois
+  retirés le 24/09/2026 : `connectors.rs` (un `connect_whatsapp` qui rangeait la
+  clé dans une HashMap et posait `status = "connected"`, 150 lignes, zéro test,
+  mort) ; les trois fonctions de `telegram.rs` (`send_message` imprimait
+  « Telegram: Would send to … » sur stdout et rendait `Ok("Message sent to
+  Telegram chat …")`, et les trois étaient **enregistrées comme commandes
+  Tauri**, à une ligne d'interface près d'être appelées) ; et
+  `save_connector_credentials` dans `database.rs`, qui écrivait un jeton en clair
+  dans le SQLite avec pour tout garde-fou un commentaire « never store a secret
+  here » sur un champ nommé `credentials`. **Un champ qu'il ne faut jamais
+  remplir n'est pas un garde-fou, c'est une invitation.** Telegram refuse
+  maintenant en français en disant que rien n'est parti, plutôt que de rendre un
+  `Ok` optimiste ou de disparaître (une commande absente donne une erreur
+  opaque). Pour les débusquer : chercher l'appel sortant dans tout module qui
+  parle au monde — pas d'appel plus un `Ok(...)`, il ment — puis regarder s'il
+  est atteignable ; en Rust un item d'un `mod X` ne s'atteint que par `X::` ou
+  `crate::X`, mais une commande Tauri peut être **enregistrée sans que l'écran
+  l'appelle**, et c'est le cas dangereux, pas le cas rassurant.
 - **`desktop/src-tauri/src/mcp.rs` est le seul endroit où un outil extérieur
   peut être appelé**, et quatre refus y sont dans le code, pas dans une consigne
   au modèle : liste blanche par agent (un outil que le serveur ajoute entre deux
@@ -640,11 +717,62 @@ par WhatsApp et email.
   anglais. La voix demande quatre pièces (moteur Piper, voix `.onnx`, ses
   réglages `.onnx.json`, modèle d'écoute) ; le README dit où les prendre.
   **Écouter et parler ne demandent pas les mêmes pièces** et se disent à part.
+- **Une pièce que l'application va chercher se vérifie avant d'être posée**
+  (`desktop/src-tauri/src/telechargement.rs`, décision de max du 24/09/2026 : le
+  client ne pose plus rien à la main). Les adresses vivent dans
+  `sources-ressources.json`, avec la taille et l'empreinte SHA-256 **relevées
+  chez l'éditeur**, jamais écrites de mémoire. Trois refus tenus par le code :
+  `https` seul et hôte d'une liste blanche (en clair, un modèle de 190 Mo se
+  lirait et se remplacerait sur le chemin) ; taille **et** empreinte comparées
+  avant de poser quoi que ce soit ; écriture en `.partiel` puis renommage, pour
+  qu'un contenu refusé ne laisse rien derrière lui — un banc le vérifie, parce
+  qu'un demi-fichier au bon nom ferait dire à l'application que la pièce est là.
+  Un fichier sans empreinte publiée (les réglages `.onnx.json`, qui ne sont pas
+  un objet LFS) se vérifie par sa lecture, déclarée en toutes lettres
+  (`verification_autre`) : sans ça, `null` passerait pour « rien à vérifier ».
+  **Le moteur Piper est déclaré depuis le 24/09/2026, pour Windows seulement**,
+  et c'est le seul morceau qui soit une ARCHIVE : `chemin` est alors un dossier,
+  et `poser()` l'ouvre — après l'empreinte, jamais avant, et une archive sans
+  empreinte est refusée d'office (la lecture en JSON qui suffit à un fichier de
+  réglages ne dit rien d'un ZIP). Trois refus de plus, tenus par des bancs : une
+  entrée qui écrirait hors du dossier fait tout refuser **sans rien poser** ; le
+  nombre d'entrées et la taille dépliée sont bornés avant la première écriture
+  (22 Mo comprimés peuvent rendre des gigaoctets) ; le dossier se remplit en
+  `.partiel` et le renommage est la dernière opération, parce qu'un moteur à
+  demi extrait serait vu présent par `ressources.rs`. **Le dossier commun est
+  retiré quand toute l'archive tient dedans** : le résultat ne dépend donc pas
+  de la façon dont l'éditeur range son archive, et sa forme n'a pas eu à être
+  relevée — ce qui compte, puisque la session ne joint pas github.com et n'a
+  jamais ouvert cette archive. L'empreinte, elle, est CALCULÉE par
+  l'intégration continue (`desktop/relever-piper.ts`), GitHub n'en publiant
+  aucune pour une version antérieure au champ. **Windows seulement** parce que
+  l'archive Linux est un `.tar.gz` et que le binaire n'embarque ni tar ni gzip ;
+  ailleurs `ressources.rs` dit toujours où le prendre à la main, et son remède
+  dépend du système. **Non constaté : personne n'a ouvert la vraie archive ni
+  lancé `piper.exe`.** Le modèle d'écoute est
+  `ggml-small-q5_1.bin` (190 Mo) et non `medium` (1,5 Go) : c'est le premier
+  contact du client avec le produit. Aucune variante `-fr` n'existe chez
+  whisper.cpp, vérifié à son API le 24/09.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,
   le client valide. Les règles qui comptent sont appliquées par le code
   (`expert.regles` → l'application), pas seulement lues par le modèle.
+- **Une question dont la réponse ne règle rien fait croire au client qu'il a
+  décidé** (24/09/2026). L'entretien posait six questions de cadre — activité,
+  horaires, intensité, répartition, autonomie, dossiers — l'écran affichait les
+  réponses, et `embaucher()` n'écrivait dans `installation.json` que `prenom`,
+  `ficheId`, `voix`, `sexe` et `photo`. Tout le reste tombait. Ça comptait
+  d'autant plus que la règle de max réserve au client le droit de mettre une
+  tâche sous contrôle : il n'avait **aucun moyen** de l'exercer. La question
+  s'annonçait d'ailleurs à l'envers (« il y en a N où j'attends votre accord »)
+  alors que rien n'attendait rien. Elle offre maintenant trois réponses écrites
+  une seule fois (`AUTONOMIE_TOUT_SEUL`, `AUTONOMIE_CONSEILLEE`,
+  `AUTONOMIE_TOUT_RELU`, dans `entretien.ts`), `planningDepuisAutonomie` en fait
+  un planning, et `check-entretien` suit la chaîne jusqu'à `planningDuClient` —
+  la même fonction que l'application lit. **Une réponse non reconnue ne pose
+  aucun réglage** : on ne devine pas un choix que le client n'a pas fait. Les
+  cinq autres sujets tombent toujours, et c'est le prochain maillon.
 - **Le parcours d'embauche ne fait remplir que ce que l'agent ne peut pas
   demander** : quelle fiche, quel prénom, quel genre, quel visage. Tout le
   reste, c'est l'agent qui le demande, avec une proposition tirée de sa fiche
