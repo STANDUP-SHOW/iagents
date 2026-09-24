@@ -1,6 +1,6 @@
 # Coût par agent et par mois — API seule contre Local-Agent
 
-Généré par `outils/economie.ts` le 2026-09-23 sur 1249 fiches. Hypothèses dans `dimensionnement/tarifs-api.json` (version 2026-09-19) : 12 000 jetons d'entrée par tour dont 70 % en cache, 800 en sortie, 6 tours par exécution (+4 avec navigateur, +3 pour un document lourd), 20 % des exécutions restent par l'API chez Local-Agent, matériel amorti sur 12 mois, électricité 0.25 €/kWh, un poste N150 par agent. **Ce sont des hypothèses, pas des mesures** : à remplacer par les moyennes relevées dès que des agents tournent.
+Généré par `outils/economie.ts` le 2026-09-24 sur 1249 fiches. Hypothèses dans `dimensionnement/tarifs-api.json` (version 2026-09-19) : 12 000 jetons d'entrée par tour dont 70 % en cache, 800 en sortie, 6 tours par exécution (+4 avec navigateur, +3 pour un document lourd), 20 % des exécutions restent par l'API chez Local-Agent, matériel amorti sur 12 mois, électricité 0.25 €/kWh, un poste N150 par agent. **Ce sont des hypothèses, pas des mesures** : à remplacer par les moyennes relevées dès que des agents tournent.
 
 Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que l'API seule. « Partagé » = le bundle d'un petit client porte un mélange d'agents et celui-ci paie sa part de charge (5 % au minimum) ; « seul » = un seul agent sur son bundle, le pire cas ; « en flotte » = sa part sur le bundle au meilleur prix par unité de puissance (gros client).
 
@@ -1154,7 +1154,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1153 Assistant gestion portefeuille assurance | 610 | 85 € | 213 € | 54 € | 17 € | 37 € | 1.6× ✗ | 1.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1154 Specialiste garanties assurance | 1051 | 133 € | 332 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1155 Gestionnaire primes assurance | 908 | 127 € | 317 € | 63 € | 25 € | 37 € | 2.0× ✗ | 1.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-1156 Analyste risques assurance | 306 | 29 € | 72 € | 55 € | 6 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-1156 Cartographe des risques d'entreprise | 306 | 29 € | 72 € | 55 € | 6 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1157 Agent relation assureurs | 753 | 105 € | 263 € | 58 € | 21 € | 37 € | 1.8× ✗ | 1.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1158 Coordinateur appels offre assurance | 1650 | 231 € | 577 € | 96 € | 46 € | 49 € | 2.4× ✗ | 0.9× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1159 Assistant couvertures assurance | 607 | 78 € | 194 € | 53 € | 16 € | 37 € | 1.5× ✗ | 1.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
@@ -1185,7 +1185,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1184 Coordinateur reporting portefeuille | 335 | 47 € | 117 € | 47 € | 9 € | 37 € | 1.0× ✗ | 0.9× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1185 Analyste benchmark portefeuille | 306 | 36 € | 89 € | 57 € | 7 € | 49 € | 0.6× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1186 Assistant gestion dividendes | 970 | 108 € | 269 € | 59 € | 22 € | 37 € | 1.8× ✗ | 1.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-1187 Assistant relation investisseurs | 2255 | 238 € | 596 € | 97 € | 48 € | 49 € | 2.5× ✗ | 0.9× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-1187 Assistant rencontres investisseurs | 2255 | 238 € | 596 € | 97 € | 48 € | 49 € | 2.5× ✗ | 0.9× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1188 Coordinateur roadshow financiers | 1504 | 175 € | 438 € | 72 € | 35 € | 37 € | 2.4× ✗ | 2.2× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1189 Agent suivi ratings crédit | 309 | 43 € | 107 € | 58 € | 9 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1190 Analyste sensibilité investisseurs | 15 | 2 € | 4 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -1195,7 +1195,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1194 Agent réponses actionnaires | 2284 | 249 € | 623 € | 87 € | 50 € | 37 € | 2.9× ✗ | 2.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1195 Analyste structure actionnariat | 484 | 54 € | 134 € | 60 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1196 Assistant gestion demandes informations | 2585 | 325 € | 812 € | 102 € | 65 € | 37 € | **3.2×** | 3.0× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-1197 Analyste M&A junior | 902 | 105 € | 263 € | 70 € | 21 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-1197 Analyste recherche de cibles M&A | 902 | 105 € | 263 € | 70 € | 21 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1198 Assistant due diligence financière | 1200 | 154 € | 384 € | 108 € | 31 € | 77 € | 1.4× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-1199 Coordinateur transactions | 694 | 82 € | 204 € | 66 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1200 Agent suivi intégration post-fusion | 196 | 20 € | 51 € | 54 € | 4 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
