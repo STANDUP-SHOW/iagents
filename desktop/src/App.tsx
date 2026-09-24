@@ -8,6 +8,7 @@ import { ConversationEngine } from './engines/ConversationEngine'
 import reglages from './config/conversation-settings.json'
 import Dashboard, { Icone, TITRES, type Onglet } from './components/Dashboard'
 import Machine from './components/Machine'
+import { BandeauChiffres, tiret, useLectures, useTravail, type Chiffre } from './components/Chiffres'
 import logo from './assets/marque/logo-iagent.png'
 import VoiceTraining from './components/VoiceTraining'
 import AgentManager from './components/AgentManager'
@@ -38,6 +39,8 @@ function App() {
   const [voieBascule, setVoieBascule] = useState(false)
   const [jauge, setJauge] = useState<Jauge | null>(null)
   const [installes, setInstalles] = useState<readonly AgentInstalle[]>([])
+  const lu = useLectures(activeTab)
+  const travail = useTravail(installes)
 
   useEffect(() => {
     initializeApp()
@@ -237,6 +240,62 @@ function App() {
 
   const onglets = Object.keys(TITRES) as Exclude<Onglet, 'dashboard'>[]
 
+
+  // Les chiffres en tête de chaque page : lus, jamais supposés (tiret si la lecture échoue).
+  const bandeau = (onglet: Onglet): Chiffre[] => {
+    const actifs = agents.filter((a) => a.status === 'active').length
+    switch (onglet) {
+      case 'agents':
+        return [
+          { valeur: tiret(installes.length), libelle: installes.length > 1 ? 'agents embauchés' : 'agent embauché' },
+          { valeur: tiret(actifs), libelle: actifs > 1 ? 'actifs' : 'actif' },
+        ]
+      case 'travail':
+        return [
+          { valeur: `${tiret(travail.pretes)} / ${tiret(travail.total)}`, libelle: 'tâches prêtes' },
+          {
+            valeur: tiret(travail.total - travail.pretes),
+            libelle: 'à compléter avant de lancer',
+            ton: travail.total > travail.pretes ? 'alerte' : undefined,
+          },
+          { valeur: tiret(travail.sansMatiere), libelle: 'sans dossier désigné' },
+        ]
+      case 'embauche':
+        return [
+          { valeur: tiret(lu.metiers), libelle: 'métiers au catalogue' },
+          { valeur: tiret(lu.secteurs), libelle: 'secteurs' },
+          { valeur: tiret(lu.activites), libelle: 'activités' },
+          { valeur: tiret(installes.length), libelle: 'déjà embauchés' },
+        ]
+      case 'connectors':
+        return [
+          {
+            valeur: lu.serveurs ? `${lu.serveurs.prets} / ${lu.serveurs.total}` : '—',
+            libelle: 'outils prêts',
+          },
+          {
+            valeur: lu.cle == null ? '—' : lu.cle ? 'Posée' : 'Aucune',
+            libelle: "clé d'API",
+            ton: lu.cle ? 'succes' : undefined,
+          },
+        ]
+      case 'navigateur':
+        return [{ valeur: tiret(lu.sites), libelle: lu.sites === 1 ? 'compte connecté' : 'comptes connectés' }]
+      case 'courriel':
+        return [{ valeur: tiret(lu.envois), libelle: lu.envois === 1 ? 'envoi consigné' : 'envois consignés' }]
+      case 'voice':
+        return [
+          {
+            valeur: motifEcoute ? 'Indisponible' : isListening ? 'En cours' : 'Prête',
+            libelle: 'écoute',
+            ton: motifEcoute ? 'danger' : undefined,
+          },
+        ]
+      default:
+        return []
+    }
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -319,24 +378,29 @@ function App() {
             onOuvrir={setActiveTab}
           />
         )}
-        {activeTab === 'machine' && <Machine jauge={jauge} />}
-        {activeTab === 'agents' && (
-          <AgentManager
-            agents={agents}
-            onToggleAgent={toggleAgentStatus}
-          />
+        {activeTab !== 'dashboard' && (
+          <div className="page-cadre">
+            <BandeauChiffres chiffres={bandeau(activeTab)} />
+            {activeTab === 'machine' && <Machine jauge={jauge} />}
+            {activeTab === 'agents' && (
+              <AgentManager
+                agents={agents}
+                onToggleAgent={toggleAgentStatus}
+              />
+            )}
+            {activeTab === 'voice' && <VoiceTraining />}
+            {activeTab === 'connectors' && (
+              <>
+                <CleApi />
+                <ConnectorSetup />
+              </>
+            )}
+            {activeTab === 'navigateur' && <Navigateur />}
+            {activeTab === 'courriel' && <Courriel />}
+            {activeTab === 'travail' && <Travail />}
+            {activeTab === 'embauche' && <Embauche />}
+          </div>
         )}
-        {activeTab === 'voice' && <VoiceTraining />}
-        {activeTab === 'connectors' && (
-          <>
-            <CleApi />
-            <ConnectorSetup />
-          </>
-        )}
-        {activeTab === 'navigateur' && <Navigateur />}
-        {activeTab === 'courriel' && <Courriel />}
-        {activeTab === 'travail' && <Travail />}
-        {activeTab === 'embauche' && <Embauche />}
       </main>
     </div>
   )

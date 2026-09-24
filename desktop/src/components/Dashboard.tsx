@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { invoke } from '@tauri-apps/api/core'
+import { useEffect, useState, type ReactNode } from 'react'
 import type { AgentInstalle } from '../agents/fiche'
 import type { Jauge } from '../agents/jauge'
-import { travailDuJour } from '../agents/travail'
+import { tiret, useLectures, useTravail } from './Chiffres'
 import puce from '../assets/marque/puce-cerveau.png'
 
 /**
@@ -35,14 +34,6 @@ interface Props {
   motifEcoute: string | null
   jauge: Jauge | null
   onOuvrir: (onglet: Onglet) => void
-}
-
-interface Lectures {
-  metiers: number | null
-  sites: number | null
-  envois: number | null
-  serveurs: { total: number; prets: number } | null
-  cle: boolean | null
 }
 
 const NIVEAUX: Record<string, string> = {
@@ -122,8 +113,6 @@ export function Icone({ onglet }: { onglet: Exclude<Onglet, 'dashboard'> }) {
   )
 }
 
-const tiret = (n: number | null | undefined) => (n == null ? '—' : n.toLocaleString('fr-FR'))
-
 export default function Dashboard({
   agents,
   installes,
@@ -133,48 +122,16 @@ export default function Dashboard({
   jauge,
   onOuvrir,
 }: Props) {
-  const [lu, setLu] = useState<Lectures>({
-    metiers: null,
-    sites: null,
-    envois: null,
-    serveurs: null,
-    cle: null,
-  })
+  const lu = useLectures('dashboard')
+  const travail = useTravail(installes)
   const [maintenant, setMaintenant] = useState(() => new Date())
 
   useEffect(() => {
-    let vivant = true
-    const poser = (p: Partial<Lectures>) => vivant && setLu((l) => ({ ...l, ...p }))
-
-    invoke<string>('lire_referentiel', { nom: 'catalogue' })
-      .then((brut) => poser({ metiers: (JSON.parse(brut).agents ?? []).length }))
-      .catch(() => {})
-    invoke<unknown[]>('navigateur_sites')
-      .then((l) => poser({ sites: l.length }))
-      .catch(() => {})
-    invoke<unknown[]>('courriel_envois')
-      .then((l) => poser({ envois: l.length }))
-      .catch(() => {})
-    invoke<{ pret: boolean }[]>('mcp_serveurs')
-      .then((l) => poser({ serveurs: { total: l.length, prets: l.filter((s) => s.pret).length } }))
-      .catch(() => {})
-    invoke<boolean>('cle_api_presente')
-      .then((cle) => poser({ cle }))
-      .catch(() => {})
-
     const horloge = setInterval(() => setMaintenant(new Date()), 30_000)
-    return () => {
-      vivant = false
-      clearInterval(horloge)
-    }
+    return () => clearInterval(horloge)
   }, [])
 
   const actifs = agents.filter((a) => a.status === 'active').length
-
-  const travail = useMemo(() => {
-    const toutes = installes.flatMap((a) => travailDuJour(a))
-    return { total: toutes.length, pretes: toutes.filter((t) => !t.empechement).length }
-  }, [installes])
 
   const etat = isProcessing ? 'reflexion' : isListening ? 'ecoute' : 'repos'
   const etatTexte = { reflexion: 'Réflexion', ecoute: "À l'écoute", repos: 'Prêt' }[etat]

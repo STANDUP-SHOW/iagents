@@ -102,9 +102,11 @@
 
 .app-nav {
   display: flex;
-  gap: 8px;
-  padding: 10px 24px;
+  gap: 10px;
+  padding: 12px 24px;
   overflow-x: auto;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
   background: rgba(3, 5, 12, 0.6);
   backdrop-filter: var(--flou-verre);
   border-bottom: 1px solid var(--bord);
@@ -112,18 +114,30 @@
 
 .app-nav button {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 6px;
   flex: none;
-  padding: 8px 14px;
-  background: transparent;
+  min-width: 104px;
+  min-height: 72px;
+  padding: 10px 14px;
+  background: var(--surface);
   border: 1px solid var(--bord);
-  border-radius: var(--rayon-pilule);
+  border-radius: var(--rayon-l);
   color: var(--texte-2);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
+  line-height: 1.15;
+  text-align: center;
   cursor: pointer;
-  transition: color 0.2s, border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  scroll-snap-align: start;
+  transition: color 0.2s, border-color 0.2s, box-shadow 0.2s, background 0.2s, transform 0.1s;
+}
+
+.app-nav button .icone {
+  width: 26px;
+  height: 26px;
 }
 
 .app-nav button:hover {
@@ -762,4 +776,154 @@
   border-color: var(--rose);
   background: transparent;
   color: var(--rose);
+}
+
+/* ---------- Pages derrière les menus : même largeur, même en-tête ---------- */
+
+.page-cadre {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* Chaque page gardait sa propre marge et sa propre largeur : le cadre décide. */
+.page-cadre > :not(.bandeau-chiffres) {
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.app-main h3 {
+  margin-bottom: 10px;
+}
+
+.bandeau-chiffres {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.chiffre {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px transparent;
+}
+
+.chiffre-valeur {
+  font-family: var(--police-titre);
+  font-weight: 700;
+  font-size: 24px;
+  color: var(--cyan);
+  text-shadow: var(--halo-texte);
+  font-variant-numeric: tabular-nums;
+}
+
+.chiffre-libelle {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--texte-3);
+}
+
+.chiffre.ton-succes .chiffre-valeur { color: var(--succes); }
+.chiffre.ton-alerte .chiffre-valeur { color: var(--alerte); }
+.chiffre.ton-danger .chiffre-valeur { color: var(--danger); }
+.chiffre.ton-alerte { border-color: var(--alerte-voile); }
+.chiffre.ton-danger { border-color: var(--danger-voile); }
+
+/* Un bouton grisé doit rester lisible : on voit ce qui manque pour continuer. */
+.page-cadre button:disabled {
+  background: transparent;
+  color: var(--texte-3);
+  border: 1px dashed var(--bord-fort);
+  opacity: 1;
+}
+
+/* ---------- Au doigt d'abord ----------
+ * Les stations livrées ont un écran tactile (max, 24/09) : toute cible fait au
+ * moins 48 px, l'appui se voit, et rien ne bouge sous le doigt. La souris
+ * garde exactement les mêmes touches. */
+
+button,
+select,
+input:not([type='checkbox']):not([type='radio']):not([type='range']) {
+  min-height: 48px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  min-width: 48px;
+  user-select: none;
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']),
+select,
+textarea {
+  font-size: 16px;
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  width: 28px;
+  height: 28px;
+  accent-color: var(--cyan);
+  flex: none;
+}
+
+/* Une case se coche en touchant son libellé entier, pas seulement la case. */
+label:has(> input[type='checkbox']),
+label:has(> input[type='radio']) {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  cursor: pointer;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.96);
+  box-shadow: var(--halo-cyan);
+}
+
+.toggle-btn {
+  min-height: 56px;
+  font-size: 16px;
+}
+
+/* Un pointeur tactile ne survole pas : l'orbite s'arrête pour qu'un menu ne
+ * glisse pas sous le doigt, et les satellites grossissent. */
+@media (any-pointer: coarse) {
+  .orbite,
+  .satellite {
+    animation: none;
+  }
+  .satellite {
+    width: clamp(100px, 20cqw, 160px);
+  }
+  .satellite-titre {
+    font-size: 13px;
+  }
+  button,
+  select,
+  input:not([type='checkbox']):not([type='radio']):not([type='range']) {
+    min-height: 56px;
+  }
+}
+
+/* Les bandeaux d'alerte s'alignent sur la page qu'ils concernent. */
+.app-main:not(.app-main-centre) > .error-banner,
+.app-main:not(.app-main-centre) > .succes-banner,
+.app-main:not(.app-main-centre) > .avertissement-banner {
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
 }
