@@ -4,6 +4,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { economiePour, coutApiMensuel, RATIO_MINIMUM, type PaquetEco } from './economie.ts';
+import { INTENSITES, PROFONDEUR_APPLIQUEE } from './intensite.ts';
 import { rendre, paquets, cheminDu } from '../outils/economie.ts';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -43,6 +44,35 @@ ok(`en flotte, la part de materiel du secretaire tombe a ${sec.materielFlotte} �
 // 6. Inactive tasks cost nothing; a package with no active task has no API bill.
 assert.equal(coutApiMensuel({ id: 'x', modeles: { texte: 'texte-standard', activite: 0.1 }, taches: [{ planification: { type: 'quotidienne' }, active: false }] }).total, 0);
 ok('une tache inactive ne coute rien');
+
+// 6b. The figure the agent quotes at the hiring interview must be the work it will
+// actually do. `intensite` has two multipliers; only `frequence` is applied anywhere
+// (by the scheduler). `profondeur` has nothing to stretch — `executer_tache` makes ONE
+// model call — so counting it quoted « Soutenu » 50 % dearer than the agent will ever
+// cost. Too high or too low is the same fault: the customer picks on a number that
+// describes nothing.
+{
+  const p = lire('AG-0001');
+  const normal = coutApiMensuel(p).total;
+  for (const [cle, reglage] of Object.entries(INTENSITES)) {
+    const vu = coutApiMensuel(p, undefined, cle as never).total;
+    const attendu = normal * reglage.frequence * (PROFONDEUR_APPLIQUEE ? reglage.profondeur : 1);
+    assert.ok(
+      Math.abs(vu - attendu) < 0.01,
+      `devis « ${reglage.libelle} » : ${vu} €/mois, attendu ${attendu} € ` +
+        `(${reglage.frequence}x la cadence${PROFONDEUR_APPLIQUEE ? `, ${reglage.profondeur}x la profondeur` : ', profondeur non comptee'})`
+    );
+  }
+  // Et le jour ou quelqu'un met le drapeau a `true`, ceci le renvoie au code qui
+  // devrait boucler : le devis ne doit compter la profondeur qu'une fois qu'elle existe.
+  assert.equal(
+    PROFONDEUR_APPLIQUEE,
+    false,
+    "PROFONDEUR_APPLIQUEE est passe a true : verifier qu'executer_tache boucle vraiment " +
+      "sur plusieurs tours avant de facturer cette profondeur au client"
+  );
+  ok(`devis par intensite : ${Math.round(normal)} € en normal, ${Math.round(normal * INTENSITES.high.frequence)} € en soutenu (cadence seule, la profondeur n'est appliquee nulle part)`);
+}
 
 // 7. The published documents say what the code computes TODAY. docs/economie.md had
 // rotted four days unnoticed — generated on 126 fiches while agents/ carried 1 249 —
