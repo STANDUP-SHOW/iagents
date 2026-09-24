@@ -27,7 +27,6 @@ export type Onglet =
 
 interface Props {
   etat: Etat
-  isListening: boolean
   isProcessing: boolean
   motifEcoute: string | null
   /** L'écoute est-elle allumée ? Le bouton VOICE la bascule. */
@@ -139,7 +138,6 @@ export function Icone({ onglet }: { onglet: Exclude<Onglet, 'dashboard'> }) {
 
 export default function Dashboard({
   etat: donnees,
-  isListening,
   isProcessing,
   motifEcoute,
   voixActive,
@@ -157,7 +155,7 @@ export default function Dashboard({
 
   const actifs = donnees.actifs
 
-  const etat = isProcessing ? 'reflexion' : eveillee ? 'eveil' : isListening ? 'ecoute' : 'repos'
+  const etat = isProcessing ? 'reflexion' : eveillee ? 'eveil' : voixActive ? 'ecoute' : 'repos'
   const etatTexte = { reflexion: 'Réflexion', eveil: 'Quel agent ?', ecoute: "À l'écoute", repos: 'Prêt' }[etat]
 
   const satellites: { onglet: Exclude<Onglet, 'dashboard'>; valeur: string; detail: string; ton?: string }[] = [

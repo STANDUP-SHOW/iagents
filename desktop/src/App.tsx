@@ -52,7 +52,6 @@ function App() {
    */
   const [agents, setAgents] = useState<AgentAffiche[]>([])
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
-  const [isListening, setIsListening] = useState(false)
   // Le mot de réveil a été entendu, on attend le prénom d'un agent.
   const [reveillee, setReveillee] = useState(false)
   // Ce que Rust dit de l'écoute : micro allumé ou non, mot de réveil entendu ou non.
@@ -135,7 +134,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!isListening) {
+    if (!ecoute.active) {
       setPartialResult('')
       return
     }
@@ -170,14 +169,24 @@ function App() {
       clearInterval(interval)
       if (silenceTimeout) clearTimeout(silenceTimeout)
     }
-  }, [isListening, activeAgent, agents])
+  }, [ecoute.active, activeAgent, agents])
+
+  /**
+   * Prépare l'écoute, et dit en clair ce qui manque quand elle ne peut pas.
+   *
+   * Appelé au démarrage, et à NOUVEAU quand le client vient d'installer les
+   * pièces de la voix : sans ce second appel il aurait téléchargé 190 Mo pour
+   * rien jusqu'à ce qu'il pense à relancer l'application.
+   */
+  const demarrerEcoute = () =>
+    invoke('init_voice')
+      .then(() => setMotifEcoute(null))
+      .catch((err) => setMotifEcoute(String(err)))
 
   const initializeApp = async () => {
     try {
       // L'échec dit quel fichier manque et où : le taire obligerait à deviner.
-      await invoke('init_voice')
-        .then(() => setMotifEcoute(null))
-        .catch((err) => setMotifEcoute(String(err)))
+      await demarrerEcoute()
 
       // L'absence de clé d'API n'est plus une panne : l'agent travaille en
       // local si le poste a le modèle de son palier. C'est `modele_etat`, à
@@ -267,23 +276,9 @@ function App() {
       setVoieBascule(false)
     }
 
-    if (active) {
-      try {
-        await invoke('start_voice_recognition')
-        setIsListening(true)
-        setEcoute(await invoke<EcouteEtat>('voix_ecoute_basculer', { active: true }))
-        setError(null)
-      } catch (err) {
-        setIsListening(false)
-        setError("Agent activé, mais l'écoute est indisponible. " + (motifEcoute ?? String(err)))
-      }
-    } else {
-      setIsListening(false)
-      await invoke<EcouteEtat>('voix_ecoute_basculer', { active: false })
-        .then(setEcoute)
-        .catch(() => {})
-      await invoke('stop_voice_recognition').catch(() => {})
-    }
+    // Le micro ne dépend plus d'un agent : il écoute dès le lancement, et
+    // seul le mot de réveil le fait parler (voix_entendu). Le bouton VOICE le
+    // coupe ou le rallume.
   }
 
   const processVoiceCommand = async (command: string) => {
@@ -381,9 +376,14 @@ function App() {
       setVoie(reponse.motif)
       setVoieBascule(reponse.bascule)
 
+      // Le message vient de Rust, qui SAIT laquelle des quatre pièces manque et
+      // quoi en faire (`manque_pour_parler`, en français, avec son remède). Le
+      // remplacer par une phrase générique jetait cette information : elle
+      // disait encore « vérifier que piper et sa voix sont présents » alors que
+      // la voix, elle, se télécharge depuis le 24/09 et qu'il ne manque plus
+      // que le moteur. Le client lisait donc un conseil faux.
       await invoke('text_to_speech', { text: reponse.texte }).catch((err) => {
-        console.error('TTS failed:', err)
-        setError("La synthèse vocale a échoué. Vérifier que piper et sa voix sont présents à côté de l'application.")
+        setError(String(err))
       })
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err)
@@ -433,26 +433,15 @@ function App() {
   const onglets = Object.keys(TITRES) as Exclude<Onglet, 'dashboard'>[]
 
 
-  // Le bouton VOICE. Deux choses à allumer ensemble : le micro
-  // (start_voice_recognition) et l'écoute du mot de réveil
-  // (voix_ecoute_basculer, `reveil.rs`). Le vert et le rouge viennent de
-  // voix_ecoute_etat, jamais d'un état tenu ici : sinon le bouton et l'écoute
-  // réelle finiraient par dire deux choses.
+  // Le bouton VOICE. Rust allume et coupe le micro lui-même
+  // (voix_ecoute_basculer) ; le vert et le rouge viennent de voix_ecoute_etat,
+  // seul état de l'écoute, jamais d'un état tenu ici.
   const basculerVoix = async () => {
-    if (ecoute.active) {
-      const e = await invoke<EcouteEtat>('voix_ecoute_basculer', { active: false }).catch(() => null)
-      if (e) setEcoute(e)
-      setIsListening(false)
-      await invoke('stop_voice_recognition').catch(() => {})
-      return
-    }
     try {
-      await invoke('start_voice_recognition')
-      setIsListening(true)
-      setEcoute(await invoke<EcouteEtat>('voix_ecoute_basculer', { active: true }))
+      setEcoute(await invoke<EcouteEtat>('voix_ecoute_basculer', { active: !ecoute.active }))
       setError(null)
     } catch (err) {
-      setError("L'écoute n'a pas pu démarrer. " + (motifEcoute ?? String(err)))
+      setError("L'écoute n'a pas pu changer d'état. " + (motifEcoute ?? String(err)))
     }
   }
 
@@ -540,7 +529,7 @@ function App() {
             <span className="listening">Réflexion…</span>
           ) : ecoute.ou_en_est === 'eveillee' ? (
             <span className="listening">Quel agent ?</span>
-          ) : isListening ? (
+          ) : ecoute.active ? (
             <span className="listening">À l'écoute</span>
           ) : (
             <span className="idle">Prêt</span>
@@ -554,7 +543,7 @@ function App() {
         </div>
       )}
 
-      {isListening && (partialResult || isProcessing || lastResponse || reveillee || ecoute.ou_en_est === 'eveillee') && (
+      {ecoute.active && (partialResult || isProcessing || lastResponse || reveillee || ecoute.ou_en_est === 'eveillee') && (
         <div className="voice-display">
           {partialResult && (
             <div className="transcription-display">
@@ -623,7 +612,6 @@ function App() {
         {activeTab === 'dashboard' && (
           <Dashboard
             etat={etat}
-            isListening={isListening}
             isProcessing={isProcessing}
             motifEcoute={motifEcoute}
             voixActive={ecoute.active}
@@ -646,7 +634,7 @@ function App() {
             {activeTab === 'connectors' && (
               <>
                 <CleApi />
-                <InstallerVoix />
+                <InstallerVoix apresInstallation={demarrerEcoute} />
                 <ConnectorSetup />
               </>
             )}
