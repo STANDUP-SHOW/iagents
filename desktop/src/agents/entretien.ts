@@ -541,6 +541,16 @@ export interface ReferentielActivites {
   activites: Activite[];
 }
 
+/**
+ * Les trois réponses possibles à la question d'autonomie, écrites une seule
+ * fois : l'écran les propose, `planningDepuisAutonomie` les relit pour en faire
+ * un planning. Deux listes auraient fini par se séparer, et le client aurait
+ * choisi une option qui ne réglait rien.
+ */
+export const AUTONOMIE_TOUT_SEUL = "J'y vais seul sur tout";
+export const AUTONOMIE_CONSEILLEE = 'Soumettez-moi celles que vous conseillez';
+export const AUTONOMIE_TOUT_RELU = 'Soumettez-moi tout';
+
 export type SujetCadre = 'activite' | 'horaires' | 'intensite' | 'repartition' | 'autonomie' | 'dossiers';
 
 export interface QuestionCadre {
@@ -667,6 +677,48 @@ export interface CoutsParIntensite {
  * réponse : le client confirme d'un mot. `couts` est la facture d'API mensuelle estimée par
  * intensité, pour que le choix se fasse sur un chiffre et non sur un adjectif.
  */
+/**
+ * Ce que le client a répondu sur l'autonomie, devenu un planning applicable.
+ *
+ * C'est le maillon qui manquait : l'agent posait la question, l'écran affichait
+ * la réponse, et rien ne l'écrivait nulle part. L'écran d'embauche n'envoyait
+ * que le prénom, la fiche et la voix, donc le client n'avait AUCUN moyen de
+ * mettre une tâche sous contrôle — alors que c'est précisément ce que la règle
+ * de max lui réserve. Une question dont la réponse ne règle rien est pire
+ * qu'une question qu'on ne pose pas : elle fait croire au client qu'il a
+ * décidé.
+ *
+ * Rend `undefined` quand il n'y a rien à écrire (l'agent va seul, ce qui est
+ * déjà le défaut) : un planning vide dans `installation.json` ne dirait rien
+ * de plus et se lirait comme un réglage.
+ */
+export function planningDepuisAutonomie(
+  taches: readonly TacheFiche[],
+  dit: string,
+  idDe: (t: TacheFiche, i: number) => string
+): { ajustements: { tacheId: string; validationHumaine: boolean }[] } | undefined {
+  const actives = taches
+    .map((t, i) => ({ t, id: idDe(t, i) }))
+    .filter(({ t }) => t.active !== false);
+  const sous = (garder: (t: TacheFiche) => boolean) => {
+    const a = actives
+      .filter(({ t }) => garder(t))
+      .map(({ id }) => ({ tacheId: id, validationHumaine: true }));
+    return a.length ? { ajustements: a } : undefined;
+  };
+  switch (dit.trim()) {
+    case AUTONOMIE_TOUT_RELU:
+      return sous(() => true);
+    case AUTONOMIE_CONSEILLEE:
+      return sous((t) => t.validationHumaine === true);
+    // « J'y vais seul », et tout ce qu'on ne reconnaît pas : la règle de max est
+    // le défaut, et une réponse qu'on n'a pas comprise ne doit pas poser un
+    // réglage que le client n'a pas demandé.
+    default:
+      return undefined;
+  }
+}
+
 export function questionsCadre(
   fiche: FicheCompelete,
   couts?: CoutsParIntensite
@@ -723,14 +775,24 @@ export function questionsCadre(
     options: ['Tout sur votre machine', 'Surtout local, une part par API', 'Tout par API'],
   });
 
-  const aValider = taches.filter((t) => t.validationHumaine);
+  // L'agent va seul, et il le DIT ainsi : c'est la règle de max, et c'est ce
+  // que le code applique (`accord_attendu`, `planningDuClient`). Jusqu'au
+  // 24/09/2026 cette question annonçait au client « il y en a N où j'attends
+  // votre accord » comme un état de fait, alors que rien n'attendait rien : ce
+  // que porte la fiche est une recommandation d'expert, et c'est ici qu'elle
+  // se propose. La proposer sans la dire conseillée laissait croire au client
+  // qu'il subissait un réglage qu'on ne lui avait jamais demandé.
+  const aRelire = taches.filter((t) => t.validationHumaine);
   if (taches.length) {
     questions.push({
       sujet: 'autonomie',
-      intitule: aValider.length
-        ? `Sur mes ${taches.length} tâches, il y en a ${aValider.length} où j'attends votre accord avant d'agir — tout ce qui part à l'extérieur en fait partie. Je garde ça, ou vous voulez en relâcher ?`
+      intitule: aRelire.length
+        ? `Je travaille seul et je vous rends compte. Sur mes ${taches.length} tâches, il y en a ${aRelire.length} que je vous conseille quand même de relire avant qu'elles servent : tout ce qui part à l'extérieur en fait partie. Je vous les soumets, ou j'y vais seul aussi ?`
         : `Mes ${taches.length} tâches tournent seules et je vous rends compte. Rien ne part à l'extérieur sans vous. Ça vous convient ?`,
-      defaut: `${aValider.length} tâche(s) sur ${taches.length} attendent votre accord`,
+      defaut: aRelire.length ? AUTONOMIE_CONSEILLEE : AUTONOMIE_TOUT_SEUL,
+      options: aRelire.length
+        ? [AUTONOMIE_CONSEILLEE, AUTONOMIE_TOUT_SEUL, AUTONOMIE_TOUT_RELU]
+        : [AUTONOMIE_TOUT_SEUL, AUTONOMIE_TOUT_RELU],
     });
   }
 

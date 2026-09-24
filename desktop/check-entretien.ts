@@ -7,7 +7,12 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { economiePour } from '../dimensionnement/economie.ts';
 import { INTENSITES, REPARTITIONS } from '../dimensionnement/intensite.ts';
+import { planningDuClient } from './src/agents/fiche.ts';
 import {
+  planningDepuisAutonomie,
+  AUTONOMIE_TOUT_SEUL,
+  AUTONOMIE_CONSEILLEE,
+  AUTONOMIE_TOUT_RELU,
   questionsCadre,
   reconnaitreActivite,
   confirmationActivite,
@@ -370,6 +375,66 @@ verifier(
   "chaque famille de logiciels a sa question dite en français, aucune n'est fabriquée",
   ref.categories.every((c) => typeof INTITULES[c] === 'string' && INTITULES[c].length > 10),
 );
+
+
+// La réponse du client sur l'autonomie doit ARRIVER quelque part. Elle était
+// posée, affichée, et jetée : l'écran d'embauche n'écrivait que le prénom, la
+// fiche et la voix, donc le client n'avait aucun moyen de mettre une tâche sous
+// contrôle. Une question dont la réponse ne règle rien fait croire au client
+// qu'il a décidé. Ce banc va jusqu'au bout de la chaîne : la réponse devient un
+// planning, et le planning change ce que `planningDuClient` conclut — c'est la
+// même fonction que l'application lit, et `temoins-planning.json` la tient déjà
+// d'accord avec le Rust.
+{
+  const fiches = readdirSync(join(racine, 'agents')).filter((f) => f.endsWith('.json')).sort();
+  const f = JSON.parse(readFileSync(join(racine, 'agents', fiches[0]), 'utf8'));
+  const actives = f.taches.filter((t: { active?: boolean }) => t.active !== false);
+  const conseillees = actives.filter((t: { validationHumaine?: boolean }) => t.validationHumaine === true);
+  const idDe = (t: { id?: string }) => t.id ?? '';
+  const controlees = (dit: string) =>
+    planningDuClient(f, planningDepuisAutonomie(f.taches, dit, idDe) ?? {})
+      .filter((t) => t.validationHumaine).length;
+
+  verifier(
+    "la question d'autonomie dit que l'agent va seul, pas qu'il attend un accord",
+    (() => {
+      const q = questionsCadre(f).find((x) => x.sujet === 'autonomie');
+      return !!q && /travaille seul|tournent seules/.test(q.intitule) && (q.options ?? []).length >= 2;
+    })(),
+  );
+  verifier(
+    "« j'y vais seul » n'écrit aucun réglage : c'est déjà la règle",
+    planningDepuisAutonomie(f.taches, AUTONOMIE_TOUT_SEUL, idDe) === undefined,
+  );
+  verifier(
+    "une réponse que l'agent ne comprend pas ne pose pas de réglage non demandé",
+    planningDepuisAutonomie(f.taches, 'euh, comme vous voulez', idDe) === undefined,
+  );
+  verifier(
+    "« soumettez-moi celles que vous conseillez » met sous contrôle celles-là, et pas d'autres",
+    controlees(AUTONOMIE_CONSEILLEE) === conseillees.length && conseillees.length > 0,
+    `${controlees(AUTONOMIE_CONSEILLEE)} sur ${conseillees.length} conseillées`,
+  );
+  verifier(
+    "« soumettez-moi tout » met sous contrôle toutes les tâches allumées",
+    controlees(AUTONOMIE_TOUT_RELU) === actives.length && actives.length > 0,
+    `${controlees(AUTONOMIE_TOUT_RELU)} sur ${actives.length} actives`,
+  );
+  verifier(
+    'sans réponse du client, rien n\'attend d\'accord : la règle de max tient jusqu\'au bout',
+    planningDuClient(f, {}).every((t) => !t.validationHumaine),
+  );
+  // Une tâche éteinte que le client rallumerait ensuite ne doit pas arriver
+  // sous contrôle sans qu'il l'ait demandé.
+  verifier(
+    "une tâche éteinte ne reçoit pas de réglage d'autonomie",
+    (() => {
+      const eteintes = f.taches.filter((t: { active?: boolean }) => t.active === false).map(idDe);
+      const p = planningDepuisAutonomie(f.taches, AUTONOMIE_TOUT_RELU, idDe);
+      return (p?.ajustements ?? []).every((a) => !eteintes.includes(a.tacheId));
+    })(),
+  );
+}
 
 console.log(`${echecs === 0 ? `${qualifiees} fiches qualifiées — entretien d'embauche ok` : `${echecs} attente(s) non tenue(s)`}`);
 if (echecs) process.exit(1);

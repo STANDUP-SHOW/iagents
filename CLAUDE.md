@@ -668,6 +668,21 @@ par WhatsApp et email.
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,
   le client valide. Les règles qui comptent sont appliquées par le code
   (`expert.regles` → l'application), pas seulement lues par le modèle.
+- **Une question dont la réponse ne règle rien fait croire au client qu'il a
+  décidé** (24/09/2026). L'entretien posait six questions de cadre — activité,
+  horaires, intensité, répartition, autonomie, dossiers — l'écran affichait les
+  réponses, et `embaucher()` n'écrivait dans `installation.json` que `prenom`,
+  `ficheId`, `voix`, `sexe` et `photo`. Tout le reste tombait. Ça comptait
+  d'autant plus que la règle de max réserve au client le droit de mettre une
+  tâche sous contrôle : il n'avait **aucun moyen** de l'exercer. La question
+  s'annonçait d'ailleurs à l'envers (« il y en a N où j'attends votre accord »)
+  alors que rien n'attendait rien. Elle offre maintenant trois réponses écrites
+  une seule fois (`AUTONOMIE_TOUT_SEUL`, `AUTONOMIE_CONSEILLEE`,
+  `AUTONOMIE_TOUT_RELU`, dans `entretien.ts`), `planningDepuisAutonomie` en fait
+  un planning, et `check-entretien` suit la chaîne jusqu'à `planningDuClient` —
+  la même fonction que l'application lit. **Une réponse non reconnue ne pose
+  aucun réglage** : on ne devine pas un choix que le client n'a pas fait. Les
+  cinq autres sujets tombent toujours, et c'est le prochain maillon.
 - **Le parcours d'embauche ne fait remplir que ce que l'agent ne peut pas
   demander** : quelle fiche, quel prénom, quel genre, quel visage. Tout le
   reste, c'est l'agent qui le demande, avec une proposition tirée de sa fiche
