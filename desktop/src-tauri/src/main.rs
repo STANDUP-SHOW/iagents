@@ -26,6 +26,7 @@ mod database;
 mod llm;
 mod voiceprint;
 mod telegram;
+mod whatsapp;
 mod mise_a_jour;
 
 use voice::VoiceState;
@@ -727,6 +728,11 @@ fn main() {
             telegram::telegram_envoyer,
             telegram::telegram_relever,
             telegram::telegram_mode_d_emploi,
+            whatsapp::whatsapp_brancher,
+            whatsapp::whatsapp_branche,
+            whatsapp::whatsapp_debrancher,
+            whatsapp::whatsapp_repondre,
+            whatsapp::whatsapp_relever,
             fiches::lire_installation,
             fiches::lire_fiche,
             fiches::installation_ecrire,
