@@ -141,7 +141,16 @@ fn uuid_simple() -> String {
     format!("{:x}", time)
 }
 
+/// La date d'enregistrement d'une empreinte vocale.
+///
+/// Elle rendait la chaîne `"2026-09-19T00:00:00Z"`, toujours la même : une
+/// empreinte posée en novembre se disait enregistrée en septembre. Le
+/// calendrier vit une seule fois, dans `tache::civil`.
 fn chrono_now() -> String {
-    // Simplified RFC3339 timestamp
-    "2026-09-19T00:00:00Z".to_string()
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let secondes = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    crate::tache::date_rfc3339(secondes)
 }
