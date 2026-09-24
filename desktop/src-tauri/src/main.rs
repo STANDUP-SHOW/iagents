@@ -14,6 +14,7 @@ mod mcp;
 mod modele;
 mod navigateur;
 mod tache;
+mod equipe;
 mod document;
 mod jauge;
 mod ressources;
@@ -727,6 +728,11 @@ fn main() {
             courriel::courriel_relever,
             courriel::courriel_envoyer,
             courriel::courriel_envois,
+            equipe::equipe_regler,
+            equipe::equipe_annuler,
+            equipe::equipe_changements,
+            equipe::equipe_productions,
+            equipe::equipe_lire_production,
             journal::journal_lire,
             journal::journal_ajouter,
             navigateur::navigateur_ouvrir,
