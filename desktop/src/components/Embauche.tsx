@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import {
   configurer,
   planningDepuisAutonomie,
+  reglagesDepuisEntretien,
   questionsCadre,
   questionsEntretien,
   reconnaitreActivite,
@@ -153,6 +154,16 @@ export default function Embauche() {
           )
         : undefined
       if (planning) nouveau.planning = planning
+
+      // Les cinq autres réponses tombaient par terre exactement comme
+      // l'autonomie : l'agent demandait au client son activité, ses horaires,
+      // son rythme, où calculer et où sont ses dossiers, et rien ne l'écrivait.
+      // Ce que le client apprend à l'agent devient des compétences, que
+      // `tache.rs` et la conversation lisent déjà ; où l'agent calcule devient
+      // un réglage que `modele::choisir` applique.
+      const regle = reglagesDepuisEntretien(cadre, reponsesCadre)
+      if (regle.competences.length) nouveau.competences = regle.competences
+      if (regle.repartition) nouveau.repartition = regle.repartition
 
       const contenu = JSON.stringify(
         { ...existant, agents: [...agents, nouveau] },

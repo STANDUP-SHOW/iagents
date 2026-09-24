@@ -32,6 +32,10 @@ import {
   type FicheCompelete,
   type ReferentielActivites,
   INTITULES,
+  reglagesDepuisEntretien,
+  REPARTITION_TOUT_LOCAL,
+  REPARTITION_MIXTE,
+  REPARTITION_TOUT_API,
 } from './src/agents/entretien.ts';
 
 const ici = dirname(fileURLToPath(import.meta.url));
@@ -434,6 +438,83 @@ verifier(
       return (p?.ajustements ?? []).every((a) => !eteintes.includes(a.tacheId));
     })(),
   );
+}
+
+// --- Ce que le client répond arrive-t-il quelque part ? ----------------------
+// Six questions, une seule réponse gardée jusqu'au 24/09/2026 : l'écran
+// n'écrivait que le prénom, la fiche, la voix et le planning. Une question dont
+// la réponse ne règle rien est pire qu'une question qu'on ne pose pas, elle fait
+// croire au client qu'il a décidé. Ce banc vérifie que chaque sujet a une
+// destination, et que la liste ne se referme pas en silence sur un sujet ajouté.
+{
+  const noms = readdirSync(join(racine, 'agents')).filter((n) => n.endsWith('.json')).sort();
+  const f = JSON.parse(readFileSync(join(racine, 'agents', noms[0]), 'utf8'));
+  const questions = questionsCadre(f);
+  const reponses: Record<string, string> = { activite: 'imprimerie de labeur, douze salariés' };
+  const regle = reglagesDepuisEntretien(questions, reponses);
+
+  verifier(
+    "ce que le client dit de son activité arrive au modèle, avec SES mots",
+    regle.competences.some((c) => c.resume === 'imprimerie de labeur, douze salariés'),
+    JSON.stringify(regle.competences.map((c) => c.titre)),
+  );
+  verifier(
+    "la répartition devient un réglage, pas un savoir",
+    regle.repartition === REPARTITION_MIXTE &&
+      !regle.competences.some((c) => c.resume === REPARTITION_MIXTE),
+    `repartition=${regle.repartition}`,
+  );
+  verifier(
+    "l'autonomie n'est pas recopiée en savoir : elle devient un planning",
+    !regle.competences.some((c) =>
+      [AUTONOMIE_CONSEILLEE, AUTONOMIE_TOUT_SEUL, AUTONOMIE_TOUT_RELU].includes(c.resume)
+    ),
+  );
+  // Une proposition que le client laisse passer vaut réponse : c'est tout le
+  // principe de l'entretien, il confirme d'un mot ou corrige.
+  verifier(
+    "un défaut non touché vaut réponse",
+    reglagesDepuisEntretien(questions, {}).competences.length > 0,
+  );
+  // Le vrai garde : un sujet ajouté sans destination retomberait par terre
+  // exactement comme les cinq d'avant, et personne ne le verrait.
+  const sansDestination = questions
+    .map((q) => q.sujet)
+    .filter((sujet) => {
+      if (sujet === 'autonomie') return false; // devient un planning
+      if (sujet === 'repartition') return regle.repartition === undefined;
+      const seul = reglagesDepuisEntretien(
+        questions.filter((q) => q.sujet === sujet),
+        { [sujet]: 'une réponse du client' }
+      );
+      return seul.competences.length === 0;
+    });
+  verifier(
+    "chaque sujet de l'entretien a une destination",
+    sansDestination.length === 0,
+    `sans destination : ${sansDestination.join(', ')}`,
+  );
+}
+
+// --- Les libellés de répartition disent la même chose des deux côtés ---------
+// Le client choisit un libellé à l'écran ; c'est Rust qui le relit pour fermer
+// une voie. Écrits deux fois, ils auraient fini par diverger, et le client
+// aurait choisi une option qui ne réglait rien — sans que rien n'échoue.
+{
+  const rust = readFileSync(join(racine, 'desktop/src-tauri/src/modele.rs'), 'utf8');
+  const cote = (nom: string) =>
+    rust.match(new RegExp(`pub const ${nom}: &str = "([^"]+)"`))?.[1];
+  for (const [nom, ecran] of [
+    ['CLIENT_TOUT_LOCAL', REPARTITION_TOUT_LOCAL],
+    ['CLIENT_MIXTE', REPARTITION_MIXTE],
+    ['CLIENT_TOUT_API', REPARTITION_TOUT_API],
+  ] as const) {
+    verifier(
+      `${nom} : l'écran et Rust lisent le même libellé`,
+      cote(nom) === ecran,
+      `Rust dit « ${cote(nom)} », l'écran dit « ${ecran} »`,
+    );
+  }
 }
 
 console.log(`${echecs === 0 ? `${qualifiees} fiches qualifiées — entretien d'embauche ok` : `${echecs} attente(s) non tenue(s)`}`);

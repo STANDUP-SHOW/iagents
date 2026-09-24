@@ -551,6 +551,16 @@ export const AUTONOMIE_TOUT_SEUL = "J'y vais seul sur tout";
 export const AUTONOMIE_CONSEILLEE = 'Soumettez-moi celles que vous conseillez';
 export const AUTONOMIE_TOUT_RELU = 'Soumettez-moi tout';
 
+/**
+ * Les trois réponses possibles sur où l'agent calcule. Même raison qu'au-dessus :
+ * écrites une fois, parce que celle que le client choisit devient un réglage que
+ * `modele::choisir` applique réellement. Une liste à l'écran et une autre dans la
+ * conversion, et le client aurait choisi une option qui ne réglait rien.
+ */
+export const REPARTITION_TOUT_LOCAL = 'Tout sur votre machine';
+export const REPARTITION_MIXTE = 'Surtout local, une part par API';
+export const REPARTITION_TOUT_API = 'Tout par API';
+
 export type SujetCadre = 'activite' | 'horaires' | 'intensite' | 'repartition' | 'autonomie' | 'dossiers';
 
 export interface QuestionCadre {
@@ -692,6 +702,79 @@ export interface CoutsParIntensite {
  * déjà le défaut) : un planning vide dans `installation.json` ne dirait rien
  * de plus et se lirait comme un réglage.
  */
+/**
+ * Ce que l'entretien a recueilli, mis sous la forme que `installation.json`
+ * porte déjà. Même maillon manquant que pour l'autonomie, sur les cinq autres
+ * sujets : l'agent demandait au client son activité, ses horaires, son rythme,
+ * où calculer et où sont ses dossiers, et **rien de tout ça n'était écrit**.
+ * L'écran d'embauche n'envoyait que le prénom, la fiche, la voix et, depuis le
+ * 24/09, le planning. Six questions, une réponse gardée.
+ *
+ * Deux destinations, et une seule chacune — un champ à deux endroits finit faux
+ * à l'un des deux :
+ *
+ *  - **`competences`** pour ce que le client APPREND à l'agent. `tache.rs` et
+ *    `ConversationEngine` les lisent déjà tous les deux et les passent au modèle
+ *    sous « ce que votre employeur vous a appris, et qui prime sur le savoir
+ *    général ». Les mots du client y entrent tels quels : ce qu'il dit de son
+ *    métier ne se résume pas mieux par nous que par lui.
+ *  - **`repartition`** pour où l'agent calcule, qui n'est pas un savoir mais un
+ *    réglage : `modele::choisir` l'applique.
+ *
+ * L'autonomie n'est ici ni dans l'un ni dans l'autre : elle devient un planning,
+ * par `planningDepuisAutonomie`, et l'écrire deux fois la ferait diverger.
+ *
+ * **Ce que ça ne fait pas :** le rythme (léger / normal / soutenu) entre comme
+ * un savoir, pas comme un réglage — rien ne planifie encore différemment selon
+ * la réponse. Et les dossiers entrent EN MOTS : « dans mon Drive » n'est pas un
+ * chemin, et deviner lequel ferait écrire l'agent à côté avec assurance. Le
+ * rattachement d'un dossier logique à un vrai dossier reste au client
+ * (`dossiers` dans `installation.json`), et l'agent sait au moins ce qu'on lui
+ * a dit.
+ */
+export interface SavoirDuClient {
+  titre: string;
+  resume: string;
+}
+
+export interface CeQueLeClientARegle {
+  competences: SavoirDuClient[];
+  repartition?: string;
+}
+
+/** Le titre sous lequel chaque réponse arrive au modèle, en français et sans jargon. */
+const TITRE_DU_SUJET: Partial<Record<SujetCadre, string>> = {
+  activite: "L'activité de la maison, dite par l'employeur",
+  horaires: 'Les horaires convenus',
+  intensite: 'Le rythme de travail demandé',
+  dossiers: "Où l'employeur range ce dont je me sers",
+};
+
+export function reglagesDepuisEntretien(
+  questions: readonly QuestionCadre[],
+  reponses: Readonly<Record<string, string | undefined>>
+): CeQueLeClientARegle {
+  const competences: SavoirDuClient[] = [];
+  let repartition: string | undefined;
+
+  for (const q of questions) {
+    // Le défaut est une proposition que le client a laissée passer : elle vaut
+    // réponse, c'est tout le principe de l'entretien. Seule une réponse vide des
+    // deux côtés ne dit rien — l'activité n'a pas de défaut, par exemple.
+    const dit = (reponses[q.sujet] ?? q.defaut ?? '').trim();
+    if (!dit) continue;
+    if (q.sujet === 'repartition') {
+      repartition = dit;
+      continue;
+    }
+    const titre = TITRE_DU_SUJET[q.sujet];
+    if (!titre) continue;
+    competences.push({ titre, resume: dit });
+  }
+
+  return repartition ? { competences, repartition } : { competences };
+}
+
 export function planningDepuisAutonomie(
   taches: readonly TacheFiche[],
   dit: string,
@@ -771,8 +854,8 @@ export function questionsCadre(
     sujet: 'repartition',
     intitule:
       "Je peux tout faire tourner sur votre machine, sans rien payer au jeton — mais ce qu'elle ne tient pas, je ne le ferai pas. Ou bien j'envoie la part qui dépasse à l'API avec votre clé. Vous préférez quoi ?",
-    defaut: 'Surtout local, une part par API',
-    options: ['Tout sur votre machine', 'Surtout local, une part par API', 'Tout par API'],
+    defaut: REPARTITION_MIXTE,
+    options: [REPARTITION_TOUT_LOCAL, REPARTITION_MIXTE, REPARTITION_TOUT_API],
   });
 
   // L'agent va seul, et il le DIT ainsi : c'est la règle de max, et c'est ce

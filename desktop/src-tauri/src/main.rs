@@ -198,8 +198,17 @@ async fn repondre(
     }
 
     // La fiche dit ou ce poste travaille. Jusqu'ici personne ne le lisait et
-    // tout passait par l'API, quoi qu'elle dise.
-    let (execution, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
+    // tout passait par l'API, quoi qu'elle dise. Ce que le client a repondu a
+    // l'entretien restreint ensuite ce que la fiche permet : il l'a choisi en
+    // connaissant la facture, et la question le lui promettait.
+    let (fiche_dit, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
+    let execution = modele::selon_le_client(
+        &fiche_dit,
+        crate::fiches::lire_installation()
+            .ok()
+            .and_then(|c| modele::repartition_du_client(&c, &prenom))
+            .as_deref(),
+    );
     let offre = modele::Offre {
         locaux: modele::modeles_installes(modele::ADRESSE_LOCALE).await.ok(),
         cle_api: llm::cle_api().is_some(),
@@ -281,7 +290,17 @@ async fn executer_tache(
         tache::matiere_en_mots(&matiere, prep.source_declaree)
     );
 
-    let (execution, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
+    // Meme regle qu'en conversation : la fiche d'abord, le choix du client
+    // ensuite. Les deux chemins doivent trancher pareil, sinon l'agent parlerait
+    // en local et travaillerait par l'API.
+    let (fiche_dit, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
+    let execution = modele::selon_le_client(
+        &fiche_dit,
+        crate::fiches::lire_installation()
+            .ok()
+            .and_then(|c| modele::repartition_du_client(&c, &prenom))
+            .as_deref(),
+    );
     let offre = modele::Offre {
         locaux: modele::modeles_installes(modele::ADRESSE_LOCALE).await.ok(),
         cle_api: llm::cle_api().is_some(),
