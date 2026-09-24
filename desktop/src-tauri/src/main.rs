@@ -17,6 +17,7 @@ mod tache;
 mod document;
 mod jauge;
 mod ressources;
+mod telechargement;
 mod pdf;
 mod lecture;
 mod agents;
@@ -611,6 +612,8 @@ fn main() {
             mcp::mcp_journal,
             modele::modele_etat,
             jauge::jauge_etat,
+            telechargement::voix_a_installer,
+            telechargement::voix_installer,
             llm::cle_api_ranger,
             llm::cle_api_presente,
             llm::cle_api_retirer,

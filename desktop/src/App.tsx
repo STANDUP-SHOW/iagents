@@ -14,6 +14,7 @@ import Courriel from './components/Courriel'
 import Embauche from './components/Embauche'
 import Travail from './components/Travail'
 import CleApi from './components/CleApi'
+import InstallerVoix from './components/InstallerVoix'
 
 function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors' | 'navigateur' | 'courriel' | 'embauche' | 'travail'>('dashboard')
@@ -340,6 +341,7 @@ function App() {
         {activeTab === 'connectors' && (
           <>
             <CleApi />
+            <InstallerVoix />
             <ConnectorSetup />
           </>
         )}

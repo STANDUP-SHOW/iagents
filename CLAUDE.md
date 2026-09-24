@@ -676,6 +676,25 @@ par WhatsApp et email.
   anglais. La voix demande quatre pièces (moteur Piper, voix `.onnx`, ses
   réglages `.onnx.json`, modèle d'écoute) ; le README dit où les prendre.
   **Écouter et parler ne demandent pas les mêmes pièces** et se disent à part.
+- **Une pièce que l'application va chercher se vérifie avant d'être posée**
+  (`desktop/src-tauri/src/telechargement.rs`, décision de max du 24/09/2026 : le
+  client ne pose plus rien à la main). Les adresses vivent dans
+  `sources-ressources.json`, avec la taille et l'empreinte SHA-256 **relevées
+  chez l'éditeur**, jamais écrites de mémoire. Trois refus tenus par le code :
+  `https` seul et hôte d'une liste blanche (en clair, un modèle de 190 Mo se
+  lirait et se remplacerait sur le chemin) ; taille **et** empreinte comparées
+  avant de poser quoi que ce soit ; écriture en `.partiel` puis renommage, pour
+  qu'un contenu refusé ne laisse rien derrière lui — un banc le vérifie, parce
+  qu'un demi-fichier au bon nom ferait dire à l'application que la pièce est là.
+  Un fichier sans empreinte publiée (les réglages `.onnx.json`, qui ne sont pas
+  un objet LFS) se vérifie par sa lecture, déclarée en toutes lettres
+  (`verification_autre`) : sans ça, `null` passerait pour « rien à vérifier ».
+  **Le moteur Piper n'est pas déclaré** — github.com ne se joint pas depuis la
+  session qui a écrit ceci, donc rien n'a pu être relevé chez l'éditeur, et
+  **un poste installé écoute mais ne parle pas**. Le modèle d'écoute est
+  `ggml-small-q5_1.bin` (190 Mo) et non `medium` (1,5 Go) : c'est le premier
+  contact du client avec le produit. Aucune variante `-fr` n'existe chez
+  whisper.cpp, vérifié à son API le 24/09.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,

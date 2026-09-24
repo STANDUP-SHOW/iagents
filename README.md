@@ -47,35 +47,44 @@ conforme n'est jamais écrit.
 - **Deux agents sur le même palier partagent le modèle**, pas la charge : c'est ce qui rend un mini-PC viable pour un pack de bureau (13 postes de bureau sur la machine « studio » d'exemple).
 - **Les chiffres de `paliers-modeles.json` sont indicatifs** (quantification 4 bits, GPU de référence classe RTX 4070). À confirmer sur les vraies machines LocalAgent avant toute promesse commerciale. `machines.json` est un jeu d'exemples à remplacer par leur catalogue.
 
-## Ce que l'installeur ne livre pas encore
+## La voix : ce que l'application va chercher, et ce qui reste à poser
 
-Le MSI (9,6 Mo) porte l'application, les 1 249 fiches et les catalogues. Il ne
-porte **pas** la voix : le modèle d'écoute pèse à lui seul bien plus que tout
-le reste réuni, et rien ne le télécharge. Tant qu'elle n'est pas là,
-l'agent travaille et écrit ses fichiers, mais il ne parle ni n'écoute, et
-l'application le dit en clair au lieu d'échouer sans raison.
+Le MSI (9,6 Mo) porte l'application, les 1 249 fiches et les catalogues, jamais
+la voix : ses pièces pèsent à elles seules plus de vingt fois le reste. Sur
+décision de max le 24/09/2026, **l'application va les chercher elle-même** au
+lieu de demander au client de les poser à la main. L'onglet « Installer la
+voix » dit ce qui manque et ce que ça pèse avant qu'il ne clique.
 
-Les quatre pièces vont **à côté de l'exécutable installé** (leurs chemins et
-leurs rôles sont dans `desktop/src-tauri/src/ressources.rs`, que deux bancs
-comparent à ce que l'installeur pose) :
+Les sources sont déclarées dans `desktop/src-tauri/sources-ressources.json` et
+le téléchargement vit dans `telechargement.rs`. Trois refus sont dans le code :
+**https seul et hôte d'une liste blanche** (une adresse en clair laisserait lire
+ce qui descend), **taille et empreinte SHA-256 relues avant de poser le
+fichier** (un téléchargement coupé vaut un modèle qui ne se charge pas, et le
+motif serait incompréhensible), et **écriture en `.partiel` puis renommage**,
+pour qu'un contenu refusé ne laisse rien derrière lui.
 
-| Pièce | Où la poser | D'où elle vient |
-| --- | --- | --- |
-| Le moteur de voix Piper | `piper/piper.exe` (Windows), `piper/piper` | les versions publiées de [rhasspy/piper](https://github.com/rhasspy/piper) |
-| La voix française | `modeles/fr_FR-siwis-medium.onnx` | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices), dossier `fr/fr_FR/siwis/medium/` |
-| Ses réglages | `modeles/fr_FR-siwis-medium.onnx.json` | le même dossier ; Piper le lit tout seul à côté du modèle |
-| Le modèle d'écoute | `modeles/ggml-medium-fr.bin` | [ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp) |
+| Pièce | Où elle va | D'où elle vient | Qui la pose |
+| --- | --- | --- | --- |
+| Le modèle d'écoute | `modeles/ggml-small-q5_1.bin` (190 Mo) | [ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp) | l'application |
+| La voix française | `modeles/fr_FR-siwis-medium.onnx` (63 Mo) | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices), `fr/fr_FR/siwis/medium/` | l'application |
+| Ses réglages | `modeles/fr_FR-siwis-medium.onnx.json` | le même dossier ; Piper le lit à côté du modèle | l'application |
+| Le moteur de voix Piper | `piper/piper.exe` (Windows), `piper/piper` | les versions publiées de [rhasspy/piper](https://github.com/rhasspy/piper) | **à la main** |
 
-Deux points restent à trancher :
+**Conséquence à ne pas oublier : un poste installé écoutera mais ne parlera pas
+encore.** Le moteur Piper n'est pas déclaré parce que la session qui a écrit ce
+téléchargement ne joint pas github.com, donc son adresse, son poids et son
+empreinte n'ont pas pu être relevés chez l'éditeur ; ils ne sont pas écrits de
+mémoire. `sources-ressources.json` porte la raison dans son champ `aDeclarer`.
 
-- **Le nom du modèle d'écoute.** Le code attend `ggml-medium-fr.bin` ; le dépôt
-  officiel de whisper.cpp publie `ggml-medium.bin` (multilingue, il transcrit le
-  français) et n'a pas de variante `-fr`. Des modèles affinés sur le français
-  existent chez des tiers, sous d'autres noms. Soit on renomme le fichier après
-  téléchargement, soit on change le chemin attendu : personne n'a encore choisi.
-- **Qui les pose.** Aujourd'hui, personne : ni l'installeur, ni un
-  téléchargement au premier lancement. Ajouter ce téléchargement demande de
-  savoir d'où et à quel poids, ce qui n'est pas décidé.
+Le choix du modèle d'écoute est tranché : `small` quantifié (190 Mo) plutôt que
+`medium` (1,5 Go), parce que c'est le premier contact du client avec le produit
+et que `reconnaitre()` rapproche les noms de produits après coup. whisper.cpp ne
+publie aucune variante `-fr` : le chemin attendu suit désormais le nom réel du
+fichier.
+
+**Non constaté :** ce téléchargement n'a jamais tourné sur une machine Windows,
+comme le reste de l'installeur. Les bancs éprouvent la vérification et l'écriture
+sans réseau ; ce qu'ils ne disent pas, c'est ce que fait un vrai poste.
 
 En développement, trois variables d'environnement déplacent ces fichiers sans
 rien installer : `IAGENT_PIPER`, `IAGENT_VOIX`, `IAGENT_MODELE_ECOUTE`.
@@ -97,7 +106,7 @@ Le détail, ce qui reste à faire et ce qui a cassé sont dans `ONBOARDING.md`.
   dossier du client ; elle tourne en local par défaut et prévient avant de
   basculer sur l'API ; la jauge dit si la machine tient les agents installés.
   Le workflow « Build Windows MSI » produit un MSI à chaque PR touchant
-  `desktop/`. **Personne ne l'a encore installé sur une vraie machine**, et la
-  voix demande les quatre pièces ci-dessus.
+  `desktop/`. **Personne ne l'a encore installé sur une vraie machine** ; la voix
+  se télécharge au premier lancement, sauf le moteur Piper (ci-dessus).
 - **Pas fait** : panier et paiement sur la boutique ; catalogue LocalAgent
   définitif (`machines.json` reste un relevé AliExpress indicatif).
