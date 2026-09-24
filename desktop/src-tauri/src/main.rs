@@ -25,6 +25,7 @@ mod database;
 mod llm;
 mod voiceprint;
 mod telegram;
+mod mise_a_jour;
 
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
@@ -192,6 +193,7 @@ async fn repondre(
     enonce: String,
     state: State<'_, AppState>,
 ) -> Result<ReponseAgent, String> {
+    let _travail = mise_a_jour::travail()?;
     if prompt_systeme.trim().is_empty() {
         return Err("prompt systeme vide : la fiche n a pas ete chargee".to_string());
     }
@@ -247,6 +249,7 @@ async fn executer_tache(
     tache_id: String,
     state: State<'_, AppState>,
 ) -> Result<tache::Resultat, String> {
+    let _travail = mise_a_jour::travail()?;
     let installation = fiches::lire_installation()?;
     let fiche = fiches::lire_fiche(fiche_id.clone())?;
     let maintenant = std::time::SystemTime::now()
@@ -580,6 +583,11 @@ fn main() {
 
     tauri::Builder::default()
         .manage(state)
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .setup(|app| {
+            mise_a_jour::demarrer(app.handle());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             init_voice,
@@ -630,6 +638,7 @@ fn main() {
             navigateur::navigateur_declarer_site,
             navigateur::navigateur_oublier_site,
             navigateur::navigateur_effacer_sessions,
+            mise_a_jour::mise_a_jour_etat,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
