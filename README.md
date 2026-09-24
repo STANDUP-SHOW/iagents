@@ -68,21 +68,34 @@ pour qu'un contenu refusé ne laisse rien derrière lui.
 | Le modèle d'écoute | `modeles/ggml-small-q5_1.bin` (190 Mo) | [ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp) | l'application |
 | La voix française | `modeles/fr_FR-siwis-medium.onnx` (63 Mo) | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices), `fr/fr_FR/siwis/medium/` | l'application |
 | Ses réglages | `modeles/fr_FR-siwis-medium.onnx.json` | le même dossier ; Piper le lit à côté du modèle | l'application |
-| Le moteur de voix Piper | `piper/piper.exe` (Windows), `piper/piper` | les versions publiées de [rhasspy/piper](https://github.com/rhasspy/piper) | **à la main** |
+| Le moteur de voix Piper | `piper/` (l'archive s'y ouvre) | la version 2023.11.14-2 de [rhasspy/piper](https://github.com/rhasspy/piper) | l'application **sous Windows**, à la main ailleurs |
 
-**Conséquence à ne pas oublier : un poste installé écoutera mais ne parlera pas
-encore.** Le relevé du moteur Piper est fait — par l'intégration continue, qui
-tourne chez GitHub là où la session qui a écrit ce téléchargement ne joint pas
-github.com (`desktop/relever-piper.ts`, étape du flux des contrôles) : version
-2023.11.14-2, `piper_windows_amd64.zip` 22 477 236 o, et **aucun digest publié**,
-la version étant antérieure au champ. Ce qui bloque n'est donc plus le relevé
-mais la forme : **ce sont des archives et non des binaires**, et celle de
-Windows porte `piper.exe`, ses DLL et les données d'espeak-ng, dont le moteur ne
-se passe pas. Les déclarer demande d'ouvrir l'archive après vérification, ce que
-`telechargement.rs` ne fait pas. Deux voies à trancher, écrites dans le champ
-`aDeclarer` de `sources-ressources.json` : ouvrir l'archive (le lecteur ZIP est
-déjà dans le binaire, il sert aux `.xlsx` et aux `.docx`), ou poser le moteur
-dans le MSI, qui passerait de 9 Mo à une trentaine.
+**Le moteur Piper est une archive, et l'application l'ouvre.** C'est le seul
+des quatre morceaux qui ne soit pas un fichier : `piper_windows_amd64.zip`
+(22 477 236 o) porte `piper.exe`, ses DLL et les données d'espeak-ng, dont le
+moteur ne se passe pas. `chemin` est donc un **dossier**, et l'ouverture ajoute
+ses propres refus à ceux du téléchargement : une entrée qui écrirait hors du
+dossier (`../`, chemin absolu) fait tout refuser sans rien poser, le nombre
+d'entrées et la taille dépliée sont bornés avant la première écriture, et le
+dossier se remplit en `.partiel` avant d'être renommé — un moteur à demi extrait
+serait vu comme présent par `ressources.rs`, ce qui est pire qu'absent. Quand
+toute l'archive tient dans un seul dossier, ce dossier est retiré : le résultat
+est le même que l'éditeur range son archive d'une façon ou de l'autre, ce qui
+évite d'avoir à relever sa forme.
+
+**Windows seulement**, et c'est écrit dans la déclaration (`"pour": "windows"`) :
+l'archive Linux est un `.tar.gz`, et le binaire n'embarque ni tar ni gzip — le
+lecteur ZIP, lui, y est déjà pour les `.xlsx` et les `.docx`. Sur les autres
+systèmes `ressources.rs` continue de dire où prendre le moteur à la main. Son
+empreinte a été **calculée** par l'intégration continue sur le fichier de
+l'éditeur (`desktop/relever-piper.ts`, qui tourne chez GitHub là où la session
+qui a écrit ce code ne joint pas github.com), parce que GitHub ne publie aucun
+digest pour une version antérieure au champ ; le flux la recompare à chaque
+passage.
+
+**Non constaté** : cette archive n'a jamais été ouverte ici, et `piper.exe` n'a
+jamais tourné sur une vraie machine Windows. Ce qui est éprouvé, ce sont les
+refus, sur des archives écrites pour le banc.
 
 Le choix du modèle d'écoute est tranché : `small` quantifié (190 Mo) plutôt que
 `medium` (1,5 Go), parce que c'est le premier contact du client avec le produit
@@ -115,6 +128,7 @@ Le détail, ce qui reste à faire et ce qui a cassé sont dans `ONBOARDING.md`.
   basculer sur l'API ; la jauge dit si la machine tient les agents installés.
   Le workflow « Build Windows MSI » produit un MSI à chaque PR touchant
   `desktop/`. **Personne ne l'a encore installé sur une vraie machine** ; la voix
-  se télécharge au premier lancement, sauf le moteur Piper (ci-dessus).
+  se télécharge au premier lancement, moteur Piper compris sous Windows
+  (ci-dessus).
 - **Pas fait** : panier et paiement sur la boutique ; catalogue LocalAgent
   définitif (`machines.json` reste un relevé AliExpress indicatif).
