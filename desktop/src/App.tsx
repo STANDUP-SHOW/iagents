@@ -34,9 +34,23 @@ interface EcouteEtat {
   ou_en_est: 'dormante' | 'eveillee'
 }
 
+
+/** Un agent tel que la bibliothèque le montre : ni prénom brut ni fiche. */
+interface AgentAffiche {
+  id: string
+  name: string
+  description: string
+  status: string
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState<Onglet>('dashboard')
-  const [agents, setAgents] = useState<any[]>([])
+  /**
+   * Ce que la bibliothèque affiche. Le type est écrit, et pas `any[]` : c'est
+   * `any[]` qui a laissé passer un `find` sur un champ que cette liste n'a pas,
+   * sans un mot du compilateur.
+   */
+  const [agents, setAgents] = useState<AgentAffiche[]>([])
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
   const [isListening, setIsListening] = useState(false)
   // Le mot de réveil a été entendu, on attend le prénom d'un agent.
@@ -307,8 +321,12 @@ function App() {
         return
       }
 
-      // `agents` est la liste affichée ({ id, name… }) : le prénom et la fiche
-      // sont dans le moteur.
+      // `agents` est la liste AFFICHÉE ({ id, name, ... }) : elle n'a ni
+      // `prenom` ni `fiche`. Le premier jet la cherchait quand même, donc
+      // `find` rendait toujours `undefined` et AUCUN agent appelé ne répondait.
+      // Rien ne le signalait : la liste était typée `any[]`, ce qui rend le
+      // compilateur aveugle sur exactement ce genre de faute. Elle est typée
+      // maintenant, et c'est le moteur qu'on interroge — lui porte le prénom.
       const agent = moteur?.getAllAgents().find((a) => a.prenom === reaction.prenom)
       if (!agent) return
       const utterance = reaction.demande
