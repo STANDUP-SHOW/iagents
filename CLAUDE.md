@@ -188,10 +188,14 @@ par WhatsApp et email.
   c'est la même faute que les champs obligatoires que rien ne lit, au niveau du
   processus. Sans filtre de chemins, délibérément : les fautes trouvées ce
   jour-là vivaient toutes hors de `desktop/`, seul chemin que l'autre flux
-  surveille. Les dépendances système de Tauri sous Linux sont relevées sur une
-  machine où `cargo test` passe (Ubuntu 24.04 : `libwebkit2gtk-4.1-dev`,
-  `libsoup-3.0-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`,
-  `libgtk-3-dev`), pas écrites de mémoire ; `patchelf` ne sert qu'à l'AppImage.
+  surveille. **Les dépendances système de Tauri vivent dans
+  `desktop/dependances-systeme.txt`**, que le flux lit : recopiées dans le
+  `.yml`, elles y ont perdu `libasound2-dev` et `libjavascriptcoregtk-4.1-dev`,
+  et `apt` réussissait — c'est `cargo` qui s'arrêtait plus loin sur
+  `alsa-sys`, parce que l'écoute du microphone est dans le même binaire que les
+  bancs. **Une étape verte ne prouve que ce qu'elle regarde** : celle-ci
+  n'installait rien de faux, il lui manquait deux lignes sur sept. `patchelf`
+  ne sert qu'à l'AppImage et n'y est pas.
 - **Un champ obligatoire que personne ne lit ne protège de rien : il attend.**
   `miseAJour.appMinimum` est exigé par le schéma sur les 1 249 fiches, valait
   **« 1.0.0 » partout alors que l'application est en 0.1.0**, et aucun code ne
@@ -692,9 +696,8 @@ npm run verifier-connecteurs  # règle d'activation, seule ou dans npm run contr
 poser d'abord, sinon `cargo` s'arrête sur `gdk-3.0` introuvable :
 
 ```bash
-apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
-  libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev \
-  libjavascriptcoregtk-4.1-dev libasound2-dev
+grep -v '^[[:space:]]*\(#\|$\)' desktop/dependances-systeme.txt \
+  | xargs apt-get install -y
 ```
 
 ## Conventions
