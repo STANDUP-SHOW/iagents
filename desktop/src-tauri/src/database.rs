@@ -31,17 +31,6 @@ pub struct VoicePrint {
     pub created_at: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Connector {
-    pub id: String,
-    pub name: String,
-    pub connector_type: String,
-    pub credentials: String, // Plain text — never store a secret here
-    pub status: String,
-    pub user_id: String,
-    pub created_at: String,
-}
-
 pub struct Database {
     conn: Arc<Mutex<Connection>>,
 }
@@ -97,21 +86,6 @@ impl Database {
             )",
             [],
         ).map_err(|e| format!("Failed to create voice_prints table: {}", e))?;
-
-        // Connector table (for Telegram and other connectors)
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS connectors (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                type TEXT NOT NULL,
-                credentials TEXT NOT NULL,
-                status TEXT NOT NULL,
-                user_id TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            )",
-            [],
-        ).map_err(|e| format!("Failed to create connectors table: {}", e))?;
 
         Ok(())
     }
@@ -177,58 +151,15 @@ impl Database {
         Ok(voice_print)
     }
 
-    pub fn save_connector_credentials(
-        &self,
-        user_id: &str,
-        name: &str,
-        connector_type: &str,
-        credentials: &str,
-    ) -> Result<Connector, String> {
-        let conn = self.conn.lock()
-            .map_err(|_| "Failed to acquire database lock".to_string())?;
-
-        let id = Uuid::new_v4().to_string();
-        let now = chrono::Local::now().to_rfc3339();
-
-        conn.execute(
-            "INSERT INTO connectors (id, name, type, credentials, status, user_id, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![&id, name, connector_type, credentials, "connected", user_id, &now],
-        ).map_err(|e| format!("Failed to save connector: {}", e))?;
-
-        Ok(Connector {
-            id,
-            name: name.to_string(),
-            connector_type: connector_type.to_string(),
-            credentials: credentials.to_string(),
-            status: "connected".to_string(),
-            user_id: user_id.to_string(),
-            created_at: now,
-        })
-    }
-
-    pub fn get_connector_credentials(&self, user_id: &str, connector_type: &str) -> Result<Option<Connector>, String> {
-        let conn = self.conn.lock()
-            .map_err(|_| "Failed to acquire database lock".to_string())?;
-
-        let mut stmt = conn.prepare(
-            "SELECT id, name, type, credentials, status, user_id, created_at FROM connectors WHERE user_id = ?1 AND type = ?2 LIMIT 1"
-        ).map_err(|e| format!("Failed to prepare statement: {}", e))?;
-
-        let connector = stmt.query_row([user_id, connector_type], |row| {
-            Ok(Connector {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                connector_type: row.get(2)?,
-                credentials: row.get(3)?,
-                status: row.get(4)?,
-                user_id: row.get(5)?,
-                created_at: row.get(6)?,
-            })
-        }).optional()
-            .map_err(|e| format!("Failed to retrieve connector: {}", e))?;
-
-        Ok(connector)
-    }
+    // Il y avait ici `save_connector_credentials` et `get_connector_credentials`,
+    // qui écrivaient le jeton d'un connecteur en clair dans une colonne
+    // `credentials` de ce SQLite. Personne ne les appelait — le seul candidat,
+    // Telegram, avait été ramené en mémoire — et la structure portait pour tout
+    // garde-fou un commentaire disant de ne jamais y mettre de secret. Un champ
+    // qu'il ne faut jamais remplir n'est pas un garde-fou : c'est une invitation
+    // à laquelle le prochain répondra. Le secret d'un connecteur va au trousseau
+    // du système, comme la clé d'API (`llm::cle_api`) et les jetons MCP, et
+    // c'est là que le prochain branchement ira le chercher.
 }
 
 // Simple datetime formatting for RFC3339

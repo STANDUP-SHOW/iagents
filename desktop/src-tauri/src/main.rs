@@ -648,7 +648,7 @@ async fn connect_telegram(
     state: State<'_, AppState>,
 ) -> Result<String, String> {
     if bot_token.is_empty() || chat_id.is_empty() {
-        return Err("Token and Chat ID cannot be empty".to_string());
+        return Err("Il faut le jeton du bot ET l'identifiant de conversation.".to_string());
     }
 
     match TelegramService::connect_telegram(bot_token, chat_id).await {
@@ -659,9 +659,11 @@ async fn connect_telegram(
             // coffre du système (Credential Manager, Trousseau), pas par cette base.
             let mut telegram = state.telegram.lock().unwrap();
             *telegram = Some(credentials);
-            Ok("Telegram connected successfully".to_string())
+            Ok("Telegram est branché.".to_string())
         }
-        Err(e) => Err(format!("Failed to connect Telegram: {}", e)),
+        // Le service dit déjà, en français, ce qui ne va pas : le répéter en
+        // anglais par-dessus ne ferait que brouiller ce que le client lit.
+        Err(e) => Err(e),
     }
 }
 
@@ -682,7 +684,7 @@ async fn send_telegram_message(
 
     match credentials {
         Some(credentials) => TelegramService::send_message(&credentials, &text).await,
-        None => Err("Telegram not connected. Call connect_telegram first.".to_string()),
+        None => Err("Telegram n'est pas branché : rien n'a été envoyé.".to_string()),
     }
 }
 
