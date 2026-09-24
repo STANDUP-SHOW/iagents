@@ -22,7 +22,6 @@ mod telechargement;
 mod pdf;
 mod lecture;
 mod agents;
-mod connectors;
 mod database;
 mod llm;
 mod voiceprint;
