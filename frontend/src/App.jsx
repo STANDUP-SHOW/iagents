@@ -26,17 +26,17 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-nuit-900">
       <Navbar search={search} onSearchChange={setSearch} />
 
       <div className="flex">
         {/* Sidebar Filters */}
-        <div className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-slate-800 border-r border-slate-700 overflow-y-auto transition-all duration-300 shadow-lg`}>
+        <div className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-nuit-800 border-r border-nuit-700 overflow-y-auto transition-all duration-300 shadow-lg`}>
           <div className="p-4 space-y-6">
             {/* Toggle Button */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="absolute -right-10 top-20 bg-slate-700 hover:bg-slate-600 text-white p-2 rounded transition"
+              className="absolute -right-10 top-20 bg-nuit-700 hover:bg-nuit-600 text-white p-2 rounded transition"
               title="Toggle sidebar"
             >
               {sidebarOpen ? '→' : '←'}
@@ -44,7 +44,7 @@ export default function App() {
 
             {/* Sectors */}
             <div>
-              <h3 className="font-bold text-slate-200 mb-3 flex items-center gap-2">
+              <h3 className="font-bold text-nuit-200 mb-3 flex items-center gap-2">
                 <span>🏢</span> Secteurs
               </h3>
               <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -55,8 +55,8 @@ export default function App() {
                   }}
                   className={`w-full text-left px-3 py-2 rounded transition text-sm ${
                     selectedSector === ''
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      ? 'bg-neon-400/15 text-neon-300 border border-neon-400 shadow-neon'
+                      : 'bg-nuit-700 text-nuit-300 hover:bg-nuit-600'
                   }`}
                 >
                   ✓ Tous ({agents.length})
@@ -70,8 +70,8 @@ export default function App() {
                     }}
                     className={`w-full text-left px-3 py-2 rounded transition text-sm ${
                       selectedSector === sector
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        ? 'bg-neon-400/15 text-neon-300 border border-neon-400 shadow-neon'
+                        : 'bg-nuit-700 text-nuit-300 hover:bg-nuit-600'
                     }`}
                   >
                     {sector} ({groupedAgents[sector]?.length || 0})
@@ -82,7 +82,7 @@ export default function App() {
 
             {/* Familles */}
             <div>
-              <h3 className="font-bold text-slate-200 mb-3 flex items-center gap-2">
+              <h3 className="font-bold text-nuit-200 mb-3 flex items-center gap-2">
                 <span>🔖</span> Familles
               </h3>
               <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -90,8 +90,8 @@ export default function App() {
                   onClick={() => setSelectedFamille('')}
                   className={`w-full text-left px-3 py-2 rounded transition text-sm ${
                     selectedFamille === ''
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      ? 'bg-rose-500/15 text-rose-300 border border-rose-500 shadow-rose'
+                      : 'bg-nuit-700 text-nuit-300 hover:bg-nuit-600'
                   }`}
                 >
                   ✓ Toutes
@@ -102,8 +102,8 @@ export default function App() {
                     onClick={() => setSelectedFamille(famille)}
                     className={`w-full text-left px-3 py-2 rounded transition text-sm ${
                       selectedFamille === famille
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        ? 'bg-rose-500/15 text-rose-300 border border-rose-500 shadow-rose'
+                        : 'bg-nuit-700 text-nuit-300 hover:bg-nuit-600'
                     }`}
                   >
                     {famille}
@@ -113,10 +113,10 @@ export default function App() {
             </div>
 
             {/* Stats */}
-            <div className="border-t border-slate-700 pt-4">
-              <div className="text-xs text-slate-400">
-                <p>Agents affichés: <span className="font-bold text-indigo-300">{filteredAgents.length}</span></p>
-                <p>Total: <span className="font-bold text-slate-300">{agents.length}</span></p>
+            <div className="border-t border-nuit-700 pt-4">
+              <div className="text-xs text-nuit-400">
+                <p>Agents affichés: <span className="font-bold text-neon-300">{filteredAgents.length}</span></p>
+                <p>Total: <span className="font-bold text-nuit-300">{agents.length}</span></p>
               </div>
             </div>
           </div>
@@ -127,20 +127,20 @@ export default function App() {
           <div className="p-8 max-w-7xl mx-auto">
             {/* Header Stats */}
             <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                <p className="text-xs text-slate-400 mb-1">Fiches visibles</p>
-                <p className="text-2xl font-bold text-indigo-300">{filteredAgents.length}</p>
+              <div className="bg-nuit-800 rounded-lg p-4 border border-nuit-700">
+                <p className="text-xs text-nuit-400 mb-1">Fiches visibles</p>
+                <p className="text-2xl font-bold text-neon-300">{filteredAgents.length}</p>
               </div>
-              <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                <p className="text-xs text-slate-400 mb-1">Total</p>
-                <p className="text-2xl font-bold text-slate-300">{agents.length}</p>
+              <div className="bg-nuit-800 rounded-lg p-4 border border-nuit-700">
+                <p className="text-xs text-nuit-400 mb-1">Total</p>
+                <p className="text-2xl font-bold text-nuit-300">{agents.length}</p>
               </div>
-              <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                <p className="text-xs text-slate-400 mb-1">Secteurs</p>
-                <p className="text-2xl font-bold text-purple-300">{sectors.length}</p>
+              <div className="bg-nuit-800 rounded-lg p-4 border border-nuit-700">
+                <p className="text-xs text-nuit-400 mb-1">Secteurs</p>
+                <p className="text-2xl font-bold text-rose-300">{sectors.length}</p>
               </div>
-              <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                <p className="text-xs text-slate-400 mb-1">Familles</p>
+              <div className="bg-nuit-800 rounded-lg p-4 border border-nuit-700">
+                <p className="text-xs text-nuit-400 mb-1">Familles</p>
                 <p className="text-2xl font-bold text-green-300">{familles.length}</p>
               </div>
             </div>
@@ -154,8 +154,8 @@ export default function App() {
               />
             ) : (
               <div className="text-center py-16">
-                <p className="text-2xl text-slate-400 mb-2">😴 Aucun agent trouvé</p>
-                <p className="text-slate-500">Essayez de modifier les filtres</p>
+                <p className="text-2xl text-nuit-400 mb-2">😴 Aucun agent trouvé</p>
+                <p className="text-nuit-500">Essayez de modifier les filtres</p>
               </div>
             )}
           </div>
