@@ -318,6 +318,47 @@ par WhatsApp et email.
   d'ouvrir COM010. **Ce qui bloque les neuf autres n'est pas l'accès au web mais
   la page** : leurs pages de quotas s'ouvrent et aucune n'énonce le coût ; c'est
   la page tarifaire qu'il faut, et elle vit sur un autre hôte. Aucun bouton « Se connecter » ne s'affiche sans passer par là.
+  **Au 24/09 au soir : 15 activables** (Asana et ClickUp ajoutés ; ce qui a fait
+  trancher et manquait aux trois autres, c'est un quota CHIFFRÉ en face de
+  l'offre gratuite, qui dit que l'API y est ouverte). Notion reste dehors parce
+  que sa page de tarifs s'est lue deux fois différemment — une page qui se
+  contredit ne chiffre rien.
+- **« 122 connecteurs attendent un prix » n'est pas le chiffre à porter**
+  (mesuré le 24/09/2026). Sur les 137, **39 seulement servent un besoin déclaré
+  par une fiche** ; les 98 autres (SAP, Workday, Epic, Procore…) ne sont
+  atteignables par aucun agent, donc les ouvrir ne change rien pour un client.
+  Et sur ces 39, ce qui est ouvert couvre **quatre besoins sur six** : Microsoft
+  365 et Google Workspace font à eux deux le courrier, l'agenda, les fichiers et
+  la conversation. **Les deux trous sont `whatsapp` (212 fiches) et `telephone`
+  (210), et ce n'est pas une question de prix : il n'y a pas de code.**
+  L'application ne sait ni envoyer ni recevoir un message WhatsApp, et ne sait
+  pas téléphoner — vérifié maillon par maillon. Chiffrer COM001 ou COM010
+  allumerait un bouton « Se connecter » vers une capacité inexistante. Le prix de
+  COM001 est d'ailleurs lu et **nul pour ce qu'un agent fait** : Meta ne facture
+  ni le message qu'un utilisateur envoie à l'entreprise, ni la réponse hors
+  modèle dans la fenêtre de service ouverte. **Et recevoir ne peut pas marcher
+  sur la machine du client** : Meta ne livre un entrant qu'en le poussant vers
+  une adresse publique et n'offre aucune relève, donc il faudrait un relais
+  hébergé — question posée à max le 24/09.
+- **Pire qu'un champ que personne ne lit : du code qui rend `Ok` sans avoir
+  agi.** Le premier attend, le second ment au client dès qu'on l'appelle. Trois
+  retirés le 24/09/2026 : `connectors.rs` (un `connect_whatsapp` qui rangeait la
+  clé dans une HashMap et posait `status = "connected"`, 150 lignes, zéro test,
+  mort) ; les trois fonctions de `telegram.rs` (`send_message` imprimait
+  « Telegram: Would send to … » sur stdout et rendait `Ok("Message sent to
+  Telegram chat …")`, et les trois étaient **enregistrées comme commandes
+  Tauri**, à une ligne d'interface près d'être appelées) ; et
+  `save_connector_credentials` dans `database.rs`, qui écrivait un jeton en clair
+  dans le SQLite avec pour tout garde-fou un commentaire « never store a secret
+  here » sur un champ nommé `credentials`. **Un champ qu'il ne faut jamais
+  remplir n'est pas un garde-fou, c'est une invitation.** Telegram refuse
+  maintenant en français en disant que rien n'est parti, plutôt que de rendre un
+  `Ok` optimiste ou de disparaître (une commande absente donne une erreur
+  opaque). Pour les débusquer : chercher l'appel sortant dans tout module qui
+  parle au monde — pas d'appel plus un `Ok(...)`, il ment — puis regarder s'il
+  est atteignable ; en Rust un item d'un `mod X` ne s'atteint que par `X::` ou
+  `crate::X`, mais une commande Tauri peut être **enregistrée sans que l'écran
+  l'appelle**, et c'est le cas dangereux, pas le cas rassurant.
 - **`desktop/src-tauri/src/mcp.rs` est le seul endroit où un outil extérieur
   peut être appelé**, et quatre refus y sont dans le code, pas dans une consigne
   au modèle : liste blanche par agent (un outil que le serveur ajoute entre deux
