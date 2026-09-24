@@ -77,11 +77,28 @@ const principal = async () => {
 
   const attendus = declare();
   if (attendus.length === 0) {
+    // Ce dépôt ne publie aucun digest (version de 2023, antérieure au champ) :
+    // sans empreinte, la pièce ne peut pas être déclarée, et sans déclaration
+    // l'application ne la télécharge pas. On la calcule donc ici, une fois —
+    // cette branche disparaît dès que le moteur est déclaré.
+    console.log(`\n  ⟳ le moteur Piper n'est pas déclaré dans sources-ressources.json.`);
+    for (const nom of ['piper_windows_amd64.zip', 'piper_linux_x86_64.tar.gz']) {
+      const a = version.assets.find((x) => x.name === nom);
+      if (!a) {
+        console.log(`     ${nom} : plus publié en ${version.tag_name}`);
+        continue;
+      }
+      const { sha256, octets } = await empreinteDistante(a.browser_download_url);
+      console.log(`     ${nom}`);
+      console.log(`       url     ${a.browser_download_url}`);
+      console.log(`       octets  ${octets}`);
+      console.log(`       sha256  ${sha256}`);
+    }
     console.log(
-      `\n  ⟳ le moteur Piper n'est pas déclaré dans sources-ressources.json.\n` +
-        `     Les lignes ci-dessus sont ce que l'éditeur publie aujourd'hui ;\n` +
-        `     c'est à partir d'elles que la déclaration s'écrit. Tant qu'elle\n` +
-        `     manque, un poste installé écoute mais ne parle pas.`
+      `     Ce sont des ARCHIVES, pas des binaires : les déclarer demande\n` +
+        `     d'ouvrir l'archive après la vérification, ce que telechargement.rs\n` +
+        `     ne fait pas encore. Tant que ça manque, un poste installé écoute\n` +
+        `     mais ne parle pas.`
     );
     return 0;
   }

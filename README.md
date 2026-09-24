@@ -71,10 +71,18 @@ pour qu'un contenu refusé ne laisse rien derrière lui.
 | Le moteur de voix Piper | `piper/piper.exe` (Windows), `piper/piper` | les versions publiées de [rhasspy/piper](https://github.com/rhasspy/piper) | **à la main** |
 
 **Conséquence à ne pas oublier : un poste installé écoutera mais ne parlera pas
-encore.** Le moteur Piper n'est pas déclaré parce que la session qui a écrit ce
-téléchargement ne joint pas github.com, donc son adresse, son poids et son
-empreinte n'ont pas pu être relevés chez l'éditeur ; ils ne sont pas écrits de
-mémoire. `sources-ressources.json` porte la raison dans son champ `aDeclarer`.
+encore.** Le relevé du moteur Piper est fait — par l'intégration continue, qui
+tourne chez GitHub là où la session qui a écrit ce téléchargement ne joint pas
+github.com (`desktop/relever-piper.ts`, étape du flux des contrôles) : version
+2023.11.14-2, `piper_windows_amd64.zip` 22 477 236 o, et **aucun digest publié**,
+la version étant antérieure au champ. Ce qui bloque n'est donc plus le relevé
+mais la forme : **ce sont des archives et non des binaires**, et celle de
+Windows porte `piper.exe`, ses DLL et les données d'espeak-ng, dont le moteur ne
+se passe pas. Les déclarer demande d'ouvrir l'archive après vérification, ce que
+`telechargement.rs` ne fait pas. Deux voies à trancher, écrites dans le champ
+`aDeclarer` de `sources-ressources.json` : ouvrir l'archive (le lecteur ZIP est
+déjà dans le binaire, il sert aux `.xlsx` et aux `.docx`), ou poser le moteur
+dans le MSI, qui passerait de 9 Mo à une trentaine.
 
 Le choix du modèle d'écoute est tranché : `small` quantifié (190 Mo) plutôt que
 `medium` (1,5 Go), parce que c'est le premier contact du client avec le produit
