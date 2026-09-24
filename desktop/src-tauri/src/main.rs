@@ -81,23 +81,34 @@ fn voix_ecoute_etat(state: State<'_, AppState>) -> EcouteVue {
 /// l'ecoute reprendrait la ou elle en etait, et le client qui a coupe pour
 /// parler tranquillement retrouverait un agent qui attend son prenom.
 #[tauri::command]
-fn voix_ecoute_basculer(active: bool, state: State<'_, AppState>) -> EcouteVue {
-    {
-        let mut e = state.ecoute.lock().unwrap();
-        e.active = active;
-        e.ou_en_est = reveil::Etat::Dormante;
-    }
+fn voix_ecoute_basculer(active: bool, state: State<'_, AppState>) -> Result<EcouteVue, String> {
     // Le micro suit le bouton ICI, et pas a l'ecran. Il y avait deux etats pour
     // une seule chose — `isListening` en React et `active` en Rust — ce qui est
     // la garantie qu'un jour le bouton serait vert pendant que l'ecoute est
     // morte. Un bouton rouge doit vouloir dire que le micro est coupe, pas
     // seulement que le mot de reveil est ignore.
     //
-    // L'echec ne remet pas le bouton a l'etat d'avant : le client a demande a
-    // couper, et couper a echoue faute d'ecoute prete, ce qui revient au meme.
-    let _ = micro(&state, active);
-    let e = state.ecoute.lock().unwrap();
-    EcouteVue { active: e.active, ou_en_est: e.ou_en_est.clone() }
+    // Le micro d'abord, l'etat ensuite, et les deux sens ne se valent pas :
+    //
+    // Allumer qui echoue ne s'enregistre pas. La version precedente posait
+    // `active = true` puis jetait l'echec de `micro()` — exactement le bouton
+    // vert sur ecoute morte que le commentaire ci-dessus dit vouloir eviter, et
+    // pas en theorie : `micro()` echoue des que la voix n'est pas prete sur ce
+    // poste, ce qui est le cas de toute installation ou les fichiers de voix
+    // n'ont pas ete poses. L'echec remonte donc a l'ecran, qui garde le bouton
+    // rouge et affiche le motif.
+    //
+    // Couper qui echoue s'enregistre quand meme : le client a demande a couper,
+    // et couper a echoue faute d'ecoute prete, ce qui revient au meme.
+    if active {
+        micro(&state, true)?;
+    } else {
+        let _ = micro(&state, false);
+    }
+    let mut e = state.ecoute.lock().unwrap();
+    e.active = active;
+    e.ou_en_est = reveil::Etat::Dormante;
+    Ok(EcouteVue { active: e.active, ou_en_est: e.ou_en_est.clone() })
 }
 
 /// Allume ou coupe le micro. `Err` quand l'ecoute n'est pas prete sur ce poste
@@ -175,7 +186,17 @@ fn init_voice(state: State<AppState>) -> Result<String, String> {
             // S'il a coupe le bouton, on respecte son choix.
             let demarre = state.ecoute.lock().unwrap().active;
             if demarre {
-                let _ = micro(&state, true);
+                // Meme regle qu'au bouton : le modele charge ne prouve pas que
+                // le micro tourne. Jeter cet echec laissait `active` a vrai, et
+                // `voix_ecoute_etat` repondait « allumee » a un ecran qui
+                // venait de lire « Écoute prête. ».
+                if let Err(motif) = micro(&state, true) {
+                    state.ecoute.lock().unwrap().active = false;
+                    return Err(format!(
+                        "Le modèle d'écoute est chargé mais le micro n'a pas démarré : {}",
+                        motif
+                    ));
+                }
             }
             Ok("Écoute prête.".to_string())
         }
