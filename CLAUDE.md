@@ -170,16 +170,39 @@ par WhatsApp et email.
   `profil_risque` dit si un humain doit approuver. Le générateur écrivait le
   second sans jamais regarder les tâches : **1 243 fiches sur 1 249 se disaient
   « PR-00 (autonome) », dont 245 dont CHAQUE tâche attend un accord humain.**
-  Personne ne lisait le champ, donc personne ne le voyait mentir. Il est dérivé
-  depuis le 23/09 (`profilRisqueAttendu`, dans `verifier-paquets.ts`) et le banc
-  refuse l'écart : **30 fiches sont réellement autonomes, 1 219 sont en PR-03**.
-  Deux valeurs seulement, parce que les fiches ne portent rien qui distingue
-  davantage ; PR-01, PR-02 et PR-04 restent inemployés tant que personne n'a dit
-  ce qui les produirait. **Ce qui est réellement appliqué reste
-  `validationHumaine`, tâche par tâche, dans `tache.rs`** — l'étiquette de fiche
-  le résume, elle ne le remplace pas. À dire à max : c'est une étiquette visible
-  au client, et elle passe de « autonome » à « approbation obligatoire » sur
-  presque tout le catalogue.
+  Personne ne lisait le champ, donc personne ne le voyait mentir. Dérivé le
+  23/09 des tâches, il mettait 1 219 fiches sur 1 249 en PR-03 (« approbation
+  obligatoire ») ; **max l'a refusé le 24/09** — « l'agent peut fonctionner de
+  manière autonome si l'utilisateur le souhaite » — et il a raison : c'était
+  écrire sur la carte du client une contrainte que le produit n'applique pas et
+  qu'il peut de toute façon lever. **PR-00 sur les 1 249 depuis**, parce que
+  l'étiquette décrit l'agent tel qu'il est vendu, avant tout réglage, et que ce
+  que l'application applique alors est l'autonomie. Conséquence à assumer : le
+  champ dit désormais la même chose partout, donc il ne porte plus rien, et il
+  n'est **affiché nulle part** (ni boutique ni application — vérifié). Ce qui
+  porte l'information, et qui varie vraiment, c'est `validationHumaine` tâche
+  par tâche : **30 fiches sans aucune tâche à relire, 973 avec une partie, 246
+  avec toutes**. C'est ce compte-là qu'une carte afficherait honnêtement, le
+  jour où la boutique aura où le dire.
+- **L'agent va seul, sauf si le client met une tâche sous contrôle** (règle de
+  max, tenue par `accord_attendu` dans `tache.rs` et `planningDuClient` dans
+  `src/agents/fiche.ts`). Le `validationHumaine` de la fiche n'est donc **pas**
+  appliqué : c'est la proposition de l'expert, celle que l'agent énonce à
+  l'entretien d'embauche (« il y en a N où j'attends votre accord, je garde ça
+  ou vous voulez en relâcher ? »), et c'est la réponse du client qui devient un
+  réglage de son planning. Écrite deux fois, la règle disait déjà deux choses le
+  24/09 : l'écran forçait l'autonomie sur toutes les tâches pendant que
+  `lire_tache` appliquait la fiche, donc l'onglet du travail annonçait « part
+  seule » et l'agent recevait la consigne « votre travail sera relu ». Pire,
+  Rust ne lisait **pas du tout** le `planning` du client : une tâche qu'il avait
+  éteinte restait exécutable et une tâche qu'il avait ajoutée était introuvable,
+  alors que `installation.json` livré avec l'application porte les deux cas.
+  `desktop/temoins-planning.json` est maintenant rejoué des deux côtés (un test
+  Rust par `include_str!`, `check-travail.ts` en TypeScript) pour qu'ils ne
+  puissent plus se séparer. **Ce que `validationHumaine` fait vraiment est
+  étroit** : il ajoute une phrase à la consigne du modèle et lève un drapeau sur
+  le résultat. Il n'autorise rien et ne retient rien — de toute façon rien ne
+  part du poste, et le courriel a sa propre empreinte de relecture.
 - **Les bancs tournent en intégration continue depuis le 23/09**
   (`.github/workflows/controles.yml`). Avant, le seul flux construisait le MSI
   et rien d'autre : `npm run controle`, `npm run controle-application`,

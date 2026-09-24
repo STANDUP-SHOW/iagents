@@ -96,17 +96,27 @@ const profils = new Map<string, any>(catalogue.profils.map((p: any) => [p.id, p]
  * (automatisation, présence physique, complexité d'intégration) et sert au prix.
  * La collision de noms est ce qui rend l'erreur invisible à la relecture.
  *
- * Deux valeurs seulement, parce que les fiches ne portent rien qui distingue
- * davantage : une tâche attend un accord, ou elle n'en attend pas.
- * `validationHumaine` est ce qui est réellement appliqué (`tache.rs`). PR-01,
- * PR-02 et PR-04 restent inemployés tant que personne n'a dit ce qui les
- * produirait.
+ * **PR-00 sur toutes les fiches, décision de max du 24/09/2026 : « l'agent peut
+ * fonctionner de manière autonome si l'utilisateur le souhaite ».** Cette
+ * étiquette décrit l'agent tel qu'il est vendu, avant que le client ne règle
+ * quoi que ce soit — et ce que l'application applique alors est l'autonomie
+ * (`accord_attendu` en Rust, `planningDuClient` à l'écran) : l'agent va seul
+ * sauf si le client met une tâche sous contrôle. La déduire du
+ * `validationHumaine` des tâches mettait 1 219 fiches sur 1 249 en
+ * « approbation obligatoire », c'est-à-dire écrivait sur la carte du client une
+ * contrainte que le produit n'applique pas et qu'il peut de toute façon lever.
  *
- * Les tâches éteintes comptent : le client peut les allumer, et sur une
- * étiquette de sûreté on se trompe du côté prudent.
+ * **Le champ ne dit donc plus rien qu'une fiche ne dise déjà**, et il n'est
+ * affiché nulle part — ni boutique ni application. Ce qui porte l'information,
+ * et qui varie vraiment d'une fiche à l'autre (30 fiches sans aucune tâche à
+ * relire, 973 avec une partie, 246 avec toutes), c'est `validationHumaine`
+ * tâche par tâche : c'est ce que l'agent propose au client à l'entretien
+ * d'embauche, et ce que le client tranche. Le jour où la boutique aura un
+ * endroit honnête pour le dire, c'est ce compte-là qu'elle affichera, pas cette
+ * étiquette.
  */
-export function profilRisqueAttendu(taches: { validationHumaine?: boolean }[]): string {
-  return taches.some((t) => t.validationHumaine === true) ? 'PR-03' : 'PR-00';
+export function profilRisqueAttendu(_taches: { validationHumaine?: boolean }[]): string {
+  return 'PR-00';
 }
 
 export function commercialAttendu(profilId: string) {
@@ -284,7 +294,7 @@ for (const f of fichiers) {
     const risque = profilRisqueAttendu(paquet.taches);
     if (paquet.profil_risque !== risque) {
       if (corriger) { paquet.profil_risque = risque; modifie = true; }
-      else faute(f, `profil_risque « ${paquet.profil_risque} » ≠ ce que disent les tâches (${risque}) : ${paquet.taches.filter((t: any) => t.validationHumaine).length} tâche(s) sur ${paquet.taches.length} attendent un accord humain`);
+      else faute(f, `profil_risque « ${paquet.profil_risque} » ≠ ${risque} : l'agent est vendu autonome, le client met sous contrôle ce qu'il veut`);
     }
 
     // Une fiche ne peut pas exiger une application qui n'existe pas. Les 1 249
