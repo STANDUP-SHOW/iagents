@@ -264,6 +264,21 @@ par WhatsApp et email.
   (Max, 22/09/2026). L'agent ouvre la conversation, demande ce que tourne
   l'entreprise, reconnaît la réponse dans le référentiel (nom ou alias) et écrit sa
   propre configuration. C'est la première impression du produit.
+- **Le Team Holder vit au socle, pas dans la boutique** (Max, 24/09/2026 :
+  « un responsable et assistant personnel » qui tient les autres agents, pour
+  que le client n'ait qu'un interlocuteur). Sa fiche est
+  `socle/AG-0000-team-holder.json`, rangée sous `catalogue.socle` et validée par
+  `verifier-paquets` avec les mêmes règles que les 1 249 : la boutique lit
+  `agents/`, elle ne le met donc pas en vente et ses comptes restent justes.
+  `lire_fiche` cherche dans `agents/` puis `socle/`, que l'installeur embarque.
+  **Ce qu'il peut changer est tenu dans `equipe.rs`, pas dans sa consigne** :
+  trois réglages seulement (horaire, allumage, mode contrôle d'une tâche), signés
+  du prénom d'un Team Holder embauché, inscrits sous `changements` dans
+  `installation.json` **dans la même écriture que le réglage**, et annulables ;
+  l'annulation refuse un réglage qui a bougé depuis plutôt que d'écraser le plus
+  récent. Il ne lit que les fichiers des dossiers de sortie des tâches de chaque
+  agent. `check-team-holder.ts` compare les réglages et les noms de champs aux
+  deux côtés.
 - **Une fiche dit de quel poste elle reçoit et à quel poste elle transmet**
   (bloc `relais`). Un groupe d'agents doit pouvoir faire tourner une entreprise sans
   humain intermédiaire ; sans ce bloc, chaque fiche est un îlot. Quand le relais

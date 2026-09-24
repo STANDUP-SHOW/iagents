@@ -80,6 +80,14 @@ const valider = ajv.compile(schema);
 /** Les connecteurs, lus au schéma : une liste recopiée ici vieillirait à part. */
 const CONNECTEURS = new Set<string>(schema.properties.connecteurs.items.enum);
 const parId = new Map<string, any>(catalogue.agents.map((a: any) => [a.id, a]));
+// Le socle : les agents livrés avec l'application (le Team Holder), hors boutique. Mêmes règles
+// que les 1 249 métiers, mais un dossier à part (`socle/`) pour que la boutique, qui lit
+// `agents/`, ne les mette pas en vente et que les comptes du catalogue restent justes.
+const socle = new Map<string, any>((catalogue.socle?.agents ?? []).map((a: any) => [a.id, a]));
+for (const [id, a] of socle) {
+  if (parId.has(id)) throw new Error(`${id} est à la fois au catalogue et au socle`);
+  parId.set(id, a);
+}
 const profils = new Map<string, any>(catalogue.profils.map((p: any) => [p.id, p]));
 
 /**
@@ -115,18 +123,22 @@ export function commercialAttendu(profilId: string) {
   return { profil: p.id, priorite: p.priorite, pack: p.pack, prixMensuel: { min: p.prixCible.min, max: p.prixCible.max }, autonomie: p.autonomie, besoinHumain: p.besoinHumain, risqueReglementaire: p.risqueReglementaire };
 }
 
-const fichiers = readdirSync(join(racine, 'agents')).filter((f) => f.endsWith('.json')).sort();
+const lister = (dossier: string) =>
+  readdirSync(join(racine, dossier)).filter((f) => f.endsWith('.json')).sort().map((f) => ({ dossier, f }));
+const fichiers = [...lister('agents'), ...lister('socle')];
 const slugs = new Map<string, string>();
 let fautes = 0;
 const faute = (f: string, msg: string) => { fautes++; console.log(`  ✗ ${f} : ${msg}`); };
 
-for (const f of fichiers) {
-  const chemin = join(racine, 'agents', f);
+for (const { dossier, f } of fichiers) {
+  const chemin = join(racine, dossier, f);
   const paquet = JSON.parse(readFileSync(chemin, 'utf8'));
   let modifie = false;
   if (!valider(paquet)) for (const e of valider.errors ?? []) faute(f, `${e.instancePath || '/'} ${e.message}`);
   const entree = parId.get(paquet.id);
   if (!entree) { faute(f, `id ${paquet.id} absent du catalogue`); continue; }
+  const attenduDans = socle.has(paquet.id) ? 'socle' : 'agents';
+  if (dossier !== attenduDans) faute(f, `${paquet.id} doit vivre dans ${attenduDans}/, pas dans ${dossier}/`);
   if (entree.secteur !== paquet.secteur) faute(f, `secteur ${paquet.secteur} ≠ catalogue ${entree.secteur}`);
   // Le métier et le slug appartiennent au catalogue. Sans ce contrôle, une fiche peut décrire
   // un autre métier que celui vendu sous son identifiant — et quatre-vingt-onze l'ont fait sans

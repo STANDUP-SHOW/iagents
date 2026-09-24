@@ -42,13 +42,20 @@ pub fn lire_fiche(id: String) -> Result<String, String> {
         return Err(format!("identifiant de fiche invalide : {}", id));
     }
 
-    let dossier = dossier_ressources().join("agents");
     let prefixe = format!("{}-", id);
 
-    let entrees = std::fs::read_dir(&dossier)
-        .map_err(|e| format!("lecture de {} : {}", dossier.display(), e))?;
+    // Les 1 249 métiers sont dans `agents/`, le Team Holder et ce qui viendra
+    // avec l'application dans `socle/` : la boutique lit le premier seulement.
+    let dossier = dossier_ressources().join("agents");
+    let mut entrees: Vec<std::fs::DirEntry> = std::fs::read_dir(&dossier)
+        .map_err(|e| format!("lecture de {} : {}", dossier.display(), e))?
+        .flatten()
+        .collect();
+    if let Ok(socle) = std::fs::read_dir(dossier_ressources().join("socle")) {
+        entrees.extend(socle.flatten());
+    }
 
-    for entree in entrees.flatten() {
+    for entree in entrees {
         let nom = entree.file_name();
         let nom = nom.to_string_lossy();
         if nom.starts_with(&prefixe) && nom.ends_with(".json") {
