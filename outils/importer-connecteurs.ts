@@ -177,10 +177,19 @@ function serveurMcp(nom: string): Ligne | undefined {
 }
 
 // Les coûts vérifiés, seul endroit du dépôt où un prix s'écrit à la main.
-const couts = new Map<string, { coutMensuel: number; source: string; constate: string }>();
+const couts = new Map<
+  string,
+  { coutMensuel: number; pourLeClient: string; source: string; constate: string }
+>();
 for (const c of lire('connecteurs/couts.json').couts as any[]) {
   if (typeof c.coutMensuel !== 'number' || !c.source || !c.constate) {
     throw new Error(`coût sans chiffre, sans source ou sans date : ${c.id}`);
+  }
+  // Ce que le client lira avant de cliquer. Exigée pour tous, pas seulement pour les
+  // payants : « sans frais en plus de votre abonnement » est l'information qu'il cherche,
+  // et un écran muet ne dit pas la différence entre gratuit et pas encore chiffré.
+  if (typeof c.pourLeClient !== 'string' || c.pourLeClient.trim() === '') {
+    throw new Error(`coût sans phrase pour le client : ${c.id}`);
   }
   couts.set(c.id, c);
 }
@@ -244,6 +253,9 @@ for (const source of SOURCES) {
       // main une ligne à la fois, chaque chiffre avec la page de l'éditeur qui le dit et la
       // date à laquelle elle a été lue. Absent de ce fichier : `null`, et la règle refuse.
       cout: couts.get(e['ID connecteur'])?.coutMensuel ?? null,
+      // Le chiffre dit à la règle qu'on a cherché ; cette phrase le dit au client. Sans
+      // elle, un connecteur payant s'ouvrirait sans qu'il sache qu'il sera facturé.
+      coutPourLeClient: couts.get(e['ID connecteur'])?.pourLeClient ?? null,
       etapesClient: etapes(e['Étapes utilisateur']),
       etapesIntegrateur: etapes(e['Étapes intégrateur']),
       urlProduit: e['URL produit'] ?? '',

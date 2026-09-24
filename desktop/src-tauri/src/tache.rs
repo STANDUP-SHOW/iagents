@@ -265,6 +265,23 @@ pub fn date_rfc5322(secondes_depuis_epoque: u64) -> String {
     )
 }
 
+/// La date au format RFC 3339, en UTC : `AAAA-MM-JJThh:mm:ssZ`.
+///
+/// C'est celle qu'on range en base. Elle sort de la même horloge que le nom du
+/// fichier, le courriel et le PDF, et pour la même raison : `database.rs` et
+/// `voiceprint.rs` écrivaient chacun la leur, et toutes deux annonçaient le
+/// 19 septembre 2026 quel que soit le jour — l'une avec la date en dur et
+/// l'heure calculée, l'autre avec une chaîne constante. Un enregistrement daté
+/// d'un jour inventé est un enregistrement faux, même quand personne ne le
+/// relit encore.
+pub fn date_rfc3339(secondes_depuis_epoque: u64) -> String {
+    let (annee, mois, jour, heure, minute, seconde, _) = civil(secondes_depuis_epoque);
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+        annee, mois, jour, heure, minute, seconde
+    )
+}
+
 /// La date au format que le PDF attend : `D:AAAAMMJJhhmmss+00'00'`.
 ///
 /// Même horloge que le courriel et que le nom du fichier : un document daté
@@ -894,13 +911,21 @@ struct SortieDeclaree {
 
 /// La tâche à exécuter, lue dans la fiche installée.
 #[derive(Debug)]
-struct TacheLue {
-    nom: String,
-    description: String,
-    entrees: Vec<String>,
-    sortie: SortieDeclaree,
-    validation_humaine: bool,
-    active: bool,
+pub(crate) struct TacheLue {
+    pub(crate) nom: String,
+    pub(crate) description: String,
+    pub(crate) entrees: Vec<String>,
+    pub(crate) sortie: SortieDeclaree,
+    pub(crate) validation_humaine: bool,
+    pub(crate) active: bool,
+    /// L'heure à laquelle cette tâche part, telle que le schéma l'écrit
+    /// (`{type, heure, ...}`). Celle de la fiche, ou celle que le client a
+    /// posée à sa place. `None` = la tâche ne part pas d'elle-même.
+    ///
+    /// Elle est rendue ici, et pas relue ailleurs, pour que le planificateur
+    /// et l'exécution tranchent sur la MÊME lecture : le client éteint une
+    /// tâche, elle ne doit pas partir à l'heure non plus.
+    pub(crate) planification: Option<serde_json::Value>,
 }
 
 /// L'accord humain attendu pour une tâche : ce que le client a réglé pour elle.
@@ -976,7 +1001,7 @@ fn tache_ajoutee<'a>(agent: &'a serde_json::Value, tache_id: &str) -> Option<&'a
 /// - l'accord humain se décidait des deux côtés, et pas pareil.
 ///
 /// `check-travail.ts` rejoue les mêmes cas sur les deux implémentations.
-fn lire_tache(
+pub(crate) fn lire_tache(
     fiche: &serde_json::Value,
     agent: &serde_json::Value,
     tache_id: &str,
@@ -1035,6 +1060,13 @@ fn lire_tache(
         active: booleen(regle.and_then(|r| r.get("active")))
             .or_else(|| booleen(t.get("active")))
             .unwrap_or(ajoutee),
+        // Même sens que les deux au-dessus : ce que le client a réglé
+        // l'emporte sur ce que la fiche propose. Il a répondu « plutôt 19 h »
+        // à l'entretien, c'est 19 h.
+        planification: regle
+            .and_then(|r| r.get("planification"))
+            .or_else(|| t.get("planification"))
+            .cloned(),
     })
 }
 
@@ -1240,6 +1272,7 @@ mod tests {
             active: bool,
             #[serde(rename = "validationHumaine")]
             validation_humaine: bool,
+            planification: serde_json::Value,
         }
         #[derive(serde::Deserialize)]
         struct Cas {
@@ -1255,13 +1288,16 @@ mod tests {
 
         let temoins: Temoins =
             serde_json::from_str(include_str!("../../temoins-planning.json")).unwrap();
-        assert!(temoins.cas.len() >= 7, "les témoins ont maigri");
+        assert!(temoins.cas.len() >= 10, "les témoins ont maigri");
 
         for cas in temoins.cas {
             let fiche = serde_json::json!({
                 "taches": [{
                     "id": "t", "nom": "T", "description": "d",
                     "sorties": [{ "dossier": "x", "format": "md" }],
+                    // La même que côté écran : sans elle, le témoin ne pourrait
+                    // pas dire d'où vient l'heure quand le client n'a rien réglé.
+                    "planification": { "type": "quotidienne", "heure": "09:00" },
                     "active": cas.fiche["active"],
                     "validationHumaine": cas.fiche["validationHumaine"],
                 }]
@@ -1281,6 +1317,15 @@ mod tests {
             assert_eq!(
                 lue.validation_humaine, cas.attendu.validation_humaine,
                 "validationHumaine — {}", cas.intitule
+            );
+            // L'heure : le planificateur part dessus, l'écran l'affiche. Si les
+            // deux ne la lisent pas pareil, le client lit 19 h et la tâche part
+            // à 9 h.
+            assert_eq!(
+                lue.planification.as_ref(),
+                Some(&cas.attendu.planification),
+                "planification — {}",
+                cas.intitule
             );
         }
     }
@@ -1569,6 +1614,33 @@ mod tests {
         // Une date après un 29 février : l'algorithme n'a pas de table à tenir.
         assert_eq!(horodatage(1_709_208_000), "20240229-120000");
         assert!(horodatage(1_758_585_600) < horodatage(1_758_672_000));
+    }
+
+    /// La date rangée en base sort de la même horloge que le nom du fichier.
+    ///
+    /// Le banc dit d'abord ce qui était faux — `database.rs` et
+    /// `voiceprint.rs` annonçaient le 19 septembre 2026 quel que soit le
+    /// jour — puis vérifie que le calcul partagé ne s'y trompe pas.
+    #[test]
+    fn la_date_rangee_en_base_est_celle_du_jour() {
+        assert_eq!(date_rfc3339(0), "1970-01-01T00:00:00Z");
+        assert_eq!(date_rfc3339(1_758_585_600), "2025-09-23T00:00:00Z");
+        assert_eq!(date_rfc3339(1_758_585_600 + 3_661), "2025-09-23T01:01:01Z");
+        assert_eq!(date_rfc3339(1_709_208_000), "2024-02-29T12:00:00Z");
+
+        // Le jour n'est plus figé : deux instants a un an d'ecart ne peuvent
+        // pas rendre la meme date, ce que les deux anciennes faisaient.
+        assert_ne!(
+            date_rfc3339(1_758_585_600),
+            date_rfc3339(1_758_585_600 + 31_536_000)
+        );
+
+        // Meme horloge, meme jour, quel que soit le format.
+        for t in [0, 1_758_585_600, 1_709_208_000_u64] {
+            assert_eq!(&date_rfc3339(t)[..4], &horodatage(t)[..4]);
+            assert_eq!(&date_rfc3339(t)[5..7], &horodatage(t)[4..6]);
+            assert_eq!(&date_rfc3339(t)[8..10], &horodatage(t)[6..8]);
+        }
     }
 
     /// Un résultat relu n'est pas écrit comme un résultat envoyé : l'agent doit

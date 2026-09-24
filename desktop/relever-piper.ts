@@ -33,7 +33,11 @@ interface Piece {
 
 const declare = (): Piece[] => {
   const f = JSON.parse(readFileSync(join(racine, 'sources-ressources.json'), 'utf8'));
-  return (f.pieces as Piece[]).filter((p) => p.chemin.startsWith('piper/'));
+  // Depuis le 24/09/2026 le moteur est declare comme une ARCHIVE, et son
+  // `chemin` est le dossier ou elle s'ouvre (« piper »), sans barre. Le filtre
+  // d'avant ne cherchait qu'un fichier (« piper/... ») : garde tel quel, il
+  // aurait dit « rien n'est declare » et le flux n'aurait plus rien compare.
+  return (f.pieces as Piece[]).filter((p) => p.chemin === 'piper' || p.chemin.startsWith('piper/'));
 };
 
 // Le jeton du flux si on l'a : l'API sans jeton plafonne a 60 appels par heure
@@ -95,10 +99,10 @@ const principal = async () => {
       console.log(`       sha256  ${sha256}`);
     }
     console.log(
-      `     Ce sont des ARCHIVES, pas des binaires : les déclarer demande\n` +
-        `     d'ouvrir l'archive après la vérification, ce que telechargement.rs\n` +
-        `     ne fait pas encore. Tant que ça manque, un poste installé écoute\n` +
-        `     mais ne parle pas.`
+      `     Ce sont des ARCHIVES, pas des binaires : telechargement.rs sait les\n` +
+        `     ouvrir depuis le 24/09/2026 (ZIP seulement, le binaire n'embarque\n` +
+        `     ni tar ni gzip). Ces chiffres se recopient dans « pieces » avec\n` +
+        `     "archive": "zip" et le systeme vise.`
     );
     return 0;
   }
@@ -108,7 +112,15 @@ const principal = async () => {
     const nom = piece.url.split('/').pop() ?? '';
     const chez = version.assets.find((a) => a.name === nom);
     if (!chez) {
-      console.log(`  ✗ ${piece.chemin} : « ${nom} » n'est plus publié en ${version.tag_name}`);
+      // Deux causes, et le message ne doit pas les confondre : l'editeur a
+      // retire le fichier, ou il a simplement publie une version plus recente.
+      // Dans les deux cas l'empreinte declaree est a revoir, mais ce n'est pas
+      // la meme urgence.
+      console.log(
+        `  ✗ ${piece.chemin} : « ${nom} » n'est pas dans la derniere version publiee ` +
+          `(${version.tag_name}). Soit l'editeur l'a retire, soit une version plus ` +
+          `recente est sortie : relire sources-ressources.json.`
+      );
       fautes += 1;
       continue;
     }

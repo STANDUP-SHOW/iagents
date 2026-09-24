@@ -37,9 +37,25 @@
       "source": "https://huggingface.co/api/models/rhasspy/piper-voices/tree/main/fr/fr_FR/siwis/medium",
       "constate": "2026-09-24",
       "verification_autre": "json"
+    },
+    {
+      "role": "le moteur qui donne sa voix à l'agent",
+      "chemin": "piper",
+      "url": "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip",
+      "sha256": "f3c58906402b24f3a96d92145f58acba6d86c9b5db896d207f78dc80811efcea",
+      "octets": 22477236,
+      "archive": "zip",
+      "pour": "windows",
+      "licence": "MIT (Piper, rhasspy)",
+      "pourquoiCelui_la": "C'est le moteur que `voice.rs` lance déjà, et l'éditeur ne le publie que chez GitHub. Version 2023.11.14-2, la dernière publiée au 24/09/2026. L'archive porte piper.exe, ses DLL et les données d'espeak-ng, dont le moteur ne se passe pas : `chemin` est donc un DOSSIER, et l'archive s'ouvre dedans.",
+      "pourquoiWindowsSeulement": "L'archive Linux est un .tar.gz, et le binaire n'embarque ni tar ni gzip — le lecteur ZIP, lui, y est déjà pour les .xlsx et les .docx. Le produit vise Windows ; ailleurs, `ressources.rs` continue de dire où prendre le moteur à la main. Son empreinte est relevée ci-dessous pour le jour où quelqu'un en aura besoin.",
+      "pourquoiCetteEmpreinte": "CALCULÉE sur le fichier de l'éditeur par l'intégration continue (desktop/relever-piper.ts), pas recopiée : GitHub ne publie aucun digest pour cette version, antérieure au champ. Le flux la recompare à chaque passage et échoue si elle bouge.",
+      "nonConstate": "Cette archive n'a JAMAIS été ouverte ici : la session ne joint pas github.com. Ce qui est éprouvé, c'est l'ouverture d'archives écrites pour le banc — un dossier commun retiré, une archive à plat gardée telle quelle, une entrée qui sortirait du dossier refusée sans rien poser. Que piper.exe tourne sur une vraie machine Windows reste non constaté, comme le MSI lui-même.",
+      "source": "https://api.github.com/repos/rhasspy/piper/releases/tags/2023.11.14-2",
+      "constate": "2026-09-24"
     }
   ],
-  "aDeclarer": "Le moteur de voix Piper (piper/piper.exe sous Windows, piper/piper ailleurs) n'est PAS déclaré ici, et c'est pour ça que l'agent ne parlera pas encore après un premier lancement. RELEVÉ PAR L'INTÉGRATION CONTINUE le 24/09/2026 (cette session ne joint pas github.com ; le flux, lui, tourne chez GitHub) : dernière version publiée 2023.11.14-2, piper_windows_amd64.zip 22 477 236 o, piper_linux_x86_64.tar.gz 26 460 462 o, et GitHub ne publie AUCUN digest pour ces fichiers — la version est antérieure au champ. Ce qui bloque n'est donc plus le relevé mais la forme : ce sont des ARCHIVES et non des binaires, et l'archive Windows porte piper.exe, ses DLL et les données d'espeak-ng, dont le moteur ne se passe pas. Les déclarer demande d'ouvrir l'archive APRÈS vérification de l'empreinte, ce que telechargement.rs ne fait pas : il écrit les octets reçus tels quels. Deux voies, à trancher : ouvrir l'archive ici (le lecteur ZIP est déjà dans le binaire, il sert à relire les .xlsx et les .docx ; le .tar.gz demanderait tar et gzip en plus), ou poser le moteur dans le MSI, ce qui le ferait passer de 9 Mo à une trentaine et supprimerait une pièce à aller chercher. Conséquence en attendant : écouter marche au premier lancement, parler non, et l'application le dit en français.",
+  "aDeclarer": "Le moteur de voix Piper est déclaré depuis le 24/09/2026, pour Windows seulement : l'archive Linux est un .tar.gz et le binaire n'embarque ni tar ni gzip. Sur les autres systèmes, `ressources.rs` dit toujours où le prendre à la main. Ce qui reste à déclarer : rien pour la voix.",
   "relevePiper": {
     "note": "Relevé par l'intégration continue (desktop/relever-piper.ts), qui tourne chez GitHub là où cette session ne le joint pas. Les empreintes sont CALCULÉES sur les fichiers de l'éditeur, pas recopiées : GitHub n'en publie aucune pour cette version, antérieure au champ digest. Ces chiffres servent quelle que soit la voie retenue — téléchargement par l'application, ou pose dans le MSI par le flux de construction, qui doit les vérifier pareillement.",
     "version": "2023.11.14-2",

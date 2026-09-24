@@ -84,6 +84,42 @@ for (const c of connecteurs) {
   }
 }
 
+// La règle elle-même, sur des cas écrits à la main. La comparer au catalogue ne prouve
+// rien du refus qui compte : aucun connecteur n'y est payant aujourd'hui, donc le jour où
+// l'un le devient, personne n'aurait vu que la condition ne le retenait pas. Le connecteur
+// de base est pris parmi les activables plutôt qu'écrit ici, pour qu'une condition ajoutée
+// demain ne rende pas ces cas faux sans le dire.
+const modele = connecteurs.find((c) => manques(c).length === 0);
+if (!modele) {
+  faute("aucun connecteur activable : les cas de la règle d'activation ne prouveraient rien");
+} else {
+  const cas: { intitule: string; change: Record<string, unknown>; activable: boolean }[] = [
+    { intitule: 'gratuit et expliqué', change: { cout: 0 }, activable: true },
+    { intitule: 'payant et expliqué au client', change: { cout: 25 }, activable: true },
+    // Celui-ci est la raison d'être de la condition : 25 ≥ 0, la règle disait oui, et le
+    // client cliquait « Se connecter » sans avoir lu qu'il serait facturé.
+    { intitule: 'payant sans phrase pour le client', change: { cout: 25, coutPourLeClient: null }, activable: false },
+    { intitule: 'payant avec une phrase vide', change: { cout: 25, coutPourLeClient: '   ' }, activable: false },
+    // Gratuit, le chiffre se suffit : la phrase reste exigée à l'écriture du fichier
+    // (importer-connecteurs), pas par la règle, qui ne demande qu'un coût identifié.
+    { intitule: 'gratuit sans phrase', change: { cout: 0, coutPourLeClient: null }, activable: true },
+    { intitule: 'pas chiffré', change: { cout: null }, activable: false },
+    { intitule: 'chiffré en texte', change: { cout: '0' }, activable: false },
+    { intitule: 'chiffré en négatif', change: { cout: -1 }, activable: false },
+  ];
+  for (const c of cas) {
+    const essai = { ...modele, coutPourLeClient: 'Sans frais en plus de votre abonnement.', ...c.change };
+    const absents = manques(essai);
+    const vu = absents.length === 0;
+    if (vu !== c.activable) {
+      faute(
+        `règle du coût — « ${c.intitule} » devrait être ${c.activable ? 'activable' : 'refusé'}` +
+          `, la règle dit ${vu ? 'activable' : `manque ${absents.join(', ')}`}`
+      );
+    }
+  }
+}
+
 // Les besoins de fiche : même recalcul, même refus de divergence.
 for (const c of connecteurs) {
   const attendu = sertQuoi(c);
