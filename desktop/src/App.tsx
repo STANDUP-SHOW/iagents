@@ -14,6 +14,7 @@ import Courriel from './components/Courriel'
 import Embauche from './components/Embauche'
 import Travail from './components/Travail'
 import CleApi from './components/CleApi'
+import MiseAJour from './components/MiseAJour'
 
 function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors' | 'navigateur' | 'courriel' | 'embauche' | 'travail'>('dashboard')
@@ -239,6 +240,7 @@ function App() {
           ) : (
             <span className="idle">Ready</span>
           )}
+          <MiseAJour />
         </div>
       </header>
 
