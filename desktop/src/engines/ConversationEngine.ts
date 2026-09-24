@@ -10,14 +10,6 @@ export interface Reglages {
   llm: { primary: Record<string, unknown> };
 }
 
-function normaliserPrenom(mot: string): string {
-  return mot
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/[^\p{Letter}]/gu, '');
-}
-
 interface Message {
   role: 'user' | 'agent';
   content: string;
@@ -55,59 +47,6 @@ export class ConversationEngine {
     this.journaux.set(ficheId, [...retours]);
   }
 
-  /**
-   * Détecte le prénom de l'agent dans la transcription
-   * Exemple: "Carla, quels sont les horaires?" → Carla
-   */
-  detectAgent(
-    transcription: string
-  ): { agent: AgentInstalle; utterance: string } | null {
-    const mots = transcription.trim().split(/\s+/);
-    if (mots.length === 0 || mots[0] === '') return null;
-
-    const premier = normaliserPrenom(mots[0]);
-    const reste = mots.slice(1).join(' ').trim();
-
-    const exact = this.agents.find((a) => normaliserPrenom(a.prenom) === premier);
-    if (exact) return { agent: exact, utterance: reste };
-
-    const proches = this.agents.filter((a) => {
-      const prenom = normaliserPrenom(a.prenom);
-      // Une lettre de travers sur un prénom un peu long reste reconnaissable ;
-      // sur un prénom court, elle en désigne souvent un autre.
-      const tolerance = prenom.length >= 5 ? 1 : 0;
-      return this.levenshteinDistance(premier, prenom) <= tolerance;
-    });
-
-    // Deux prénoms aussi proches l'un que l'autre : mieux vaut ne pas répondre
-    // que faire répondre le mauvais agent.
-    return proches.length === 1 ? { agent: proches[0], utterance: reste } : null;
-  }
-
-  private levenshteinDistance(a: string, b: string): number {
-    const matrix: number[][] = [];
-
-    for (let i = 0; i <= b.length; i++) {
-      matrix[i] = [i];
-    }
-
-    for (let j = 0; j <= a.length; j++) {
-      matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= b.length; i++) {
-      for (let j = 1; j <= a.length; j++) {
-        const cost = a[j - 1] === b[i - 1] ? 0 : 1;
-        matrix[i][j] = Math.min(
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1,
-          matrix[i - 1][j - 1] + cost
-        );
-      }
-    }
-
-    return matrix[b.length][a.length];
-  }
 
   /**
    * Crée une nouvelle session de conversation
