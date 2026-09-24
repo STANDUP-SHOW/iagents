@@ -14,18 +14,18 @@ export default function FicheList({ agents, onSelectAgent, selectedAgent }) {
           <div
             key={agent.id}
             onClick={() => onSelectAgent(agent)}
-            className={`card cursor-pointer border-2 transition-all hover:border-indigo-500 hover:shadow-xl hover:scale-105 ${
-              isSelected ? 'border-indigo-500 ring-2 ring-indigo-400' : 'border-slate-700'
+            className={`card cursor-pointer border-2 transition-all hover:border-neon-400 hover:shadow-neon hover:scale-105 ${
+              isSelected ? 'border-neon-400 shadow-neon-fort' : 'border-nuit-700'
             }`}
           >
             <div className="flex justify-between items-start gap-2 mb-2">
               <div>
-                <p className="text-xs font-mono text-indigo-300">{agent.id}</p>
+                <p className="text-xs font-mono text-neon-300">{agent.id}</p>
                 <h3 className="font-bold text-sm text-white line-clamp-2">{agent.nom}</h3>
               </div>
               {passes3x && (
                 <span
-                  className="badge bg-green-600 text-white text-xs flex-shrink-0"
+                  className="badge bg-succes/15 text-succes border border-succes/50 text-xs flex-shrink-0"
                   title="Matériel + API résiduelle au moins 3× moins cher que l'API seule, bundle partagé"
                 >
                   {ratio3x(agent).toFixed(1)}× moins cher
@@ -33,18 +33,18 @@ export default function FicheList({ agents, onSelectAgent, selectedAgent }) {
               )}
             </div>
 
-            <p className="text-xs text-slate-300 line-clamp-2 mb-3">{agent.accroche}</p>
+            <p className="text-xs text-nuit-300 line-clamp-2 mb-3">{agent.accroche}</p>
 
             <div className="flex flex-wrap gap-2 mb-3">
-              <span className="badge bg-slate-700 text-slate-200">{agent.secteur}</span>
-              <span className="badge bg-slate-700 text-slate-200">{agent.famille}</span>
+              <span className="badge bg-nuit-700 text-nuit-200">{agent.secteur}</span>
+              <span className="badge bg-nuit-700 text-nuit-200">{agent.famille}</span>
             </div>
 
-            <div className="pt-3 border-t border-slate-700">
-              <div className="text-sm font-semibold text-indigo-300">
+            <div className="pt-3 border-t border-nuit-700">
+              <div className="text-sm font-semibold text-neon-300">
                 {price}€/mois
               </div>
-              <div className="text-xs text-slate-400">
+              <div className="text-xs text-nuit-400">
                 {agent.execution?.appelsParJourEstimes || 0} appels/jour
               </div>
             </div>

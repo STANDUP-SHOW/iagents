@@ -67,9 +67,9 @@ export default function AgentSimulator({ agent, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-800 rounded-lg shadow-2xl max-w-2xl w-full my-8">
+      <div className="bg-nuit-800 rounded-lg shadow-2xl max-w-2xl w-full my-8">
         {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 flex justify-between items-center">
+        <div className="bg-gradient-to-r from-braise-500 to-rose-500 p-6 flex justify-between items-center">
           <h2 className="text-2xl font-bold text-white">Simuler l'exécution</h2>
           <button
             onClick={onClose}
@@ -82,7 +82,7 @@ export default function AgentSimulator({ agent, onClose }) {
         <div className="p-6 space-y-6">
           {/* Input Section */}
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-2">
+            <label className="block text-sm font-semibold text-nuit-300 mb-2">
               Entrée utilisateur
             </label>
             <textarea
@@ -90,7 +90,7 @@ export default function AgentSimulator({ agent, onClose }) {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Décrivez la tâche à exécuter..."
               disabled={executing}
-              className="w-full px-4 py-3 rounded-lg bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+              className="w-full px-4 py-3 rounded-lg bg-nuit-700 border border-nuit-600 text-white placeholder-nuit-400 focus:outline-none focus:ring-2 focus:ring-neon-500 disabled:opacity-50"
               rows="4"
             />
           </div>
@@ -115,42 +115,42 @@ export default function AgentSimulator({ agent, onClose }) {
 
           {/* Results Section */}
           {result && (
-            <div className="space-y-4 bg-slate-900/50 p-6 rounded-lg border border-slate-700">
-              <h3 className="text-xl font-bold text-indigo-300">Résultats</h3>
+            <div className="space-y-4 bg-nuit-900/50 p-6 rounded-lg border border-nuit-700">
+              <h3 className="text-xl font-bold text-neon-300">Résultats</h3>
 
               {/* Output */}
-              <div className="bg-slate-800 p-4 rounded-lg">
-                <p className="text-sm text-slate-400 mb-2">Résultat:</p>
-                <p className="text-slate-200">{result.output}</p>
+              <div className="bg-nuit-800 p-4 rounded-lg">
+                <p className="text-sm text-nuit-400 mb-2">Résultat:</p>
+                <p className="text-nuit-200">{result.output}</p>
               </div>
 
               {/* Metrics */}
               <div className="grid md:grid-cols-3 gap-3">
-                <div className="bg-slate-700/50 p-3 rounded">
-                  <p className="text-xs text-slate-400">Tokens utilisés</p>
+                <div className="bg-nuit-700/50 p-3 rounded">
+                  <p className="text-xs text-nuit-400">Tokens utilisés</p>
                   <p className="text-lg font-bold text-green-300">{result.metrics.tokensUsed}</p>
                 </div>
-                <div className="bg-slate-700/50 p-3 rounded">
-                  <p className="text-xs text-slate-400">Coût estimé</p>
-                  <p className="text-lg font-bold text-blue-300">{result.metrics.cost}€</p>
+                <div className="bg-nuit-700/50 p-3 rounded">
+                  <p className="text-xs text-nuit-400">Coût estimé</p>
+                  <p className="text-lg font-bold text-neon-300">{result.metrics.cost}€</p>
                 </div>
-                <div className="bg-slate-700/50 p-3 rounded">
-                  <p className="text-xs text-slate-400">Temps d'exécution</p>
-                  <p className="text-lg font-bold text-purple-300">{result.metrics.duration}s</p>
+                <div className="bg-nuit-700/50 p-3 rounded">
+                  <p className="text-xs text-nuit-400">Temps d'exécution</p>
+                  <p className="text-lg font-bold text-rose-300">{result.metrics.duration}s</p>
                 </div>
               </div>
 
               {/* Audit Log */}
               <div>
-                <p className="text-sm font-semibold text-slate-400 mb-3">Journal d'exécution</p>
+                <p className="text-sm font-semibold text-nuit-400 mb-3">Journal d'exécution</p>
                 <div className="space-y-2">
                   {Object.entries(result.auditLog).map(([stepKey, step]) => (
-                    <div key={stepKey} className="bg-slate-800 p-3 rounded text-xs">
+                    <div key={stepKey} className="bg-nuit-800 p-3 rounded text-xs">
                       <div className="flex justify-between items-start mb-1">
-                        <span className="font-mono font-bold text-indigo-300">{step.action}</span>
+                        <span className="font-mono font-bold text-neon-300">{step.action}</span>
                         <span className="text-green-300">✓ {step.status}</span>
                       </div>
-                      <div className="flex gap-4 text-slate-400">
+                      <div className="flex gap-4 text-nuit-400">
                         <span>⏱ {step.duration_ms}ms</span>
                         <span>📊 {step.tokens.toLocaleString('fr-FR')} tokens</span>
                         {step.model && <span>🤖 {step.model}</span>}
@@ -161,11 +161,11 @@ export default function AgentSimulator({ agent, onClose }) {
               </div>
 
               {/* JSON Export */}
-              <details className="bg-slate-800 p-4 rounded">
-                <summary className="font-semibold text-slate-300 cursor-pointer hover:text-indigo-300">
+              <details className="bg-nuit-800 p-4 rounded">
+                <summary className="font-semibold text-nuit-300 cursor-pointer hover:text-neon-300">
                   📋 Réponse JSON complète
                 </summary>
-                <pre className="mt-3 text-xs bg-slate-900 p-3 rounded overflow-x-auto text-slate-300">
+                <pre className="mt-3 text-xs bg-nuit-900 p-3 rounded overflow-x-auto text-nuit-300">
                   {JSON.stringify(result, null, 2)}
                 </pre>
               </details>
