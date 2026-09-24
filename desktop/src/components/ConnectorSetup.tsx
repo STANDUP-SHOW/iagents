@@ -363,6 +363,11 @@ function Ligne({
         ))}
       </p>
 
+      {/* Ce que ça coûte, avant le bouton et pas dans les étapes : c'est là-dessus que le
+          client décide. Le chiffre vit dans connecteurs/couts.json, chacun avec la page de
+          l'éditeur qui le dit ; la règle d'activation refuse un montant sans cette phrase. */}
+      {reponse.accorde && <p className="cout">{reponse.cout}</p>}
+
       {reponse.accorde ? (
         <button className="setup-btn" onClick={onOuvrir}>
           {ouvert ? 'Fermer' : 'Se connecter'}
@@ -386,6 +391,9 @@ function Ligne({
             Authentification : {reponse.authentification}. Accès demandé :{' '}
             {reponse.accesRequis}.
           </p>
+          {/* Relevées chez l'éditeur : elles disent ce que le connecteur ne fera pas.
+              Écrites au catalogue depuis le relevé V6 et affichées nulle part jusqu'ici. */}
+          {connecteur.limites && <p className="limites">{connecteur.limites}</p>}
           <ol>
             {reponse.etapesClient.map((e, i) => (
               <li key={i}>{e}</li>
