@@ -27,12 +27,12 @@ mod database;
 mod llm;
 mod voiceprint;
 mod telegram;
+mod mise_a_jour;
 
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
 use llm::{LLMService, AgentPersona};
 use voiceprint::{VoicePrintService, VoicePrint};
-use telegram::{TelegramService, TelegramCredentials};
 use database::Database;
 use std::sync::Arc;
 
@@ -40,7 +40,6 @@ pub struct AppState {
     voice: Mutex<Option<VoiceState>>,
     agents: Mutex<AgentRouter>,
     llm: Mutex<Option<LLMService>>,
-    telegram: Mutex<Option<TelegramCredentials>>,
     db: Arc<Mutex<Option<Database>>>,
     /// Ou en est le mot de reveil, et si l'ecoute est allumee. L'etat vit ici
     /// et pas a l'ecran : c'est le code qui doit tenir la regle de max, pas une
@@ -326,6 +325,7 @@ async fn repondre(
     enonce: String,
     state: State<'_, AppState>,
 ) -> Result<ReponseAgent, String> {
+    let _travail = mise_a_jour::travail()?;
     if prompt_systeme.trim().is_empty() {
         return Err("prompt systeme vide : la fiche n a pas ete chargee".to_string());
     }
@@ -390,6 +390,7 @@ async fn executer_tache(
     tache_id: String,
     state: State<'_, AppState>,
 ) -> Result<tache::Resultat, String> {
+    let _travail = mise_a_jour::travail()?;
     let installation = fiches::lire_installation()?;
     let fiche = fiches::lire_fiche(fiche_id.clone())?;
     let maintenant = std::time::SystemTime::now()
@@ -674,53 +675,6 @@ async fn text_to_speech(text: String) -> Result<String, String> {
     voice::text_to_speech(&text).await
 }
 
-#[tauri::command]
-async fn connect_telegram(
-    bot_token: String,
-    chat_id: String,
-    state: State<'_, AppState>,
-) -> Result<String, String> {
-    if bot_token.is_empty() || chat_id.is_empty() {
-        return Err("Il faut le jeton du bot ET l'identifiant de conversation.".to_string());
-    }
-
-    match TelegramService::connect_telegram(bot_token, chat_id).await {
-        Ok(credentials) => {
-            // Le jeton du bot reste en mémoire, jamais sur le disque : il était
-            // écrit en clair dans le SQLite du poste et jamais relu. Le jour où
-            // la connexion devra survivre à un redémarrage, elle passera par le
-            // coffre du système (Credential Manager, Trousseau), pas par cette base.
-            let mut telegram = state.telegram.lock().unwrap();
-            *telegram = Some(credentials);
-            Ok("Telegram est branché.".to_string())
-        }
-        // Le service dit déjà, en français, ce qui ne va pas : le répéter en
-        // anglais par-dessus ne ferait que brouiller ce que le client lit.
-        Err(e) => Err(e),
-    }
-}
-
-#[tauri::command]
-fn get_telegram_instructions() -> Result<String, String> {
-    Ok(TelegramService::get_connection_instructions())
-}
-
-#[tauri::command]
-async fn send_telegram_message(
-    text: String,
-    state: State<'_, AppState>,
-) -> Result<String, String> {
-    let credentials = {
-        let telegram = state.telegram.lock().unwrap();
-        telegram.clone()
-    };
-
-    match credentials {
-        Some(credentials) => TelegramService::send_message(&credentials, &text).await,
-        None => Err("Telegram n'est pas branché : rien n'a été envoyé.".to_string()),
-    }
-}
-
 fn main() {
     // Initialize database
     let db = match Database::new("iagent.db") {
@@ -740,13 +694,17 @@ fn main() {
         voice: Mutex::new(None),
         agents: Mutex::new(AgentRouter::new()),
         llm: Mutex::new(None),
-        telegram: Mutex::new(None),
         db: Arc::new(Mutex::new(db)),
         ecoute: Mutex::new(Ecoute::default()),
     };
 
     tauri::Builder::default()
         .manage(state)
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .setup(|app| {
+            mise_a_jour::demarrer(app.handle());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             init_voice,
@@ -764,9 +722,12 @@ fn main() {
             activate_agent,
             deactivate_agent,
             train_voice,
-            connect_telegram,
-            get_telegram_instructions,
-            send_telegram_message,
+            telegram::telegram_brancher,
+            telegram::telegram_branche,
+            telegram::telegram_debrancher,
+            telegram::telegram_envoyer,
+            telegram::telegram_relever,
+            telegram::telegram_mode_d_emploi,
             fiches::lire_installation,
             fiches::lire_fiche,
             fiches::installation_ecrire,
@@ -807,6 +768,7 @@ fn main() {
             navigateur::navigateur_declarer_site,
             navigateur::navigateur_oublier_site,
             navigateur::navigateur_effacer_sessions,
+            mise_a_jour::mise_a_jour_etat,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

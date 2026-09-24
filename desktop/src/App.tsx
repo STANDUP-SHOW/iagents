@@ -19,6 +19,7 @@ import Embauche from './components/Embauche'
 import Travail from './components/Travail'
 import CleApi from './components/CleApi'
 import InstallerVoix from './components/InstallerVoix'
+import MiseAJour from './components/MiseAJour'
 import Equipe from './components/Equipe'
 import {
   comprendreDemande,
@@ -534,6 +535,7 @@ function App() {
           ) : (
             <span className="idle">Prêt</span>
           )}
+          <MiseAJour />
         </div>
       </header>
 
