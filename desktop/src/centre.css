@@ -1,0 +1,765 @@
+/*
+ * Habillage néon de l'application et tableau de bord en rond.
+ * Toutes les valeurs viennent de charte.css.
+ */
+
+/* ---------- Cadre de l'application ---------- */
+
+.app {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Une grille HUD très discrète derrière tout l'écran. */
+.app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--cyan-voile) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cyan-voile) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at 50% 40%, #000 0%, transparent 75%);
+  opacity: 0.5;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background: var(--surface);
+  backdrop-filter: var(--flou-verre);
+  border-bottom: 1px solid var(--bord);
+  box-shadow: 0 1px 0 var(--cyan-voile-fort), 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.app-header .marque {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.app-header .marque img {
+  height: 34px;
+  width: auto;
+  filter: drop-shadow(0 0 6px rgba(3, 243, 255, 0.45));
+  transition: filter 0.2s;
+}
+
+.app-header .marque:hover img {
+  filter: drop-shadow(0 0 10px rgba(3, 243, 255, 0.8));
+}
+
+.status-bar {
+  font-family: var(--police-titre);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.status-bar .listening,
+.status-bar .idle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: var(--rayon-pilule);
+  border: 1px solid var(--bord);
+  background: var(--cyan-voile);
+}
+
+.status-bar .listening {
+  color: var(--rose);
+  border-color: var(--rose);
+  box-shadow: var(--halo-rose);
+}
+
+.status-bar .idle {
+  color: var(--cyan);
+}
+
+.status-bar .listening::before,
+.status-bar .idle::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.status-bar .listening::before {
+  animation: battement 1s ease-in-out infinite;
+}
+
+/* ---------- Barre des menus (hors du centre) ---------- */
+
+.app-nav {
+  display: flex;
+  gap: 8px;
+  padding: 10px 24px;
+  overflow-x: auto;
+  background: rgba(3, 5, 12, 0.6);
+  backdrop-filter: var(--flou-verre);
+  border-bottom: 1px solid var(--bord);
+}
+
+.app-nav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon-pilule);
+  color: var(--texte-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.app-nav button:hover {
+  color: var(--texte);
+  border-color: var(--bord-fort);
+  background: var(--cyan-voile);
+}
+
+.app-nav button.active {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  background: var(--cyan-voile-fort);
+  box-shadow: var(--halo-cyan);
+}
+
+.app-nav .retour-centre {
+  color: var(--cyan);
+  font-family: var(--police-titre);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.icone {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+/* ---------- Les pages ---------- */
+
+.app-main {
+  padding: 28px;
+}
+
+.app-main h2 {
+  font-family: var(--police-titre);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  text-shadow: var(--halo-texte);
+  margin-bottom: 10px;
+}
+
+.app-main h3 {
+  font-family: var(--police-titre);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.app-main section,
+.connecteurs .besoins,
+.connecteurs .metier,
+.connecteurs .connecteur,
+.cle-api,
+.travail .taches li,
+.agent-card,
+.connector-card,
+.training-section,
+.connector-flow,
+.connector-modal {
+  backdrop-filter: var(--flou-verre);
+  border-radius: var(--rayon-l);
+}
+
+.app-main section,
+.cle-api,
+.connecteurs .besoins {
+  border: 1px solid var(--bord);
+}
+
+.app-main input,
+.app-main select,
+.app-main textarea {
+  background: var(--surface);
+  border: 1px solid var(--bord);
+  color: var(--texte);
+  border-radius: var(--rayon-s);
+}
+
+.app-main input:focus,
+.app-main select:focus,
+.app-main textarea:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: var(--halo-cyan);
+}
+
+.app-main button:not(:disabled):not(.lien) {
+  transition: box-shadow 0.2s, transform 0.2s, filter 0.2s;
+}
+
+.app-main button:not(:disabled):not(.lien):hover {
+  box-shadow: var(--halo-cyan);
+}
+
+.error-banner,
+.succes-banner,
+.avertissement-banner {
+  backdrop-filter: var(--flou-verre);
+}
+
+.processing-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--cyan-voile-fort);
+  border-top-color: var(--cyan);
+  animation: spin 0.9s linear infinite;
+}
+
+/* ---------- Le centre : noyau et satellites ---------- */
+
+.app-main-centre {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.centre {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  container-type: size;
+}
+
+.systeme {
+  /* Les tailles du système sont en cqw : une part de son propre diamètre. */
+  position: relative;
+  width: min(94cqw, 94cqh, 860px);
+  aspect-ratio: 1;
+  container-type: inline-size;
+}
+
+.orbite {
+  position: absolute;
+  inset: 0;
+  animation: graviter 240s linear infinite;
+}
+
+.systeme:hover .orbite,
+.systeme:hover .satellite {
+  animation-play-state: paused;
+}
+
+.rayons {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.rayons .trajectoire {
+  fill: none;
+  stroke: var(--bord);
+  stroke-width: 0.3;
+  stroke-dasharray: 1 2;
+}
+
+.rayons .rayon {
+  stroke: var(--cyan);
+  stroke-width: 0.25;
+  opacity: 0.35;
+  stroke-dasharray: 2 1.5;
+  animation: flux 3s linear infinite;
+}
+
+.emplacement {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform: rotate(var(--angle)) translateY(-39cqw) rotate(calc(-1 * var(--angle)));
+}
+
+.satellite {
+  position: absolute;
+  left: 0;
+  top: 0;
+  translate: -50% -50%;
+  width: clamp(84px, 19cqw, 150px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--texte);
+  background: radial-gradient(circle at 50% 30%, rgba(3, 243, 255, 0.14), var(--surface-forte) 70%);
+  border: 1px solid var(--bord-fort);
+  box-shadow: var(--halo-cyan), inset 0 0 18px rgba(3, 243, 255, 0.12);
+  backdrop-filter: var(--flou-verre);
+  /* Contre-rotation : l'orbite tourne, le texte reste droit. */
+  animation: graviter 240s linear infinite reverse;
+  transition: box-shadow 0.25s, border-color 0.25s, scale 0.25s;
+}
+
+.satellite:hover,
+.satellite:focus-visible {
+  scale: 1.08;
+  border-color: var(--cyan);
+  box-shadow: var(--halo-cyan-fort), inset 0 0 24px rgba(3, 243, 255, 0.25);
+  outline: none;
+}
+
+.satellite .icone {
+  width: 22px;
+  height: 22px;
+  color: var(--cyan);
+  filter: drop-shadow(0 0 4px rgba(3, 243, 255, 0.7));
+}
+
+.satellite-valeur {
+  font-family: var(--police-titre);
+  font-weight: 700;
+  font-size: clamp(15px, 2.8cqw, 22px);
+  color: var(--blanc);
+  text-shadow: var(--halo-texte);
+  line-height: 1.2;
+}
+
+.satellite-titre {
+  font-family: var(--police-titre);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+
+.satellite-detail {
+  font-size: 10.5px;
+  color: var(--texte-3);
+  line-height: 1.25;
+}
+
+.satellite.ton-alerte {
+  border-color: var(--alerte);
+}
+.satellite.ton-alerte .icone,
+.satellite.ton-alerte .satellite-titre {
+  color: var(--alerte);
+}
+.satellite.ton-danger {
+  border-color: var(--danger);
+}
+.satellite.ton-danger .icone,
+.satellite.ton-danger .satellite-titre {
+  color: var(--danger);
+}
+
+/* Le noyau */
+.noyau {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46cqw;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.anneaux {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.anneau {
+  fill: none;
+  transform-origin: 0 0;
+}
+
+.anneau-graduation {
+  stroke: var(--cyan);
+  stroke-width: 3;
+  stroke-dasharray: 0.6 4.4;
+  opacity: 0.45;
+  animation: graviter 90s linear infinite;
+}
+
+.anneau-tirets {
+  stroke: var(--cyan);
+  stroke-width: 1;
+  stroke-dasharray: 18 6 4 6;
+  opacity: 0.6;
+  animation: graviter 40s linear infinite reverse;
+}
+
+.anneau-arc {
+  stroke: var(--cyan);
+  stroke-width: 2.4;
+  stroke-dasharray: 120 383;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px var(--cyan));
+  animation: graviter 7s linear infinite;
+}
+
+.anneau-arc-marque {
+  stroke: var(--rose);
+  stroke-width: 1.6;
+  stroke-dasharray: 60 60 20 312;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px var(--rose));
+  animation: graviter 11s linear infinite reverse;
+}
+
+.anneau-fin {
+  stroke: var(--bord-fort);
+  stroke-width: 0.6;
+}
+
+.noyau-coeur {
+  position: relative;
+  width: 52%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(3, 243, 255, 0.22) 0%, rgba(3, 243, 255, 0.05) 45%, transparent 70%);
+  animation: respirer 4s ease-in-out infinite;
+}
+
+.noyau-puce {
+  width: 62%;
+  height: auto;
+  filter: drop-shadow(0 0 10px rgba(3, 243, 255, 0.8)) drop-shadow(0 0 28px rgba(230, 80, 144, 0.35));
+}
+
+.noyau-etat {
+  position: absolute;
+  bottom: 13%;
+  font-family: var(--police-titre);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  text-shadow: var(--halo-texte);
+}
+
+/* Le noyau réagit à ce que fait l'agent */
+.etat-ecoute .noyau-coeur {
+  animation-duration: 1.2s;
+  background: radial-gradient(circle, rgba(230, 80, 144, 0.3) 0%, rgba(242, 142, 68, 0.08) 45%, transparent 70%);
+}
+.etat-ecoute .noyau-etat {
+  color: var(--rose);
+  text-shadow: var(--halo-rose);
+}
+.etat-ecoute .anneau-arc {
+  animation-duration: 2.5s;
+}
+.etat-reflexion .anneau-arc,
+.etat-reflexion .anneau-arc-marque {
+  animation-duration: 1.4s;
+}
+
+/* Coins HUD */
+.hud-coin {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon);
+  background: var(--surface);
+  backdrop-filter: var(--flou-verre);
+  pointer-events: none;
+}
+
+.hud-coin::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 12px;
+  width: 28px;
+  height: 2px;
+  background: var(--cyan);
+  box-shadow: var(--halo-cyan);
+}
+
+.hud-coin-haut-gauche { top: 20px; left: 24px; }
+.hud-coin-haut-droite { top: 20px; right: 24px; text-align: right; }
+.hud-coin-haut-droite::before { left: auto; right: 12px; }
+.hud-coin-bas-gauche { bottom: 20px; left: 24px; }
+
+.hud-etiquette {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--texte-3);
+}
+
+.hud-valeur {
+  font-family: var(--police-titre);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--cyan);
+  text-shadow: var(--halo-texte);
+}
+
+.hud-slogan {
+  font-family: var(--police-titre);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--degrade-marque);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@container (max-width: 600px) {
+  .satellite-detail { display: none; }
+  .satellite-titre { font-size: 8.5px; }
+}
+
+@media (max-width: 900px), (max-height: 640px) {
+  .hud-coin { display: none; }
+}
+
+/* ---------- Page « Votre machine » ---------- */
+
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.cadrans {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+
+.cadran {
+  position: relative;
+  width: 200px;
+  aspect-ratio: 1;
+}
+
+.cadran svg {
+  width: 100%;
+  height: 100%;
+}
+
+.cadran-fond {
+  fill: none;
+  stroke: var(--cyan-voile-fort);
+  stroke-width: 10;
+}
+
+.cadran-plein {
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 10;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 5px var(--cyan));
+  transition: stroke-dasharray 0.8s ease;
+}
+
+.cadran.ton-danger .cadran-plein { stroke: var(--danger); filter: drop-shadow(0 0 5px var(--danger)); }
+.cadran.ton-alerte .cadran-plein { stroke: var(--alerte); filter: drop-shadow(0 0 5px var(--alerte)); }
+
+.cadran-texte {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 36px;
+}
+
+.cadran-valeur {
+  font-family: var(--police-titre);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--blanc);
+  text-shadow: var(--halo-texte);
+}
+
+.cadran-libelle {
+  font-size: 12px;
+  color: var(--texte-2);
+}
+
+.panneau {
+  margin: 20px 0;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon-l);
+}
+
+.panneau h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  color: var(--cyan-doux);
+  margin-bottom: 10px;
+}
+
+.verdict.ton-succes { border-left: 3px solid var(--succes); }
+.verdict.ton-alerte { border-left: 3px solid var(--alerte); }
+.verdict.ton-danger { border-left: 3px solid var(--danger); }
+
+.chiffres {
+  display: grid;
+  grid-template-columns: minmax(180px, max-content) 1fr;
+  gap: 10px 24px;
+}
+
+.chiffres dt { color: var(--texte-3); }
+.chiffres dd { color: var(--texte); font-weight: 600; }
+
+/* ---------- Animations ---------- */
+
+@keyframes graviter {
+  to { rotate: 360deg; }
+}
+
+@keyframes respirer {
+  0%, 100% { scale: 1; opacity: 0.9; }
+  50% { scale: 1.06; opacity: 1; }
+}
+
+@keyframes battement {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes flux {
+  to { stroke-dashoffset: -7; }
+}
+
+/* ---------- Page « Vos agents » ---------- */
+
+.agent-manager {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.agents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.agent-card {
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--bord);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.agent-card:hover {
+  border-color: var(--bord-fort);
+}
+
+.agent-card.active {
+  border-color: var(--rose);
+  box-shadow: var(--halo-rose);
+}
+
+.agent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.agent-header h3 {
+  font-size: 18px;
+  color: var(--blanc);
+}
+
+.agent-id {
+  font-family: var(--police-titre);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--cyan);
+  padding: 3px 8px;
+  border: 1px solid var(--bord);
+  border-radius: var(--rayon-pilule);
+}
+
+.agent-desc {
+  flex: 1;
+  margin: 10px 0 16px;
+  font-size: 14px;
+  color: var(--texte-2);
+}
+
+.toggle-btn {
+  padding: 9px;
+  border-radius: var(--rayon-s);
+  border: 1px solid var(--cyan);
+  background: var(--cyan-voile);
+  color: var(--cyan);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.agent-card.active .toggle-btn {
+  border-color: var(--rose);
+  background: transparent;
+  color: var(--rose);
+}

@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import './App.css'
-import { installerAgents, type Fiche, type Installation } from './agents/fiche'
+import './centre.css'
+import { installerAgents, type AgentInstalle, type Fiche, type Installation } from './agents/fiche'
 import type { Jauge } from './agents/jauge'
 import { ConversationEngine } from './engines/ConversationEngine'
 import reglages from './config/conversation-settings.json'
-import Dashboard from './components/Dashboard'
+import Dashboard, { Icone, TITRES, type Onglet } from './components/Dashboard'
+import Machine from './components/Machine'
+import logo from './assets/marque/logo-iagent.png'
 import VoiceTraining from './components/VoiceTraining'
 import AgentManager from './components/AgentManager'
 import ConnectorSetup from './components/ConnectorSetup'
@@ -16,7 +19,7 @@ import Travail from './components/Travail'
 import CleApi from './components/CleApi'
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'agents' | 'voice' | 'connectors' | 'navigateur' | 'courriel' | 'embauche' | 'travail'>('dashboard')
+  const [activeTab, setActiveTab] = useState<Onglet>('dashboard')
   const [agents, setAgents] = useState<any[]>([])
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
   const [isListening, setIsListening] = useState(false)
@@ -34,6 +37,7 @@ function App() {
   const [voie, setVoie] = useState<string | null>(null)
   const [voieBascule, setVoieBascule] = useState(false)
   const [jauge, setJauge] = useState<Jauge | null>(null)
+  const [installes, setInstalles] = useState<readonly AgentInstalle[]>([])
 
   useEffect(() => {
     initializeApp()
@@ -112,6 +116,7 @@ function App() {
 
       const m = new ConversationEngine(installerAgents(fiches, installation.agents), reglages)
       setMoteur(m)
+      setInstalles(m.getAllAgents())
       setAgents(listerDepuisMoteur(m))
       setError(null)
 
@@ -125,6 +130,7 @@ function App() {
       // Sans agents installés, la bibliothèque reste vide plutôt que de montrer
       // des exemples qui ne correspondent à aucune fiche du catalogue.
       setAgents([])
+      setInstalles([])
       setError(
         "Aucun agent installé n'a pu être chargé. Vérifier config/installation.json " +
           'et le dossier agents/ à côté de l\'application. Détail : ' + String(err)
@@ -229,15 +235,21 @@ function App() {
     }
   }
 
+  const onglets = Object.keys(TITRES) as Exclude<Onglet, 'dashboard'>[]
+
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🤖 iAgent Desktop</h1>
+        <button className="marque" onClick={() => setActiveTab('dashboard')} title="Revenir au centre">
+          <img src={logo} alt="iAgent" />
+        </button>
         <div className="status-bar">
-          {isListening ? (
-            <span className="listening">🎤 Listening...</span>
+          {isProcessing ? (
+            <span className="listening">Réflexion…</span>
+          ) : isListening ? (
+            <span className="listening">À l'écoute</span>
           ) : (
-            <span className="idle">Ready</span>
+            <span className="idle">Prêt</span>
           )}
         </div>
       </header>
@@ -246,77 +258,44 @@ function App() {
         <div className="voice-display">
           {partialResult && (
             <div className="transcription-display">
-              <span className="transcription-label">Hearing:</span>
+              <span className="transcription-label">J'entends :</span>
               <span className="transcription-text">{partialResult}</span>
             </div>
           )}
           {isProcessing && (
             <div className="processing-display">
-              <span className="processing-spinner">⏳</span>
-              <span className="processing-label">Thinking...</span>
+              <span className="processing-spinner" aria-hidden="true" />
+              <span className="processing-label">Réflexion…</span>
             </div>
           )}
           {lastResponse && !isProcessing && (
             <div className="response-display">
-              <span className="response-label">Response:</span>
+              <span className="response-label">Réponse :</span>
               <span className="response-text">{lastResponse}</span>
             </div>
           )}
         </div>
       )}
 
-      <nav className="app-nav">
-        <button
-          className={activeTab === 'dashboard' ? 'active' : ''}
-          onClick={() => setActiveTab('dashboard')}
-        >
-          Dashboard
-        </button>
-        <button
-          className={activeTab === 'agents' ? 'active' : ''}
-          onClick={() => setActiveTab('agents')}
-        >
-          Agents
-        </button>
-        <button
-          className={activeTab === 'voice' ? 'active' : ''}
-          onClick={() => setActiveTab('voice')}
-        >
-          Voice Training
-        </button>
-        <button
-          className={activeTab === 'connectors' ? 'active' : ''}
-          onClick={() => setActiveTab('connectors')}
-        >
-          Vos connexions
-        </button>
-        <button
-          className={activeTab === 'navigateur' ? 'active' : ''}
-          onClick={() => setActiveTab('navigateur')}
-        >
-          Vos comptes
-        </button>
-        <button
-          className={activeTab === 'courriel' ? 'active' : ''}
-          onClick={() => setActiveTab('courriel')}
-        >
-          Courrier
-        </button>
-        <button
-          className={activeTab === 'travail' ? 'active' : ''}
-          onClick={() => setActiveTab('travail')}
-        >
-          Le travail du jour
-        </button>
-        <button
-          className={activeTab === 'embauche' ? 'active' : ''}
-          onClick={() => setActiveTab('embauche')}
-        >
-          Embaucher
-        </button>
-      </nav>
+      {activeTab !== 'dashboard' && (
+        <nav className="app-nav">
+          <button className="retour-centre" onClick={() => setActiveTab('dashboard')}>
+            <svg className="icone" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" />
+              <circle cx="12" cy="12" r="8.5" />
+            </svg>
+            Centre
+          </button>
+          {onglets.map((o) => (
+            <button key={o} className={activeTab === o ? 'active' : ''} onClick={() => setActiveTab(o)}>
+              <Icone onglet={o} />
+              {TITRES[o]}
+            </button>
+          ))}
+        </nav>
+      )}
 
-      <main className="app-main">
+      <main className={activeTab === 'dashboard' ? 'app-main app-main-centre' : 'app-main'}>
         {error && <div className="error-banner">{error}</div>}
         {motifEcoute && (
           <div className="error-banner">Écoute indisponible — {motifEcoute}</div>
@@ -329,7 +308,18 @@ function App() {
             {jauge.machine.nom} — {jauge.message}
           </div>
         )}
-        {activeTab === 'dashboard' && <Dashboard agents={agents} isListening={isListening} />}
+        {activeTab === 'dashboard' && (
+          <Dashboard
+            agents={agents}
+            installes={installes}
+            isListening={isListening}
+            isProcessing={isProcessing}
+            motifEcoute={motifEcoute}
+            jauge={jauge}
+            onOuvrir={setActiveTab}
+          />
+        )}
+        {activeTab === 'machine' && <Machine jauge={jauge} />}
         {activeTab === 'agents' && (
           <AgentManager
             agents={agents}
