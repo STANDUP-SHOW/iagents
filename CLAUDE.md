@@ -303,8 +303,21 @@ par WhatsApp et email.
   `activation`, `npm run controle` refuse toute divergence (`--corriger` répare),
   et `demanderActivation()` la rejoue dans l'application au lieu de croire le
   fichier — un catalogue truqué portant `activable: true` est refusé quand même.
-  Au 23/09/2026 : **4 connecteurs activables sur 137**. Il manque un coût à 133 et
-  un risque à 117. Aucun bouton « Se connecter » ne s'affiche sans passer par là.
+  Au 24/09/2026 : **9 connecteurs activables sur 137** (4 la veille). Il manque un
+  coût à 128 et un risque à 117. Les cinq ouverts le 24/09 après lecture de la
+  page de l'éditeur : Microsoft Teams (la plupart des API Teams ne sont plus
+  facturées à l'usage depuis le 25/08/2025 ; restent payants les insights de
+  réunion, les PATCH DLP et le contenu des enregistrements au-delà de 600
+  min/mois), HubSpot (compris dans l'abonnement, option payante pour élargir le
+  quota), WooCommerce (auto-hébergé, rien en plus), GitHub et GitLab (API
+  ouverte à tous les paliers, bornée par un quota). **Twilio est resté dehors
+  exprès, sa page lue** : son coût est réel mais c'est du paiement à l'usage
+  (0,0083 $ le message aux États-Unis, ≥ 1,15 $/mois le numéro), et `couts.json`
+  ne sait exprimer qu'un montant mensuel fixe — y écrire 1,15 sous-estimerait la
+  facture du client dès le premier envoi. Le champ manquant se décide avant
+  d'ouvrir COM010. **Ce qui bloque les neuf autres n'est pas l'accès au web mais
+  la page** : leurs pages de quotas s'ouvrent et aucune n'énonce le coût ; c'est
+  la page tarifaire qu'il faut, et elle vit sur un autre hôte. Aucun bouton « Se connecter » ne s'affiche sans passer par là.
 - **`desktop/src-tauri/src/mcp.rs` est le seul endroit où un outil extérieur
   peut être appelé**, et quatre refus y sont dans le code, pas dans une consigne
   au modèle : liste blanche par agent (un outil que le serveur ajoute entre deux
