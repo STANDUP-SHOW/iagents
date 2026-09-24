@@ -1,4 +1,4 @@
-import { estimateMonthlyPrice, passes3xTest } from '../data/loader.js';
+import { estimateMonthlyPrice, passes3xTest, ratio3x } from '../data/loader.js';
 
 export default function FicheList({ agents, onSelectAgent, selectedAgent }) {
   const sortedAgents = [...agents].sort((a, b) => estimateMonthlyPrice(b) - estimateMonthlyPrice(a));
@@ -24,7 +24,12 @@ export default function FicheList({ agents, onSelectAgent, selectedAgent }) {
                 <h3 className="font-bold text-sm text-white line-clamp-2">{agent.nom}</h3>
               </div>
               {passes3x && (
-                <span className="badge bg-green-600 text-white text-xs flex-shrink-0">3x ✓</span>
+                <span
+                  className="badge bg-green-600 text-white text-xs flex-shrink-0"
+                  title="Matériel + API résiduelle au moins 3× moins cher que l'API seule, bundle partagé"
+                >
+                  {ratio3x(agent).toFixed(1)}× moins cher
+                </span>
               )}
             </div>
 

@@ -6,21 +6,36 @@ authors = ["STANDUP-SHOW"]
 license = "MIT"
 repository = "https://github.com/STANDUP-SHOW/iagents"
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.85"
 build = "build.rs"
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.5", features = ["shell-open", "dialog-open", "clipboard-write-text", "clipboard-read-text"] }
+tauri = { version = "2", features = [] }
 tokio = { version = "1", features = ["full"] }
-vosk = "0.3"
+whisper-rs = "0.14"
 hound = "3.5"
 cpal = "0.17"
-rubato = "0.13"
 reqwest = { version = "0.11", features = ["json"] }
 rusqlite = { version = "0.30", features = ["bundled"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
+imap = "2"
+lettre = "0.11.23"
+keyring = "3.6.3"
+mailparse = "0.17.0"
+native-tls = "0.2.18"
+rust_xlsxwriter = { version = "0.96.0", default-features = false }
+# Deja compile dans le binaire via rust_xlsxwriter : un .docx est une
+# archive ZIP de trois pieces XML, et c'est la conversion qui manquait,
+# pas une bibliotheque.
+zip = { version = "7", default-features = false, features = ["deflate"] }
+
+# La jauge de la machine lit la memoire totale. Cote Windows c'est
+# GlobalMemoryStatusEx : un appel documente, sans sortie a analyser. La version
+# est deja dans l'arbre (tauri en depend), donc rien de neuf n'est telecharge.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_System_SystemInformation"] }
 
 [build-dependencies]
-tauri-build = "1.5"
+tauri-build = { version = "2", features = [] }

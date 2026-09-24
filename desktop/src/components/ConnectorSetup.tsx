@@ -1,162 +1,398 @@
-import { useState } from 'react'
-import { invoke } from '@tauri-apps/api/tauri'
+import { useEffect, useMemo, useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
+import {
+  demanderActivation,
+  matrice,
+  besoinsDeLaFiche,
+  packDuMetier,
+  CAPACITES,
+  type Capacite,
+  type Connecteur,
+  type PackDuMetier,
+  type ReferentielConnecteurs,
+} from '../agents/connecteurs'
+
+/**
+ * La matrice à cocher.
+ *
+ * Le client coche ce qu'il utilise — Odoo, Shopify, Pennylane — et l'application sait quoi
+ * lui demander, parce que c'est écrit au catalogue. Ce qui se joue ici, au-delà de la liste :
+ * aucun bouton « Connecter » ne s'affiche sans passer par `demanderActivation`. Quand la
+ * règle refuse, on écrit ce qui manque au lieu de griser un bouton sans explication.
+ *
+ * L'écran d'avant listait six plateformes codées en dur dont cinq disaient « Coming Soon »,
+ * et la sixième affichait « connected » après avoir validé un jeton qu'elle ne rangeait nulle
+ * part. Personne n'était connecté à rien.
+ */
+
+const RUBRIQUES: Record<string, string> = {
+  metier: 'Vos logiciels métier',
+  communication: 'Vos canaux',
+  bureautique: 'Votre bureautique',
+}
+
+const RISQUES: Record<string, string> = {
+  critique: 'risque critique',
+  eleve: 'risque élevé',
+  moyen: 'risque moyen',
+  faible: 'risque faible',
+}
+
+const BESOINS: Record<Capacite, string> = {
+  voix: 'Parler et entendre',
+  conversation: 'Discuter avec vous',
+  email: 'Envoyer des courriels',
+  whatsapp: 'Répondre sur WhatsApp',
+  calendrier: 'Tenir un agenda',
+  fichiers: 'Lire et déposer des fichiers',
+  navigateur: 'Se servir de vos sites',
+  telephone: 'Passer des appels',
+}
 
 export default function ConnectorSetup() {
-  const [activeConnector, setActiveConnector] = useState<string | null>(null)
-  const [botToken, setBotToken] = useState('')
-  const [chatId, setChatId] = useState('')
-  const [instructions, setInstructions] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [telegramConnected, setTelegramConnected] = useState(false)
+  const [ref, setRef] = useState<ReferentielConnecteurs | null>(null)
+  const [erreur, setErreur] = useState('')
+  const [rubrique, setRubrique] = useState('metier')
+  const [filtre, setFiltre] = useState('')
+  const [ouvert, setOuvert] = useState<string | null>(null)
+  const [coches, setCoches] = useState<string[]>([])
+  const [secteurs, setSecteurs] = useState<string[]>([])
 
-  const connectors = [
-    { name: 'Telegram', icon: '✈️' },
-    { name: 'WhatsApp', icon: '💬' },
-    { name: 'Email', icon: '📧' },
-    { name: 'Calendar', icon: '📅' },
-    { name: 'Instagram', icon: '📸' },
-    { name: 'Facebook', icon: '👍' },
-  ]
+  useEffect(() => {
+    invoke<string>('lire_referentiel', { nom: 'connecteurs' })
+      .then((brut) => setRef(JSON.parse(brut)))
+      .catch((e) => setErreur(String(e)))
+  }, [])
 
-  const handleShowTelegramForm = async () => {
-    setError('')
-    setActiveConnector('Telegram')
-    try {
-      const instr = await invoke<string>('get_telegram_instructions')
-      setInstructions(instr)
-    } catch (err) {
-      setError('Failed to load instructions: ' + String(err))
-    }
-  }
-
-  const handleConnectTelegram = async () => {
-    setError('')
-    if (!botToken.trim() || !chatId.trim()) {
-      setError('Bot token and chat ID are required')
-      return
-    }
-
-    setLoading(true)
-    try {
-      await invoke<string>('connect_telegram', {
-        bot_token: botToken,
-        chat_id: chatId,
+  // Les métiers que le client a embauchés. Rien à saisir : c'est ce qu'il a fait
+  // qui décide de ce qu'on lui montre en premier.
+  useEffect(() => {
+    invoke<string>('lire_installation')
+      .then(async (brut) => {
+        const installation: { agents?: { ficheId: string }[] } = JSON.parse(brut)
+        const fiches = await Promise.all(
+          (installation.agents ?? []).map((a) =>
+            invoke<string>('lire_fiche', { id: a.ficheId })
+              .then((f) => JSON.parse(f).secteur as string)
+              .catch(() => '')
+          )
+        )
+        setSecteurs([...new Set(fiches.filter(Boolean))])
       })
-      setTelegramConnected(true)
-      setBotToken('')
-      setChatId('')
-      setActiveConnector(null)
-    } catch (err) {
-      setError('Connection failed: ' + String(err))
-    } finally {
-      setLoading(false)
+      .catch(() => setSecteurs([]))
+  }, [])
+
+  const rubriques = useMemo(() => (ref ? matrice(ref) : []), [ref])
+
+  const courante = rubriques.find((r) => r.categorie === rubrique)
+  const cherche = filtre.trim().toLowerCase()
+  const familles = (courante?.familles ?? [])
+    .map((f) => ({
+      ...f,
+      connecteurs: f.connecteurs.filter(
+        (c) =>
+          !cherche ||
+          c.nom.toLowerCase().includes(cherche) ||
+          c.specialite.toLowerCase().includes(cherche)
+      ),
+    }))
+    .filter((f) => f.connecteurs.length > 0)
+
+  const cocher = (id: string) =>
+    setCoches((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]))
+
+  if (erreur) {
+    return (
+      <div className="connecteurs">
+        <h2>Vos connexions</h2>
+        <div className="error-banner">Catalogue des connecteurs illisible — {erreur}</div>
+      </div>
+    )
+  }
+  if (!ref) {
+    return (
+      <div className="connecteurs">
+        <h2>Vos connexions</h2>
+        <p>Lecture du catalogue…</p>
+      </div>
+    )
+  }
+
+  const ouvrables = ref.connecteurs.filter((c) => demanderActivation(ref, c.id).accorde)
+  const metiers = secteurs
+    .map((s) => packDuMetier(ref, s))
+    .filter((p): p is PackDuMetier => p !== null)
+  // Une fiche type sert à montrer la traduction besoin → connecteurs sans en choisir une.
+  const besoins = besoinsDeLaFiche(ref, [...CAPACITES])
+
+  return (
+    <div className="connecteurs">
+      <h2>Vos connexions</h2>
+      <p className="subtitle">
+        {ref.connecteurs.length} logiciels et canaux sont décrits au catalogue.{' '}
+        {ouvrables.length === 0
+          ? "Aucun n'est encore ouvrable : chacun attend d'être chiffré et son risque classé avant qu'on vous propose de vous y brancher."
+          : `${ouvrables.length} sont ouvrables aujourd'hui.`}
+      </p>
+
+      {metiers.map((m) => (
+        <section key={m.secteur} className="metier">
+          <h3>Ce qu'on rencontre en {m.libelle.toLowerCase()}</h3>
+          <p className="precision">
+            Vous avez embauché dans ce métier. Voilà les logiciels qu'on y trouve : pas
+            la peine de chercher dans la liste entière.
+          </p>
+          {m.rayons.map((r) => (
+            <div key={r.titre} className="rayon">
+              <h4>{r.titre}</h4>
+              <p className="precision">{r.precision}</p>
+              <ul className="noms">
+                {r.connecteurs.map((c) => (
+                  <li key={c.id}>
+                    <button className="lien" onClick={() => { setRubrique(c.categorie); setOuvert(c.id) }}>
+                      {c.nom}
+                    </button>
+                    {demanderActivation(ref, c.id).accorde && <span className="servi">prêt</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      ))}
+
+      <section className="besoins">
+        <h3>Ce que vos agents réclament</h3>
+        <ul>
+          {besoins.map((b) => (
+            <li key={b.capacite}>
+              <strong>{BESOINS[b.capacite]}</strong>{' '}
+              {b.parLApplication ? (
+                <span className="servi">tenu par {b.parLApplication}</span>
+              ) : (
+                <span>
+                  {b.candidats.length} possibilité{b.candidats.length > 1 ? 's' : ''} au
+                  catalogue
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <Outillage />
+
+      <nav className="rubriques">
+        {ref.categories.map((c) => (
+          <button
+            key={c}
+            className={rubrique === c ? 'active' : ''}
+            onClick={() => setRubrique(c)}
+          >
+            {RUBRIQUES[c] ?? c}
+          </button>
+        ))}
+      </nav>
+
+      <input
+        type="search"
+        placeholder="Chercher un logiciel…"
+        value={filtre}
+        onChange={(e) => setFiltre(e.target.value)}
+      />
+
+      {coches.length > 0 && (
+        <p className="coches">
+          {coches.length} coché{coches.length > 1 ? 's' : ''} — on vous les proposera dès
+          qu'ils seront ouvrables.
+        </p>
+      )}
+
+      {familles.length === 0 && <p>Rien ne correspond à « {filtre} » dans cette rubrique.</p>}
+
+      {familles.map((f) => (
+        <section key={f.famille} className="famille">
+          <h3>{f.famille.replace(/-/g, ' ')}</h3>
+          {f.connecteurs.map((c) => (
+            <Ligne
+              key={c.id}
+              connecteur={c}
+              ref_={ref}
+              coche={coches.includes(c.id)}
+              onCocher={() => cocher(c.id)}
+              ouvert={ouvert === c.id}
+              onOuvrir={() => setOuvert(ouvert === c.id ? null : c.id)}
+            />
+          ))}
+        </section>
+      ))}
+    </div>
+  )
+}
+
+interface ServeurVisible {
+  nom: string
+  commande: string
+  adresse: string | null
+  voie: string
+  role: string
+  connecteur: string | null
+  secrets_attendus: string[]
+  pret: boolean
+}
+
+/**
+ * Où tourne l'outil. Ça compte pour le client : un outil local ne fait rien
+ * sortir de chez lui, un outil distant parle à un serveur de l'éditeur.
+ */
+const VOIES: Record<string, string> = {
+  local: 'sur votre ordinateur',
+  distant: "chez l'éditeur, par internet",
+}
+
+/**
+ * Ce que les agents savent faire, en dehors des logiciels du client.
+ *
+ * Volontairement écrit du point de vue de l'employeur et pas de l'intégrateur :
+ * il lit ce que l'outil permet et ce qu'il lui reste à fournir, pas une commande
+ * ni un protocole. Quand un serveur ne se lance pas, la raison s'affiche telle
+ * quelle plutôt que de laisser croire à une panne de l'application.
+ */
+function Outillage() {
+  const [serveurs, setServeurs] = useState<ServeurVisible[]>([])
+  const [erreur, setErreur] = useState('')
+  const [secret, setSecret] = useState<Record<string, string>>({})
+  const [dit, setDit] = useState('')
+
+  useEffect(() => {
+    invoke<ServeurVisible[]>('mcp_serveurs')
+      .then(setServeurs)
+      .catch((e) => setErreur(String(e)))
+  }, [])
+
+  const ranger = async (nom: string) => {
+    setErreur('')
+    try {
+      setDit(await invoke<string>('mcp_ranger_secret', { nomDeVariable: nom, valeur: secret[nom] ?? '' }))
+      setSecret((v) => ({ ...v, [nom]: '' }))
+      setServeurs(await invoke<ServeurVisible[]>('mcp_serveurs'))
+    } catch (e) {
+      setErreur(String(e))
     }
   }
 
-  const handleDisconnect = () => {
-    setTelegramConnected(false)
-    setBotToken('')
-    setChatId('')
-    setActiveConnector(null)
-    setError('')
+  if (erreur && serveurs.length === 0) {
+    return (
+      <section className="besoins">
+        <h3>Ce que vos agents savent faire</h3>
+        <p className="refus">{erreur}</p>
+      </section>
+    )
   }
 
   return (
-    <div className="connector-setup">
-      <h2>Connector Setup</h2>
-      <p className="subtitle">Connect agents to messaging platforms and services</p>
-
-      {error && <div className="error-banner">{error}</div>}
-
-      <div className="connectors-grid">
-        {connectors.map((connector) => (
-          <div key={connector.name} className="connector-card">
-            <div className="connector-icon">{connector.icon}</div>
-            <h3>{connector.name}</h3>
-            <p className="status">
-              {connector.name === 'Telegram' && telegramConnected
-                ? 'connected'
-                : 'disconnected'}
-            </p>
-            {connector.name === 'Telegram' ? (
-              telegramConnected ? (
-                <button className="setup-btn disconnect" onClick={handleDisconnect}>
-                  Disconnect
-                </button>
-              ) : (
-                <button className="setup-btn" onClick={handleShowTelegramForm}>
-                  Connect
-                </button>
-              )
-            ) : (
-              <button className="setup-btn" disabled>
-                Coming Soon
-              </button>
+    <section className="besoins">
+      <h3>Ce que vos agents savent faire</h3>
+      {dit && <p className="servi">{dit}</p>}
+      {erreur && <p className="refus">{erreur}</p>}
+      <ul>
+        {serveurs.map((s) => (
+          <li key={s.nom}>
+            <strong>{s.role}</strong>
+            <span className="precision">{VOIES[s.voie] ?? s.voie}</span>
+            {s.secrets_attendus.length > 0 && !s.pret && (
+              <span className="etapes">
+                {s.secrets_attendus.map((nom) => (
+                  <span key={nom}>
+                    <input
+                      type="password"
+                      placeholder={`Votre ${nom.toLowerCase().replace(/_/g, ' ')}`}
+                      value={secret[nom] ?? ''}
+                      onChange={(e) => setSecret((v) => ({ ...v, [nom]: e.target.value }))}
+                    />
+                    <button className="setup-btn" onClick={() => ranger(nom)}>
+                      Ranger dans le coffre
+                    </button>
+                  </span>
+                ))}
+              </span>
             )}
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
+      <p className="context">
+        Ce que vous rangez ici va dans le coffre de votre ordinateur, jamais dans un fichier
+        ni chez nous. Un agent ne se sert que des outils que vous lui avez confiés, et rien
+        qui modifie quelque chose ne part sans que vous l'ayez validé.
+      </p>
+    </section>
+  )
+}
 
-      {activeConnector === 'Telegram' && (
-        <div className="connector-modal-overlay" onClick={() => setActiveConnector(null)}>
-          <div className="connector-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Connect Telegram</h3>
-            <div className="telegram-instructions">
-              <pre>{instructions}</pre>
-            </div>
+function Ligne({
+  connecteur,
+  ref_,
+  coche,
+  onCocher,
+  ouvert,
+  onOuvrir,
+}: {
+  connecteur: Connecteur
+  ref_: ReferentielConnecteurs
+  coche: boolean
+  onCocher: () => void
+  ouvert: boolean
+  onOuvrir: () => void
+}) {
+  const reponse = demanderActivation(ref_, connecteur.id)
 
-            <div className="form-group">
-              <label>Bot Token</label>
-              <input
-                type="password"
-                placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-                value={botToken}
-                onChange={(e) => setBotToken(e.target.value)}
-                disabled={loading}
-              />
-            </div>
+  return (
+    <article className={`connecteur${coche ? ' coche' : ''}`}>
+      <label>
+        <input type="checkbox" checked={coche} onChange={onCocher} />
+        <span className="nom">{connecteur.nom}</span>
+      </label>
+      <p className="specialite">{connecteur.specialite}</p>
 
-            <div className="form-group">
-              <label>Chat ID</label>
-              <input
-                type="text"
-                placeholder="987654321 or -1001234567890"
-                value={chatId}
-                onChange={(e) => setChatId(e.target.value)}
-                disabled={loading}
-              />
-            </div>
+      <p className="marques">
+        {connecteur.risque && <span className="marque">{RISQUES[connecteur.risque]}</span>}
+        {connecteur.sert.map((s) => (
+          <span className="marque" key={s}>
+            {BESOINS[s]}
+          </span>
+        ))}
+      </p>
 
-            <div className="modal-buttons">
-              <button
-                className="btn-primary"
-                onClick={handleConnectTelegram}
-                disabled={loading}
-              >
-                {loading ? 'Connecting...' : 'Connect Telegram'}
-              </button>
-              <button
-                className="btn-secondary"
-                onClick={() => setActiveConnector(null)}
-                disabled={loading}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+      {reponse.accorde ? (
+        <button className="setup-btn" onClick={onOuvrir}>
+          {ouvert ? 'Fermer' : 'Se connecter'}
+        </button>
+      ) : (
+        <p className="refus">{reponse.motif}</p>
       )}
 
-      <div className="connector-flow">
-        <h3>Typical Setup Flow</h3>
-        <ol>
-          <li>Click "Connect" on a platform (Telegram, WhatsApp, etc.)</li>
-          <li>Paste your API token or authenticate with OAuth</li>
-          <li>Select which agents have access to this connector</li>
-          <li>Test the connection</li>
-        </ol>
-      </div>
-    </div>
+      {ouvert && reponse.accorde && (
+        <div className="etapes">
+          {/* La règle exige que le risque soit identifié, pas qu'il soit faible. Quand il est
+              lourd, le client doit le lire avant de cliquer, pas le découvrir après. */}
+          {(connecteur.risque === 'critique' || connecteur.risque === 'eleve') && (
+            <p className="alerte">
+              Connexion à {RISQUES[connecteur.risque]} : votre agent pourra{' '}
+              {connecteur.ecriture === true ? 'lire et écrire' : 'lire'} dans {connecteur.nom}.
+              Rien n'est envoyé ni publié sans que vous l'ayez validé.
+            </p>
+          )}
+          <p>
+            Authentification : {reponse.authentification}. Accès demandé :{' '}
+            {reponse.accesRequis}.
+          </p>
+          <ol>
+            {reponse.etapesClient.map((e, i) => (
+              <li key={i}>{e}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </article>
   )
 }

@@ -1,7 +1,11 @@
 // Bench for the sizing engine against the REAL machine catalogue (AliExpress mini-PCs, iGPU only).
 // Expectations are written by hand, never derived from the code under test.
 import assert from 'node:assert/strict';
-import { materielPour, machinesPourPack, agentsParMachine, appelsParJour, jaugeMachine, diagnosticLocal, kitClient, MACHINES, BUNDLES, POSTES, type AgentDimension } from './calculer.ts';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
+import { materielPour, machinesPourPack, agentsParMachine, appelsParJour, appelsParJourEstimes, jaugeMachine, diagnosticLocal, kitClient, MACHINES, BUNDLES, POSTES, RESERVE_MEMOIRE_UNIFIEE, type AgentDimension } from './calculer.ts';
 
 const bureau: AgentDimension = { id: 'bureau', modeles: { texte: 'texte-standard', audio: 'audio-parole', embeddings: 'embeddings', activite: 0.15 } };
 const analyste: AgentDimension = { id: 'analyste', modeles: { texte: 'texte-avance', audio: 'audio-parole', embeddings: 'embeddings', activite: 0.3 } };
@@ -76,6 +80,33 @@ assert.equal(appelsParJour([
 ]), 1 + 48 + 20 + 5);
 ok('les appels par jour suivent la planification et ignorent les taches inactives');
 
+// 9b. Weekly and monthly are NOT on-demand. They used to fall into the catch-all and
+// count 5 calls a DAY, on 3 407 tasks, which flattered the API-only bill of nearly
+// every fiche. And an unknown type must shout instead of taking the same default.
+const une = (type: string, n = 1) => Array.from({ length: n }, () => ({ planification: { type: type as never }, active: true }));
+assert.equal(appelsParJour(une('hebdomadaire')), 1 / 7, 'une tache hebdomadaire ne fait pas 5 appels par jour');
+assert.equal(appelsParJour(une('hebdomadaire', 7)), 1, 'sept taches hebdomadaires font un appel par jour');
+assert.equal(appelsParJour(une('mensuelle', 30)), 1, 'trente taches mensuelles font un appel par jour');
+// La cadence est FRACTIONNAIRE, le champ du schema est un entier plancher a 1.
+// Les confondre a coute : economie.ts pese les taches UNE PAR UNE, et un plancher
+// de 1 par tache rend une tache hebdomadaire aussi chere qu'une quotidienne.
+assert.equal(appelsParJourEstimes(une('hebdomadaire')), 1, 'la fiche annonce au moins un appel par jour');
+assert.equal(appelsParJourEstimes([]), 1, 'une fiche sans tache active annonce 1, jamais 0');
+assert.ok(appelsParJour(une('hebdomadaire')) < appelsParJour(une('quotidienne')), 'pesee seule, une tache hebdomadaire doit couter moins qu une quotidienne');
+assert.ok(appelsParJour(une('mensuelle')) < appelsParJour(une('hebdomadaire')), 'pesee seule, une tache mensuelle doit couter moins qu une hebdomadaire');
+assert.throws(() => appelsParJour([{ planification: { type: 'annuelle' as never }, active: true }]), /Planification inconnue/);
+// Chaque type que le schema autorise doit etre traite : c'est l'oubli qui a coute.
+const typesDuSchema: string[] = JSON.parse(readFileSync(join(racine, 'contrat/paquet-agent.schema.json'), 'utf8'))
+  .properties.taches.items.properties.planification.oneOf.map((o: { properties: { type: { const: string } } }) => o.properties.type.const);
+assert.equal(typesDuSchema.length, 6, `le schema declare ${typesDuSchema.length} planifications`);
+for (const type of typesDuSchema) {
+  assert.doesNotThrow(
+    () => appelsParJour([{ planification: { type: type as never, minutes: 60 }, active: true }]),
+    `le schema autorise « ${type} » et le calcul ne sait pas le compter`
+  );
+}
+ok(`les ${typesDuSchema.length} planifications du schema sont comptees, une inconnue leve une erreur, et la cadence ne se confond pas avec l entier de la fiche`);
+
 // 10. The gauge tells the user what to do, in the right order.
 const trois = cinq.slice(0, 3), quatre = cinq.slice(0, 4);
 assert.equal(jaugeMachine(machine(AM02), [bureau]).jauge, 'confortable');
@@ -133,5 +164,22 @@ assert.equal(kit.postes.machine.role, 'poste');
 assert.equal(kit.prixKit, kit.prixTotal + 5 * POSTES[0].prixIndicatif);
 assert.ok(kit.machines.every((m) => m.machine.role === 'bundle'));
 ok('un kit client = bundles cerveau + postes ; un poste ne porte jamais d agent');
+
+// 16. Unified memory is not a free field: on a mini-PC the memory left to models is
+// the RAM minus the reserve, and a poste carries no agent so it carries no model.
+// Written by hand in machines.json, so a new reference can enter with a wrong figure
+// and every placement below it would be wrong without a single error.
+const unifiees = MACHINES.filter((m) => m.memoireUnifiee);
+assert.ok(unifiees.length >= 25, `${unifiees.length} machines a memoire unifiee, c est trop peu pour un relevé`);
+for (const m of unifiees) {
+  const attendu = m.role === 'poste' ? 0 : m.ram - RESERVE_MEMOIRE_UNIFIEE;
+  assert.equal(m.vram, attendu, `${m.id} : ${m.ram} Go de RAM, ${m.vram} Go annonces aux modeles, ${attendu} attendus`);
+}
+// A dedicated card carries its own memory, which is not derived from anything.
+assert.ok(
+  MACHINES.filter((m) => !m.memoireUnifiee).every((m) => m.vram > 0 && m.vram !== m.ram - RESERVE_MEMOIRE_UNIFIEE),
+  'une machine a carte dediee dont la memoire suivrait la regle unifiee est une machine mal classee'
+);
+ok(`${unifiees.length} machines a memoire unifiee : la memoire des modeles suit la RAM moins ${RESERVE_MEMOIRE_UNIFIEE} Go`);
 
 console.log(`\n${n} attentes tenues — dimensionnement ok`);

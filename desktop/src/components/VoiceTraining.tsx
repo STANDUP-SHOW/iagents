@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { invoke } from '@tauri-apps/api/tauri'
 
 export default function VoiceTraining() {
   const [stage, setStage] = useState<'intro' | 'recording' | 'complete'>('intro')
   const [currentPhrase, setCurrentPhrase] = useState(0)
   const [isRecording, setIsRecording] = useState(false)
   const [recordedCount, setRecordedCount] = useState(0)
-  const [loading, setLoading] = useState(false)
+  const [loading] = useState(false)
   const [error, setError] = useState('')
 
   const phrases = [
@@ -22,50 +21,15 @@ export default function VoiceTraining() {
     setError('')
   }
 
+  // L'empreinte vocale n'est pas implémentée : rien ne capte le micro ici, et
+  // verify_voice renvoie une valeur fixe. Annoncer « voix enregistrée » ferait
+  // croire à une reconnaissance qui, en l'état, accepte n'importe qui.
   const handleRecordUtterance = async () => {
-    setError('')
-    setIsRecording(true)
-
-    try {
-      // Simulate 3-second recording
-      await new Promise((resolve) => setTimeout(resolve, 3000))
-
-      // In production: capture real audio from microphone
-      // Placeholder: generate dummy audio samples (1 sec at 44100 Hz)
-      const placeholderSamples = new Array(44100).fill(0).map(() =>
-        Math.floor(Math.random() * 32767 - 16384)
-      )
-
-      const newCount = recordedCount + 1
-      setRecordedCount(newCount)
-
-      if (newCount >= 3) {
-        // All 3 phrases recorded, submit enrollment
-        setLoading(true)
-        try {
-          // Send all 3 utterances to backend
-          const allSamples = [placeholderSamples, placeholderSamples, placeholderSamples]
-          await invoke<string>('enroll_voice', {
-            user_id: 'current_user',
-            audio_samples: allSamples,
-          })
-          setStage('complete')
-          setError('')
-        } catch (err) {
-          setError('Enrollment failed: ' + String(err))
-          setRecordedCount(newCount - 1) // Revert count
-        } finally {
-          setLoading(false)
-        }
-      } else {
-        setCurrentPhrase(newCount)
-      }
-
-      setIsRecording(false)
-    } catch (err) {
-      setError('Recording failed: ' + String(err))
-      setIsRecording(false)
-    }
+    setIsRecording(false)
+    setError(
+      "L'empreinte vocale n'est pas encore disponible : l'agent ne reconnaît pas " +
+        'qui parle. Il répond à son prénom, pas à une voix.'
+    )
   }
 
   const handleReset = () => {

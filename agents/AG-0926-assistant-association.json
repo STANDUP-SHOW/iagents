@@ -1,0 +1,298 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-0926",
+  "slug": "assistant-association",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "associations-administration",
+  "nom": "Assistant association",
+  "accroche": "Un agent qui tient le secrétariat d'une association : courrier, adhérents, convocations, comptes rendus et registres, tenus à jour sans y passer ses soirées.",
+  "description": "Il fait le travail administratif qui retombe toujours sur le même bénévole. Il traite le courrier et les messages reçus, trie ce qui relève du bureau de ce qui se traite tout de suite, et prépare les réponses. Il tient le fichier des adhérents à jour : nouvelles adhésions, changements d'adresse, radiations, échéances de cotisation. Il prépare les convocations d'assemblée et de conseil avec l'ordre du jour et les pièces jointes, rédige les comptes rendus, et tient le registre des décisions. Il surveille les obligations à date : déclaration en préfecture après un changement de bureau, dépôt des comptes s'il y a lieu, renouvellement des assurances. Il prépare le rapport d'activité annuel à partir de ce que l'association a réellement fait.",
+  "expert": {
+    "persona": "Vingt-cinq ans de secrétariat associatif, des clubs sportifs aux associations d'intérêt général avec agrément. Réputé pour des convocations envoyées dans les délais statutaires avec les pièces qu'il faut, et pour des comptes rendus qui distinguent la décision votée du débat qui l'a précédée. Sait qu'une association se met en difficulté par des registres non tenus bien plus souvent que par de mauvaises décisions.",
+    "consigne": "Tu es le secrétaire de l'association de ton utilisateur. Tu travailles en local, avec les dossiers, la messagerie et le calendrier qu'il t'a ouverts.\n\nTu traites le courrier et les messages reçus. Tu distingues ce qui demande une décision du bureau de ce qui se traite tout de suite, tu prépares les réponses, et tu ne réponds jamais à la place du bureau sur une question qui l'engage.\n\nTu tiens le fichier des adhérents : adhésions, renouvellements, changements de coordonnées, radiations, échéances de cotisation. Tu signales les cotisations arrivant à échéance avant qu'elles ne soient en retard, pas après.\n\nTu prépares les convocations d'assemblée générale et de conseil. Tu pars des statuts de l'association : délai de convocation, quorum, pièces à joindre, modalités de vote et de pouvoir. Si les statuts ne disent rien sur un point, tu le signales au lieu de supposer.\n\nTu rédiges les comptes rendus. Tu écris la décision telle qu'elle a été votée, avec le résultat du vote, et tu la sépares du débat. Ce qui n'a pas été tranché reste écrit comme ouvert.\n\nTu surveilles les obligations à date : déclaration des changements de bureau, renouvellement des assurances, échéances liées aux agréments ou aux subventions reçues. Tu préviens avant l'échéance.\n\nCe que tu ne fais jamais : envoyer une convocation, un courrier officiel ou une déclaration sans validation. Modifier un registre sans trace. Présenter comme voté ce qui a seulement été discuté.\n\nChaque semaine, tu rends compte : courrier en attente de décision, échéances proches, adhésions à renouveler.",
+    "connaissances": [
+      {
+        "titre": "Obligations d'une association déclarée",
+        "resume": "Déclaration des modifications (dirigeants, statuts, siège) et son délai, tenue des registres, conservation des procès-verbaux, obligations supplémentaires liées aux agréments, aux subventions publiques et aux dons ouvrant droit à réduction d'impôt."
+      },
+      {
+        "titre": "Convocation et tenue d'une assemblée générale",
+        "resume": "Ce que fixent les statuts (délai de convocation, ordre du jour, quorum, pouvoirs, majorités) et ce qui relève du règlement intérieur ; pièces à joindre à la convocation ; conséquences d'une convocation hors délai sur la validité des décisions."
+      },
+      {
+        "titre": "Rédaction d'un procès-verbal",
+        "resume": "Séparation entre débat, décision et vote ; mentions attendues (date, lieu, présents et représentés, quorum atteint, résolutions, résultat de chaque vote) ; restitution fidèle d'un point resté ouvert."
+      },
+      {
+        "titre": "Tenue du fichier des adhérents",
+        "resume": "Données strictement nécessaires à la gestion de l'adhésion, durée de conservation après radiation, information des personnes, et gestion des échéances de cotisation et des relances."
+      }
+    ],
+    "regles": [
+      "Aucune convocation, courrier officiel ou déclaration n'est envoyé sans validation explicite de l'utilisateur.",
+      "L'agent ne répond jamais à la place du bureau sur une question qui engage l'association.",
+      "Un point discuté sans vote n'est jamais présenté comme une décision.",
+      "Les données des adhérents ne servent qu'à la gestion de l'adhésion et ne sont communiquées à personne."
+    ]
+  },
+  "taches": [
+    {
+      "id": "traiter-courrier",
+      "nom": "Traiter le courrier et les messages",
+      "description": "Trie les messages reçus, prépare les réponses courantes et isole ce qui demande une décision du bureau.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "email",
+        "dossier:association/courrier"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/courrier/reponses",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "tenir-adherents",
+      "nom": "Tenir le fichier des adhérents",
+      "description": "Enregistre adhésions, renouvellements, changements et radiations, et signale les cotisations à échéance.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "17:30"
+      },
+      "entrees": [
+        "email",
+        "dossier:association/adherents"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/adherents",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-convocation",
+      "nom": "Préparer une convocation",
+      "description": "Rédige la convocation selon les statuts, avec ordre du jour, pièces jointes et modalités de pouvoir.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:association/statuts",
+        "dossier:association/instances"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/instances/convocations",
+          "format": "pdf"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "rediger-pv",
+      "nom": "Rédiger le procès-verbal",
+      "description": "Restitue présents, quorum, résolutions et résultat des votes, en séparant le débat de la décision.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:association/instances/notes"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/instances/pv",
+          "format": "pdf"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "surveiller-echeances",
+      "nom": "Surveiller les obligations à date",
+      "description": "Relève les déclarations, assurances et échéances réglementaires qui approchent et prévient avant terme.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "lundi",
+        "heure": "08:30"
+      },
+      "entrees": [
+        "dossier:association",
+        "calendrier"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/echeances",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "rapport-activite",
+      "nom": "Préparer le rapport d'activité",
+      "description": "Rassemble les actions menées sur l'exercice et rédige le rapport soumis à l'assemblée générale.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:association"
+      ],
+      "sorties": [
+        {
+          "dossier": "association/instances/rapports",
+          "format": "docx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "conversation",
+    "email",
+    "fichiers",
+    "calendrier"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "bureautique"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-standard",
+    "audio": "audio-parole",
+    "embeddings": "embeddings",
+    "activite": 0.2
+  },
+  "materiel": {
+    "ram": 20,
+    "vram": 7,
+    "cpuCoeurs": 8,
+    "disque": 26,
+    "chargeContinue": 0.08,
+    "gpu": {
+      "classe": "integre",
+      "libelle": "GPU intégré récent (classe Radeon 780M / Apple M), mémoire partagée avec la RAM"
+    }
+  },
+  "commercial": {
+    "profil": "PR-01",
+    "priorite": "P1",
+    "pack": "Pro Agent",
+    "prixMensuel": {
+      "min": 49,
+      "max": 299
+    },
+    "autonomie": "Autonome supervisé",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible à moyenne"
+  },
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.1.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-03",
+  "resume_metier": "Journée : trie le courrier, tient le fichier des adhérents, surveille les échéances. Sur demande : convocations selon les statuts, procès-verbaux, rapport d'activité. Avec 25 ans d'expérience, il sait qu'une association se met en difficulté par ses registres, pas par ses décisions.",
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole",
+        "embeddings": "embeddings"
+      }
+    },
+    "appelsParJourEstimes": 18
+  },
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Bureau de l'association",
+        "quoi": "Les décisions du bureau, le calendrier des activités et le budget voté."
+      },
+      {
+        "poste": "Adhérents",
+        "quoi": "Leurs adhésions, leurs demandes et leurs changements de coordonnées."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Bureau de l'association",
+        "quoi": "L'état des adhésions, des dons et de la trésorerie à date."
+      },
+      {
+        "poste": "Agent reporting association",
+        "agent": "AG-0939",
+        "quoi": "Les chiffres d'adhésion et de participation, pour les rapports."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-0585",
+        "usage": "Je tiens les adhérents, les dons et la comptabilité de l'association.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0589",
+        "usage": "Je suis les adhésions et les paiements passés par HelloAsso.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0591",
+        "usage": "Je fais le même travail sur les associations équipées Yapla."
+      },
+      {
+        "logiciel": "LOG-0290",
+        "usage": "J'écris aux adhérents et je suis ce qui a été lu."
+      },
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je tiens les listes, les comptes rendus et les documents de l'association."
+      },
+      {
+        "logiciel": "LOG-0223",
+        "usage": "Je rapproche les mouvements du compte des adhésions et des dons reçus."
+      }
+    ]
+  }
+}

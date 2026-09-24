@@ -1,19 +1,30 @@
 import { useState } from 'react';
 import AgentSimulator from './AgentSimulator.jsx';
-import { estimateMonthlyPrice, getRiskProfile } from '../data/loader.js';
+import { estimateMonthlyPrice, getRiskProfile, economieDe, attendUnAccordHumain } from '../data/loader.js';
 
-export default function FicheDetail({ agent, onClose }) {
-  const [activeTab, setActiveTab] = useState('overview');
+/** Les onglets, nommes une seule fois : le banc les parcourt tous. */
+export const ONGLETS = ['overview', 'taches', 'connecteurs', 'economie'];
+
+// `ongletInitial` n'existe que pour le banc : l'onglet est un etat interne, donc
+// un rendu sans lui ne montre que « overview » et ne prouve rien des trois
+// autres. C'est comme ca que quatre variables inexistantes dans l'onglet
+// « economie » ont passe une construction verte le 23/09.
+export default function FicheDetail({ agent, onClose, ongletInitial = 'overview' }) {
+  const [activeTab, setActiveTab] = useState(ongletInitial);
   const [showSimulator, setShowSimulator] = useState(false);
 
   if (!agent) return null;
 
   const price = estimateMonthlyPrice(agent);
-  const apiCallsPerDay = agent.execution?.appelsParJourEstimes || 0;
-  const estimatedApiCost = (apiCallsPerDay * 30 * 0.00015).toFixed(2);
-  const hardwareCost = Math.round(price * 0.3);
-  const estimatedProfit = Math.round(price - hardwareCost - estimatedApiCost);
-  const marginRatio = estimatedProfit / price;
+  // Ce bloc calculait un « profit » et une « marge » depuis un coût de matériel
+  // posé à 30 % du PRIX D'ABONNEMENT, et un coût d'API à 0,00015 € l'appel qui
+  // ne vient d'aucune source. Le matériel ne dépend pas de ce qu'on facture :
+  // la marge sortait donc à ~70 % pour les 1 249 fiches, quelles qu'elles
+  // soient. Le vrai calcul est dans dimensionnement/economie.ts, et ses
+  // hypothèses sont dans tarifs-api.json.
+  const eco = economieDe(agent);
+  const accordHumain = attendUnAccordHumain(agent);
+  const apiCallsPerDay = agent.execution?.appelsParJourEstimes ?? 0;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center overflow-y-auto">
@@ -38,7 +49,7 @@ export default function FicheDetail({ agent, onClose }) {
         {/* Tabs */}
         <div className="border-b border-slate-700 bg-slate-900">
           <div className="flex gap-4 px-6 overflow-x-auto">
-            {['overview', 'taches', 'connecteurs', 'economie'].map((tab) => (
+            {ONGLETS.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -206,12 +217,12 @@ export default function FicheDetail({ agent, onClose }) {
                   <p className="text-2xl font-bold text-slate-200">{apiCallsPerDay}</p>
                 </div>
                 <div className="bg-slate-700/50 p-4 rounded-lg">
-                  <p className="text-sm text-slate-400 mb-1">Coût API estimé</p>
-                  <p className="text-2xl font-bold text-slate-200">{estimatedApiCost}€/mois</p>
+                  <p className="text-sm text-slate-400 mb-1">API résiduelle</p>
+                  <p className="text-2xl font-bold text-slate-200">{eco ? Math.round(eco.apiResiduelle) : '—'}€/mois</p>
                 </div>
                 <div className="bg-slate-700/50 p-4 rounded-lg">
                   <p className="text-sm text-slate-400 mb-1">Coût matériel</p>
-                  <p className="text-2xl font-bold text-slate-200">{hardwareCost}€/mois</p>
+                  <p className="text-2xl font-bold text-slate-200">{eco ? Math.round(eco.materielPartage + eco.poste) : '—'}€/mois</p>
                 </div>
               </div>
 
@@ -219,12 +230,31 @@ export default function FicheDetail({ agent, onClose }) {
                 <p className="text-sm text-slate-400 mb-2">Analyse économique (ratio 3×)</p>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-slate-300">Profit estimé: <span className="font-bold text-purple-300">{estimatedProfit}€/mois</span></p>
-                    <p className="text-slate-300">Marge: <span className="font-bold text-purple-300">{(marginRatio * 100).toFixed(1)}%</span></p>
+                    {eco ? (
+                      <>
+                        <p className="text-slate-300">API seule: <span className="font-bold text-purple-300">{Math.round(eco.apiSeulReference)}€/mois</span></p>
+                        <p className="text-slate-300">Local-Agent: <span className="font-bold text-purple-300">{Math.round(eco.localAgentPartage)}€/mois</span> <span className="text-slate-400 text-sm">(bundle partagé)</span></p>
+                        <p className="text-slate-300">
+                          Ratio:{' '}
+                          <span className={eco.ratioPartage >= 3 ? 'font-bold text-green-300' : 'font-bold text-amber-300'}>
+                            {eco.ratioPartage.toFixed(1)}× moins cher
+                          </span>
+                          {eco.ratioPartage < 3 && <span className="text-slate-400 text-sm"> — à vendre en mode API</span>}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-slate-400">Coût non calculable pour cette fiche.</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-slate-300">Risque régulementaire: <span className="font-bold text-slate-200">{getRiskProfile(agent)}</span></p>
                     <p className="text-slate-300">Autonomie: <span className="font-bold text-slate-200">{agent.commercial?.autonomie}</span></p>
+                    <p className="text-slate-300">
+                      Validation:{' '}
+                      <span className="font-bold text-slate-200">
+                        {accordHumain ? "attend l'accord d'un humain" : 'travaille seul'}
+                      </span>
+                    </p>
                   </div>
                 </div>
               </div>

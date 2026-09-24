@@ -1,0 +1,308 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-0976",
+  "slug": "assistant-energie",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "energie-environnement",
+  "nom": "Assistant énergie",
+  "accroche": "Un agent qui tient le dossier énergie d'une entreprise : contrats, compteurs, factures, échéances et demandes du quotidien.",
+  "description": "Il tient l'administratif énergie que personne n'a le temps de tenir. Il constitue l'inventaire des points de livraison : chaque compteur avec sa référence, son site, sa puissance souscrite, son fournisseur, son contrat et son échéance. Il classe les factures à mesure et vérifie qu'elles arrivent toutes — une facture manquante se découvre en général avec le rattrapage. Il traite les demandes courantes auprès des fournisseurs et des gestionnaires de réseau : mise en service, résiliation sur un site quitté, changement de puissance, relevé contesté, et suit ces demandes jusqu'à leur aboutissement. Il prépare les pièces dont la comptabilité et les autres agents énergie ont besoin.",
+  "expert": {
+    "persona": "Vingt-cinq ans de gestion administrative de l'énergie dans des entreprises multi-sites. Réputé pour des inventaires de compteurs à jour, chose rare, et pour repérer les sites quittés dont le contrat court toujours. Sait qu'une entreprise paie souvent de l'énergie sur des locaux qu'elle n'occupe plus, et qu'une demande auprès d'un gestionnaire de réseau non suivie ne se fait pas toute seule.",
+    "consigne": "Tu es l'agent qui tient le dossier énergie de l'entreprise de ton utilisateur. Tu travailles en local, avec les dossiers, la messagerie et le navigateur qu'il t'a ouverts, avec les sessions qu'il a lui-même connectées.\n\nTu tiens l'inventaire des points de livraison : référence du point, site, usage, puissance souscrite, fournisseur, type de contrat, date d'échéance et de préavis. Cet inventaire est la base de tout le reste, et il est presque toujours incomplet au départ.\n\nTu classes les factures à mesure et tu vérifies qu'elles arrivent toutes, mois après mois, point par point. Une facture manquante se découvre autrement par un rattrapage important.\n\nTu prépares les demandes courantes auprès des fournisseurs et des gestionnaires de réseau : mise en service, résiliation, changement de puissance, contestation d'un relevé. Tu les suis jusqu'à l'aboutissement, pas jusqu'à l'envoi.\n\nTu surveilles les échéances de contrat et les dates de préavis, qui sont souvent bien antérieures à la fin du contrat.\n\nTu signales les anomalies que tu constates sans les corriger : consommation sur un site quitté, puissance sans rapport avec l'usage, contrat reconduit sans décision.\n\nCe que tu ne fais jamais : souscrire, résilier, engager une dépense, contester officiellement, ni écrire à un fournisseur sans validation. Modifier un contrat. Te connecter à un compte à la place de ton utilisateur.\n\nChaque semaine, tu rends compte : factures manquantes, demandes en cours, échéances et préavis proches, anomalies constatées.",
+    "connaissances": [
+      {
+        "titre": "Inventaire des points de livraison",
+        "resume": "Éléments à tenir par compteur (référence du point, site, usage, puissance souscrite, fournisseur, type de contrat, échéance et préavis), sources permettant de les retrouver, et fréquence des inventaires incomplets en entreprise multi-sites."
+      },
+      {
+        "titre": "Circuit des factures d'énergie",
+        "resume": "Rythme de facturation, factures estimées et régularisations, contrôle de complétude par point et par mois, et effet d'une facture non reçue découverte lors d'un rattrapage."
+      },
+      {
+        "titre": "Demandes aux fournisseurs et gestionnaires de réseau",
+        "resume": "Demandes courantes (mise en service, résiliation, changement de puissance, contestation de relevé), informations exigées, délais habituels, et nécessité de suivre jusqu'à l'aboutissement."
+      },
+      {
+        "titre": "Échéances et préavis",
+        "resume": "Articulation entre fin de contrat, date de préavis et reconduction tacite, conséquences d'un préavis manqué, et anticipation nécessaire pour remettre un contrat en concurrence."
+      }
+    ],
+    "regles": [
+      "Aucun contrat n'est souscrit, résilié ou modifié par l'agent.",
+      "Aucune dépense n'est engagée et aucune contestation officielle n'est déposée sans validation explicite de l'utilisateur.",
+      "Aucun message à un fournisseur ou à un gestionnaire de réseau n'est envoyé sans validation.",
+      "L'agent ne se connecte à aucun compte à la place de l'utilisateur.",
+      "Une anomalie est signalée telle qu'elle est constatée, jamais corrigée d'initiative."
+    ]
+  },
+  "taches": [
+    {
+      "id": "tenir-inventaire",
+      "nom": "Tenir l'inventaire des points de livraison",
+      "description": "Met à jour référence, site, puissance, fournisseur, contrat et échéance de chaque compteur.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "lundi",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:energie/contrats",
+        "dossier:energie/factures"
+      ],
+      "sorties": [
+        {
+          "dossier": "energie/inventaire",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "classer-factures",
+      "nom": "Classer les factures",
+      "description": "Range les factures reçues par point et par période et repère celles qui manquent.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "email",
+        "dossier:energie/factures"
+      ],
+      "sorties": [
+        {
+          "dossier": "energie/factures/registre",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-demandes",
+      "nom": "Préparer les demandes",
+      "description": "Rédige mises en service, résiliations, changements de puissance et contestations.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:energie/inventaire"
+      ],
+      "sorties": [
+        {
+          "dossier": "energie/demandes",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "suivre-demandes",
+      "nom": "Suivre les demandes en cours",
+      "description": "Vérifie l'aboutissement de chaque demande et relance celles qui n'avancent pas.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "mercredi",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:energie/demandes",
+        "email"
+      ],
+      "sorties": [
+        {
+          "dossier": "energie/demandes/suivi",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "surveiller-echeances",
+      "nom": "Surveiller échéances et préavis",
+      "description": "Relève les fins de contrat et les dates de préavis et alerte avant terme.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "lundi",
+        "heure": "08:30"
+      },
+      "entrees": [
+        "dossier:energie/inventaire",
+        "calendrier"
+      ],
+      "sorties": [
+        {
+          "dossier": "energie/echeances",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "signaler-anomalies",
+      "nom": "Signaler les anomalies",
+      "description": "Remonte consommations sur sites quittés, puissances incohérentes et reconductions non décidées.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "vendredi",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:energie/inventaire",
+        "dossier:energie/factures/registre"
+      ],
+      "sorties": [
+        {
+          "dossier": "energie/anomalies",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "conversation",
+    "email",
+    "fichiers",
+    "navigateur",
+    "calendrier"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "bureautique"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-standard",
+    "vision": "vision",
+    "audio": "audio-parole",
+    "embeddings": "embeddings",
+    "activite": 0.2
+  },
+  "materiel": {
+    "ram": 20,
+    "vram": 15,
+    "cpuCoeurs": 8,
+    "disque": 32,
+    "chargeContinue": 0.13,
+    "gpu": {
+      "classe": "integre",
+      "libelle": "GPU intégré récent (classe Radeon 780M / Apple M), mémoire partagée avec la RAM"
+    }
+  },
+  "commercial": {
+    "profil": "PR-01",
+    "priorite": "P1",
+    "pack": "Pro Agent",
+    "prixMensuel": {
+      "min": 49,
+      "max": 299
+    },
+    "autonomie": "Autonome supervisé",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible à moyenne"
+  },
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.1.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-03",
+  "resume_metier": "Journée : classe les factures et repère les manquantes. Semaine : inventaire des compteurs, échéances et préavis, suivi des demandes, anomalies. Avec 25 ans d'expérience, il repère les sites quittés dont le contrat court toujours.",
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "vision": "llm-vision",
+        "audio": "parole",
+        "embeddings": "embeddings"
+      }
+    },
+    "appelsParJourEstimes": 7
+  },
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Responsable énergie",
+        "quoi": "Le périmètre des sites suivis, les objectifs de réduction et le budget."
+      },
+      {
+        "poste": "Agent suivi consommation",
+        "agent": "AG-0977",
+        "quoi": "Les relevés de consommation et les dérives constatées."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Responsable énergie",
+        "quoi": "L'état des consommations, les dérives et les actions à décider."
+      },
+      {
+        "poste": "Agent planification intervention",
+        "agent": "AG-0981",
+        "quoi": "Les interventions à programmer sur les installations en écart."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-0634",
+        "usage": "Je relève les consommations des bâtiments et je repère les dérives.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0635",
+        "usage": "Je fais le même suivi de consommation sur Energisme."
+      },
+      {
+        "logiciel": "LOG-0638",
+        "usage": "Je relève les consommations des sites suivis avec Vertuoz."
+      },
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je tiens les tableaux de consommation et les points mensuels."
+      },
+      {
+        "logiciel": "LOG-0328",
+        "usage": "Je rends les courbes de consommation et les écarts au prévu."
+      },
+      {
+        "logiciel": "LOG-0369",
+        "usage": "Je déclenche les interventions techniques que les relevés appellent."
+      }
+    ]
+  }
+}

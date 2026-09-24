@@ -9,7 +9,7 @@
  *   npx tsx outils/generer-fiches.ts soumettre ... --attendre           submits, polls until ended, then collects (what the GitHub workflow runs)
  *
  * The model writes ONLY the editorial part of a package (famille, nom, accroche,
- * description, expert, taches, connecteurs, acces, modeles). Everything derived
+ * description, expert, taches, connecteurs, modeles). Everything derived
  * (materiel, commercial, execution, version) is assembled here from the sources
  * of truth, then the whole package is validated against the contract. A package
  * that fails validation is never written: it goes to outils/lots/<id>-echecs.json.
@@ -19,7 +19,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Ajv2020 } from 'ajv/dist/2020.js';
-import { materielPour, appelsParJour } from '../dimensionnement/calculer.ts';
+import { materielPour, appelsParJourEstimes } from '../dimensionnement/calculer.ts';
+import { logicielsDesTaches } from './logiciels-metier.ts';
 
 /**
  * A key created at organisation level (not inside a workspace) must name the
@@ -34,6 +35,7 @@ function clientAnthropic() {
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const lire = (p: string) => readFileSync(join(racine, p), 'utf8');
 const catalogue = JSON.parse(lire('catalogue/catalogue.json'));
+const categoriesLogiciels = new Set<string>(JSON.parse(lire('catalogue/logiciels.json')).categories);
 const schema = JSON.parse(lire('contrat/paquet-agent.schema.json'));
 const contrat = lire('contrat/paquet-agent.md');
 const paliers = JSON.parse(lire('dimensionnement/paliers-modeles.json'));
@@ -120,10 +122,11 @@ function assembler(a: any, fiche: any) {
   const paquet = {
     format: 'iagent-paquet/1', id: a.id, slug: a.slug, version: '1.0.0',
     famille: fiche.famille, secteur: a.secteur, nom: fiche.nom, accroche: fiche.accroche, description: fiche.description,
-    expert: fiche.expert, taches: fiche.taches, connecteurs: fiche.connecteurs, acces: fiche.acces, modeles,
+    expert: fiche.expert, taches: fiche.taches, connecteurs: fiche.connecteurs,
+    acces: { ...fiche.acces, logiciels: logicielsDesTaches(fiche.taches, categoriesLogiciels) }, modeles,
     execution: { modes: ['local', 'api'], defaut: 'local', bascule: 'automatique',
       api: { capacites: Object.fromEntries(Object.keys(modeles).filter((k) => k in API_CAPACITES).map((k) => [k, API_CAPACITES[k]])) },
-      appelsParJourEstimes: appelsParJour(fiche.taches) },
+      appelsParJourEstimes: appelsParJourEstimes(fiche.taches) },
     materiel: materielPour(modeles),
     commercial: { profil: p.id, priorite: p.priorite, pack: p.pack, prixMensuel: { min: p.prixCible.min, max: p.prixCible.max }, autonomie: p.autonomie, besoinHumain: p.besoinHumain, risqueReglementaire: p.risqueReglementaire },
     miseAJour: { canal: 'stable', appMinimum: '1.0.0', notes: 'Première version.' },

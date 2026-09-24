@@ -9,6 +9,7 @@
  */
 import tarifs from './tarifs-api.json' with { type: 'json' };
 import { appelsParJour, machinesPourPack, agentsParMachine, materielPour, POSTES, BUNDLES, type AgentDimension, type Machine, type TachePlanifiee } from './calculer.ts';
+import { INTENSITES, REPARTITIONS, INTENSITE_DEFAUT, REPARTITION_DEFAUT, type Intensite, type Repartition } from './intensite.ts';
 
 export interface PaquetEco extends AgentDimension { taches: (TachePlanifiee & { logiciels?: string[]; sorties?: { format: string }[] })[]; commercial?: { prixMensuel?: { min: number } } }
 export interface Economie {
@@ -43,13 +44,22 @@ function coutTourEur(prix: { entree: number; entreeCache: number; sortie: number
   return usd * tarifs.tauxUsdEur;
 }
 
-/** Monthly API bill of an agent if every execution went through the API. */
-export function coutApiMensuel(paquet: PaquetEco, prix = tarifs.modeles.reference): { total: number; executions: number; toursMoyens: number } {
+/**
+ * Monthly API bill of an agent if every execution went through the API.
+ * `intensite` is what the customer chose at the hiring interview: it stretches both how often
+ * a task runs and how deep each run goes, which is exactly what the token bill measures.
+ */
+export function coutApiMensuel(
+  paquet: PaquetEco,
+  prix = tarifs.modeles.reference,
+  intensite: Intensite = INTENSITE_DEFAUT
+): { total: number; executions: number; toursMoyens: number } {
+  const reglage = INTENSITES[intensite];
   let total = 0, executions = 0, tours = 0;
   for (const t of paquet.taches) {
     if (!t.active) continue;
-    const parMois = appelsParJour([t]) * JOURS;
-    const n = toursPour(t);
+    const parMois = appelsParJour([t]) * JOURS * reglage.frequence;
+    const n = toursPour(t) * reglage.profondeur;
     let coutExec = n * coutTourEur(prix);
     if (t.sorties?.some((s) => ['png', 'jpg'].includes(s.format))) coutExec += tarifs.image.prixUnitaireUsd * tarifs.image.parExecution * tarifs.tauxUsdEur;
     if (t.sorties?.some((s) => s.format === 'mp4')) coutExec += tarifs.video.prixUnitaireUsd * tarifs.video.parExecution * tarifs.tauxUsdEur;
@@ -64,16 +74,21 @@ const r = (x: number) => Math.round(x * 100) / 100;
  * The full case. `avecPoste`: the customer buys a poste per agent (else uses their own PC).
  * `catalogue`: bundles considered (default: all brains).
  */
-export function economiePour(paquet: PaquetEco, { avecPoste = false, catalogue = BUNDLES }: { avecPoste?: boolean; catalogue?: Machine[] } = {}): Economie {
-  const ref = coutApiMensuel(paquet);
-  const haut = coutApiMensuel(paquet, tarifs.modeles.hautDeGamme);
+export function economiePour(
+  paquet: PaquetEco,
+  { avecPoste = false, catalogue = BUNDLES, intensite = INTENSITE_DEFAUT, repartition = REPARTITION_DEFAUT }:
+    { avecPoste?: boolean; catalogue?: Machine[]; intensite?: Intensite; repartition?: Repartition } = {}
+): Economie {
+  const ref = coutApiMensuel(paquet, tarifs.modeles.reference, intensite);
+  const haut = coutApiMensuel(paquet, tarifs.modeles.hautDeGamme, intensite);
   const place = machinesPourPack([paquet], catalogue);
   const bundle = place.machines[0]?.machine;
   const capacitesHorsLocal: string[] = [];
   const mat = materielPour(paquet.modeles);
   if (!bundle) capacitesHorsLocal.push(...Object.keys(paquet.modeles).filter((k) => k !== 'activite'));
   // Residual API: the commercial share on what runs locally, 100 % on what cannot.
-  const partApi = bundle ? tarifs.partApiResiduelle : 1;
+  // Sans bundle, tout passe forcément par l'API ; avec, c'est le client qui a choisi sa part.
+  const partApi = bundle ? REPARTITIONS[repartition].partApi : 1;
   const apiResiduelle = ref.total * partApi;
   const agentsParBundle = bundle ? Math.max(1, agentsParMachine(bundle, paquet)) : 0;
   const coutMensuel = (m: Machine) => m.prixIndicatif / tarifs.amortissementMois + ((tarifs.electricite.wattsParGamme as Record<string, number>)[m.gamme] ?? 100) * 24 * JOURS / 1000 * tarifs.electricite.prixKwhEur;

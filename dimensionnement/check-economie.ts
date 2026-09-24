@@ -4,6 +4,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { economiePour, coutApiMensuel, RATIO_MINIMUM, type PaquetEco } from './economie.ts';
+import { rendre, paquets, cheminDu } from '../outils/economie.ts';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const lire = (id: string): PaquetEco => { const f = readdirSync(join(racine, 'agents')).find((f) => f.startsWith(id)); if (!f) throw new Error(`${id} absent`); return JSON.parse(readFileSync(join(racine, 'agents', f), 'utf8')); };
@@ -42,5 +43,24 @@ ok(`en flotte, la part de materiel du secretaire tombe a ${sec.materielFlotte} �
 // 6. Inactive tasks cost nothing; a package with no active task has no API bill.
 assert.equal(coutApiMensuel({ id: 'x', modeles: { texte: 'texte-standard', activite: 0.1 }, taches: [{ planification: { type: 'quotidienne' }, active: false }] }).total, 0);
 ok('une tache inactive ne coute rien');
+
+// 7. The published documents say what the code computes TODAY. docs/economie.md had
+// rotted four days unnoticed — generated on 126 fiches while agents/ carried 1 249 —
+// and it is the file the commercial argument is read from. The generation date on disk
+// is taken as given (it records when, not what); every figure after it must match.
+const fiches = paquets();
+for (const avecPoste of [false, true]) {
+  const chemin = cheminDu(avecPoste);
+  const surDisque = readFileSync(join(racine, chemin), 'utf8');
+  const jour = surDisque.match(/le (\d{4}-\d{2}-\d{2}) sur /)?.[1];
+  assert.ok(jour, `${chemin} ne dit pas quand il a ete genere`);
+  const attendu = rendre(fiches, avecPoste, jour);
+  if (surDisque !== attendu) {
+    const a = surDisque.split('\n'), b = attendu.split('\n');
+    const i = a.findIndex((l, k) => l !== b[k]);
+    assert.fail(`${chemin} ne dit plus ce que le calcul donne — lancer « npm run economie ».\n  ligne ${i + 1} sur disque : ${a[i]?.slice(0, 160)}\n  ligne ${i + 1} attendue  : ${b[i]?.slice(0, 160)}`);
+  }
+  ok(`${chemin} est a jour (${fiches.length} fiches, genere le ${jour})`);
+}
 
 console.log(`\n${n} attentes tenues — economie ok`);

@@ -1,0 +1,77 @@
+{
+  "note": "Les serveurs MCP que l'application sait joindre. Saisi à la main. Un serveur porte OU BIEN une `commande` qu'on lance sur le poste, OU BIEN une `url` qu'on joint par le réseau (transport « Streamable HTTP »), jamais les deux : le code refuse le fichier entier sinon. AUCUNE CLÉ ICI : `secrets` et `jeton` ne portent que des NOMS de variables, dont la valeur est lue dans le trousseau du système au lancement. Une clé écrite dans ce fichier se retrouverait dans une sauvegarde, dans un journal, et dans le dépôt — le code la refuse (`declaration_recevable`), y compris cachée dans une adresse.",
+  "aConfirmer": "Les deux commandes ci-dessous n'ont pas encore été lancées sur une machine Windows. Elles supposent Node installé sur le poste du client, ce que l'installeur ne fait pas aujourd'hui. Aucun serveur DISTANT n'est encore déclaré : le transport est écrit et éprouvé contre un vrai serveur HTTP en local, mais aucun serveur d'éditeur n'a été joint. 109 des 137 connecteurs du catalogue sont annoncés sur ce transport ; ils attendent, comme les autres, un coût vérifié et un risque classé avant d'être activables.",
+  "serveurs": [
+    {
+      "nom": "fichiers",
+      "commande": "npx",
+      "arguments": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem"
+      ],
+      "secrets": [],
+      "connecteur": "OFF029",
+      "role": "Lire et déposer des documents dans les dossiers que le client a désignés, et nulle part ailleurs : le serveur reçoit la liste des dossiers autorisés en argument au lancement.",
+      "outils": [
+        {
+          "nom": "read_text_file"
+        },
+        {
+          "nom": "read_media_file"
+        },
+        {
+          "nom": "read_multiple_files"
+        },
+        {
+          "nom": "write_file"
+        },
+        {
+          "nom": "edit_file"
+        },
+        {
+          "nom": "create_directory"
+        },
+        {
+          "nom": "list_directory"
+        },
+        {
+          "nom": "list_directory_with_sizes"
+        },
+        {
+          "nom": "directory_tree"
+        },
+        {
+          "nom": "move_file"
+        },
+        {
+          "nom": "search_files"
+        },
+        {
+          "nom": "get_file_info"
+        },
+        {
+          "nom": "list_allowed_directories"
+        }
+      ],
+      "releve": "Relevé le 2026-09-23 en lançant le serveur et en lisant sa réponse à tools/list. Les annotations de lecture seule viennent du serveur lui-même, aucune n'est affirmée ici. `read_file` existe aussi mais le serveur le dit DEPRECATED au profit de `read_text_file` : il n'est pas retenu."
+    },
+    {
+      "nom": "web",
+      "commande": "uvx",
+      "arguments": [
+        "mcp-server-fetch"
+      ],
+      "secrets": [],
+      "connecteur": null,
+      "role": "Lire une page publique. Ne remplace pas le navigateur intégré : ce qui demande les comptes du client passe par le navigateur, où c'est lui qui s'est connecté.",
+      "outils": [
+        {
+          "nom": "fetch",
+          "lectureSeule": true,
+          "pourquoi": "Le serveur n'annonce rien, et sans annotation chaque lecture d'une page demanderait un clic du client. Relevé le 2026-09-23 : cet outil récupère une page et en rend le texte, il n'écrit rien sur le poste. Réserve : la page visitée, elle, peut enregistrer la visite."
+        }
+      ],
+      "releve": "Relevé le 2026-09-23. Corrigé le même jour : la commande déclarée était `npx -y @modelcontextprotocol/server-fetch`, qui n'existe pas au registre npm (404). Le serveur de référence est un paquet Python, lancé par `uvx`."
+    }
+  ]
+}

@@ -25,7 +25,8 @@ outils/           verifier-paquets.ts (contrat + cohérence), generer-fiches.ts 
 npm install
 npm run controle                         # banc du dimensionnement + validation de tous les paquets
 npm run verifier -- --corriger           # recalcule materiel / commercial / appels depuis les sources de vérité
-npm run generer -- --sec --ids AG-0002   # prépare les requêtes sans rien envoyer
+npm run generer -- --sec --refaire --ids AG-0002   # prépare les requêtes sans rien envoyer
+                                                  # --refaire est obligatoire : la fiche existe déjà
 npm run generer -- soumettre --secteur comptabilite         # un lot Anthropic (ANTHROPIC_API_KEY requis)
 npm run generer -- relever <batchId>     # écrit agents/*.json, liste les échecs à relancer
 ```
@@ -46,6 +47,39 @@ conforme n'est jamais écrit.
 - **Deux agents sur le même palier partagent le modèle**, pas la charge : c'est ce qui rend un mini-PC viable pour un pack de bureau (13 postes de bureau sur la machine « studio » d'exemple).
 - **Les chiffres de `paliers-modeles.json` sont indicatifs** (quantification 4 bits, GPU de référence classe RTX 4070). À confirmer sur les vraies machines LocalAgent avant toute promesse commerciale. `machines.json` est un jeu d'exemples à remplacer par leur catalogue.
 
+## Ce que l'installeur ne livre pas encore
+
+Le MSI (9,6 Mo) porte l'application, les 1 249 fiches et les catalogues. Il ne
+porte **pas** la voix : le modèle d'écoute pèse à lui seul bien plus que tout
+le reste réuni, et rien ne le télécharge. Tant qu'elle n'est pas là,
+l'agent travaille et écrit ses fichiers, mais il ne parle ni n'écoute, et
+l'application le dit en clair au lieu d'échouer sans raison.
+
+Les quatre pièces vont **à côté de l'exécutable installé** (leurs chemins et
+leurs rôles sont dans `desktop/src-tauri/src/ressources.rs`, que deux bancs
+comparent à ce que l'installeur pose) :
+
+| Pièce | Où la poser | D'où elle vient |
+| --- | --- | --- |
+| Le moteur de voix Piper | `piper/piper.exe` (Windows), `piper/piper` | les versions publiées de [rhasspy/piper](https://github.com/rhasspy/piper) |
+| La voix française | `modeles/fr_FR-siwis-medium.onnx` | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices), dossier `fr/fr_FR/siwis/medium/` |
+| Ses réglages | `modeles/fr_FR-siwis-medium.onnx.json` | le même dossier ; Piper le lit tout seul à côté du modèle |
+| Le modèle d'écoute | `modeles/ggml-medium-fr.bin` | [ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp) |
+
+Deux points restent à trancher :
+
+- **Le nom du modèle d'écoute.** Le code attend `ggml-medium-fr.bin` ; le dépôt
+  officiel de whisper.cpp publie `ggml-medium.bin` (multilingue, il transcrit le
+  français) et n'a pas de variante `-fr`. Des modèles affinés sur le français
+  existent chez des tiers, sous d'autres noms. Soit on renomme le fichier après
+  téléchargement, soit on change le chemin attendu : personne n'a encore choisi.
+- **Qui les pose.** Aujourd'hui, personne : ni l'installeur, ni un
+  téléchargement au premier lancement. Ajouter ce téléchargement demande de
+  savoir d'où et à quel poids, ce qui n'est pas décidé.
+
+En développement, trois variables d'environnement déplacent ces fichiers sans
+rien installer : `IAGENT_PIPER`, `IAGENT_VOIX`, `IAGENT_MODELE_ECOUTE`.
+
 ## État de réalisation (2026-09-19)
 
 Le détail, ce qui reste à faire et ce qui a cassé sont dans `ONBOARDING.md`.
@@ -57,8 +91,13 @@ Le détail, ce qui reste à faire et ce qui a cassé sont dans `ONBOARDING.md`.
   15/15, économie 7/7, paquets 0 faute).
 - **Dimensionnement et économie** : placement poste + bundle, diagnostic en clair,
   coût API seule contre Local-Agent par fiche (`npm run economie`).
-- **Application desktop** (`desktop/`, Tauri 1 + Rust + React) : code présent,
-  workflow « Build Windows MSI » (GitHub Actions) en remise en état,
-  5 agents d'exemple codés en dur, pas encore branchée sur `agents/`.
+- **Application desktop** (`desktop/`, Tauri 2 + Rust + React) — mise à jour le
+  2026-09-23 : elle lit les vraies fiches (`config/installation.json` +
+  `agents/`), embauche, exécute les tâches du jour et pose le résultat dans le
+  dossier du client ; elle tourne en local par défaut et prévient avant de
+  basculer sur l'API ; la jauge dit si la machine tient les agents installés.
+  Le workflow « Build Windows MSI » produit un MSI à chaque PR touchant
+  `desktop/`. **Personne ne l'a encore installé sur une vraie machine**, et la
+  voix demande les quatre pièces ci-dessus.
 - **Pas fait** : panier et paiement sur la boutique ; catalogue LocalAgent
   définitif (`machines.json` reste un relevé AliExpress indicatif).

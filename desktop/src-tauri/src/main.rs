@@ -3,10 +3,22 @@
   windows_subsystem = "windows"
 )]
 
-use tauri::{Manager, State};
+use tauri::State;
 use std::sync::Mutex;
 
 mod voice;
+mod fiches;
+mod courriel;
+mod journal;
+mod mcp;
+mod modele;
+mod navigateur;
+mod tache;
+mod document;
+mod jauge;
+mod ressources;
+mod pdf;
+mod lecture;
 mod agents;
 mod connectors;
 mod database;
@@ -30,6 +42,10 @@ pub struct AppState {
     db: Arc<Mutex<Option<Database>>>,
 }
 
+/// Enrollment and verification must extract features at the same rate, or the
+/// frames do not line up and the comparison is meaningless.
+const TAUX_ECHANTILLONNAGE: u32 = 44_100;
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}!", name)
@@ -37,16 +53,26 @@ fn greet(name: &str) -> String {
 
 #[tauri::command]
 fn init_voice(state: State<AppState>) -> Result<String, String> {
-    // Initialize voice with default model path (typically bundled)
-    let model_path = "model/vosk-model-en-us-0.22";
+    // Ce qui manque se dit AVANT d'essayer. whisper-rs rend « failed to load
+    // model », qui ne nomme ni le fichier ni ce que le client peut y faire, et
+    // l'écran le montrait tel quel, en anglais, à un client francophone.
+    if let Some(manque) = ressources::manque_pour_ecouter() {
+        return Err(manque);
+    }
 
-    match VoiceState::new(model_path) {
+    let model_path = voice::chemin_modele_ecoute();
+    match VoiceState::new(&model_path) {
         Ok(voice_state) => {
             let mut voice = state.voice.lock().unwrap();
             *voice = Some(voice_state);
-            Ok("Voice module initialized".to_string())
+            Ok("Écoute prête.".to_string())
         }
-        Err(e) => Err(format!("Failed to initialize voice: {}", e))
+        // Le fichier est là et ne se charge pas : ce n'est plus le même problème,
+        // et renvoyer au README enverrait le client retélécharger pour rien.
+        Err(e) => Err(format!(
+            "Le modèle d'écoute est bien là mais n'a pas pu être chargé : {}",
+            e
+        )),
     }
 }
 
@@ -57,7 +83,7 @@ fn start_voice_recognition(state: State<AppState>) -> Result<String, String> {
     if let Some(voice) = voice_guard.as_ref() {
         voice.start_listening()
     } else {
-        Err("Voice not initialized. Call init_voice first.".to_string())
+        Err("L'écoute n'est pas prête sur ce poste.".to_string())
     }
 }
 
@@ -68,7 +94,7 @@ fn stop_voice_recognition(state: State<AppState>) -> Result<String, String> {
     if let Some(voice) = voice_guard.as_ref() {
         voice.stop_listening()
     } else {
-        Err("Voice not initialized".to_string())
+        Err("L'écoute n'est pas prête sur ce poste.".to_string())
     }
 }
 
@@ -79,7 +105,7 @@ fn process_voice_audio(audio_data: Vec<i16>, state: State<AppState>) -> Result<O
     if let Some(voice) = voice_guard.as_ref() {
         voice.process_audio(&audio_data)
     } else {
-        Err("Voice not initialized".to_string())
+        Err("L'écoute n'est pas prête sur ce poste.".to_string())
     }
 }
 
@@ -88,9 +114,9 @@ fn get_partial_result(state: State<AppState>) -> Result<Option<String>, String> 
     let voice_guard = state.voice.lock().unwrap();
 
     if let Some(voice) = voice_guard.as_ref() {
-        voice.get_partial_result()
+        voice.get_partial_result().map(Some)
     } else {
-        Err("Voice not initialized".to_string())
+        Err("L'écoute n'est pas prête sur ce poste.".to_string())
     }
 }
 
@@ -112,17 +138,22 @@ async fn call_agent_llm(
     command: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let agents = state.agents.lock().unwrap();
-    let agent = agents
-        .list_agents()
-        .iter()
-        .find(|a| a.id == agent_id)
-        .cloned()
-        .ok_or("Agent not found".to_string())?;
-    drop(agents);
+    let agent = {
+        let agents = state.agents.lock().unwrap();
+        agents
+            .list_agents()
+            .iter()
+            .find(|a| a.id == agent_id)
+            .cloned()
+            .ok_or("Agent not found".to_string())?
+    };
 
-    let llm = state.llm.lock().unwrap();
-    let llm_service = llm.as_ref().ok_or("LLM not initialized")?;
+    // Le service est copié puis le verrou relâché : le garder à travers le .await
+    // rendrait la commande non transmissible entre fils d'exécution.
+    let llm_service = {
+        let llm = state.llm.lock().unwrap();
+        llm.as_ref().ok_or("LLM not initialized")?.clone()
+    };
 
     let persona = AgentPersona {
         id: agent.id.clone(),
@@ -135,6 +166,188 @@ async fn call_agent_llm(
     };
 
     llm_service.call_agent_llm(&persona, &command).await
+}
+
+/// Le prompt vient de l'interface, qui l'assemble depuis la vraie fiche :
+/// consigne d'expert, connaissances du metier, savoir de la maison, genre choisi
+/// par le client. Le construire ici a partir du routeur code en dur donnerait un
+/// agent generique, en anglais, qui ignore tout ce que la fiche decrit.
+/// Ce que l'agent a repondu, et par ou il est passe pour le dire.
+///
+/// La voie fait partie de la reponse et pas d'un reglage cache : un agent qui
+/// bascule sur l'API se met a couter des jetons, et le client a le droit de
+/// l'apprendre en le lisant plutot que sur sa facture.
+#[derive(serde::Serialize)]
+struct ReponseAgent {
+    texte: String,
+    motif: String,
+    bascule: bool,
+}
+
+#[tauri::command]
+async fn repondre(
+    prenom: String,
+    fiche_id: String,
+    prompt_systeme: String,
+    enonce: String,
+    state: State<'_, AppState>,
+) -> Result<ReponseAgent, String> {
+    if prompt_systeme.trim().is_empty() {
+        return Err("prompt systeme vide : la fiche n a pas ete chargee".to_string());
+    }
+
+    // La fiche dit ou ce poste travaille. Jusqu'ici personne ne le lisait et
+    // tout passait par l'API, quoi qu'elle dise.
+    let (execution, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
+    let offre = modele::Offre {
+        locaux: modele::modeles_installes(modele::ADRESSE_LOCALE).await.ok(),
+        cle_api: llm::cle_api().is_some(),
+        memoire_insuffisante: jauge::memoire_insuffisante_pour(&fiche_id),
+    };
+    let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_API)?;
+
+    let texte = match &choix.voie {
+        modele::Voie::Local { modele: nom } => {
+            modele::repondre_en_local(modele::ADRESSE_LOCALE, nom, &prompt_systeme, &enonce).await?
+        }
+        modele::Voie::Api { .. } => {
+            let llm_service = {
+                let llm = state.llm.lock().unwrap();
+                llm.as_ref()
+                    .ok_or("aucune cle d API n est enregistree sur cet ordinateur")?
+                    .clone()
+            };
+            let persona = AgentPersona {
+                id: prenom.clone(),
+                name: prenom,
+                role: String::new(),
+                system_prompt: prompt_systeme,
+            };
+            llm_service.call_agent_llm(&persona, &enonce).await?
+        }
+    };
+
+    Ok(ReponseAgent { texte, motif: choix.motif, bascule: choix.bascule })
+}
+
+/// Exécute une tâche de l'agent et pose le résultat dans le dossier du client.
+///
+/// Le parcours minimal du cadrage s'arrêtait ici : les fiches décrivent
+/// 9 233 tâches et aucune ne pouvait s'exécuter. Ce qui décide — l'agent est-il
+/// embauché, la tâche est-elle allumée, le dossier a-t-il été choisi, le format
+/// est-il seulement écrivable — est dans `tache::preparer`, éprouvé à part ;
+/// cette commande ne fait que le suivre, appeler le modèle par la même route que
+/// la conversation, et écrire.
+///
+/// Rien ne part du poste : un résultat qui attend un accord est écrit et le dit.
+#[tauri::command]
+async fn executer_tache(
+    prenom: String,
+    fiche_id: String,
+    tache_id: String,
+    state: State<'_, AppState>,
+) -> Result<tache::Resultat, String> {
+    let installation = fiches::lire_installation()?;
+    let fiche = fiches::lire_fiche(fiche_id.clone())?;
+    let maintenant = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    // Ce que l'employeur a déjà repris à cet agent le suit dans son travail
+    // écrit, pas seulement dans la conversation : une correction qui ne vaut
+    // que pour ce qu'il dit, il la refait dans ce qu'il rend.
+    let repris: Vec<String> = journal::journal_lire(prenom.clone())
+        .unwrap_or_default()
+        .into_iter()
+        .map(|e| e.raison)
+        .collect();
+    let prep = tache::preparer(
+        &installation, &fiche, &prenom, &fiche_id, &tache_id, maintenant, &repris,
+    )?;
+
+    // La matière d'abord : un agent à qui on ne donne rien produit un résultat
+    // vraisemblable et faux, que le client n'a aucun moyen de démentir.
+    let mut matiere = tache::Matiere::default();
+    for source in &prep.sources {
+        let lue = tache::lire_matiere(source);
+        matiere.textes.extend(lue.textes);
+        matiere.non_lus.extend(lue.non_lus);
+        matiere.tronque |= lue.tronque;
+    }
+    let enonce = format!(
+        "{}{}",
+        prep.enonce,
+        tache::matiere_en_mots(&matiere, prep.source_declaree)
+    );
+
+    let (execution, exemples) = modele::contexte_de_la_fiche(&fiche_id)?;
+    let offre = modele::Offre {
+        locaux: modele::modeles_installes(modele::ADRESSE_LOCALE).await.ok(),
+        cle_api: llm::cle_api().is_some(),
+        memoire_insuffisante: jauge::memoire_insuffisante_pour(&fiche_id),
+    };
+    let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_API)?;
+
+    let texte = match &choix.voie {
+        modele::Voie::Local { modele: nom } => {
+            modele::repondre_en_local(modele::ADRESSE_LOCALE, nom, &prep.systeme, &enonce).await?
+        }
+        modele::Voie::Api { .. } => {
+            let llm_service = {
+                let llm = state.llm.lock().unwrap();
+                llm.as_ref()
+                    .ok_or("aucune cle d API n est enregistree sur cet ordinateur")?
+                    .clone()
+            };
+            let persona = AgentPersona {
+                id: prenom.clone(),
+                name: prenom.clone(),
+                role: String::new(),
+                system_prompt: prep.systeme.clone(),
+            };
+            llm_service.call_agent_llm(&persona, &enonce).await?
+        }
+    };
+
+    // Un fichier vide serait pire qu'une erreur : le client croirait le travail
+    // fait. Le modèle qui n'a rien rendu est un échec, pas un résultat.
+    if texte.trim().is_empty() {
+        return Err(format!(
+            "{} n'a rien rendu pour cette tâche : aucun fichier n'a été écrit",
+            prenom
+        ));
+    }
+
+    let chemin = if tache::est_un_tableau(&prep.format) {
+        // Le modèle rend des lignes ; le classeur, c'est nous.
+        tache::poser_tableur(
+            &prep.dossier,
+            &prep.nom_fichier,
+            &tache::lignes_du_tableau(&texte),
+        )?
+    } else if tache::est_un_courriel(&prep.format) {
+        // Le modèle rend un objet et une lettre ; les en-têtes, c'est nous.
+        tache::poser_courriel(&prep.dossier, &prep.nom_fichier, prep.epoque, &texte)?
+    } else if tache::est_un_document(&prep.format) {
+        // Le modèle rend du texte avec ses titres et ses puces ; la boîte,
+        // c'est nous — le même texte part en OOXML ou en PDF.
+        if prep.format == "pdf" {
+            pdf::poser_pdf(&prep.dossier, &prep.nom_fichier, prep.epoque, &texte)?
+        } else {
+            document::poser_document(&prep.dossier, &prep.nom_fichier, &texte)?
+        }
+    } else {
+        tache::poser(&prep.dossier, &prep.nom_fichier, &texte)?
+    };
+    Ok(tache::Resultat {
+        fichier: chemin.display().to_string(),
+        voie: match &choix.voie {
+            modele::Voie::Local { .. } => "local".to_string(),
+            modele::Voie::Api { .. } => "api".to_string(),
+        },
+        motif: choix.motif,
+        validation_humaine: prep.validation_humaine,
+    })
 }
 
 #[tauri::command]
@@ -197,44 +410,84 @@ fn enroll_voice(
         return Err("No audio samples provided".to_string());
     }
 
-    match VoicePrintService::create_voice_print(&user_id, audio_samples, 44100) {
-        Ok(voice_print) => {
-            // Try to store in database
-            if let Ok(Some(db)) = state.db.lock().map(|guard| guard.as_ref()) {
-                let mfcc_json = serde_json::to_string(&voice_print.mfcc_features)
-                    .unwrap_or_else(|_| "[]".to_string());
-                if let Err(e) = db.save_voice_print(&user_id, &mfcc_json) {
-                    eprintln!("Failed to store voice print in database: {}", e);
-                }
-            }
+    let voice_print = VoicePrintService::create_voice_print(&user_id, audio_samples, TAUX_ECHANTILLONNAGE)
+        .map_err(|e| format!("Voice enrollment failed: {}", e))?;
 
-            println!(
-                "Voice print created with {} features",
-                voice_print.mfcc_features.len()
-            );
-            Ok(format!(
-                "Voice enrollment complete. Voice print ID: {}",
-                voice_print.id
-            ))
-        }
-        Err(e) => Err(format!("Voice enrollment failed: {}", e)),
-    }
+    // An enrollment that was not persisted cannot be verified later. Reporting
+    // success on a failed write would leave the user believing their voice is
+    // known, while every verification would find nothing to compare against.
+    let mfcc_json = serde_json::to_string(&voice_print.mfcc_features)
+        .map_err(|e| format!("Voice enrollment failed: {}", e))?;
+
+    let verrou = state
+        .db
+        .lock()
+        .map_err(|_| "Voice enrollment failed: database is locked".to_string())?;
+    let db = verrou
+        .as_ref()
+        .ok_or("Voice enrollment failed: no database on this machine")?;
+    db.save_voice_print(&user_id, &mfcc_json)
+        .map_err(|e| format!("Voice enrollment failed: {}", e))?;
+
+    Ok(format!(
+        "Voice enrollment complete. Voice print ID: {}",
+        voice_print.id
+    ))
 }
 
+/// Compare a sample against the voice print enrolled for this user.
+///
+/// The score is real, but the features behind it are not a biometric: the
+/// extractor in `voiceprint.rs` computes zero-crossing rate, energy and a
+/// spectral approximation, not true MFCCs. Two different speakers in the same
+/// room score close together. **This score must not, on its own, grant access
+/// to anything.** Until the extractor is replaced by a real one and measured
+/// against a false-acceptance target, the interface says the agent answers to
+/// its first name, not to a voice.
 #[tauri::command]
 fn verify_voice(
     user_id: String,
     audio_sample: Vec<i16>,
+    state: State<AppState>,
 ) -> Result<f32, String> {
     if audio_sample.is_empty() {
         return Err("No audio sample provided".to_string());
     }
 
-    // TODO: Retrieve stored voice print from database
-    // For now, return placeholder
-    let similarity = 0.85; // Placeholder: would compute against stored voice print
+    let stocke = {
+        let verrou = state
+            .db
+            .lock()
+            .map_err(|_| "Database is locked".to_string())?;
+        let db = verrou
+            .as_ref()
+            .ok_or("No database on this machine: nothing was ever enrolled")?;
+        db.get_voice_print(&user_id)?
+    };
 
-    Ok(similarity)
+    // No enrollment means no comparison. Returning a passing score here was the
+    // whole bug: an unknown speaker scored as well as the owner.
+    let stocke = stocke.ok_or_else(|| format!("No voice print enrolled for {}", user_id))?;
+
+    let mfcc_features: Vec<Vec<f32>> = serde_json::from_str(&stocke.mfcc_data)
+        .map_err(|e| format!("Stored voice print is unreadable: {}", e))?;
+    if mfcc_features.is_empty() {
+        return Err(format!("Voice print enrolled for {} is empty", user_id));
+    }
+
+    let empreinte = VoicePrint {
+        id: stocke.id,
+        user_id: stocke.user_id,
+        mfcc_features,
+        enrollment_date: stocke.created_at,
+        is_active: true,
+    };
+
+    Ok(VoicePrintService::verify_voice(
+        &audio_sample,
+        &empreinte,
+        TAUX_ECHANTILLONNAGE,
+    ))
 }
 
 #[tauri::command]
@@ -248,7 +501,7 @@ fn train_voice(utterances: Vec<String>, state: State<AppState>) -> Result<String
             "Voice training prepared. Use enroll_voice with audio samples to complete."
         ))
     } else {
-        Err("Voice not initialized".to_string())
+        Err("L'écoute n'est pas prête sur ce poste.".to_string())
     }
 }
 
@@ -269,22 +522,10 @@ async fn connect_telegram(
 
     match TelegramService::connect_telegram(bot_token, chat_id).await {
         Ok(credentials) => {
-            // Store credentials in database
-            if let Ok(Some(db)) = state.db.lock().map(|guard| guard.as_ref()) {
-                let creds_json = serde_json::json!({
-                    "bot_token": &credentials.bot_token,
-                    "chat_id": &credentials.chat_id,
-                }).to_string();
-                if let Err(e) = db.save_connector_credentials(
-                    "default_user",
-                    "Telegram",
-                    "telegram",
-                    &creds_json,
-                ) {
-                    eprintln!("Failed to store Telegram credentials: {}", e);
-                }
-            }
-
+            // Le jeton du bot reste en mémoire, jamais sur le disque : il était
+            // écrit en clair dans le SQLite du poste et jamais relu. Le jour où
+            // la connexion devra survivre à un redémarrage, elle passera par le
+            // coffre du système (Credential Manager, Trousseau), pas par cette base.
             let mut telegram = state.telegram.lock().unwrap();
             *telegram = Some(credentials);
             Ok("Telegram connected successfully".to_string())
@@ -303,12 +544,14 @@ async fn send_telegram_message(
     text: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let telegram = state.telegram.lock().unwrap();
+    let credentials = {
+        let telegram = state.telegram.lock().unwrap();
+        telegram.clone()
+    };
 
-    if let Some(credentials) = telegram.as_ref() {
-        TelegramService::send_message(credentials, &text).await
-    } else {
-        Err("Telegram not connected. Call connect_telegram first.".to_string())
+    match credentials {
+        Some(credentials) => TelegramService::send_message(&credentials, &text).await,
+        None => Err("Telegram not connected. Call connect_telegram first.".to_string()),
     }
 }
 
@@ -357,6 +600,36 @@ fn main() {
             connect_telegram,
             get_telegram_instructions,
             send_telegram_message,
+            fiches::lire_installation,
+            fiches::lire_fiche,
+            fiches::installation_ecrire,
+            fiches::lire_referentiel,
+            mcp::mcp_serveurs,
+            mcp::mcp_ranger_secret,
+            mcp::mcp_outils_permis,
+            mcp::mcp_appeler,
+            mcp::mcp_journal,
+            modele::modele_etat,
+            jauge::jauge_etat,
+            llm::cle_api_ranger,
+            llm::cle_api_presente,
+            llm::cle_api_retirer,
+            executer_tache,
+            tache::dossier_de_travail,
+            repondre,
+            courriel::courriel_enregistrer_motdepasse,
+            courriel::courriel_motdepasse_present,
+            courriel::courriel_relever,
+            courriel::courriel_envoyer,
+            courriel::courriel_envois,
+            journal::journal_lire,
+            journal::journal_ajouter,
+            navigateur::navigateur_ouvrir,
+            navigateur::navigateur_fermer,
+            navigateur::navigateur_sites,
+            navigateur::navigateur_declarer_site,
+            navigateur::navigateur_oublier_site,
+            navigateur::navigateur_effacer_sessions,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

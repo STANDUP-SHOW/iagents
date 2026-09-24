@@ -13,7 +13,7 @@ import paliersJson from './paliers-modeles.json' with { type: 'json' };
 import machinesJson from './machines.json' with { type: 'json' };
 
 export type PalierId = keyof typeof paliersJson.paliers;
-export interface Palier { ram: number; vram: number; disque: number; chargeUnitaire: number; exemples: string[]; usage: string }
+export interface Palier { ram: number; vram: number; disque: number; chargeUnitaire: number; resident: boolean; exemples: string[]; usage: string }
 export interface Modeles { texte: PalierId; vision?: PalierId; image?: PalierId; video?: PalierId; audio?: PalierId; musique?: PalierId; embeddings?: PalierId; activite: number }
 export interface ClasseGpu { classe: string; libelle: string; capacite: number; vram: number }
 export interface Materiel { ram: number; vram: number; cpuCoeurs: number; disque: number; chargeContinue: number; gpu: { classe: string; libelle: string } }
@@ -33,8 +33,13 @@ export const CLASSES_GPU: ClasseGpu[] = [
   { classe: 'serveur',        libelle: 'plusieurs cartes ou serveur GPU (au-delà de 24 Go ou de la charge d une RTX 4090)', capacite: 99, vram: 999 },
 ];
 
-/** Tiers kept loaded at all times (they answer the voice and the mail) vs tiers loaded on demand, one at a time. */
-const PALIERS_RESIDENTS = new Set<string>(['texte-leger', 'texte-standard', 'texte-avance', 'texte-expert', 'audio-parole', 'embeddings']);
+/**
+ * Tiers kept loaded at all times (they answer the voice and the mail) vs tiers loaded
+ * on demand, one at a time. The flag lives in paliers-modeles.json, not here: the
+ * desktop app computes the same gauge from the same file, and a rule written in two
+ * languages is a rule that will disagree with itself.
+ */
+const est_resident = (id: PalierId): boolean => PALIERS[id].resident === true;
 
 /** Model memory for a set of distinct tiers: resident tiers add up, on-demand tiers count once for the largest. */
 function memoireModeles(paliers: PalierId[]): number {
@@ -42,7 +47,7 @@ function memoireModeles(paliers: PalierId[]): number {
   for (const id of paliers) {
     const p = PALIERS[id];
     const m = p.vram + (p.vram > 0 ? MEMOIRE_TRAVAIL_PAR_PALIER : 0);
-    if (PALIERS_RESIDENTS.has(id)) residents += m; else aLaDemande = Math.max(aLaDemande, m);
+    if (est_resident(id)) residents += m; else aLaDemande = Math.max(aLaDemande, m);
   }
   return Math.ceil(residents + aLaDemande);
 }
@@ -61,8 +66,11 @@ export const MACHINES: Machine[] = machinesJson.machines as Machine[];
 export const BUNDLES: Machine[] = MACHINES.filter((m) => m.role === 'bundle');
 export const POSTES: Machine[] = MACHINES.filter((m) => m.role === 'poste');
 
-/** Working memory (KV cache, activations) per LOADED TIER, in GB, on top of the weights. Agents queue on one loaded model, so it is counted per tier, not per agent. */
-export const MEMOIRE_TRAVAIL_PAR_PALIER = 0.5;
+/** Working memory (KV cache, activations) per LOADED TIER, in GB, on top of the weights. Agents queue on one loaded model, so it is counted per tier, not per agent. Read from the tier file, which the desktop app reads too. */
+export const MEMOIRE_TRAVAIL_PAR_PALIER: number = paliersJson.memoireTravailParPalier;
+
+/** On a unified-memory machine (a mini-PC with no dedicated card), the memory left to models is the RAM minus this. Same file, same reason. */
+export const RESERVE_MEMOIRE_UNIFIEE: number = paliersJson.reserveMemoireUnifiee;
 
 export function paliersDe(modeles: Modeles): PalierId[] {
   const { activite: _a, ...caps } = modeles;
@@ -164,24 +172,58 @@ export function agentsParMachine(machine: Machine, agent: AgentDimension): numbe
 }
 
 /**
- * Estimated calls per day, derived from task scheduling. Feeds the API-mode
- * cost warning in the desktop app. Triggered and on-demand tasks get a flat
- * allowance; the app replaces the estimate with the measured figure after a week.
+ * Calls per day, derived from task scheduling. FRACTIONAL and unfloored on
+ * purpose: a weekly task is 1/7 of a call a day, and callers that weigh tasks
+ * one by one need that to stay true. `appelsParJourEstimes` below is the
+ * rounded integer the package schema stores. Triggered and on-demand tasks get
+ * a flat allowance; the app replaces the estimate with the measured figure
+ * after a week.
+ *
+ * The six types are the six the package schema allows, and an unknown one
+ * THROWS. It used to fall into the on-demand allowance: `hebdomadaire` and
+ * `mensuelle` were never listed here, so 3 407 tasks were counted at 5 calls a
+ * DAY instead of one a week or one a month. Nothing failed — the figure just
+ * came out too high, which flattered the API-only bill and therefore the
+ * commercial ratio. A silent default on an enumeration is how that happens.
  */
-export interface TachePlanifiee { planification: { type: 'quotidienne' | 'intervalle' | 'declencheur' | 'a-la-demande'; minutes?: number }; active: boolean }
+export type TypePlanification = 'quotidienne' | 'hebdomadaire' | 'mensuelle' | 'intervalle' | 'declencheur' | 'a-la-demande';
+export interface TachePlanifiee { planification: { type: TypePlanification; minutes?: number }; active: boolean }
 export const APPELS_DECLENCHEUR_PAR_JOUR = 20;
 export const APPELS_A_LA_DEMANDE_PAR_JOUR = 5;
+/** Days in the month the sizing counts with, so a monthly task is 1/30 of a day. */
+export const JOURS_PAR_MOIS = 30;
 export function appelsParJour(taches: TachePlanifiee[]): number {
-  let total = 0;
+  let parJour = 0, parSemaine = 0, parMois = 0;
   for (const t of taches) {
     if (!t.active) continue;
     const p = t.planification;
-    if (p.type === 'quotidienne') total += 1;
-    else if (p.type === 'intervalle') total += Math.ceil(1440 / (p.minutes ?? 1440));
-    else if (p.type === 'declencheur') total += APPELS_DECLENCHEUR_PAR_JOUR;
-    else total += APPELS_A_LA_DEMANDE_PAR_JOUR;
+    switch (p.type) {
+      case 'quotidienne': parJour += 1; break;
+      case 'hebdomadaire': parSemaine += 1; break;
+      case 'mensuelle': parMois += 1; break;
+      case 'intervalle': parJour += Math.ceil(1440 / (p.minutes ?? 1440)); break;
+      case 'declencheur': parJour += APPELS_DECLENCHEUR_PAR_JOUR; break;
+      case 'a-la-demande': parJour += APPELS_A_LA_DEMANDE_PAR_JOUR; break;
+      default: throw new Error(`Planification inconnue : ${(p as { type: string }).type}`);
+    }
   }
-  return Math.max(1, total);
+  // Counted per period, then divided once: summing 1/7 seven times lands on
+  // 0.9999999999999998, and a rate that drifts is a rate compared wrong.
+  return parJour + parSemaine / 7 + parMois / JOURS_PAR_MOIS;
+}
+
+/**
+ * The same rate as the integer the package schema carries in
+ * `execution.appelsParJourEstimes`. An agent that works at all works at least
+ * once, so it rounds up rather than announce zero.
+ *
+ * It is deliberately NOT what `appelsParJour` returns. The floor and the
+ * rounding belong to the stored field, not to the rate: `economie.ts` weighs
+ * tasks ONE BY ONE, and a floor of 1 there makes a weekly task cost as much as
+ * a daily one — which is the very confusion this pair was split to end.
+ */
+export function appelsParJourEstimes(taches: TachePlanifiee[]): number {
+  return Math.max(1, Math.ceil(appelsParJour(taches)));
 }
 
 /** Load gauge for the desktop app: how full a machine is with a set of agents running locally. */

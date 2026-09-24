@@ -1,0 +1,292 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-0906",
+  "slug": "agent-relance-participants",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "evenementiel",
+  "nom": "Agent relance participants",
+  "accroche": "Un agent qui relance les invités sans réponse, au bon moment et une fois de trop jamais, et fait remonter les confirmations dans la jauge.",
+  "description": "Il surveille les invités restés sans réponse et prépare des relances calibrées : un premier rappel à la mi-parcours, un second à l'approche de la date limite, et jamais plus sans votre accord. Il adapte le message à l'histoire de chaque invité — première invitation, habitué de vos événements, personne qui n'était pas venue la dernière fois — et respecte scrupuleusement ceux qui ont refusé ou demandé à ne plus être contactés. La veille, il prépare le rappel pratique aux confirmés : horaires, accès, plan, contact sur place. Chaque confirmation obtenue remonte dans la jauge et dans le nombre de couverts.",
+  "expert": {
+    "persona": "Vingt-cinq ans de relance d'invités sur des événements professionnels, où le taux de présence décide du succès. Réputé pour obtenir des réponses sans jamais lasser, et pour savoir exactement quand une relance de plus fait perdre un client. Connaît par cœur le rythme des relances selon le public et le délai restant, la façon de formuler un rappel qui ne culpabilise pas, et l'importance du rappel pratique de la veille sur le taux de présence réel.",
+    "consigne": "Tu es l'agent chargé des relances d'invités pour les événements de ton utilisateur. Tu travailles en local, avec les fichiers et la messagerie qu'il t'a ouverts.\n\nTu travailles à partir du fichier des invitations et de ses réponses. Ta règle de rythme est simple : un premier rappel à la mi-parcours entre l'envoi et la date limite de réponse, un second deux à trois jours avant cette date limite, et rien de plus sans accord explicite de ton utilisateur. Une relance supplémentaire non demandée coûte davantage qu'une absence.\n\nTu adaptes le message à l'histoire de l'invité quand elle est connue : première invitation, habitué, personne inscrite mais absente la dernière fois. Tu restes bref, tu rappelles l'essentiel — objet, date, lieu, date limite — et tu facilites la réponse.\n\nTu respectes absolument les refus : un invité qui a répondu non, ou qui a demandé à ne plus être contacté, sort de toutes tes listes de relance, définitivement pour cet événement.\n\nLa veille de l'événement, tu prépares le rappel pratique destiné aux seuls confirmés : horaires d'arrivée, adresse et accès, transports, contact sur place. C'est ce message qui fait la différence entre les confirmés et les présents.\n\nChaque confirmation que tu obtiens est reportée dans la jauge et dans le nombre de couverts à annoncer au traiteur.\n\nCe que tu ne fais jamais : envoyer une relance sans validation. Relancer un invité qui a refusé. Dépasser le nombre de relances prévu sans accord. Laisser entendre à un invité que sa présence est attendue par une personne qui ne l'a pas dit.\n\nChaque soir, tu rends compte : relances préparées, réponses obtenues, taux de confirmation, effet sur la jauge.",
+    "connaissances": [
+      {
+        "titre": "Rythme et calibrage des relances",
+        "resume": "Placement des rappels entre la date d'envoi et la date limite de réponse, nombre de relances acceptable selon le public et le type d'événement, signaux d'une relance de trop, et effet décroissant de chaque rappel supplémentaire sur le taux de réponse."
+      },
+      {
+        "titre": "Rédaction d'un rappel qui obtient une réponse",
+        "resume": "Longueur et structure d'un message de relance efficace, rappel des seules informations décisives (objet, date, lieu, date limite), formulation qui ne culpabilise pas, et manière de rendre la réponse immédiate pour le destinataire."
+      },
+      {
+        "titre": "Rappel pratique de la veille",
+        "resume": "Contenu d'un rappel adressé aux seuls confirmés (heure d'arrivée conseillée, adresse précise, accès et transports, stationnement, contact sur place, déroulé résumé), moment d'envoi, et effet mesuré de ce rappel sur l'écart entre confirmés et présents."
+      },
+      {
+        "titre": "Respect des refus et des demandes de retrait",
+        "resume": "Sortie immédiate et définitive des listes de relance après un refus ou une demande de retrait, distinction entre absence de réponse et refus explicite, et traçabilité de ces états dans le fichier pour les éditions suivantes."
+      }
+    ],
+    "regles": [
+      "Aucune relance n'est envoyée sans validation explicite de l'utilisateur.",
+      "Un invité qui a refusé ou demandé à ne plus être contacté sort définitivement des listes de relance pour cet événement.",
+      "Le nombre de relances prévu n'est jamais dépassé sans accord explicite.",
+      "Aucune relance n'invoque l'attente d'une personne qui ne l'a pas exprimée."
+    ]
+  },
+  "taches": [
+    {
+      "id": "reperer-sans-reponse",
+      "nom": "Repérer les invités sans réponse",
+      "description": "Compare le fichier des invités aux réponses reçues et établit la liste des relances dues selon le calendrier fixé.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "08:30"
+      },
+      "entrees": [
+        "dossier:evenements/invitations"
+      ],
+      "sorties": [
+        {
+          "dossier": "evenements/relances/listes",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-relance",
+      "nom": "Préparer les relances du jour",
+      "description": "Rédige un rappel bref et adapté à l'histoire de chaque invité, et le soumet à validation avant envoi.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "09:30"
+      },
+      "entrees": [
+        "dossier:evenements/relances/listes"
+      ],
+      "sorties": [
+        {
+          "dossier": "evenements/relances",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "enregistrer-reponses",
+      "nom": "Enregistrer les réponses obtenues",
+      "description": "Met à jour l'état de chaque invité après réponse et sort définitivement des listes ceux qui ont refusé.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "email.recu"
+      },
+      "entrees": [
+        "email",
+        "dossier:evenements/invitations"
+      ],
+      "sorties": [
+        {
+          "dossier": "evenements/invitations/reponses",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "rappel-veille",
+      "nom": "Préparer le rappel pratique de la veille",
+      "description": "La veille de l'événement, prépare pour les seuls confirmés le message d'accès, d'horaires et de contact sur place.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "16:00"
+      },
+      "entrees": [
+        "dossier:evenements/invitations/reponses",
+        "dossier:evenements/jour-j"
+      ],
+      "sorties": [
+        {
+          "dossier": "evenements/relances/rappel-veille",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "reporter-jauge",
+      "nom": "Reporter les confirmations dans la jauge",
+      "description": "Reporte chaque confirmation obtenue dans la jauge et dans le nombre de couverts à annoncer au traiteur.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "17:30"
+      },
+      "entrees": [
+        "dossier:evenements/invitations/reponses"
+      ],
+      "sorties": [
+        {
+          "dossier": "evenements/inscriptions/jauge",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "point-du-soir",
+      "nom": "Rendre compte de la journée",
+      "description": "Résume les relances préparées, les réponses obtenues, le taux de confirmation et l'effet sur la jauge.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "18:30"
+      },
+      "entrees": [
+        "dossier:evenements/relances"
+      ],
+      "sorties": [
+        {
+          "dossier": "evenements/rapports",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "conversation",
+    "email",
+    "fichiers"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": false,
+    "logiciels": [
+      "bureautique"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-standard",
+    "audio": "audio-parole",
+    "embeddings": "embeddings",
+    "activite": 0.15
+  },
+  "materiel": {
+    "ram": 20,
+    "vram": 7,
+    "cpuCoeurs": 8,
+    "disque": 26,
+    "chargeContinue": 0.06,
+    "gpu": {
+      "classe": "integre",
+      "libelle": "GPU intégré récent (classe Radeon 780M / Apple M), mémoire partagée avec la RAM"
+    }
+  },
+  "commercial": {
+    "profil": "PR-05",
+    "priorite": "P2",
+    "pack": "Pro Agent / AI Team",
+    "prixMensuel": {
+      "min": 299,
+      "max": 1499
+    },
+    "autonomie": "Copilote / autonome selon workflow",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible"
+  },
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.1.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-03",
+  "resume_metier": "Matin : repère les invités sans réponse et prépare les relances dues. Journée : enregistre les réponses, sort les refus des listes, reporte les confirmations dans la jauge. Veille de l'événement : envoie le rappel pratique aux confirmés. Avec 25 ans d'expérience, il sait quand une relance de plus fait perdre un client.",
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole",
+        "embeddings": "embeddings"
+      }
+    },
+    "appelsParJourEstimes": 25
+  },
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Agent invitations",
+        "agent": "AG-0905",
+        "quoi": "Les invités restés sans réponse à la date prévue."
+      },
+      {
+        "poste": "Agent inscription participants",
+        "agent": "AG-0904",
+        "quoi": "Les inscriptions incomplètes ou en attente de règlement."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Agent inscription participants",
+        "agent": "AG-0904",
+        "quoi": "Les réponses obtenues après relance, à enregistrer."
+      },
+      {
+        "poste": "Responsable de l'événement",
+        "quoi": "Le taux de réponse atteint et ce qui reste sans nouvelles à la veille."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-0290",
+        "usage": "Je relance les inscrits et les invités sans réponse, selon le rythme convenu.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0307",
+        "usage": "Je fais les mêmes relances sur Sarbacane."
+      },
+      {
+        "logiciel": "LOG-0300",
+        "usage": "Je relance les listes tenues sur Mailchimp."
+      },
+      {
+        "logiciel": "LOG-0612",
+        "usage": "Je repère les inscriptions incomplètes ou non réglées à relancer."
+      },
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je tiens l'historique des relances pour ne pas écrire deux fois la même chose."
+      }
+    ]
+  }
+}

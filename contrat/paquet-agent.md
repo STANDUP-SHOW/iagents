@@ -43,14 +43,14 @@ l'application. C'est l'unité de réglage, d'où sa structure fixe :
 - `planification` : `{ "type": "quotidienne", "heure": "08:00" }`, `{ "type": "intervalle", "minutes": 30 }`, `{ "type": "declencheur", "evenement": "email.recu" }` ou `{ "type": "a-la-demande" }`.
 - `entrees[]` : d'où vient la matière (`email`, `dossier:entrant`, `calendrier`, `navigateur:<url>`, `conversation`).
 - `sorties[]` : où va le résultat — `{ "dossier": "courrier/reponses", "format": "docx" }`. **Toujours un dossier** : c'est là que l'utilisateur consulte le travail.
-- `logiciels[]` : ce qu'elle a le droit d'utiliser (`libreoffice`, `outlook`, `navigateur`, `excel`). L'utilisateur peut restreindre.
+- `logiciels[]` : les logiciels métier que la tâche ouvre, **par famille** (`crm`, `comptabilite`, `bureautique`) — chaque mot est une `categorie` de `catalogue/logiciels.json`, pour que la boutique nomme les vrais produits derrière. Le courrier, l'agenda, WhatsApp, le téléphone et les fichiers n'en sont pas : ils sont dans `connecteurs`. L'utilisateur peut restreindre.
 - `validationHumaine` : `true` si le résultat attend un accord avant d'être envoyé ou publié. Le niveau d'autonomie du profil commercial fixe le défaut.
 - `active` : état par défaut à l'installation.
 
 ## Connexion au monde
 
 - `connecteurs[]` : parmi `email`, `whatsapp`, `voix`, `conversation`, `navigateur`, `calendrier`, `fichiers`, `telephone`. La voix est **toujours** présente : c'est l'échange privilégié.
-- `acces` : `{ "dossiers": "choisis" | "total", "internet": true, "logiciels": [] }`. Le défaut est `choisis` : l'utilisateur ouvre ce qu'il veut. `total` ne se coche que par lui.
+- `acces` : `{ "dossiers": "choisis" | "total", "internet": true, "logiciels": [] }`. Le défaut est `choisis` : l'utilisateur ouvre ce qu'il veut. `total` ne se coche que par lui. **`logiciels` est dérivé** : c'est l'union de ce que les tâches ouvrent, recalculé par `npm run verifier -- --corriger`.
 
 ## Modèles et matériel — ce qui parle à LocalAgent
 
