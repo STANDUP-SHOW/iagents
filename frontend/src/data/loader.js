@@ -121,7 +121,15 @@ export const economieDe = (agent) => {
 };
 
 /** Est-ce que cet agent attend l'accord d'un humain ? Déduit de ses tâches. */
-export const attendUnAccordHumain = (agent) => (agent?.taches ?? []).some((t) => t.validationHumaine === true);
+// Combien de tâches l'EXPERT conseille de relire avant qu'elles servent. Ce
+// n'est pas ce que l'application applique : l'agent va seul, sauf si le client
+// met une tâche sous contrôle (règle de max, tenue par `accord_attendu` en Rust
+// et `planningDuClient` à l'écran). Jusqu'au 24/09/2026 cette fonction s'appelait
+// `attendUnAccordHumain` et la fiche affichait « attend l'accord d'un humain » :
+// la boutique promettait donc au client un contrôle que le produit n'exerce pas,
+// et qu'il doit au contraire demander lui-même à l'entretien d'embauche.
+export const tachesAReliretConseillees = (agent) =>
+  (agent?.taches ?? []).filter((t) => t.validationHumaine === true).length;
 
 // Récupérer le profil de risque
 export const getRiskProfile = (agent) => {

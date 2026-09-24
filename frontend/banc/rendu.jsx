@@ -72,4 +72,26 @@ else ok('les 1 249 fiches ont un detail economique calculable');
 if (getSectors().length < 20) echoue(`${getSectors().length} secteurs seulement`);
 else ok(`${getSectors().length} secteurs, ${getFamilles().length} familles`);
 
+// 7. Ce que la fiche DIT de la validation doit etre ce que le produit fait.
+//    L'agent va seul sauf si le client met une tache sous controle (regle de
+//    max) : la boutique affichait « attend l'accord d'un humain » des qu'une
+//    tache de la fiche le conseillait, donc elle promettait un controle que le
+//    produit n'exerce pas. Le banc lit le HTML rendu, pas la fonction, parce que
+//    c'est la phrase qui compte.
+{
+  const aRelire = agents.find((a) => (a.taches ?? []).some((t) => t.validationHumaine === true));
+  const sansRien = agents.find((a) => (a.taches ?? []).every((t) => t.validationHumaine !== true));
+  for (const [quoi, agent] of [['avec des taches conseillees', aRelire], ['sans aucune', sansRien]]) {
+    if (!agent) { echoue(`aucune fiche ${quoi}`); continue; }
+    const html = renderToString(<FicheDetail agent={agent} onClose={() => {}} ongletInitial="economie" />);
+    if (html.includes("accord d&#x27;un humain") || html.includes("accord d'un humain")) {
+      echoue(`${agent.id} (${quoi}) : la fiche promet encore l'accord d'un humain`);
+    } else if (!html.includes('travaille seul')) {
+      echoue(`${agent.id} (${quoi}) : la fiche ne dit pas que l'agent travaille seul`);
+    } else {
+      ok(`${agent.id} (${quoi}) : la fiche dit « travaille seul », comme le produit`);
+    }
+  }
+}
+
 console.log(`\n${n} attentes tenues — boutique ok`);
