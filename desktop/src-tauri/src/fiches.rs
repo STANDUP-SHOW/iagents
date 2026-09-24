@@ -110,6 +110,34 @@ pub fn installation_recevable(contenu: &str) -> Result<(), String> {
             return Err(format!("prénom d'agent invalide : {}", prenom));
         }
 
+        // Ce que le client règle tâche par tâche est un choix de sûreté :
+        // `active` dit si elle part, `validationHumaine` si un humain relit.
+        // Mal écrits, ils seraient ignorés en silence et le client croirait
+        // avoir réglé quelque chose. « true » entre guillemets, 1 ou « oui »
+        // sont refusés plutôt que devinés.
+        let ajustements = agent
+            .get("planning")
+            .and_then(|p| p.get("ajustements"))
+            .and_then(|a| a.as_array());
+        for regle in ajustements.map(Vec::as_slice).unwrap_or(&[]) {
+            let ou = regle
+                .get("tacheId")
+                .and_then(|v| v.as_str())
+                .unwrap_or("une tâche sans identifiant");
+            for champ in ["active", "validationHumaine"] {
+                match regle.get(champ) {
+                    None => {}
+                    Some(v) if v.is_boolean() => {}
+                    Some(v) => {
+                        return Err(format!(
+                            "« {} » de la tâche {} de {} doit être vrai ou faux, pas {} : le réglage serait ignoré sans que vous le sachiez",
+                            champ, ou, prenom, v
+                        ))
+                    }
+                }
+            }
+        }
+
         let clef = prenom.trim().to_lowercase();
         if prenoms_vus.contains(&clef) {
             return Err(format!("deux agents portent le prénom {}", prenom));
@@ -189,6 +217,52 @@ pub fn catalogue_connu(nom: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{catalogue_connu, comparer_versions, identifiant_valide, installation_recevable, version_app, version_insuffisante_pour};
+
+    #[test]
+    fn un_reglage_mal_ecrit_est_refuse_a_l_ecriture() {
+        // Accepté en silence, il ne ferait rien : le client croirait avoir
+        // éteint une tâche, et elle partirait quand même.
+        for champ in ["active", "validationHumaine"] {
+            for mauvaise in [r#""true""#, "1", r#""oui""#, "null"] {
+                let contenu = format!(
+                    r#"{{"agents":[{{"prenom":"Marie","ficheId":"AG-0001","planning":{{"ajustements":[{{"tacheId":"avoirs","{}":{}}}]}}}}]}}"#,
+                    champ, mauvaise
+                );
+                let r = installation_recevable(&contenu);
+                assert!(r.is_err(), "« {} » = {} aurait dû être refusé", champ, mauvaise);
+                let message = r.unwrap_err();
+                assert!(
+                    message.contains("Marie") && message.contains("avoirs") && message.contains(champ),
+                    "le message doit nommer l'agent, la tâche et le champ : {}",
+                    message
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn un_reglage_bien_ecrit_passe_dans_les_deux_sens() {
+        for valeur in ["true", "false"] {
+            let contenu = format!(
+                r#"{{"agents":[{{"prenom":"Marie","ficheId":"AG-0001","planning":{{"ajustements":[{{"tacheId":"avoirs","active":{},"validationHumaine":{}}}]}}}}]}}"#,
+                valeur, valeur
+            );
+            assert!(installation_recevable(&contenu).is_ok(), "« {} » refusé à tort", valeur);
+        }
+        // Et sans planning du tout : c'est le cas de la plupart des agents.
+        assert!(installation_recevable(r#"{"agents":[{"prenom":"Marie","ficheId":"AG-0001"}]}"#).is_ok());
+    }
+
+    #[test]
+    fn la_configuration_livree_avec_l_installeur_est_recevable() {
+        // Elle porte un vrai planning : une tâche éteinte et une tâche ajoutée.
+        let livree = include_str!("../../src/config/installation.json");
+        assert!(
+            installation_recevable(livree).is_ok(),
+            "la configuration livrée doit passer : {:?}",
+            installation_recevable(livree)
+        );
+    }
 
     #[test]
     fn accepte_un_identifiant_de_fiche() {

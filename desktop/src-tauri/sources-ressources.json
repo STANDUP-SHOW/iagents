@@ -1,0 +1,63 @@
+{
+  "note": "D'où viennent les pièces que l'installeur ne livre pas, et comment savoir qu'on a bien reçu ce qu'on attendait. Même règle que connecteurs/couts.json : une ligne par pièce, chacune avec l'adresse, l'empreinte relevée CHEZ L'ÉDITEUR, la taille, et la date de relevé. Une pièce absente de ce fichier ne se télécharge pas — l'application dit ce qui manque et où le prendre, plutôt que d'aller chercher un fichier dont personne ne sait ce qu'il contient.",
+  "regle": "L'empreinte se vérifie AVANT que le fichier soit posé, jamais après : un fichier à demi téléchargé qui porte déjà son nom définitif est indiscernable d'un fichier entier, et le moteur échouerait alors sans dire pourquoi. Le téléchargement écrit donc à côté, sous un nom provisoire, calcule l'empreinte en chemin, et ne renomme qu'à la fin.",
+  "pieces": [
+    {
+      "role": "le modèle d'écoute, qui transcrit ce que le client dit",
+      "chemin": "modeles/ggml-small-q5_1.bin",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
+      "sha256": "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb",
+      "octets": 190085487,
+      "licence": "MIT (whisper.cpp)",
+      "pourquoiCelui_la": "Le code attendait « ggml-medium-fr.bin ». Relevé le 24/09/2026 dans l'index du dépôt de whisper.cpp : AUCUN fichier ne porte « -fr », il n'existe pas de variante française. Le modèle multilingue transcrit le français. Reste la taille : « medium » pèse 1 533 763 059 octets, soit un gigaonze et demi à télécharger avant que l'agent puisse entendre son premier mot, et c'est le premier contact du client avec le produit. « small » quantifié en q5_1 pèse 190 085 487 octets, il se prend en une minute, et la reconnaissance des noms de logiciels ne repose pas sur lui seul : `reconnaitre()` rapproche ensuite ce qui a été entendu du référentiel. Les trois autres tailles sont dans la note ci-dessous, à changer ici sans toucher au code si l'essai sur une vraie machine dit que ce n'est pas assez.",
+      "autresTailles": "ggml-base.bin 147 951 465 o, sha256 60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe ; ggml-small.bin 487 601 967 o, sha256 1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b ; ggml-medium.bin 1 533 763 059 o, sha256 6c14d5adee5f86394037b4e4e8b59f1673b6cee10e3cf0b11bbdbee79c156208",
+      "source": "https://huggingface.co/api/models/ggerganov/whisper.cpp?blobs=true",
+      "constate": "2026-09-24"
+    },
+    {
+      "role": "la voix française",
+      "chemin": "modeles/fr_FR-siwis-medium.onnx",
+      "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx",
+      "sha256": "641d1ab097da2b81128c076810edb052b385decc8be3381814802a64a73baf99",
+      "octets": 63201294,
+      "licence": "CC BY 4.0 (corpus SIWIS)",
+      "pourquoiCelui_la": "C'est la voix que le code cherche déjà, et la seule voix française installée : le choix de voix de l'écran est décoratif tant qu'il n'y en a qu'une, et l'application le dit au client.",
+      "source": "https://huggingface.co/api/models/rhasspy/piper-voices/tree/main/fr/fr_FR/siwis/medium",
+      "constate": "2026-09-24"
+    },
+    {
+      "role": "les réglages de la voix française",
+      "chemin": "modeles/fr_FR-siwis-medium.onnx.json",
+      "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx.json",
+      "sha256": null,
+      "octets": 4875,
+      "licence": "CC BY 4.0 (corpus SIWIS)",
+      "pourquoiCelui_la": "Piper lit ce fichier tout seul à côté du modèle ; absent, le moteur démarre puis échoue sans rien dire d'utile.",
+      "pourquoiPasDEmpreinte": "4 875 octets, donc pas un objet LFS : l'API de l'éditeur ne publie pas de sha256 pour lui, seulement un sha1 de blob git qui ne se recalcule pas sur le contenu seul. Plutôt qu'une empreinte inventée, on vérifie ce qui peut mal tourner sur un fichier de cette taille : la troncature et la corruption, que la lecture en JSON attrape. La taille annoncée est vérifiée en plus.",
+      "source": "https://huggingface.co/api/models/rhasspy/piper-voices/tree/main/fr/fr_FR/siwis/medium",
+      "constate": "2026-09-24",
+      "verification_autre": "json"
+    }
+  ],
+  "aDeclarer": "Le moteur de voix Piper (piper/piper.exe sous Windows, piper/piper ailleurs) n'est PAS déclaré ici, et c'est pour ça que l'agent ne parlera pas encore après un premier lancement. RELEVÉ PAR L'INTÉGRATION CONTINUE le 24/09/2026 (cette session ne joint pas github.com ; le flux, lui, tourne chez GitHub) : dernière version publiée 2023.11.14-2, piper_windows_amd64.zip 22 477 236 o, piper_linux_x86_64.tar.gz 26 460 462 o, et GitHub ne publie AUCUN digest pour ces fichiers — la version est antérieure au champ. Ce qui bloque n'est donc plus le relevé mais la forme : ce sont des ARCHIVES et non des binaires, et l'archive Windows porte piper.exe, ses DLL et les données d'espeak-ng, dont le moteur ne se passe pas. Les déclarer demande d'ouvrir l'archive APRÈS vérification de l'empreinte, ce que telechargement.rs ne fait pas : il écrit les octets reçus tels quels. Deux voies, à trancher : ouvrir l'archive ici (le lecteur ZIP est déjà dans le binaire, il sert à relire les .xlsx et les .docx ; le .tar.gz demanderait tar et gzip en plus), ou poser le moteur dans le MSI, ce qui le ferait passer de 9 Mo à une trentaine et supprimerait une pièce à aller chercher. Conséquence en attendant : écouter marche au premier lancement, parler non, et l'application le dit en français.",
+  "relevePiper": {
+    "note": "Relevé par l'intégration continue (desktop/relever-piper.ts), qui tourne chez GitHub là où cette session ne le joint pas. Les empreintes sont CALCULÉES sur les fichiers de l'éditeur, pas recopiées : GitHub n'en publie aucune pour cette version, antérieure au champ digest. Ces chiffres servent quelle que soit la voie retenue — téléchargement par l'application, ou pose dans le MSI par le flux de construction, qui doit les vérifier pareillement.",
+    "version": "2023.11.14-2",
+    "constate": "2026-09-24",
+    "archives": [
+      {
+        "pour": "windows",
+        "url": "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip",
+        "octets": 22477236,
+        "sha256": "f3c58906402b24f3a96d92145f58acba6d86c9b5db896d207f78dc80811efcea"
+      },
+      {
+        "pour": "linux-x86_64",
+        "url": "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz",
+        "octets": 26460462,
+        "sha256": "a50cb45f355b7af1f6d758c1b360717877ba0a398cc8cbe6d2a7a3a26e225992"
+      }
+    ],
+    "cequimanque": "Ce sont des archives et non des binaires : l'archive Windows porte piper.exe, ses DLL et les données d'espeak-ng, dont le moteur ne se passe pas. telechargement.rs écrit les octets reçus tels quels et n'ouvre rien. Décision en attente de max : ouvrir l'archive dans l'application (le lecteur ZIP est déjà dans le binaire, il sert aux .xlsx et aux .docx), ou poser le moteur dans le MSI."
+  }
+}
