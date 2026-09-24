@@ -1,7 +1,7 @@
 {
   "note": "Ce que coûte au client le fait de brancher un agent sur ce logiciel, en euros par mois et EN PLUS de l'abonnement qu'il paie déjà. Saisi à la main, une ligne par connecteur vérifié : ce n'est pas une donnée dérivée, c'est un fait commercial qui se constate chez l'éditeur. Un connecteur absent de ce fichier garde un coût nul-inconnu et reste refusé par la règle d'activation — c'est voulu, on ne devine pas un prix.",
   "unite": "euros par mois, en plus de l'abonnement du client",
-  "aConfirmer": "Aucun chiffre ne doit être écrit ici sans la page de l'éditeur qui le dit et la date à laquelle elle a été lue. COM010 (Twilio) est délibérément ABSENT alors que sa page a été lue le 24/09/2026 : son coût est réel mais n'est pas un abonnement mensuel. C'est du paiement à l'usage, 0,0083 $ par message aux États-Unis plus les frais d'opérateur, et au moins 1,15 $ par mois pour la location du numéro ; le tarif par message vers la France n'était pas sur cette page. Ce fichier ne sait exprimer qu'un montant mensuel fixe, donc y écrire 1,15 mettrait devant le client un chiffre qui sous-estime sa facture dès qu'un agent envoie des messages. Le champ manquant se décide avant d'ouvrir COM010, pas après. Restent à lire : Salesforce (CRM001, NPO001), Slack (COM004), Pipedrive (CRM005), Notion (OFF008), Airtable (OFF009), Trello (OFF020), Asana (OFF021), ClickUp (OFF022), Todoist (OFF028) — leurs pages de quotas ont été ouvertes mais aucune n'énonce le coût, et leurs pages tarifaires n'ont pas été joignables depuis cette session.",
+  "aConfirmer": "Aucun chiffre ne doit être écrit ici sans la page de l'éditeur qui le dit et la date à laquelle elle a été lue. COM010 (Twilio) est délibérément ABSENT alors que sa page a été lue le 24/09/2026 : son coût est réel mais n'est pas un abonnement mensuel. C'est du paiement à l'usage, 0,0083 $ par message aux États-Unis plus les frais d'opérateur, et au moins 1,15 $ par mois pour la location du numéro ; le tarif par message vers la France n'était pas sur cette page. Ce fichier ne sait exprimer qu'un montant mensuel fixe, donc y écrire 1,15 mettrait devant le client un chiffre qui sous-estime sa facture dès qu'un agent envoie des messages. Le champ manquant se décide avant d'ouvrir COM010, pas après. NPO001 (Salesforce Nonprofit Cloud) est absent pour une autre raison : la règle des éditions vaut pour le Sales Cloud, et son offre propre (Power of Us) n'a pas été lue. Restent à lire, et leurs hôtes ont refusé la consultation depuis cette session (une demande d'autorisation reste sans réponse) : Notion (OFF008), Airtable (OFF009), ClickUp (OFF022). Asana (OFF021) et Trello (OFF020) se lisent mais leurs pages de documentation n'énoncent tout simplement pas le coût ; leurs pages de quotas donnent les débits par offre, pas un prix.",
   "couts": [
     {
       "id": "COM003",
@@ -101,6 +101,36 @@
       "base": "Slack ne facture ni l'emploi de son API ni la présence au Marketplace : « Slack does not charge for Marketplace inclusion ». L'API est comprise dans l'abonnement du client, offre gratuite incluse, et bornée par un débit et non par un paiement.",
       "reserve": "Ce qui coûte ici n'est pas de l'argent, c'est du débit, et il dépend de la façon dont le connecteur sera bâti. Depuis le 29/05/2025, une application NON présente au Marketplace et distribuée commercialement est ramenée à UNE requête par minute et QUINZE objets par réponse sur conversations.history et conversations.replies — c'est-à-dire sur la lecture des messages, tout ce qu'un agent vient faire dans Slack. La page de clarification du 03/06/2025 (https://docs.slack.dev/changelog/2025/06/03/rate-limits-clarity/) écarte un cas : « Any internal customer-built apps will maintain their existing rate limits and will not be subject to the new posted limits » — 50 requêtes par minute et 1 000 objets. Conséquence pour le chantier : le connecteur Slack doit se brancher sur un accès que le CLIENT crée dans son propre espace de travail, comme le reste du produit, et non sur une application iAgent distribuée. Bâti autrement, il faudrait passer au Marketplace de Slack (gratuit, mais soumis à validation) sans quoi la lecture des messages devient inutilisable. Les étapes intégrateur du relevé V6 (« Manifeste Slack, scopes bot/user, Events API ») ne disent pas lequel des deux, et personne n'a tranché.",
       "source": "https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps/",
+      "constate": "2026-09-24"
+    },
+    {
+      "id": "CRM005",
+      "nom": "Pipedrive",
+      "coutMensuel": 0,
+      "pourLeClient": "Sans frais en plus de votre abonnement Pipedrive, quelle que soit votre offre.",
+      "base": "Pipedrive l'écrit sur sa propre page produit : « Every Pipedrive plan comes with an API token that gives you access to our RESTful API for free », et en titre « Free API access with every plan ».",
+      "reserve": "Un débit s'applique comme partout, et ses valeurs vivent sur une autre page que celle-ci. À relever le jour où un agent les approchera.",
+      "source": "https://www.pipedrive.com/en/features/crm-api",
+      "constate": "2026-09-24"
+    },
+    {
+      "id": "OFF028",
+      "nom": "Todoist",
+      "coutMensuel": 0,
+      "pourLeClient": "Sans frais en plus de votre compte Todoist. Certaines fonctions restent celles de votre offre : l'API ne donne pas accès à ce que votre abonnement ne contient pas.",
+      "base": "La documentation de l'API le dit en toutes lettres : « You can use our API for free, but depending on your Todoist account plan (or that of the authenticated user), some features may be restricted. »",
+      "reserve": "L'API est gratuite, les FONCTIONS ne le sont pas toutes : ce que l'offre du client ne contient pas reste fermé par l'API aussi. La page renvoie à « Request Limits » pour le débit, dont les chiffres n'y sont pas.",
+      "source": "https://developer.todoist.com/api/v1/",
+      "constate": "2026-09-24"
+    },
+    {
+      "id": "CRM001",
+      "nom": "Salesforce Sales Cloud",
+      "coutMensuel": 0,
+      "pourLeClient": "Sans frais si votre Salesforce est en édition Enterprise, Unlimited, Performance ou Developer. En édition Professional, l'accès API est une option payante de Salesforce dont le prix n'est pas public ; en Group et Essentials il n'existe pas du tout.",
+      "base": "La page d'aide de Salesforce range l'accès API par édition : « Enterprise Edition, Unlimited Edition, Developer Edition, Performance Edition » l'ont d'office. Pour ces éditions, brancher un agent ne coûte rien en plus de l'abonnement, d'où le zéro.",
+      "reserve": "Zéro ne vaut PAS pour tout le monde, et c'est la raison de la phrase montrée au client. La même page écrit : « Professional Edition — API is not included by default but can be purchased as an add-on », sans en donner le prix, et « Group Edition — API is not available and cannot be purchased as an add-on », de même pour Essentials. Le tarif de l'option Professional n'a pas pu être lu : la liste des options de Salesforce (all-add-ons.pdf) est fermée aux robots. Ce n'est donc pas un coût d'API variable, c'est une condition sur l'abonnement que le client a déjà, ce que disent aussi `accesRequis` et `limites`, affichés à côté. Salesforce Nonprofit Cloud (NPO001) reste fermé : la règle des éditions est générique, mais son offre propre (programme Power of Us) n'a pas été lue, et étendre un constat d'un produit à l'autre est exactement ce qui fait entrer une erreur sans que rien ne l'attrape.",
+      "source": "https://help.salesforce.com/s/articleView?id=000385436&language=en_US&type=1",
       "constate": "2026-09-24"
     }
   ],
