@@ -164,6 +164,7 @@ export default function Embauche() {
       const regle = reglagesDepuisEntretien(cadre, reponsesCadre)
       if (regle.competences.length) nouveau.competences = regle.competences
       if (regle.repartition) nouveau.repartition = regle.repartition
+      if (regle.intensite) nouveau.intensite = regle.intensite
 
       const contenu = JSON.stringify(
         { ...existant, agents: [...agents, nouveau] },

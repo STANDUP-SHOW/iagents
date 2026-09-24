@@ -203,6 +203,28 @@ par WhatsApp et email.
   étroit** : il ajoute une phrase à la consigne du modèle et lève un drapeau sur
   le résultat. Il n'autorise rien et ne retient rien — de toute façon rien ne
   part du poste, et le courriel a sa propre empreinte de relecture.
+- **Les tâches partent seules à leur heure depuis le 24/09/2026**
+  (`desktop/src-tauri/src/planificateur.rs`). Avant, la `planification` des
+  fiches était lue, affichée, écrite dans le planning du client, et **rien ne
+  l'exécutait** : un agent ne travaillait que sur un clic. Le planning relit
+  `installation.json` toutes les 30 s (un réglage du client ou du Team Holder
+  vaut au tour suivant) et passe par `executer_tache` et rien d'autre, donc les
+  refus restent ceux de l'exécution et s'écrivent au journal
+  (`config/planning-journal.jsonl`) avec leur motif. Trois règles tenues par
+  des bancs : **une tâche manquée application fermée se rattrape une seule
+  fois** au lancement suivant, et le journal dit le retard et le nombre de
+  passages sautés ; **rien d'avant l'entrée au planning ne se rattrape** (un
+  agent embauché à 14h ne rend pas le travail de 9h, une heure déplacée ne fait
+  pas partir la tâche aussitôt) ; **la même tâche du même agent ne part jamais
+  deux fois à la fois** (`planificateur::occuper`, posé en tête
+  d'`executer_tache`, compte aussi les clics). Les quotidiennes tournent **sept
+  jours sur sept** (max, 24/09/2026), et l'entretien l'annonce ainsi ; un banc
+  Rust relit la phrase de `entretien.ts` pour que les deux ne se séparent pas.
+  **Le rythme (`intensite` dans `installation.json`) est appliqué** : léger
+  passe deux fois moins souvent, soutenu deux fois plus, avec les
+  multiplicateurs de `dimensionnement/intensite.ts` que le banc Rust relit.
+  Pas encore : les tâches `declencheur` (529) attendent un événement que
+  personne n'écoute, et la profondeur du rythme soutenu n'est pas appliquée.
 - **Les bancs tournent en intégration continue depuis le 23/09**
   (`.github/workflows/controles.yml`). Avant, le seul flux construisait le MSI
   et rien d'autre : `npm run controle`, `npm run controle-application`,
