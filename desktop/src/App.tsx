@@ -15,6 +15,7 @@ import Embauche from './components/Embauche'
 import Travail from './components/Travail'
 import CleApi from './components/CleApi'
 import InstallerVoix from './components/InstallerVoix'
+import MiseAJour from './components/MiseAJour'
 
 
 /** Un agent tel que la bibliothèque le montre : ni prénom brut ni fiche. */
@@ -300,6 +301,7 @@ function App() {
           ) : (
             <span className="idle">Ready</span>
           )}
+          <MiseAJour />
         </div>
       </header>
 

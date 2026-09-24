@@ -47,14 +47,10 @@ const TOUR: std::time::Duration = std::time::Duration::from_secs(30);
 /// la jauge et le moteur local se lèvent pendant ce temps.
 const PREMIER_REGARD: std::time::Duration = std::time::Duration::from_secs(20);
 
-/// Les tâches quotidiennes tournent du lundi au vendredi.
-///
-/// C'est ce que l'agent annonce au client à l'entretien d'embauche (« mes
-/// tâches tournent entre 9h et 17h30, du lundi au vendredi »,
-/// `questionsCadre`), donc ce que le client attend de voir. Le tableau
-/// d'économie, lui, compte 30 jours par mois : il surestime un peu la facture
-/// d'API d'une tâche quotidienne, ce qui est le sens prudent.
-pub const QUOTIDIENNE_EN_SEMAINE_SEULEMENT: bool = true;
+/// Les tâches quotidiennes tournent sept jours sur sept (décision de max du
+/// 24/09/2026). L'agent l'annonce ainsi à l'entretien (`questionsCadre`), et
+/// le tableau d'économie compte déjà 30 jours par mois : les trois disent la
+/// même chose.
 
 /// Au-delà, un passage est dit « en retard » dans le journal.
 const RETARD_TOLERE_MINUTES: i64 = 10;
@@ -173,10 +169,6 @@ pub fn lire_rythme(p: &Value) -> Result<Rythme, String> {
 // c'est 19h00 à l'horloge du client, été comme hiver. La conversion vers
 // l'instant réel n'a lieu qu'au bord, dans `vers_epoque`.
 
-fn en_semaine(d: NaiveDate) -> bool {
-    !matches!(d.weekday(), Weekday::Sat | Weekday::Sun)
-}
-
 /// Rythme léger : un passage sur deux, choisi par la parité du jour, de la
 /// semaine ou du mois. Stable d'un lancement à l'autre, sans rien retenir.
 fn jour_pair(d: NaiveDate) -> bool {
@@ -204,13 +196,9 @@ fn second_passage(h: NaiveTime) -> NaiveTime {
 }
 
 /// Rythme soutenu, tâche hebdomadaire : un second passage trois jours plus
-/// tard, ramené au lundi s'il tombe un week-end.
+/// tard. L'agent travaille sept jours sur sept, donc le week-end compte.
 fn second_jour(j: Weekday) -> Weekday {
-    let d = j.succ().succ().succ();
-    match d {
-        Weekday::Sat | Weekday::Sun => Weekday::Mon,
-        autre => autre,
-    }
+    j.succ().succ().succ()
 }
 
 /// Rythme soutenu, tâche mensuelle : un second passage quatorze jours plus
@@ -224,9 +212,6 @@ fn passages_du_jour(r: &Rythme, i: Intensite, d: NaiveDate) -> Vec<NaiveDateTime
     let mut v = Vec::new();
     match r {
         Rythme::Quotidienne { heure } => {
-            if QUOTIDIENNE_EN_SEMAINE_SEULEMENT && !en_semaine(d) {
-                return v;
-            }
             if i == Intensite::Light && !jour_pair(d) {
                 return v;
             }
@@ -1052,13 +1037,21 @@ mod tests {
     }
 
     #[test]
-    fn la_quotidienne_suit_ce_que_l_agent_annonce_a_l_entretien_du_lundi_au_vendredi() {
+    fn la_quotidienne_tourne_sept_jours_sur_sept_comme_l_annonce_l_entretien() {
         let q = r(json!({"type": "quotidienne", "heure": "09:00"}));
-        // Samedi 26 et dimanche 27 : rien ; lundi 28 : oui.
+        // Vendredi 25 après l'heure : samedi 26, puis dimanche 27.
         assert_eq!(
             prochaine_echeance(&q, Intensite::Medium, t("2026-09-25 10:00"), t("2026-09-25 10:00")),
-            Some(t("2026-09-28 09:00"))
+            Some(t("2026-09-26 09:00"))
         );
+        assert_eq!(
+            prochaine_echeance(&q, Intensite::Medium, t("2026-09-25 10:00"), t("2026-09-26 10:00")),
+            Some(t("2026-09-27 09:00"))
+        );
+        // Et la phrase de l'entretien dit la même chose que le planning.
+        let entretien = include_str!("../../src/agents/entretien.ts");
+        assert!(entretien.contains("sept jours sur sept"));
+        assert!(!entretien.contains("du lundi au vendredi"));
     }
 
     #[test]
@@ -1129,8 +1122,7 @@ mod tests {
     fn au_rythme_soutenu_l_agent_repasse_dans_la_journee_pas_la_nuit() {
         assert_eq!(second_passage(NaiveTime::from_hms_opt(9, 0, 0).unwrap()), NaiveTime::from_hms_opt(15, 0, 0).unwrap());
         assert_eq!(second_passage(NaiveTime::from_hms_opt(19, 0, 0).unwrap()), NaiveTime::from_hms_opt(13, 0, 0).unwrap());
-        for j in [Weekday::Mon, Weekday::Tue, Weekday::Wed, Weekday::Thu, Weekday::Fri] {
-            assert!(!matches!(second_jour(j), Weekday::Sat | Weekday::Sun), "{:?}", j);
+        for j in [Weekday::Mon, Weekday::Tue, Weekday::Wed, Weekday::Thu, Weekday::Fri, Weekday::Sat, Weekday::Sun] {
             assert_ne!(second_jour(j), j);
         }
         for q in 1..=28 {

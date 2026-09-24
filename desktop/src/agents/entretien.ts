@@ -852,15 +852,15 @@ export function questionsCadre(
       : '';
     const plage =
       h.debut === h.fin
-        ? `Je passe une fois par jour, à ${enClair(h.debut)}, du lundi au vendredi.${surveille} Ça vous va ?`
-        : `Mes tâches tournent entre ${enClair(h.debut)} et ${enClair(h.fin)}, du lundi au vendredi.${surveille} Ça vous va, ou vos journées commencent plus tôt ?`;
+        ? `Je passe une fois par jour, à ${enClair(h.debut)}, sept jours sur sept.${surveille} Ça vous va ?`
+        : `Mes tâches tournent entre ${enClair(h.debut)} et ${enClair(h.fin)}, sept jours sur sept.${surveille} Ça vous va, ou vos journées commencent plus tôt ?`;
     questions.push({
       sujet: 'horaires',
       intitule: plage,
       defaut:
         h.debut === h.fin
-          ? `une fois par jour à ${enClair(h.debut)}, du lundi au vendredi`
-          : `${enClair(h.debut)} – ${enClair(h.fin)}, du lundi au vendredi`,
+          ? `une fois par jour à ${enClair(h.debut)}, sept jours sur sept`
+          : `${enClair(h.debut)} – ${enClair(h.fin)}, sept jours sur sept`,
     });
   }
 
