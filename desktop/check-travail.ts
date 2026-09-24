@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { installerAgents, type Fiche, type Installation } from './src/agents/fiche.ts';
 import { travailDuJour, resumeDuTravail, FORMATS_ECRITS } from './src/agents/travail.ts';
+import { planningDuClient } from './src/agents/fiche.ts';
 
 /**
  * Le travail du jour : ce que l'écran propose doit être ce que Rust accepte.
@@ -43,6 +44,55 @@ verifier(
   cotesRust.length > 0 && cotesRust.join(',') === [...FORMATS_ECRITS].join(','),
   `rust ${cotesRust.join('/')} ≠ écran ${[...FORMATS_ECRITS].join('/')}`
 );
+
+// Ce que le client règle vaut-il la même chose ici que dans `tache.rs` ?
+// Jusqu'au 24/09/2026, non : cet écran forçait toutes les tâches en autonomie
+// et Rust n'ouvrait même pas le planning du client. Les mêmes témoins sont
+// rejoués par le test Rust `les_temoins_de_planning_valent_la_meme_chose_...`.
+interface CasTemoin {
+  intitule: string;
+  fiche: { active: boolean; validationHumaine: boolean };
+  reglage: Record<string, unknown> | null;
+  attendu: { active: boolean; validationHumaine: boolean };
+}
+const temoins = JSON.parse(
+  readFileSync(join(ici, 'temoins-planning.json'), 'utf8')
+) as { cas: CasTemoin[] };
+
+verifier(
+  `${temoins.cas.length} témoins de planning, autant que côté Rust`,
+  temoins.cas.length >= 7,
+  `${temoins.cas.length} témoins`
+);
+
+for (const cas of temoins.cas) {
+  const fausseFiche = {
+    id: 'AG-0001',
+    nom: 'Témoin',
+    taches: [
+      {
+        id: 't',
+        nom: 'T',
+        description: 'd',
+        planification: { type: 'quotidienne' as const, heure: '09:00' },
+        entrees: [],
+        sorties: [{ dossier: 'x', format: 'md' }],
+        logiciels: [],
+        active: cas.fiche.active,
+        validationHumaine: cas.fiche.validationHumaine,
+      },
+    ],
+  } as unknown as Fiche;
+  const planning = cas.reglage ? { ajustements: [{ tacheId: 't', ...cas.reglage }] } : {};
+  const obtenu = planningDuClient(fausseFiche, planning as never)[0];
+  verifier(
+    `planning — ${cas.intitule}`,
+    obtenu.active === cas.attendu.active &&
+      obtenu.validationHumaine === cas.attendu.validationHumaine,
+    `écran donne active=${obtenu.active} validationHumaine=${obtenu.validationHumaine}, ` +
+      `attendu active=${cas.attendu.active} validationHumaine=${cas.attendu.validationHumaine}`
+  );
+}
 
 const AG = 'AG-0001';
 const f = fiche(AG);

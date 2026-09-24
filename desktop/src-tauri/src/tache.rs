@@ -893,6 +893,7 @@ struct SortieDeclaree {
 }
 
 /// La tâche à exécuter, lue dans la fiche installée.
+#[derive(Debug)]
 struct TacheLue {
     nom: String,
     description: String,
@@ -902,15 +903,104 @@ struct TacheLue {
     active: bool,
 }
 
-fn lire_tache(fiche: &serde_json::Value, tache_id: &str) -> Result<TacheLue, String> {
+/// L'accord humain attendu pour une tâche : ce que le client a réglé pour elle.
+///
+/// **Règle de max : l'agent va seul, sauf si le client met une tâche sous
+/// contrôle.** On ne vend pas un employé dont il faut relire chaque geste, et
+/// « l'agent peut fonctionner de manière autonome si l'utilisateur le
+/// souhaite » (max, 24/09/2026).
+///
+/// Le `validationHumaine` de la fiche n'entre donc pas ici, et ce n'est pas un
+/// oubli : c'est la proposition de l'expert, celle que l'agent énonce à
+/// l'entretien d'embauche (« il y en a N où j'attends votre accord, je garde ça
+/// ou vous voulez en relâcher ? »). La réponse du client devient un ajustement
+/// de son planning, et c'est l'ajustement qui décide — dans les deux sens : il
+/// peut poser un accord sur une tâche que la fiche dit autonome.
+///
+/// **Une seule grandeur, un seul sens.** Des deux côtés le champ s'appelle
+/// `validationHumaine` et veut dire « un humain relit avant que ça serve ». Un
+/// réglage nommé « autonomie » à côté aurait le sens inverse, et un jour
+/// quelqu'un aurait écrit l'un en pensant à l'autre.
+///
+/// Jusqu'au 24/09/2026 cette fonction n'existait pas et `lire_tache` appliquait
+/// la fiche, pendant que `planningDuClient` appliquait l'autonomie sur le même
+/// agent : l'onglet du travail annonçait « part seule » et l'agent recevait la
+/// consigne « votre travail sera relu ». `temoins-planning.json` est rejoué des
+/// deux côtés pour qu'ils ne puissent plus se séparer.
+pub fn accord_attendu(choix_du_client: Option<bool>) -> bool {
+    choix_du_client.unwrap_or(false)
+}
+
+/// Le réglage du client pour une tâche, ou rien s'il n'a rien dit.
+///
+/// Rend `None` dès que la valeur n'est pas un booléen : mal écrite (« true »
+/// entre guillemets, 1, « oui »), elle ne doit pas passer pour un choix. On
+/// retombe alors sur la fiche plutôt que de deviner.
+fn booleen(v: Option<&serde_json::Value>) -> Option<bool> {
+    v.and_then(serde_json::Value::as_bool)
+}
+
+/// Ce que le client a réglé pour cette tâche, dans `installation.json`.
+fn ajustement<'a>(agent: &'a serde_json::Value, tache_id: &str) -> Option<&'a serde_json::Value> {
+    agent
+        .get("planning")?
+        .get("ajustements")?
+        .as_array()?
+        .iter()
+        .find(|a| a.get("tacheId").and_then(serde_json::Value::as_str) == Some(tache_id))
+}
+
+/// Une tâche que le client a ajoutée lui-même, absente de la fiche.
+fn tache_ajoutee<'a>(agent: &'a serde_json::Value, tache_id: &str) -> Option<&'a serde_json::Value> {
+    agent
+        .get("planning")?
+        .get("ajoutees")?
+        .as_array()?
+        .iter()
+        .find(|a| a.get("id").and_then(serde_json::Value::as_str) == Some(tache_id))
+}
+
+/// La tâche à exécuter, telle que le CLIENT l'a réglée.
+///
+/// La fiche décrit le poste ; `installation.json` porte ce que ce client en a
+/// changé — une tâche éteinte, une heure déplacée, une tâche qu'il a ajoutée.
+/// L'écran applique déjà ces réglages (`planningDuClient`, dans
+/// `desktop/src/agents/fiche.ts`) ; ici on applique les mêmes, parce qu'un
+/// réglage qui ne vaut que d'un côté de la frontière ne règle rien. Constaté
+/// le 24/09/2026 sur la configuration livrée avec l'installeur :
+///
+/// - une tâche que le client avait éteinte restait **exécutable** ici, le refus
+///   ne tenait qu'à l'écran qui ne l'affichait pas ;
+/// - une tâche ajoutée par le client n'existait **pas** ici, donc le bouton de
+///   l'écran serait tombé sur « la fiche n'a pas de tâche … » ;
+/// - l'accord humain se décidait des deux côtés, et pas pareil.
+///
+/// `check-travail.ts` rejoue les mêmes cas sur les deux implémentations.
+fn lire_tache(
+    fiche: &serde_json::Value,
+    agent: &serde_json::Value,
+    tache_id: &str,
+) -> Result<TacheLue, String> {
+
     let taches = fiche
         .get("taches")
         .and_then(serde_json::Value::as_array)
         .ok_or("fiche sans tâches")?;
-    let t = taches
+    // Dans la fiche, ou parmi celles que le client a ajoutées lui-même. Une
+    // tâche ajoutée est allumée par défaut : le client vient de l'écrire.
+    let (t, ajoutee) = match taches
         .iter()
         .find(|t| t.get("id").and_then(serde_json::Value::as_str) == Some(tache_id))
-        .ok_or_else(|| format!("la fiche n'a pas de tâche « {} »", tache_id))?;
+    {
+        Some(t) => (t, false),
+        None => (
+            tache_ajoutee(agent, tache_id).ok_or_else(|| {
+                format!("ni la fiche ni votre planning n'ont de tâche « {} »", tache_id)
+            })?,
+            true,
+        ),
+    };
+    let regle = ajustement(agent, tache_id);
 
     let sorties = t
         .get("sorties")
@@ -932,11 +1022,19 @@ fn lire_tache(fiche: &serde_json::Value, tache_id: &str) -> Result<TacheLue, Str
             .unwrap_or_default(),
         sortie: serde_json::from_value(sorties.clone())
             .map_err(|e| format!("sortie illisible pour « {} » : {}", tache_id, e))?,
-        validation_humaine: t
-            .get("validationHumaine")
-            .and_then(serde_json::Value::as_bool)
-            .unwrap_or(true),
-        active: t.get("active").and_then(serde_json::Value::as_bool).unwrap_or(false),
+        // Ce que le client a réglé pour cette tâche, et rien d'autre. Une tâche
+        // qu'il ajoute lui-même sans rien dire part seule : il ne l'a pas mise
+        // sous contrôle. Pour une tâche de la fiche, le réglage vient de sa
+        // réponse à l'entretien.
+        validation_humaine: accord_attendu(booleen(
+            regle.and_then(|r| r.get("validationHumaine"))
+                .or_else(|| if ajoutee { t.get("validationHumaine") } else { None }),
+        )),
+        // Éteinte par le client, elle ne part pas — et c'est le code qui le
+        // refuse, plus seulement l'écran qui la cachait.
+        active: booleen(regle.and_then(|r| r.get("active")))
+            .or_else(|| booleen(t.get("active")))
+            .unwrap_or(ajoutee),
     })
 }
 
@@ -1002,7 +1100,7 @@ pub fn preparer(
 
     let fiche: serde_json::Value =
         serde_json::from_str(fiche).map_err(|e| format!("fiche illisible : {}", e))?;
-    let tache = lire_tache(&fiche, tache_id)?;
+    let tache = lire_tache(&fiche, &agent, tache_id)?;
     // Le client éteint les tâches qu'il ne veut pas : les exécuter quand même
     // ferait travailler l'agent sur ce qu'on lui a retiré.
     if !tache.active {
@@ -1088,10 +1186,188 @@ pub fn preparer(
 mod tests {
     use super::*;
 
+    // --- ce que le client regle, et qui doit arriver jusqu'ici ------------
+
+    fn agent_avec(planning: &str) -> serde_json::Value {
+        serde_json::from_str(&format!(
+            r#"{{"prenom":"Marie","ficheId":"AG-0028","planning":{}}}"#,
+            planning
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn sans_reglage_du_client_l_agent_va_seul() {
+        // Règle de max. Ce qu'en dit la fiche est une proposition d'entretien,
+        // pas un réglage : elle n'entre pas dans cette fonction.
+        assert!(!accord_attendu(None));
+    }
+
+    #[test]
+    fn le_client_tranche_dans_les_deux_sens() {
+        assert!(accord_attendu(Some(true)), "le client a mis la tâche sous contrôle");
+        assert!(!accord_attendu(Some(false)), "le client l'a laissée partir seule");
+    }
+
+    #[test]
+    fn une_valeur_mal_ecrite_ne_passe_pas_pour_un_choix() {
+        // La faute que ce dépôt n'arrête pas de retrouver : un réglage que
+        // personne ne lit, ou qu'on lit de travers, et qui ne protège rien.
+        for mauvaise in [r#""true""#, "1", r#""oui""#, "null", "[]"] {
+            let v: serde_json::Value =
+                serde_json::from_str(&format!(r#"{{"validationHumaine":{}}}"#, mauvaise)).unwrap();
+            assert_eq!(
+                booleen(v.get("validationHumaine")),
+                None,
+                "« {} » ne doit pas passer pour un choix",
+                mauvaise
+            );
+            assert!(
+                !accord_attendu(booleen(v.get("validationHumaine"))),
+                "mal écrite, elle ne doit pas passer pour une mise sous contrôle : {}",
+                mauvaise
+            );
+        }
+    }
+
+    #[test]
+    fn les_temoins_de_planning_valent_la_meme_chose_ici_que_sur_l_ecran() {
+        // Les mêmes cas sont rejoués par check-travail.ts sur `planningDuClient`.
+        // Une règle écrite des deux côtés finit par dire deux choses : elle le
+        // disait déjà le 24/09/2026, et c'est ce banc qui l'empêche de revenir.
+        #[derive(serde::Deserialize)]
+        struct Attendu {
+            active: bool,
+            #[serde(rename = "validationHumaine")]
+            validation_humaine: bool,
+        }
+        #[derive(serde::Deserialize)]
+        struct Cas {
+            intitule: String,
+            fiche: serde_json::Value,
+            reglage: Option<serde_json::Value>,
+            attendu: Attendu,
+        }
+        #[derive(serde::Deserialize)]
+        struct Temoins {
+            cas: Vec<Cas>,
+        }
+
+        let temoins: Temoins =
+            serde_json::from_str(include_str!("../../temoins-planning.json")).unwrap();
+        assert!(temoins.cas.len() >= 7, "les témoins ont maigri");
+
+        for cas in temoins.cas {
+            let fiche = serde_json::json!({
+                "taches": [{
+                    "id": "t", "nom": "T", "description": "d",
+                    "sorties": [{ "dossier": "x", "format": "md" }],
+                    "active": cas.fiche["active"],
+                    "validationHumaine": cas.fiche["validationHumaine"],
+                }]
+            });
+            let agent = match cas.reglage {
+                None => serde_json::json!({ "prenom": "Marie", "ficheId": "AG-0001" }),
+                Some(mut r) => {
+                    r["tacheId"] = serde_json::json!("t");
+                    serde_json::json!({
+                        "prenom": "Marie", "ficheId": "AG-0001",
+                        "planning": { "ajustements": [r] }
+                    })
+                }
+            };
+            let lue = lire_tache(&fiche, &agent, "t").unwrap();
+            assert_eq!(lue.active, cas.attendu.active, "active — {}", cas.intitule);
+            assert_eq!(
+                lue.validation_humaine, cas.attendu.validation_humaine,
+                "validationHumaine — {}", cas.intitule
+            );
+        }
+    }
+
+    #[test]
+    fn une_tache_que_le_client_a_eteinte_est_refusee_par_le_code() {
+        // Avant le 24/09/2026 elle passait : seul l'écran la cachait, et la
+        // configuration livrée avec l'installeur en portait une.
+        let fiche: serde_json::Value = serde_json::from_str(
+            r#"{"taches":[{"id":"avoirs","nom":"Avoirs","description":"d",
+                 "sorties":[{"dossier":"x","format":"md"}],"validationHumaine":true,"active":true}]}"#,
+        )
+        .unwrap();
+        let agent = agent_avec(r#"{"ajustements":[{"tacheId":"avoirs","active":false}]}"#);
+        let lue = lire_tache(&fiche, &agent, "avoirs").unwrap();
+        assert!(!lue.active, "le client l'a éteinte, elle ne doit pas être active");
+    }
+
+    #[test]
+    fn une_tache_ajoutee_par_le_client_est_trouvee() {
+        // Avant, l'écran la listait et le code répondait « la fiche n'a pas de
+        // tâche … » : un bouton qui ne pouvait pas marcher.
+        let fiche: serde_json::Value = serde_json::from_str(r#"{"taches":[]}"#).unwrap();
+        let agent = agent_avec(
+            r#"{"ajoutees":[{"id":"soir","nom":"Compte rendu","description":"d",
+                 "sorties":[{"dossier":"x","format":"md"}]}]}"#,
+        );
+        let lue = lire_tache(&fiche, &agent, "soir").unwrap();
+        assert_eq!(lue.nom, "Compte rendu");
+        assert!(lue.active, "une tâche que le client vient d'ajouter est allumée");
+        assert!(
+            !lue.validation_humaine,
+            "c'est lui qui l'a écrite : il ne l'a pas mise sous contrôle"
+        );
+    }
+
+    #[test]
+    fn une_tache_introuvable_le_dit_des_deux_cotes() {
+        let fiche: serde_json::Value = serde_json::from_str(r#"{"taches":[]}"#).unwrap();
+        let agent = agent_avec("{}");
+        let message = lire_tache(&fiche, &agent, "fantome").unwrap_err();
+        assert!(
+            message.contains("ni la fiche ni votre planning"),
+            "le message doit dire où on a cherché : {}",
+            message
+        );
+    }
+
+    #[test]
+    fn le_choix_du_client_sur_l_accord_arrive_jusqu_a_l_execution() {
+        let fiche: serde_json::Value = serde_json::from_str(
+            r#"{"taches":[{"id":"t","nom":"T","description":"d",
+                 "sorties":[{"dossier":"x","format":"md"}],"validationHumaine":true,"active":true}]}"#,
+        )
+        .unwrap();
+        // Dans les deux sens, parce qu'un client prudent doit pouvoir tout
+        // relire et un client pressé doit pouvoir tout relâcher.
+        let sous_controle =
+            agent_avec(r#"{"ajustements":[{"tacheId":"t","validationHumaine":true}]}"#);
+        assert!(
+            lire_tache(&fiche, &sous_controle, "t").unwrap().validation_humaine,
+            "le client l'a mise sous contrôle : l'exécution doit le savoir"
+        );
+        let libre = agent_avec(r#"{"ajustements":[{"tacheId":"t","validationHumaine":false}]}"#);
+        assert!(
+            !lire_tache(&fiche, &libre, "t").unwrap().validation_humaine,
+            "le client a demandé l'autonomie : l'exécution doit le savoir"
+        );
+        // Règle de max : sans réglage, l'agent va seul. La fiche dit
+        // `validationHumaine: true` et ce n'est pas elle qui décide ici — c'est
+        // ce qu'elle proposera au client à l'entretien.
+        let muet = agent_avec("{}");
+        assert!(
+            !lire_tache(&fiche, &muet, "t").unwrap().validation_humaine,
+            "sans réglage du client, l'agent va seul"
+        );
+    }
+
     fn installation(dossiers: &str) -> String {
+        installation_avec(dossiers, "{}")
+    }
+
+    /// Le planning du client, celui qui décide de l'accord et de ce qui tourne.
+    fn installation_avec(dossiers: &str, planning: &str) -> String {
         format!(
-            r#"{{"agents":[{{"prenom":"Camille","ficheId":"AG-0001","voix":"fr","dossiers":{},"competences":[]}}]}}"#,
-            dossiers
+            r#"{{"agents":[{{"prenom":"Camille","ficheId":"AG-0001","voix":"fr","dossiers":{},"competences":[],"planning":{}}}]}}"#,
+            dossiers, planning
         )
     }
 
@@ -1300,8 +1576,13 @@ mod tests {
     #[test]
     fn un_resultat_qui_attend_un_accord_le_dit_a_l_agent() {
         let p = preparer(
-            &installation(DOSSIERS),
-            &fiche("md", true, true),
+            // La fiche la dit autonome : c'est le client qui la met sous
+            // contrôle, et c'est son réglage que l'agent doit entendre.
+            &installation_avec(
+                DOSSIERS,
+                r#"{"ajustements":[{"tacheId":"compte-rendu","validationHumaine":true}]}"#,
+            ),
+            &fiche("md", true, false),
             "Camille",
             "AG-0001",
             "compte-rendu",

@@ -541,6 +541,26 @@ export interface ReferentielActivites {
   activites: Activite[];
 }
 
+/**
+ * Les trois réponses possibles à la question d'autonomie, écrites une seule
+ * fois : l'écran les propose, `planningDepuisAutonomie` les relit pour en faire
+ * un planning. Deux listes auraient fini par se séparer, et le client aurait
+ * choisi une option qui ne réglait rien.
+ */
+export const AUTONOMIE_TOUT_SEUL = "J'y vais seul sur tout";
+export const AUTONOMIE_CONSEILLEE = 'Soumettez-moi celles que vous conseillez';
+export const AUTONOMIE_TOUT_RELU = 'Soumettez-moi tout';
+
+/**
+ * Les trois réponses possibles sur où l'agent calcule. Même raison qu'au-dessus :
+ * écrites une fois, parce que celle que le client choisit devient un réglage que
+ * `modele::choisir` applique réellement. Une liste à l'écran et une autre dans la
+ * conversion, et le client aurait choisi une option qui ne réglait rien.
+ */
+export const REPARTITION_TOUT_LOCAL = 'Tout sur votre machine';
+export const REPARTITION_MIXTE = 'Surtout local, une part par API';
+export const REPARTITION_TOUT_API = 'Tout par API';
+
 export type SujetCadre = 'activite' | 'horaires' | 'intensite' | 'repartition' | 'autonomie' | 'dossiers';
 
 export interface QuestionCadre {
@@ -667,6 +687,121 @@ export interface CoutsParIntensite {
  * réponse : le client confirme d'un mot. `couts` est la facture d'API mensuelle estimée par
  * intensité, pour que le choix se fasse sur un chiffre et non sur un adjectif.
  */
+/**
+ * Ce que le client a répondu sur l'autonomie, devenu un planning applicable.
+ *
+ * C'est le maillon qui manquait : l'agent posait la question, l'écran affichait
+ * la réponse, et rien ne l'écrivait nulle part. L'écran d'embauche n'envoyait
+ * que le prénom, la fiche et la voix, donc le client n'avait AUCUN moyen de
+ * mettre une tâche sous contrôle — alors que c'est précisément ce que la règle
+ * de max lui réserve. Une question dont la réponse ne règle rien est pire
+ * qu'une question qu'on ne pose pas : elle fait croire au client qu'il a
+ * décidé.
+ *
+ * Rend `undefined` quand il n'y a rien à écrire (l'agent va seul, ce qui est
+ * déjà le défaut) : un planning vide dans `installation.json` ne dirait rien
+ * de plus et se lirait comme un réglage.
+ */
+/**
+ * Ce que l'entretien a recueilli, mis sous la forme que `installation.json`
+ * porte déjà. Même maillon manquant que pour l'autonomie, sur les cinq autres
+ * sujets : l'agent demandait au client son activité, ses horaires, son rythme,
+ * où calculer et où sont ses dossiers, et **rien de tout ça n'était écrit**.
+ * L'écran d'embauche n'envoyait que le prénom, la fiche, la voix et, depuis le
+ * 24/09, le planning. Six questions, une réponse gardée.
+ *
+ * Deux destinations, et une seule chacune — un champ à deux endroits finit faux
+ * à l'un des deux :
+ *
+ *  - **`competences`** pour ce que le client APPREND à l'agent. `tache.rs` et
+ *    `ConversationEngine` les lisent déjà tous les deux et les passent au modèle
+ *    sous « ce que votre employeur vous a appris, et qui prime sur le savoir
+ *    général ». Les mots du client y entrent tels quels : ce qu'il dit de son
+ *    métier ne se résume pas mieux par nous que par lui.
+ *  - **`repartition`** pour où l'agent calcule, qui n'est pas un savoir mais un
+ *    réglage : `modele::choisir` l'applique.
+ *
+ * L'autonomie n'est ici ni dans l'un ni dans l'autre : elle devient un planning,
+ * par `planningDepuisAutonomie`, et l'écrire deux fois la ferait diverger.
+ *
+ * **Ce que ça ne fait pas :** le rythme (léger / normal / soutenu) entre comme
+ * un savoir, pas comme un réglage — rien ne planifie encore différemment selon
+ * la réponse. Et les dossiers entrent EN MOTS : « dans mon Drive » n'est pas un
+ * chemin, et deviner lequel ferait écrire l'agent à côté avec assurance. Le
+ * rattachement d'un dossier logique à un vrai dossier reste au client
+ * (`dossiers` dans `installation.json`), et l'agent sait au moins ce qu'on lui
+ * a dit.
+ */
+export interface SavoirDuClient {
+  titre: string;
+  resume: string;
+}
+
+export interface CeQueLeClientARegle {
+  competences: SavoirDuClient[];
+  repartition?: string;
+}
+
+/** Le titre sous lequel chaque réponse arrive au modèle, en français et sans jargon. */
+const TITRE_DU_SUJET: Partial<Record<SujetCadre, string>> = {
+  activite: "L'activité de la maison, dite par l'employeur",
+  horaires: 'Les horaires convenus',
+  intensite: 'Le rythme de travail demandé',
+  dossiers: "Où l'employeur range ce dont je me sers",
+};
+
+export function reglagesDepuisEntretien(
+  questions: readonly QuestionCadre[],
+  reponses: Readonly<Record<string, string | undefined>>
+): CeQueLeClientARegle {
+  const competences: SavoirDuClient[] = [];
+  let repartition: string | undefined;
+
+  for (const q of questions) {
+    // Le défaut est une proposition que le client a laissée passer : elle vaut
+    // réponse, c'est tout le principe de l'entretien. Seule une réponse vide des
+    // deux côtés ne dit rien — l'activité n'a pas de défaut, par exemple.
+    const dit = (reponses[q.sujet] ?? q.defaut ?? '').trim();
+    if (!dit) continue;
+    if (q.sujet === 'repartition') {
+      repartition = dit;
+      continue;
+    }
+    const titre = TITRE_DU_SUJET[q.sujet];
+    if (!titre) continue;
+    competences.push({ titre, resume: dit });
+  }
+
+  return repartition ? { competences, repartition } : { competences };
+}
+
+export function planningDepuisAutonomie(
+  taches: readonly TacheFiche[],
+  dit: string,
+  idDe: (t: TacheFiche, i: number) => string
+): { ajustements: { tacheId: string; validationHumaine: boolean }[] } | undefined {
+  const actives = taches
+    .map((t, i) => ({ t, id: idDe(t, i) }))
+    .filter(({ t }) => t.active !== false);
+  const sous = (garder: (t: TacheFiche) => boolean) => {
+    const a = actives
+      .filter(({ t }) => garder(t))
+      .map(({ id }) => ({ tacheId: id, validationHumaine: true }));
+    return a.length ? { ajustements: a } : undefined;
+  };
+  switch (dit.trim()) {
+    case AUTONOMIE_TOUT_RELU:
+      return sous(() => true);
+    case AUTONOMIE_CONSEILLEE:
+      return sous((t) => t.validationHumaine === true);
+    // « J'y vais seul », et tout ce qu'on ne reconnaît pas : la règle de max est
+    // le défaut, et une réponse qu'on n'a pas comprise ne doit pas poser un
+    // réglage que le client n'a pas demandé.
+    default:
+      return undefined;
+  }
+}
+
 export function questionsCadre(
   fiche: FicheCompelete,
   couts?: CoutsParIntensite
@@ -719,18 +854,28 @@ export function questionsCadre(
     sujet: 'repartition',
     intitule:
       "Je peux tout faire tourner sur votre machine, sans rien payer au jeton — mais ce qu'elle ne tient pas, je ne le ferai pas. Ou bien j'envoie la part qui dépasse à l'API avec votre clé. Vous préférez quoi ?",
-    defaut: 'Surtout local, une part par API',
-    options: ['Tout sur votre machine', 'Surtout local, une part par API', 'Tout par API'],
+    defaut: REPARTITION_MIXTE,
+    options: [REPARTITION_TOUT_LOCAL, REPARTITION_MIXTE, REPARTITION_TOUT_API],
   });
 
-  const aValider = taches.filter((t) => t.validationHumaine);
+  // L'agent va seul, et il le DIT ainsi : c'est la règle de max, et c'est ce
+  // que le code applique (`accord_attendu`, `planningDuClient`). Jusqu'au
+  // 24/09/2026 cette question annonçait au client « il y en a N où j'attends
+  // votre accord » comme un état de fait, alors que rien n'attendait rien : ce
+  // que porte la fiche est une recommandation d'expert, et c'est ici qu'elle
+  // se propose. La proposer sans la dire conseillée laissait croire au client
+  // qu'il subissait un réglage qu'on ne lui avait jamais demandé.
+  const aRelire = taches.filter((t) => t.validationHumaine);
   if (taches.length) {
     questions.push({
       sujet: 'autonomie',
-      intitule: aValider.length
-        ? `Sur mes ${taches.length} tâches, il y en a ${aValider.length} où j'attends votre accord avant d'agir — tout ce qui part à l'extérieur en fait partie. Je garde ça, ou vous voulez en relâcher ?`
+      intitule: aRelire.length
+        ? `Je travaille seul et je vous rends compte. Sur mes ${taches.length} tâches, il y en a ${aRelire.length} que je vous conseille quand même de relire avant qu'elles servent : tout ce qui part à l'extérieur en fait partie. Je vous les soumets, ou j'y vais seul aussi ?`
         : `Mes ${taches.length} tâches tournent seules et je vous rends compte. Rien ne part à l'extérieur sans vous. Ça vous convient ?`,
-      defaut: `${aValider.length} tâche(s) sur ${taches.length} attendent votre accord`,
+      defaut: aRelire.length ? AUTONOMIE_CONSEILLEE : AUTONOMIE_TOUT_SEUL,
+      options: aRelire.length
+        ? [AUTONOMIE_CONSEILLEE, AUTONOMIE_TOUT_SEUL, AUTONOMIE_TOUT_RELU]
+        : [AUTONOMIE_TOUT_SEUL, AUTONOMIE_TOUT_RELU],
     });
   }
 

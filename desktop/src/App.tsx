@@ -18,12 +18,23 @@ import Courriel from './components/Courriel'
 import Embauche from './components/Embauche'
 import Travail from './components/Travail'
 import CleApi from './components/CleApi'
+import InstallerVoix from './components/InstallerVoix'
+
+/** `voix_ecoute_etat` et `voix_ecoute_basculer`, noms de champs figés par un banc Rust. */
+interface EcouteEtat {
+  active: boolean
+  ou_en_est: 'dormante' | 'eveillee'
+}
 
 function App() {
   const [activeTab, setActiveTab] = useState<Onglet>('dashboard')
   const [agents, setAgents] = useState<any[]>([])
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
   const [isListening, setIsListening] = useState(false)
+  // Le mot de réveil a été entendu, on attend le prénom d'un agent.
+  const [reveillee, setReveillee] = useState(false)
+  // Ce que Rust dit de l'écoute : micro allumé ou non, mot de réveil entendu ou non.
+  const [ecoute, setEcoute] = useState<EcouteEtat>({ active: false, ou_en_est: 'dormante' })
   const [partialResult, setPartialResult] = useState<string>('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState<string>('')
@@ -72,6 +83,22 @@ function App() {
 
   useEffect(() => {
     initializeApp()
+  }, [])
+
+  // L'état de l'écoute se relit chaque seconde : le réveil retombe tout seul
+  // quand personne ne dit de prénom, et l'écran doit le voir retomber.
+  useEffect(() => {
+    let vivant = true
+    const lire = () =>
+      invoke<EcouteEtat>('voix_ecoute_etat')
+        .then((e) => vivant && setEcoute(e))
+        .catch(() => {})
+    lire()
+    const minuterie = setInterval(lire, 1000)
+    return () => {
+      vivant = false
+      clearInterval(minuterie)
+    }
   }, [])
 
   useEffect(() => {
@@ -211,6 +238,7 @@ function App() {
       try {
         await invoke('start_voice_recognition')
         setIsListening(true)
+        setEcoute(await invoke<EcouteEtat>('voix_ecoute_basculer', { active: true }))
         setError(null)
       } catch (err) {
         setIsListening(false)
@@ -218,6 +246,9 @@ function App() {
       }
     } else {
       setIsListening(false)
+      await invoke<EcouteEtat>('voix_ecoute_basculer', { active: false })
+        .then(setEcoute)
+        .catch(() => {})
       await invoke('stop_voice_recognition').catch(() => {})
     }
   }
@@ -229,14 +260,39 @@ function App() {
       setIsProcessing(true)
       setPartialResult('')
 
-      // C'est le prénom prononcé qui choisit l'agent, pas la case cochée.
-      const detecte = moteur?.detectAgent(command)
-      if (!detecte) {
-        // Aucun prénom reconnu : on ne fait pas répondre un agent au hasard.
+      // Le mot de réveil d'abord, et c'est Rust qui tranche (`reveil.rs`).
+      // Avant le 24/09/2026 ce bloc prenait le PREMIER MOT de tout ce qui
+      // était transcrit pour un prénom d'agent : deux personnes qui parlaient
+      // dans la pièce faisaient répondre un agent dès qu'une phrase commençait
+      // par un mot proche de « Carla ». max l'a dit en clair : l'application
+      // écoute en permanence mais ne doit être dérangée que par un seul mot.
+      //
+      // La décision n'est pas ici parce qu'un état gardé dans React se perd au
+      // premier rechargement de la page, et parce qu'elle s'éprouve sans micro.
+      const reaction = await invoke<
+        | { quoi: 'rien' }
+        | { quoi: 'reveillee' }
+        | { quoi: 'appel'; prenom: string; demande: string }
+        | { quoi: 'aucun-agent-de-ce-nom'; entendu: string }
+      >('voix_entendu', { texte: command })
+
+      if (reaction.quoi === 'rien') return
+      if (reaction.quoi === 'reveillee') {
+        // Elle attend le prénom : le dire à l'écran, sans faire parler personne.
+        setReveillee(true)
+        return
+      }
+      setReveillee(false)
+      if (reaction.quoi === 'aucun-agent-de-ce-nom') {
+        setLastResponse(`Personne ne s'appelle « ${reaction.entendu} » ici.`)
         return
       }
 
-      const { agent, utterance } = detecte
+      // `agents` est la liste affichée ({ id, name… }) : le prénom et la fiche
+      // sont dans le moteur.
+      const agent = moteur?.getAllAgents().find((a) => a.prenom === reaction.prenom)
+      if (!agent) return
+      const utterance = reaction.demande
       setActiveAgent(agent.fiche.id)
 
       const reponse = await invoke<{ texte: string; motif: string; bascule: boolean }>(
@@ -269,10 +325,15 @@ function App() {
   const onglets = Object.keys(TITRES) as Exclude<Onglet, 'dashboard'>[]
 
 
-  // Le bouton VOICE : allume ou coupe l'écoute, avec les commandes qui
-  // existent déjà. Le mot d'éveil « Voice » viendra côté écoute.
+  // Le bouton VOICE. Deux choses à allumer ensemble : le micro
+  // (start_voice_recognition) et l'écoute du mot de réveil
+  // (voix_ecoute_basculer, `reveil.rs`). Le vert et le rouge viennent de
+  // voix_ecoute_etat, jamais d'un état tenu ici : sinon le bouton et l'écoute
+  // réelle finiraient par dire deux choses.
   const basculerVoix = async () => {
-    if (isListening) {
+    if (ecoute.active) {
+      const e = await invoke<EcouteEtat>('voix_ecoute_basculer', { active: false }).catch(() => null)
+      if (e) setEcoute(e)
       setIsListening(false)
       await invoke('stop_voice_recognition').catch(() => {})
       return
@@ -280,6 +341,7 @@ function App() {
     try {
       await invoke('start_voice_recognition')
       setIsListening(true)
+      setEcoute(await invoke<EcouteEtat>('voix_ecoute_basculer', { active: true }))
       setError(null)
     } catch (err) {
       setError("L'écoute n'a pas pu démarrer. " + (motifEcoute ?? String(err)))
@@ -331,7 +393,7 @@ function App() {
       case 'voice':
         return [
           {
-            valeur: motifEcoute ? 'Indisponible' : isListening ? 'En cours' : 'Prête',
+            valeur: motifEcoute ? 'Indisponible' : ecoute.active ? 'Active' : 'Coupée',
             libelle: 'écoute',
             ton: motifEcoute ? 'danger' : undefined,
           },
@@ -358,6 +420,8 @@ function App() {
         <div className="status-bar">
           {isProcessing ? (
             <span className="listening">Réflexion…</span>
+          ) : ecoute.ou_en_est === 'eveillee' ? (
+            <span className="listening">Quel agent ?</span>
           ) : isListening ? (
             <span className="listening">À l'écoute</span>
           ) : (
@@ -372,12 +436,20 @@ function App() {
         </div>
       )}
 
-      {isListening && (partialResult || isProcessing || lastResponse) && (
+      {isListening && (partialResult || isProcessing || lastResponse || reveillee || ecoute.ou_en_est === 'eveillee') && (
         <div className="voice-display">
           {partialResult && (
             <div className="transcription-display">
               <span className="transcription-label">J'entends :</span>
               <span className="transcription-text">{partialResult}</span>
+            </div>
+          )}
+          {/* Le mot de réveil a été entendu : sans ce signe, le client ne sait
+              pas si l'application l'a pris et redit « Voice » par-dessus. */}
+          {(reveillee || ecoute.ou_en_est === 'eveillee') && !isProcessing && (
+            <div className="processing-display reveil-display">
+              <span className="reveil-point" aria-hidden="true" />
+              <span className="processing-label">J'écoute. Quel agent ?</span>
             </div>
           )}
           {isProcessing && (
@@ -436,7 +508,8 @@ function App() {
             isListening={isListening}
             isProcessing={isProcessing}
             motifEcoute={motifEcoute}
-            voixActive={isListening}
+            voixActive={ecoute.active}
+            eveillee={ecoute.ou_en_est === 'eveillee' || reveillee}
             onBasculerVoix={basculerVoix}
             onOuvrir={setActiveTab}
           />
@@ -455,6 +528,7 @@ function App() {
             {activeTab === 'connectors' && (
               <>
                 <CleApi />
+                <InstallerVoix />
                 <ConnectorSetup />
               </>
             )}

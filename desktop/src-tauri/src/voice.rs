@@ -249,7 +249,7 @@ fn chemin_voix() -> std::path::PathBuf {
 
 /// Le modèle d'écoute, cherché lui aussi à côté de l'exécutable.
 pub fn chemin_modele_ecoute() -> std::path::PathBuf {
-    ressource("IAGENT_MODELE_ECOUTE", "modeles/ggml-medium-fr.bin")
+    ressource("IAGENT_MODELE_ECOUTE", "modeles/ggml-small-q5_1.bin")
 }
 
 pub async fn text_to_speech(text: &str) -> Result<String, String> {

@@ -31,6 +31,8 @@ interface Props {
   motifEcoute: string | null
   /** L'écoute est-elle allumée ? Le bouton VOICE la bascule. */
   voixActive: boolean
+  /** « Voice » a été entendu : l'écoute attend un prénom. */
+  eveillee: boolean
   onBasculerVoix: () => void
   onOuvrir: (onglet: Onglet) => void
 }
@@ -130,6 +132,7 @@ export default function Dashboard({
   isProcessing,
   motifEcoute,
   voixActive,
+  eveillee,
   onBasculerVoix,
   onOuvrir,
 }: Props) {
@@ -143,8 +146,8 @@ export default function Dashboard({
 
   const actifs = donnees.actifs
 
-  const etat = isProcessing ? 'reflexion' : isListening ? 'ecoute' : 'repos'
-  const etatTexte = { reflexion: 'Réflexion', ecoute: "À l'écoute", repos: 'Prêt' }[etat]
+  const etat = isProcessing ? 'reflexion' : eveillee ? 'eveil' : isListening ? 'ecoute' : 'repos'
+  const etatTexte = { reflexion: 'Réflexion', eveil: 'Quel agent ?', ecoute: "À l'écoute", repos: 'Prêt' }[etat]
 
   const satellites: { onglet: Exclude<Onglet, 'dashboard'>; valeur: string; detail: string; ton?: string }[] = [
     {
