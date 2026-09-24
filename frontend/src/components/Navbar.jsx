@@ -1,3 +1,8 @@
+// Stable asset name published by build-windows-msi.yml (PR #10): /latest/download/
+// serves the file itself, so the visitor never lands on a GitHub page.
+const TELECHARGEMENT_MSI =
+  'https://github.com/STANDUP-SHOW/iagents/releases/latest/download/iagent-desktop.msi';
+
 export default function Navbar({ search, onSearchChange }) {
   return (
     <nav className="bg-slate-800 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
@@ -22,9 +27,9 @@ export default function Navbar({ search, onSearchChange }) {
           </div>
 
           <a
-            href="https://github.com/STANDUP-SHOW/iagents/releases/latest"
-            target="_blank"
+            href={TELECHARGEMENT_MSI}
             rel="noopener noreferrer"
+            title="Installeur Windows (.msi)"
             className="ml-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition flex items-center gap-2"
           >
             <span>💻</span> Télécharger App
