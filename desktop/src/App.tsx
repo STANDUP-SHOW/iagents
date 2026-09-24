@@ -94,12 +94,22 @@ function App() {
     }
   }, [isListening, activeAgent, agents])
 
+  /**
+   * Prépare l'écoute, et dit en clair ce qui manque quand elle ne peut pas.
+   *
+   * Appelé au démarrage, et à NOUVEAU quand le client vient d'installer les
+   * pièces de la voix : sans ce second appel il aurait téléchargé 190 Mo pour
+   * rien jusqu'à ce qu'il pense à relancer l'application.
+   */
+  const demarrerEcoute = () =>
+    invoke('init_voice')
+      .then(() => setMotifEcoute(null))
+      .catch((err) => setMotifEcoute(String(err)))
+
   const initializeApp = async () => {
     try {
       // L'échec dit quel fichier manque et où : le taire obligerait à deviner.
-      await invoke('init_voice')
-        .then(() => setMotifEcoute(null))
-        .catch((err) => setMotifEcoute(String(err)))
+      await demarrerEcoute()
 
       // L'absence de clé d'API n'est plus une panne : l'agent travaille en
       // local si le poste a le modèle de son palier. C'est `modele_etat`, à
@@ -393,7 +403,7 @@ function App() {
         {activeTab === 'connectors' && (
           <>
             <CleApi />
-            <InstallerVoix />
+            <InstallerVoix apresInstallation={demarrerEcoute} />
             <ConnectorSetup />
           </>
         )}
