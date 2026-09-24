@@ -14,6 +14,7 @@ mod mcp;
 mod modele;
 mod navigateur;
 mod tache;
+mod planificateur;
 mod document;
 mod jauge;
 mod ressources;
@@ -369,6 +370,9 @@ async fn executer_tache(
     tache_id: String,
     state: State<'_, AppState>,
 ) -> Result<tache::Resultat, String> {
+    // La même tâche du même agent ne part jamais deux fois à la fois, qu'elle
+    // vienne d'un clic ou de son heure : le planning passe par ici aussi.
+    let _garde = planificateur::occuper(&prenom, &fiche_id, &tache_id)?;
     let installation = fiches::lire_installation()?;
     let fiche = fiches::lire_fiche(fiche_id.clone())?;
     let maintenant = std::time::SystemTime::now()
@@ -713,6 +717,12 @@ fn main() {
 
     tauri::Builder::default()
         .manage(state)
+        // Les agents tiennent leur planning seuls : sans ça, une tâche ne
+        // partait que sur un clic dans « Le travail du jour ».
+        .setup(|app| {
+            planificateur::demarrer(app.handle().clone());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             init_voice,
@@ -754,6 +764,8 @@ fn main() {
             llm::cle_api_retirer,
             executer_tache,
             tache::dossier_de_travail,
+            planificateur::planning_etat,
+            planificateur::planning_journal,
             repondre,
             courriel::courriel_enregistrer_motdepasse,
             courriel::courriel_motdepasse_present,

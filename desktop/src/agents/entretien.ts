@@ -724,9 +724,11 @@ export interface CoutsParIntensite {
  * L'autonomie n'est ici ni dans l'un ni dans l'autre : elle devient un planning,
  * par `planningDepuisAutonomie`, et l'écrire deux fois la ferait diverger.
  *
- * **Ce que ça ne fait pas :** le rythme (léger / normal / soutenu) entre comme
- * un savoir, pas comme un réglage — rien ne planifie encore différemment selon
- * la réponse. Et les dossiers entrent EN MOTS : « dans mon Drive » n'est pas un
+ *  - **`intensite`** pour le rythme (léger / normal / soutenu), que le
+ *    planning applique depuis le 24/09/2026 : léger passe deux fois moins
+ *    souvent, soutenu deux fois plus.
+ *
+ * **Ce que ça ne fait pas :** les dossiers entrent EN MOTS : « dans mon Drive » n'est pas un
  * chemin, et deviner lequel ferait écrire l'agent à côté avec assurance. Le
  * rattachement d'un dossier logique à un vrai dossier reste au client
  * (`dossiers` dans `installation.json`), et l'agent sait au moins ce qu'on lui
@@ -740,7 +742,21 @@ export interface SavoirDuClient {
 export interface CeQueLeClientARegle {
   competences: SavoirDuClient[];
   repartition?: string;
+  /** Le rythme, sous la clé que le planning lit (`planificateur.rs`). */
+  intensite?: 'light' | 'medium' | 'high';
 }
+
+/**
+ * Le libellé que le client choisit, et la clé du réglage. Les libellés sont
+ * ceux de `dimensionnement/intensite.ts`, d'où vient le coût annoncé ;
+ * `check-entretien.ts` refuse qu'ils se séparent. Jusqu'au 24/09/2026 la
+ * réponse n'entrait que comme un savoir, et rien ne planifiait autrement.
+ */
+export const INTENSITE_DU_LIBELLE: Record<string, 'light' | 'medium' | 'high'> = {
+  Léger: 'light',
+  Normal: 'medium',
+  Soutenu: 'high',
+};
 
 /** Le titre sous lequel chaque réponse arrive au modèle, en français et sans jargon. */
 const TITRE_DU_SUJET: Partial<Record<SujetCadre, string>> = {
@@ -756,6 +772,7 @@ export function reglagesDepuisEntretien(
 ): CeQueLeClientARegle {
   const competences: SavoirDuClient[] = [];
   let repartition: string | undefined;
+  let intensite: CeQueLeClientARegle['intensite'];
 
   for (const q of questions) {
     // Le défaut est une proposition que le client a laissée passer : elle vaut
@@ -767,12 +784,19 @@ export function reglagesDepuisEntretien(
       repartition = dit;
       continue;
     }
+    // Le rythme est les deux : un réglage que le planning applique, et un
+    // savoir, pour que l'agent sache à quel train on lui a demandé de tenir.
+    if (q.sujet === 'intensite') intensite = INTENSITE_DU_LIBELLE[dit];
     const titre = TITRE_DU_SUJET[q.sujet];
     if (!titre) continue;
     competences.push({ titre, resume: dit });
   }
 
-  return repartition ? { competences, repartition } : { competences };
+  return {
+    competences,
+    ...(repartition ? { repartition } : {}),
+    ...(intensite ? { intensite } : {}),
+  };
 }
 
 export function planningDepuisAutonomie(

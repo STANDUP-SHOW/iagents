@@ -131,6 +131,17 @@ pub fn installation_recevable(contenu: &str) -> Result<(), String> {
             }
         }
 
+        // Le rythme choisi à l'entretien : mal écrit, le planning retomberait
+        // sur « normal » et le client paierait un rythme qu'il n'a pas eu.
+        if let Some(v) = agent.get("intensite") {
+            if crate::planificateur::Intensite::lire(Some(v)).is_none() {
+                return Err(format!(
+                    "le rythme de {} doit être light, medium ou high, pas {} : il serait ignoré sans que vous le sachiez",
+                    prenom, v
+                ));
+            }
+        }
+
         let clef = prenom.trim().to_lowercase();
         if prenoms_vus.contains(&clef) {
             return Err(format!("deux agents portent le prénom {}", prenom));

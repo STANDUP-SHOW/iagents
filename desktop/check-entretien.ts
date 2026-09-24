@@ -33,6 +33,7 @@ import {
   type ReferentielActivites,
   INTITULES,
   reglagesDepuisEntretien,
+  INTENSITE_DU_LIBELLE,
   REPARTITION_TOUT_LOCAL,
   REPARTITION_MIXTE,
   REPARTITION_TOUT_API,
@@ -469,6 +470,23 @@ verifier(
     !regle.competences.some((c) =>
       [AUTONOMIE_CONSEILLEE, AUTONOMIE_TOUT_SEUL, AUTONOMIE_TOUT_RELU].includes(c.resume)
     ),
+  );
+  // Le rythme n'était qu'un savoir : rien ne planifiait autrement. Il devient
+  // un réglage que le planning lit, sous les clés de l'économie.
+  verifier(
+    "le rythme choisi devient un réglage que le planning lit",
+    reglagesDepuisEntretien(questions, { intensite: 'Soutenu' }).intensite === 'high' &&
+      reglagesDepuisEntretien(questions, { intensite: 'Léger' }).intensite === 'light' &&
+      reglagesDepuisEntretien(questions, {}).intensite === 'medium',
+  );
+  verifier(
+    "les libellés du rythme sont ceux d'où vient le coût annoncé",
+    Object.entries(INTENSITE_DU_LIBELLE).every(
+      ([libelle, cle]) => INTENSITES[cle].libelle === libelle
+    ) && Object.keys(INTENSITES).length === Object.keys(INTENSITE_DU_LIBELLE).length &&
+      (questions.find((q) => q.sujet === 'intensite')?.options ?? []).every(
+        (o) => o in INTENSITE_DU_LIBELLE
+      ),
   );
   // Une proposition que le client laisse passer vaut réponse : c'est tout le
   // principe de l'entretien, il confirme d'un mot ou corrige.

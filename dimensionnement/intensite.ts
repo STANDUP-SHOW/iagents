@@ -18,7 +18,11 @@ export type Repartition = 'local' | 'hybride' | 'api';
 
 export interface ReglageIntensite {
   libelle: string;
-  /** Multiplie le nombre d'exécutions par mois de chaque tâche planifiée. */
+  /**
+   * Multiplie le nombre d'exécutions par mois de chaque tâche planifiée. Le
+   * planning de l'application (`planificateur.rs`) applique le même chiffre, et
+   * un banc Rust relit ce fichier pour qu'ils ne se séparent pas.
+   */
   frequence: number;
   /** Multiplie le nombre de tours par exécution : recherches et vérifications en plus. */
   profondeur: number;
@@ -32,7 +36,7 @@ export const INTENSITES: Record<Intensite, ReglageIntensite> = {
     frequence: 0.5,
     profondeur: 1,
     phrase:
-      "Je fais l'essentiel, une fois par jour, sans creuser au-delà de ce qu'il faut pour rendre le travail.",
+      "Je fais l'essentiel, deux fois moins souvent que ma fiche ne le prévoit, sans creuser au-delà de ce qu'il faut pour rendre le travail.",
   },
   medium: {
     libelle: 'Normal',
