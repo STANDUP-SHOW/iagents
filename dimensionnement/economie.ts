@@ -9,7 +9,7 @@
  */
 import tarifs from './tarifs-api.json' with { type: 'json' };
 import { appelsParJour, machinesPourPack, agentsParMachine, materielPour, POSTES, BUNDLES, type AgentDimension, type Machine, type TachePlanifiee } from './calculer.ts';
-import { INTENSITES, REPARTITIONS, INTENSITE_DEFAUT, REPARTITION_DEFAUT, type Intensite, type Repartition } from './intensite.ts';
+import { INTENSITES, REPARTITIONS, INTENSITE_DEFAUT, REPARTITION_DEFAUT, PROFONDEUR_APPLIQUEE, type Intensite, type Repartition } from './intensite.ts';
 
 export interface PaquetEco extends AgentDimension { taches: (TachePlanifiee & { logiciels?: string[]; sorties?: { format: string }[] })[]; commercial?: { prixMensuel?: { min: number } } }
 export interface Economie {
@@ -46,8 +46,9 @@ function coutTourEur(prix: { entree: number; entreeCache: number; sortie: number
 
 /**
  * Monthly API bill of an agent if every execution went through the API.
- * `intensite` is what the customer chose at the hiring interview: it stretches both how often
- * a task runs and how deep each run goes, which is exactly what the token bill measures.
+ * `intensite` is what the customer chose at the hiring interview: it stretches how often a
+ * task runs, and — once there is a turn loop to stretch — how deep each run goes. Depth is
+ * not applied yet (`PROFONDEUR_APPLIQUEE`), and the quote must not charge for it.
  */
 export function coutApiMensuel(
   paquet: PaquetEco,
@@ -59,7 +60,10 @@ export function coutApiMensuel(
   for (const t of paquet.taches) {
     if (!t.active) continue;
     const parMois = appelsParJour([t]) * JOURS * reglage.frequence;
-    const n = toursPour(t) * reglage.profondeur;
+    // La profondeur n'est comptée que si elle est appliquée quelque part. Elle
+    // ne l'est pas : le devis annoncé au client à l'entretien ne doit pas
+    // facturer des tours que l'agent ne fera pas.
+    const n = toursPour(t) * (PROFONDEUR_APPLIQUEE ? reglage.profondeur : 1);
     let coutExec = n * coutTourEur(prix);
     if (t.sorties?.some((s) => ['png', 'jpg'].includes(s.format))) coutExec += tarifs.image.prixUnitaireUsd * tarifs.image.parExecution * tarifs.tauxUsdEur;
     if (t.sorties?.some((s) => s.format === 'mp4')) coutExec += tarifs.video.prixUnitaireUsd * tarifs.video.parExecution * tarifs.tauxUsdEur;

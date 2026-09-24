@@ -710,9 +710,26 @@ par WhatsApp et email.
   Un fichier sans empreinte publiée (les réglages `.onnx.json`, qui ne sont pas
   un objet LFS) se vérifie par sa lecture, déclarée en toutes lettres
   (`verification_autre`) : sans ça, `null` passerait pour « rien à vérifier ».
-  **Le moteur Piper n'est pas déclaré** — github.com ne se joint pas depuis la
-  session qui a écrit ceci, donc rien n'a pu être relevé chez l'éditeur, et
-  **un poste installé écoute mais ne parle pas**. Le modèle d'écoute est
+  **Le moteur Piper est déclaré depuis le 24/09/2026, pour Windows seulement**,
+  et c'est le seul morceau qui soit une ARCHIVE : `chemin` est alors un dossier,
+  et `poser()` l'ouvre — après l'empreinte, jamais avant, et une archive sans
+  empreinte est refusée d'office (la lecture en JSON qui suffit à un fichier de
+  réglages ne dit rien d'un ZIP). Trois refus de plus, tenus par des bancs : une
+  entrée qui écrirait hors du dossier fait tout refuser **sans rien poser** ; le
+  nombre d'entrées et la taille dépliée sont bornés avant la première écriture
+  (22 Mo comprimés peuvent rendre des gigaoctets) ; le dossier se remplit en
+  `.partiel` et le renommage est la dernière opération, parce qu'un moteur à
+  demi extrait serait vu présent par `ressources.rs`. **Le dossier commun est
+  retiré quand toute l'archive tient dedans** : le résultat ne dépend donc pas
+  de la façon dont l'éditeur range son archive, et sa forme n'a pas eu à être
+  relevée — ce qui compte, puisque la session ne joint pas github.com et n'a
+  jamais ouvert cette archive. L'empreinte, elle, est CALCULÉE par
+  l'intégration continue (`desktop/relever-piper.ts`), GitHub n'en publiant
+  aucune pour une version antérieure au champ. **Windows seulement** parce que
+  l'archive Linux est un `.tar.gz` et que le binaire n'embarque ni tar ni gzip ;
+  ailleurs `ressources.rs` dit toujours où le prendre à la main, et son remède
+  dépend du système. **Non constaté : personne n'a ouvert la vraie archive ni
+  lancé `piper.exe`.** Le modèle d'écoute est
   `ggml-small-q5_1.bin` (190 Mo) et non `medium` (1,5 Go) : c'est le premier
   contact du client avec le produit. Aucune variante `-fr` n'existe chez
   whisper.cpp, vérifié à son API le 24/09.
