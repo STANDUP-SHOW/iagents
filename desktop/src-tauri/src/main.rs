@@ -17,6 +17,7 @@ mod tache;
 mod document;
 mod jauge;
 mod ressources;
+mod reveil;
 mod telechargement;
 mod pdf;
 mod lecture;
@@ -41,6 +42,84 @@ pub struct AppState {
     llm: Mutex<Option<LLMService>>,
     telegram: Mutex<Option<TelegramCredentials>>,
     db: Arc<Mutex<Option<Database>>>,
+    /// Ou en est le mot de reveil, et si l'ecoute est allumee. L'etat vit ici
+    /// et pas a l'ecran : c'est le code qui doit tenir la regle de max, pas une
+    /// variable React qu'un rechargement de page remettrait a zero.
+    ecoute: Mutex<Ecoute>,
+}
+
+/// L'ecoute telle que le bouton VOICE la montre, et telle que le mot de reveil
+/// la fait avancer.
+struct Ecoute {
+    /// Vert ou rouge : le client peut couper le micro d'un clic. Eteinte, plus
+    /// rien n'est ecoute, meme pas le mot de reveil.
+    active: bool,
+    ou_en_est: reveil::Etat,
+}
+
+impl Default for Ecoute {
+    fn default() -> Self {
+        // Allumee par defaut : le produit se vend sur le fait qu'on lui parle.
+        Ecoute { active: true, ou_en_est: reveil::Etat::Dormante }
+    }
+}
+
+/// Ce que l'ecran lit pour peindre le bouton VOICE et le noyau anime.
+#[derive(serde::Serialize)]
+struct EcouteVue {
+    active: bool,
+    ou_en_est: reveil::Etat,
+}
+
+/// L'etat de l'ecoute, pour le bouton VOICE (vert = actif, rouge = inactif).
+#[tauri::command]
+fn voix_ecoute_etat(state: State<'_, AppState>) -> EcouteVue {
+    let e = state.ecoute.lock().unwrap();
+    EcouteVue { active: e.active, ou_en_est: e.ou_en_est.clone() }
+}
+
+/// Allume ou coupe l'ecoute. Couper rendort aussi le mot de reveil : sinon
+/// l'ecoute reprendrait la ou elle en etait, et le client qui a coupe pour
+/// parler tranquillement retrouverait un agent qui attend son prenom.
+#[tauri::command]
+fn voix_ecoute_basculer(active: bool, state: State<'_, AppState>) -> EcouteVue {
+    let mut e = state.ecoute.lock().unwrap();
+    e.active = active;
+    e.ou_en_est = reveil::Etat::Dormante;
+    EcouteVue { active: e.active, ou_en_est: e.ou_en_est.clone() }
+}
+
+/// Ce que l'ecoute conclut de ce qu'elle vient d'entendre.
+///
+/// L'ecran transcrit et passe le texte ici ; c'est Rust qui decide, parce que
+/// c'est la regle de max et qu'une regle tenue par l'ecran se perd au premier
+/// rechargement. Les prenoms viennent de `installation.json`, jamais de
+/// l'ecran : un agent qu'on n'a pas embauche ne repond pas.
+#[tauri::command]
+fn voix_entendu(texte: String, state: State<'_, AppState>) -> reveil::Reaction {
+    let mut e = state.ecoute.lock().unwrap();
+    if !e.active {
+        return reveil::Reaction::Rien;
+    }
+    let prenoms = prenoms_embauches();
+    let (apres, reaction) = reveil::entendu(&e.ou_en_est, &texte, &prenoms);
+    e.ou_en_est = apres;
+    reaction
+}
+
+/// Les prenoms que ce client a donnes a SES agents. Une installation illisible
+/// ne fait repondre personne, ce qui est le bon sens de l'echec ici.
+fn prenoms_embauches() -> Vec<String> {
+    crate::fiches::lire_installation()
+        .ok()
+        .and_then(|c| serde_json::from_str::<serde_json::Value>(&c).ok())
+        .and_then(|c| c.get("agents")?.as_array().cloned())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.get("prenom")?.as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// Enrollment and verification must extract features at the same rate, or the
@@ -596,6 +675,7 @@ fn main() {
         llm: Mutex::new(None),
         telegram: Mutex::new(None),
         db: Arc::new(Mutex::new(db)),
+        ecoute: Mutex::new(Ecoute::default()),
     };
 
     tauri::Builder::default()
@@ -631,6 +711,9 @@ fn main() {
             mcp::mcp_journal,
             modele::modele_etat,
             jauge::jauge_etat,
+            voix_ecoute_etat,
+            voix_ecoute_basculer,
+            voix_entendu,
             telechargement::voix_a_installer,
             telechargement::voix_installer,
             llm::cle_api_ranger,

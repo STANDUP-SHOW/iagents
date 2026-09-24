@@ -21,6 +21,8 @@ function App() {
   const [agents, setAgents] = useState<any[]>([])
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
   const [isListening, setIsListening] = useState(false)
+  // Le mot de réveil a été entendu, on attend le prénom d'un agent.
+  const [reveillee, setReveillee] = useState(false)
   const [partialResult, setPartialResult] = useState<string>('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState<string>('')
@@ -193,14 +195,37 @@ function App() {
       setIsProcessing(true)
       setPartialResult('')
 
-      // C'est le prénom prononcé qui choisit l'agent, pas la case cochée.
-      const detecte = moteur?.detectAgent(command)
-      if (!detecte) {
-        // Aucun prénom reconnu : on ne fait pas répondre un agent au hasard.
+      // Le mot de réveil d'abord, et c'est Rust qui tranche (`reveil.rs`).
+      // Avant le 24/09/2026 ce bloc prenait le PREMIER MOT de tout ce qui
+      // était transcrit pour un prénom d'agent : deux personnes qui parlaient
+      // dans la pièce faisaient répondre un agent dès qu'une phrase commençait
+      // par un mot proche de « Carla ». max l'a dit en clair : l'application
+      // écoute en permanence mais ne doit être dérangée que par un seul mot.
+      //
+      // La décision n'est pas ici parce qu'un état gardé dans React se perd au
+      // premier rechargement de la page, et parce qu'elle s'éprouve sans micro.
+      const reaction = await invoke<
+        | { quoi: 'rien' }
+        | { quoi: 'reveillee' }
+        | { quoi: 'appel'; prenom: string; demande: string }
+        | { quoi: 'aucun-agent-de-ce-nom'; entendu: string }
+      >('voix_entendu', { texte: command })
+
+      if (reaction.quoi === 'rien') return
+      if (reaction.quoi === 'reveillee') {
+        // Elle attend le prénom : le dire à l'écran, sans faire parler personne.
+        setReveillee(true)
+        return
+      }
+      setReveillee(false)
+      if (reaction.quoi === 'aucun-agent-de-ce-nom') {
+        setLastResponse(`Personne ne s'appelle « ${reaction.entendu} » ici.`)
         return
       }
 
-      const { agent, utterance } = detecte
+      const agent = agents.find((a) => a.prenom === reaction.prenom)
+      if (!agent) return
+      const utterance = reaction.demande
       setActiveAgent(agent.fiche.id)
 
       const reponse = await invoke<{ texte: string; motif: string; bascule: boolean }>(
@@ -249,6 +274,13 @@ function App() {
             <div className="transcription-display">
               <span className="transcription-label">Hearing:</span>
               <span className="transcription-text">{partialResult}</span>
+            </div>
+          )}
+          {/* Le mot de réveil a été entendu : sans ce signe, le client ne sait
+              pas si l'application l'a pris et redit « Voice » par-dessus. */}
+          {reveillee && !isProcessing && (
+            <div className="processing-display">
+              <span className="processing-label">J'écoute. Quel agent ?</span>
             </div>
           )}
           {isProcessing && (
