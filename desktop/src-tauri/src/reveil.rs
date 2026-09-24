@@ -88,14 +88,53 @@ fn commence_par_le_reveil(mots: &[String]) -> bool {
     mots.first().is_some_and(|m| MOTS_DE_REVEIL.contains(&m.as_str()))
 }
 
+/// Distance d'édition entre deux mots : combien de lettres il faut changer,
+/// ajouter ou retirer pour passer de l'un à l'autre.
+fn distance(a: &str, b: &str) -> usize {
+    let a: Vec<char> = a.chars().collect();
+    let b: Vec<char> = b.chars().collect();
+    let mut ligne: Vec<usize> = (0..=a.len()).collect();
+    for (j, cb) in b.iter().enumerate() {
+        let mut precedent = ligne[0];
+        ligne[0] = j + 1;
+        for (i, ca) in a.iter().enumerate() {
+            let cout = usize::from(ca != cb);
+            let remplace = precedent + cout;
+            precedent = ligne[i + 1];
+            ligne[i + 1] = remplace.min(ligne[i] + 1).min(ligne[i + 1] + 1);
+        }
+    }
+    ligne[a.len()]
+}
+
 /// Le prénom entendu, s'il nomme un agent embauché sur ce poste.
 ///
-/// Comparaison sur le mot nu, sans tolérance : `detectAgent` accepte une lettre
-/// de travers, ce qui a du sens quand on a déjà dit le mot de réveil et qu'on
-/// attend un prénom. Ici on n'en veut pas — mais on n'en a pas besoin non plus,
-/// parce que le réveil a déjà fait le tri.
+/// Une lettre de travers est tolérée sur un prénom un peu long, pas sur un
+/// court où elle en désigne souvent un autre. C'est la règle que portait
+/// `detectAgent` côté écran, reprise ici quand cette fonction a cessé d'être
+/// appelée : le mot de réveil règle les faux déclenchements, il ne règle PAS le
+/// prénom mal transcrit. « Robaire » pour Robert reste une transcription
+/// plausible, et exiger l'exactitude aurait fait taire l'agent sans rien dire.
+///
+/// Deux prénoms aussi proches l'un que l'autre ne départagent rien : on préfère
+/// le silence au mauvais agent. Un prénom exact l'emporte toujours sur son
+/// voisin approximatif.
 fn agent_nomme(mot: &str, prenoms: &[String]) -> Option<String> {
-    prenoms.iter().find(|p| nu(p) == mot).cloned()
+    if let Some(exact) = prenoms.iter().find(|p| nu(p) == mot) {
+        return Some(exact.clone());
+    }
+    let proches: Vec<&String> = prenoms
+        .iter()
+        .filter(|p| {
+            let nu_p = nu(p);
+            let tolerance = usize::from(nu_p.chars().count() >= 5);
+            tolerance > 0 && distance(mot, &nu_p) <= tolerance
+        })
+        .collect();
+    match proches.as_slice() {
+        [seul] => Some((*seul).clone()),
+        _ => None,
+    }
 }
 
 /// Ce que l'écoute conclut de ce qu'elle vient d'entendre.
@@ -230,6 +269,41 @@ mod tests {
                 dit
             );
         }
+    }
+
+    #[test]
+    fn un_prenom_a_une_lettre_pres_repond_quand_meme() {
+        // Le mot de réveil règle les faux déclenchements, pas le prénom mal
+        // transcrit : « Robaire » pour Robert reste plausible au micro, et
+        // exiger l'exactitude aurait fait taire l'agent sans rien dire.
+        let (_, reaction) = entendu(&Etat::Dormante, "Voice Robart", &maison());
+        assert_eq!(
+            reaction,
+            Reaction::Appel { prenom: "Robert".into(), demande: String::new() }
+        );
+    }
+
+    #[test]
+    fn entre_deux_prenoms_aussi_proches_personne_ne_repond() {
+        // Mieux vaut le silence que le mauvais agent.
+        let deux: Vec<String> = ["Carla", "Carlo"].iter().map(|p| p.to_string()).collect();
+        let (_, reaction) = entendu(&Etat::Dormante, "Voice Carlx", &deux);
+        assert!(matches!(reaction, Reaction::AucunAgentDeCeNom { .. }));
+        // Mais un prénom exact l'emporte toujours sur son voisin.
+        let (_, exact) = entendu(&Etat::Dormante, "Voice Carlo", &deux);
+        assert_eq!(
+            exact,
+            Reaction::Appel { prenom: "Carlo".into(), demande: String::new() }
+        );
+    }
+
+    #[test]
+    fn sur_un_prenom_court_une_lettre_de_travers_en_designe_un_autre() {
+        // « Luc » et « Lea » ne sont qu'a deux lettres l'un de l'autre : tolerer
+        // sur trois lettres ferait repondre n'importe qui.
+        let courts: Vec<String> = ["Luc", "Lea"].iter().map(|p| p.to_string()).collect();
+        let (_, reaction) = entendu(&Etat::Dormante, "Voice Lud", &courts);
+        assert!(matches!(reaction, Reaction::AucunAgentDeCeNom { .. }));
     }
 
     #[test]

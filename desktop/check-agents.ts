@@ -477,58 +477,23 @@ verifier(
   moteurJournal.formatSystemPrompt(ids[0]).includes('que tu ne refais pas')
 );
 
-// Détection du prénom : « l'employeur dit Carla, Carla répond ».
+// La détection du prénom a déménagé en Rust le 24/09/2026 (`reveil.rs`), avec
+// le mot de réveil que max a demandé : l'écran ne choisit plus l'agent, il
+// transmet ce qu'il a entendu à `voix_entendu` et suit la réponse. `detectAgent`
+// n'était plus appelé que par ce banc, et un chemin mort qui a l'air vivant est
+// ce qui se fait rebrancher par erreur.
+//
+// Rien n'est perdu : la tolérance d'une lettre sur un prénom un peu long, le
+// silence entre deux prénoms aussi proches, et le prénom exact qui l'emporte sur
+// son voisin sont maintenant éprouvés dans `reveil.rs` (`agent_nomme`). Ils y
+// comptent davantage : le mot de réveil règle les faux déclenchements, il ne
+// règle pas le prénom mal transcrit.
 const moteur = new ConversationEngine(agents, {
   conversation: { max_context_turns: 10, user_session_timeout_minutes: 30 },
   tts: { primary: {} },
   stt: { primary: {} },
   llm: { primary: {} },
 });
-
-const cas: Array<[string, string | null, string]> = [
-  ['Carla, quels sont les horaires ?', 'Carla', 'quels sont les horaires ?'],
-  ['Robert peux-tu vérifier la commande', 'Robert', 'peux-tu vérifier la commande'],
-  ['Marie bonjour', 'Marie', 'bonjour'],
-  ['carla bonjour', 'Carla', 'bonjour'],
-  ['Carlaa tu es là ?', 'Carla', 'tu es là ?'],
-  ['Bonjour tout le monde', null, ''],
-  ['Sophie es-tu là', null, ''],
-];
-
-for (const [phrase, prenomAttendu, enonceAttendu] of cas) {
-  const r = moteur.detectAgent(phrase);
-  const prenomObtenu = r?.agent.prenom ?? null;
-  const ok = prenomObtenu === prenomAttendu && (r === null || r.utterance === enonceAttendu);
-  verifier(
-    `« ${phrase} » → ${prenomAttendu ?? 'aucun agent'}`,
-    ok,
-    ok ? '' : `obtenu ${prenomObtenu} / « ${r?.utterance ?? ''} »`
-  );
-}
-
-// Deux prénoms à une lettre d'écart : on préfère le silence au mauvais agent.
-const ambigu = new ConversationEngine(
-  installerAgents(fiches, [
-    { prenom: 'Carla', ficheId: ids[0], voix: 'v' },
-    { prenom: 'Carlo', ficheId: ids[0], voix: 'v' },
-  ]),
-  {
-    conversation: { max_context_turns: 10, user_session_timeout_minutes: 30 },
-    tts: { primary: {} },
-    stt: { primary: {} },
-    llm: { primary: {} },
-  }
-);
-
-verifier(
-  'entre deux prénoms aussi proches, aucun agent ne répond',
-  ambigu.detectAgent('Carlx tu es là') === null
-);
-
-verifier(
-  "mais un prénom exact l'emporte toujours sur son voisin",
-  ambigu.detectAgent('Carlo tu es là')?.agent.prenom === 'Carlo'
-);
 
 const sessionId = 'controle';
 moteur.createSession(sessionId, marie.fiche.id);
