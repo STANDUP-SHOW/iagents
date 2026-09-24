@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import './App.css'
 import './centre.css'
@@ -19,6 +19,14 @@ import Embauche from './components/Embauche'
 import Travail from './components/Travail'
 import CleApi from './components/CleApi'
 import InstallerVoix from './components/InstallerVoix'
+import Equipe from './components/Equipe'
+import {
+  comprendreDemande,
+  contexteDuTeamHolder,
+  estTeamHolder,
+  rassemblerContexte,
+  type Proposition,
+} from './agents/team-holder'
 
 /** `voix_ecoute_etat` et `voix_ecoute_basculer`, noms de champs figés par un banc Rust. */
 interface EcouteEtat {
@@ -50,6 +58,16 @@ function App() {
   const [voieBascule, setVoieBascule] = useState(false)
   const [jauge, setJauge] = useState<Jauge | null>(null)
   const [installes, setInstalles] = useState<readonly AgentInstalle[]>([])
+  // Ce que le Team Holder a proposé de changer, en attente du oui du client.
+  // Gardé aussi dans une ref : la boucle d'écoute lit processVoiceCommand tel
+  // qu'il était à son démarrage, et verrait sinon une proposition périmée.
+  const [proposition, setPropositionEtat] = useState<Proposition | null>(null)
+  const propositionRef = useRef<Proposition | null>(null)
+  const setProposition = (p: Proposition | null) => {
+    propositionRef.current = p
+    setPropositionEtat(p)
+  }
+  const [versionEquipe, setVersionEquipe] = useState(0)
   const luReel = useLectures(activeTab)
   const travailReel = useTravail(installes)
   // Le mode démo montre un cabinet d'exemple, pour une démonstration client ou
@@ -73,7 +91,8 @@ function App() {
   const etat: Etat = demo
     ? ETAT_DEMO
     : {
-        embauches: installes.length,
+        embauches: installes.filter((a) => !estTeamHolder(a)).length,
+        teamHolder: installes.find((a) => estTeamHolder(a))?.prenom ?? null,
         actifs: agents.filter((a) => a.status === 'active').length,
         travail: travailReel,
         lu: luReel,
@@ -294,13 +313,48 @@ function App() {
       if (!agent) return
       const utterance = reaction.demande
       setActiveAgent(agent.fiche.id)
+      const equipe = moteur!.getAllAgents()
+      let promptSysteme = moteur!.formatSystemPrompt(agent.fiche.id)
+
+      if (estTeamHolder(agent)) {
+        // Une proposition attend : « oui » l'applique, « non » l'écarte.
+        const attente = propositionRef.current
+        if (attente && utterance) {
+          const reponseCourte = utterance.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+          if (/^(oui|ok|d accord|d'accord|vas-y|allez-y|fais-le|faites-le)\b/.test(reponseCourte)) {
+            await accepterProposition()
+            return
+          }
+          if (/^non\b/.test(reponseCourte)) {
+            setProposition(null)
+            await dire("D'accord, je ne change rien.")
+            return
+          }
+        }
+        if (utterance) {
+          const compris = comprendreDemande(utterance, equipe)
+          if ('proposition' in compris) {
+            setProposition(compris.proposition)
+            await dire(compris.proposition.phrase)
+            return
+          }
+          if ('deja' in compris) {
+            await dire(compris.deja)
+            return
+          }
+          // Une question sur le réglage, ou pas un réglage du tout : il répond
+          // en conversation, avec ce qu'il a lu de son équipe.
+        }
+        const { lectures, changements } = await rassemblerContexte(invoke, equipe)
+        promptSysteme += contexteDuTeamHolder(equipe, lectures, changements)
+      }
 
       const reponse = await invoke<{ texte: string; motif: string; bascule: boolean }>(
         'repondre',
         {
           prenom: agent.prenom,
           ficheId: agent.fiche.id,
-          promptSysteme: moteur!.formatSystemPrompt(agent.fiche.id),
+          promptSysteme,
           enonce: utterance || command,
         }
       )
@@ -320,6 +374,42 @@ function App() {
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  // Ce que l'application dit à voix haute, affiché aussi pour qui ne l'entend pas.
+  const dire = async (texte: string) => {
+    setLastResponse(texte)
+    await invoke('text_to_speech', { text: texte }).catch(() => {})
+  }
+
+  // Le client a dit oui (à voix haute ou sur l'écran « Votre équipe ») : le
+  // réglage passe par Rust, qui le refuse s'il sort des trois permis.
+  const accepterProposition = async () => {
+    const p = propositionRef.current
+    const chef = installes.find((a) => estTeamHolder(a)) ?? moteur?.getAllAgents().find((a) => estTeamHolder(a))
+    if (!p || !chef) return
+    try {
+      await invoke('equipe_regler', {
+        par: chef.prenom,
+        agent: p.agent,
+        tacheId: p.tacheId,
+        reglage: p.reglage,
+        valeur: p.valeur,
+      })
+      setProposition(null)
+      setVersionEquipe((v) => v + 1)
+      // Le planning en mémoire est celui d'avant : on relit l'installation.
+      await chargerAgentsInstalles()
+      await dire("C'est fait.")
+    } catch (err) {
+      setProposition(null)
+      await dire(`Je n'ai pas pu le faire : ${String(err)}`)
+    }
+  }
+
+  const refuserProposition = () => {
+    setProposition(null)
+    setLastResponse("D'accord, je ne change rien.")
   }
 
   const onglets = Object.keys(TITRES) as Exclude<Onglet, 'dashboard'>[]
@@ -388,6 +478,16 @@ function App() {
         ]
       case 'navigateur':
         return [{ valeur: tiret(lu.sites), libelle: lu.sites === 1 ? 'compte connecté' : 'comptes connectés' }]
+      case 'equipe':
+        return [
+          { valeur: etat.teamHolder ?? '—', libelle: 'Team Holder' },
+          { valeur: tiret(etat.embauches), libelle: 'agents qu’il tient' },
+          {
+            valeur: proposition && !demo ? '1' : '0',
+            libelle: 'réglage à confirmer',
+            ton: proposition && !demo ? 'alerte' : undefined,
+          },
+        ]
       case 'courriel':
         return [{ valeur: tiret(lu.envois), libelle: lu.envois === 1 ? 'envoi consigné' : 'envois consignés' }]
       case 'voice':
@@ -536,6 +636,15 @@ function App() {
             {activeTab === 'courriel' && <Courriel />}
             {activeTab === 'travail' && <Travail />}
             {activeTab === 'embauche' && <Embauche />}
+            {activeTab === 'equipe' && (
+              <Equipe
+                installes={demo ? [] : installes}
+                proposition={demo ? null : proposition}
+                onAccepter={accepterProposition}
+                onRefuser={refuserProposition}
+                version={versionEquipe}
+              />
+            )}
           </div>
         )}
       </main>

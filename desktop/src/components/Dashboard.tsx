@@ -23,6 +23,7 @@ export type Onglet =
   | 'embauche'
   | 'travail'
   | 'machine'
+  | 'equipe'
 
 interface Props {
   etat: Etat
@@ -87,6 +88,14 @@ export const ICONES: Record<Exclude<Onglet, 'dashboard'>, ReactNode> = {
       <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
     </>
   ),
+  equipe: (
+    <>
+      <circle cx="12" cy="7" r="3" />
+      <circle cx="5" cy="10" r="2.2" />
+      <circle cx="19" cy="10" r="2.2" />
+      <path d="M7 20c0-2.8 2.2-5 5-5s5 2.2 5 5M1.5 18c0-2 1.6-3.6 3.5-3.6M22.5 18c0-2-1.6-3.6-3.5-3.6" />
+    </>
+  ),
   machine: (
     <>
       <rect x="6" y="6" width="12" height="12" rx="1.5" />
@@ -104,6 +113,7 @@ export const TITRES: Record<Exclude<Onglet, 'dashboard'>, string> = {
   courriel: 'Courrier',
   voice: 'Votre voix',
   machine: 'Votre machine',
+  equipe: 'Votre équipe',
 }
 
 /** Ce qui tient dans un rond : un mot, deux au plus. */
@@ -116,6 +126,7 @@ const TITRES_COURTS: Record<Exclude<Onglet, 'dashboard'>, string> = {
   courriel: 'Courrier',
   voice: 'Voix',
   machine: 'Machine',
+  equipe: 'Équipe',
 }
 
 export function Icone({ onglet }: { onglet: Exclude<Onglet, 'dashboard'> }) {
@@ -284,7 +295,12 @@ export default function Dashboard({
           ))}
         </div>
 
-        <div className="noyau" aria-live="polite">
+        <button
+          className={`noyau${donnees.teamHolder ? ' noyau-chef' : ''}`}
+          aria-live="polite"
+          onClick={() => onOuvrir('equipe')}
+          title={donnees.teamHolder ? `${donnees.teamHolder}, votre Team Holder` : 'Votre équipe'}
+        >
           <svg className="anneaux" viewBox="-100 -100 200 200" aria-hidden="true">
             <circle className="anneau anneau-graduation" r="96" />
             <circle className="anneau anneau-tirets" r="88" />
@@ -295,8 +311,9 @@ export default function Dashboard({
           <div className="noyau-coeur">
             <img src={puce} alt="" className="noyau-puce" />
           </div>
+          {donnees.teamHolder && <div className="noyau-chef-nom">{donnees.teamHolder}</div>}
           <div className="noyau-etat">{etatTexte}</div>
-        </div>
+        </button>
       </div>
     </div>
   )

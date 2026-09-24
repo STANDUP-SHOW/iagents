@@ -110,7 +110,10 @@ export function BandeauChiffres({ chiffres }: { chiffres: Chiffre[] }) {
  * ils montrent ; c'est le ruban « Mode démo » qui le dit au client.
  */
 export interface Etat {
+  /** Les agents embauchés, sans le Team Holder. */
   embauches: number
+  /** Le prénom du Team Holder, s'il y en a un sur ce poste. */
+  teamHolder: string | null
   actifs: number
   travail: { total: number; pretes: number; sansMatiere: number }
   lu: Lectures
@@ -124,6 +127,7 @@ export interface Etat {
  */
 export const ETAT_DEMO: Etat = {
   embauches: 5,
+  teamHolder: 'Victor',
   actifs: 3,
   travail: { total: 27, pretes: 22, sansMatiere: 4 },
   lu: {
