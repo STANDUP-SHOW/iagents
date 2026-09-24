@@ -272,9 +272,14 @@ function App() {
       setVoie(reponse.motif)
       setVoieBascule(reponse.bascule)
 
+      // Le message vient de Rust, qui SAIT laquelle des quatre pièces manque et
+      // quoi en faire (`manque_pour_parler`, en français, avec son remède). Le
+      // remplacer par une phrase générique jetait cette information : elle
+      // disait encore « vérifier que piper et sa voix sont présents » alors que
+      // la voix, elle, se télécharge depuis le 24/09 et qu'il ne manque plus
+      // que le moteur. Le client lisait donc un conseil faux.
       await invoke('text_to_speech', { text: reponse.texte }).catch((err) => {
-        console.error('TTS failed:', err)
-        setError("La synthèse vocale a échoué. Vérifier que piper et sa voix sont présents à côté de l'application.")
+        setError(String(err))
       })
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err)
