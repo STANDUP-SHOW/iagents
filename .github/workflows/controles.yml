@@ -51,6 +51,18 @@ jobs:
       - name: Contrôle de la boutique
         run: npm run controle-boutique
 
+      # Le seul relevé que ce dépôt ne peut pas faire ailleurs : les binaires du
+      # moteur de voix Piper sont publiés dans les versions de GitHub, et la
+      # session qui a écrit le téléchargement de la voix ne joint pas
+      # github.com. Ce flux, lui, TOURNE chez GitHub. Tant que le moteur n'est
+      # pas déclaré, l'étape imprime ce qu'il faudrait écrire sans rien faire
+      # échouer ; une fois déclaré, elle refuse une version qui a bougé chez
+      # l'éditeur — vu ici plutôt que chez le client au moment où il clique.
+      - name: Relevé du moteur de voix chez l'éditeur
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node --experimental-strip-types desktop/relever-piper.ts
+
   application:
     name: Application desktop
     runs-on: ubuntu-latest
