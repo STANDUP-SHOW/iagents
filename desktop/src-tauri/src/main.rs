@@ -83,10 +83,32 @@ fn voix_ecoute_etat(state: State<'_, AppState>) -> EcouteVue {
 /// parler tranquillement retrouverait un agent qui attend son prenom.
 #[tauri::command]
 fn voix_ecoute_basculer(active: bool, state: State<'_, AppState>) -> EcouteVue {
-    let mut e = state.ecoute.lock().unwrap();
-    e.active = active;
-    e.ou_en_est = reveil::Etat::Dormante;
+    {
+        let mut e = state.ecoute.lock().unwrap();
+        e.active = active;
+        e.ou_en_est = reveil::Etat::Dormante;
+    }
+    // Le micro suit le bouton ICI, et pas a l'ecran. Il y avait deux etats pour
+    // une seule chose — `isListening` en React et `active` en Rust — ce qui est
+    // la garantie qu'un jour le bouton serait vert pendant que l'ecoute est
+    // morte. Un bouton rouge doit vouloir dire que le micro est coupe, pas
+    // seulement que le mot de reveil est ignore.
+    //
+    // L'echec ne remet pas le bouton a l'etat d'avant : le client a demande a
+    // couper, et couper a echoue faute d'ecoute prete, ce qui revient au meme.
+    let _ = micro(&state, active);
+    let e = state.ecoute.lock().unwrap();
     EcouteVue { active: e.active, ou_en_est: e.ou_en_est.clone() }
+}
+
+/// Allume ou coupe le micro. `Err` quand l'ecoute n'est pas prete sur ce poste
+/// (modele absent) : l'appelant decide si c'est une faute chez lui.
+fn micro(state: &State<'_, AppState>, allume: bool) -> Result<String, String> {
+    let voice_guard = state.voice.lock().unwrap();
+    let Some(voice) = voice_guard.as_ref() else {
+        return Err("L'écoute n'est pas prête sur ce poste.".to_string());
+    };
+    if allume { voice.start_listening() } else { voice.stop_listening() }
 }
 
 /// Ce que l'ecoute conclut de ce qu'elle vient d'entendre.
@@ -143,8 +165,19 @@ fn init_voice(state: State<AppState>) -> Result<String, String> {
     let model_path = voice::chemin_modele_ecoute();
     match VoiceState::new(&model_path) {
         Ok(voice_state) => {
-            let mut voice = state.voice.lock().unwrap();
-            *voice = Some(voice_state);
+            {
+                let mut voice = state.voice.lock().unwrap();
+                *voice = Some(voice_state);
+            }
+            // « L'application est toujours a l'ecoute » (max, 24/09/2026) : le
+            // micro demarre donc seul, sans que le client ait a cliquer. Ce qui
+            // rend ca acceptable est le mot de reveil — rien n'est ecoute POUR
+            // etre suivi tant que « Voice » n'a pas ete prononce (`reveil.rs`).
+            // S'il a coupe le bouton, on respecte son choix.
+            let demarre = state.ecoute.lock().unwrap().active;
+            if demarre {
+                let _ = micro(&state, true);
+            }
             Ok("Écoute prête.".to_string())
         }
         // Le fichier est là et ne se charge pas : ce n'est plus le même problème,
