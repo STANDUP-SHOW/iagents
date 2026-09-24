@@ -621,19 +621,30 @@ fn verify_voice(
     ))
 }
 
-#[tauri::command]
-fn train_voice(utterances: Vec<String>, state: State<AppState>) -> Result<String, String> {
-    let voice_guard = state.voice.lock().unwrap();
+/// Ce que répond `train_voice`, et pourquoi il ne répond que ça.
+///
+/// La reconnaissance du propriétaire se fait sur du son, pas sur des phrases
+/// écrites : `enroll_voice` calcule les MFCC de vrais échantillons et les range
+/// en base, `verify_voice` s'y compare. Du texte n'apprend rien à personne.
+const APPRENTISSAGE_PAR_LE_SON: &str = "La voix ne s'apprend pas sur des phrases écrites : \
+il faut enregistrer de vrais échantillons de son. Rien n'a été appris.";
 
-    if voice_guard.is_some() {
-        println!("Training voice with {} utterances", utterances.len());
-        // Voice training now done via enroll_voice with actual audio samples
-        Ok(format!(
-            "Voice training prepared. Use enroll_voice with audio samples to complete."
-        ))
-    } else {
-        Err("L'écoute n'est pas prête sur ce poste.".to_string())
-    }
+/// Restait de l'époque où l'on croyait pouvoir apprendre une voix sur du texte.
+///
+/// Elle jetait ses `utterances`, en imprimait le nombre sur la sortie standard,
+/// et rendait `Ok("Voice training prepared…")` — un succès que personne n'avait
+/// gagné, sur une commande que Tauri expose. C'est la même faute que
+/// `telegram.rs` : le premier écran qui l'aurait appelée aurait annoncé au
+/// client que sa voix était apprise. Elle refuse maintenant, en français et en
+/// disant par où passer, plutôt que de disparaître d'un coup du carnet de
+/// commandes où l'interface pourrait encore la chercher.
+#[tauri::command]
+fn train_voice(utterances: Vec<String>) -> Result<String, String> {
+    // Le nom de l'argument reste `utterances` : Tauri en fait la clef
+    // attendue cote interface, et la renommer rendrait une erreur de
+    // desserialisation illisible au lieu du refus en francais.
+    let _ = utterances;
+    Err(APPRENTISSAGE_PAR_LE_SON.to_string())
 }
 
 #[tauri::command]
