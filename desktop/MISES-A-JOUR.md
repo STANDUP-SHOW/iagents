@@ -41,7 +41,7 @@ publique et l'adresse ne sont pas secrètes.
 1. Étiqueter : `git tag v0.2.0 && git push origin v0.2.0`. Le numéro de
    l'étiquette devient celui de l'application.
 2. Le flux construit l'installeur et le joint à une Release GitHub sous des
-   noms stables : `iAgent-Windows-setup.exe`, `iAgent-Windows.msi`, et, si la
+   noms stables : `iagent-desktop-setup.exe`, `iagent-desktop.msi`, et, si la
    clé est posée, `latest.json` avec l'installeur signé.
 3. **Tant que la variable du dépôt `IAGENT_PUBLIER_RELEASES` ne vaut pas
    `oui`, cette Release reste un brouillon** : personne d'autre ne la voit.
@@ -51,8 +51,8 @@ publique et l'adresse ne sont pas secrètes.
 
 Une fois publiée, les adresses ne changent plus d'une version à l'autre :
 
-- bouton du site : `https://github.com/STANDUP-SHOW/iagents/releases/latest/download/iAgent-Windows-setup.exe`
-  (ou `iAgent-Windows.msi` pour un parc d'entreprise) ;
+- bouton du site : `https://github.com/STANDUP-SHOW/iagents/releases/latest/download/iagent-desktop-setup.exe`
+  (ou `iagent-desktop.msi` pour un parc d'entreprise) ;
 - `IAGENT_MAJ_ADRESSE`, si les mises à jour vivent au même endroit :
   `https://github.com/STANDUP-SHOW/iagents/releases/latest/download/latest.json`.
 
