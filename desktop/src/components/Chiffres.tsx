@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import type { AgentInstalle } from '../agents/fiche'
 import { travailDuJour } from '../agents/travail'
+import type { Jauge } from '../agents/jauge'
 
 /**
  * Ce que l'application sait lire d'elle-même, pour le centre et pour le
@@ -101,4 +102,51 @@ export function BandeauChiffres({ chiffres }: { chiffres: Chiffre[] }) {
       ))}
     </div>
   )
+}
+
+/**
+ * Tout ce que le centre et les bandeaux affichent, d'une seule source : les
+ * lectures réelles, ou l'exemple du mode démo. Les écrans ne savent pas lequel
+ * ils montrent ; c'est le ruban « Mode démo » qui le dit au client.
+ */
+export interface Etat {
+  embauches: number
+  actifs: number
+  travail: { total: number; pretes: number; sansMatiere: number }
+  lu: Lectures
+  jauge: Jauge | null
+}
+
+/**
+ * Le mode démo : un cabinet de cinq agents, pour montrer l'application à un
+ * client ou la contrôler sans rien installer. Ces chiffres sont un EXEMPLE ; ils
+ * ne sortent jamais du mode démo, et le ruban le dit sur chaque écran.
+ */
+export const ETAT_DEMO: Etat = {
+  embauches: 5,
+  actifs: 3,
+  travail: { total: 27, pretes: 22, sansMatiere: 4 },
+  lu: {
+    metiers: 1249,
+    secteurs: 44,
+    activites: 282,
+    sites: 4,
+    envois: 38,
+    serveurs: { total: 12, prets: 9 },
+    cle: true,
+  },
+  jauge: {
+    niveau: 'confortable',
+    memoireModeles: 9.5,
+    charge: 0.42,
+    message: "Exemple : vos cinq agents tiennent sur cette machine, avec de la marge pour en ajouter deux.",
+    machine: {
+      nom: 'Firebat AM02 (exemple)',
+      ram: 32,
+      memoireModeles: 26,
+      memoireUnifiee: true,
+      capaciteGpu: 0.2,
+      origine: 'Mode démo : chiffres d’exemple, pas une mesure de ce poste.',
+    },
+  },
 }

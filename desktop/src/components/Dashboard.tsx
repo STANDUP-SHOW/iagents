@@ -1,7 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { AgentInstalle } from '../agents/fiche'
-import type { Jauge } from '../agents/jauge'
-import { tiret, useLectures, useTravail } from './Chiffres'
+import { tiret, type Etat } from './Chiffres'
 import puce from '../assets/marque/puce-cerveau.png'
 
 /**
@@ -12,7 +10,7 @@ import puce from '../assets/marque/puce-cerveau.png'
  * installés, dans la jauge calculée en Rust, ou dans ce que les commandes de
  * l'application renvoient. Quand une lecture échoue, le satellite affiche un
  * tiret : un chiffre inventé sur un tableau de bord se croit, et c'est pire
- * qu'un trou.
+ * qu'un trou. Seul le mode démo montre un exemple, et le ruban le dit.
  */
 
 export type Onglet =
@@ -27,12 +25,13 @@ export type Onglet =
   | 'machine'
 
 interface Props {
-  agents: { id: string; status: string }[]
-  installes: readonly AgentInstalle[]
+  etat: Etat
   isListening: boolean
   isProcessing: boolean
   motifEcoute: string | null
-  jauge: Jauge | null
+  /** L'écoute est-elle allumée ? Le bouton VOICE la bascule. */
+  voixActive: boolean
+  onBasculerVoix: () => void
   onOuvrir: (onglet: Onglet) => void
 }
 
@@ -105,6 +104,18 @@ export const TITRES: Record<Exclude<Onglet, 'dashboard'>, string> = {
   machine: 'Votre machine',
 }
 
+/** Ce qui tient dans un rond : un mot, deux au plus. */
+const TITRES_COURTS: Record<Exclude<Onglet, 'dashboard'>, string> = {
+  agents: 'Agents',
+  travail: 'Travail',
+  embauche: 'Embaucher',
+  connectors: 'Connexions',
+  navigateur: 'Comptes',
+  courriel: 'Courrier',
+  voice: 'Voix',
+  machine: 'Machine',
+}
+
 export function Icone({ onglet }: { onglet: Exclude<Onglet, 'dashboard'> }) {
   return (
     <svg className="icone" viewBox="0 0 24 24" aria-hidden="true">
@@ -114,16 +125,15 @@ export function Icone({ onglet }: { onglet: Exclude<Onglet, 'dashboard'> }) {
 }
 
 export default function Dashboard({
-  agents,
-  installes,
+  etat: donnees,
   isListening,
   isProcessing,
   motifEcoute,
-  jauge,
+  voixActive,
+  onBasculerVoix,
   onOuvrir,
 }: Props) {
-  const lu = useLectures('dashboard')
-  const travail = useTravail(installes)
+  const { lu, travail, jauge } = donnees
   const [maintenant, setMaintenant] = useState(() => new Date())
 
   useEffect(() => {
@@ -131,7 +141,7 @@ export default function Dashboard({
     return () => clearInterval(horloge)
   }, [])
 
-  const actifs = agents.filter((a) => a.status === 'active').length
+  const actifs = donnees.actifs
 
   const etat = isProcessing ? 'reflexion' : isListening ? 'ecoute' : 'repos'
   const etatTexte = { reflexion: 'Réflexion', ecoute: "À l'écoute", repos: 'Prêt' }[etat]
@@ -139,8 +149,8 @@ export default function Dashboard({
   const satellites: { onglet: Exclude<Onglet, 'dashboard'>; valeur: string; detail: string; ton?: string }[] = [
     {
       onglet: 'agents',
-      valeur: tiret(agents.length),
-      detail: actifs ? `${actifs} actif${actifs > 1 ? 's' : ''}` : agents.length ? 'aucun actif' : 'aucun installé',
+      valeur: tiret(donnees.embauches),
+      detail: actifs ? `${actifs} actif${actifs > 1 ? 's' : ''}` : donnees.embauches ? 'aucun actif' : 'aucun embauché',
     },
     {
       onglet: 'travail',
@@ -166,12 +176,6 @@ export default function Dashboard({
       onglet: 'courriel',
       valeur: tiret(lu.envois),
       detail: lu.envois === 1 ? 'envoi' : 'envois',
-    },
-    {
-      onglet: 'voice',
-      valeur: motifEcoute ? 'Hors' : isListening ? 'On' : 'Prête',
-      detail: motifEcoute ? 'écoute indisponible' : isListening ? 'écoute en cours' : 'écoute disponible',
-      ton: motifEcoute ? 'danger' : undefined,
     },
     {
       onglet: 'machine',
@@ -203,6 +207,39 @@ export default function Dashboard({
       <div className="hud-coin hud-coin-bas-gauche">
         <span className="hud-slogan">They do it for you.</span>
         <span className="hud-etiquette">Alone. With or without you.</span>
+      </div>
+
+      <div className="commande-voix">
+        <button
+          className={`bouton-voice ${voixActive ? 'voice-actif' : 'voice-inactif'}`}
+          onClick={onBasculerVoix}
+          aria-pressed={voixActive}
+          disabled={!!motifEcoute}
+          title={motifEcoute ?? (voixActive ? 'Couper l\u2019écoute' : 'Allumer l\u2019écoute')}
+        >
+          <svg className="icone" viewBox="0 0 24 24" aria-hidden="true">
+            {ICONES.voice}
+          </svg>
+          <span className="bouton-voice-nom">Voice</span>
+          <span className="bouton-voice-etat">
+            {motifEcoute ? 'indisponible' : voixActive ? 'à l\u2019écoute' : 'coupé'}
+          </span>
+        </button>
+        <p className="commande-voix-aide">
+          {motifEcoute
+            ? 'L\u2019écoute ne peut pas démarrer : voir les réglages dessous.'
+            : voixActive
+              ? '« Voice », puis le prénom de l\u2019agent.'
+              : 'Touchez pour que vos agents vous entendent.'}
+        </p>
+        <button className="bouton-reglage-voix" onClick={() => onOuvrir('voice')}>
+          <svg className="icone" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" />
+          </svg>
+          Réglages de la voix
+          <span className="bouton-reglage-detail">voix, empreinte vocale</span>
+        </button>
       </div>
 
       <div className={`systeme etat-${etat}`}>
@@ -237,7 +274,7 @@ export default function Dashboard({
               >
                 <Icone onglet={s.onglet} />
                 <span className="satellite-valeur">{s.valeur}</span>
-                <span className="satellite-titre">{TITRES[s.onglet]}</span>
+                <span className="satellite-titre">{TITRES_COURTS[s.onglet]}</span>
                 <span className="satellite-detail">{s.detail}</span>
               </button>
             </div>

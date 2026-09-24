@@ -8,7 +8,7 @@ import { ConversationEngine } from './engines/ConversationEngine'
 import reglages from './config/conversation-settings.json'
 import Dashboard, { Icone, TITRES, type Onglet } from './components/Dashboard'
 import Machine from './components/Machine'
-import { BandeauChiffres, tiret, useLectures, useTravail, type Chiffre } from './components/Chiffres'
+import { BandeauChiffres, ETAT_DEMO, tiret, useLectures, useTravail, type Chiffre, type Etat } from './components/Chiffres'
 import logo from './assets/marque/logo-iagent.png'
 import VoiceTraining from './components/VoiceTraining'
 import AgentManager from './components/AgentManager'
@@ -39,8 +39,36 @@ function App() {
   const [voieBascule, setVoieBascule] = useState(false)
   const [jauge, setJauge] = useState<Jauge | null>(null)
   const [installes, setInstalles] = useState<readonly AgentInstalle[]>([])
-  const lu = useLectures(activeTab)
-  const travail = useTravail(installes)
+  const luReel = useLectures(activeTab)
+  const travailReel = useTravail(installes)
+  // Le mode démo montre un cabinet d'exemple, pour une démonstration client ou
+  // un contrôle sans rien installer. Retenu d'une ouverture à l'autre.
+  const [demo, setDemo] = useState(() => {
+    try {
+      return localStorage.getItem('iagent-demo') === '1'
+    } catch {
+      return false
+    }
+  })
+  const basculerDemo = () =>
+    setDemo((d) => {
+      try {
+        localStorage.setItem('iagent-demo', d ? '0' : '1')
+      } catch {
+        /* sans stockage, le mode vaut pour cette ouverture */
+      }
+      return !d
+    })
+  const etat: Etat = demo
+    ? ETAT_DEMO
+    : {
+        embauches: installes.length,
+        actifs: agents.filter((a) => a.status === 'active').length,
+        travail: travailReel,
+        lu: luReel,
+        jauge,
+      }
+  const { lu, travail } = etat
 
   useEffect(() => {
     initializeApp()
@@ -241,13 +269,30 @@ function App() {
   const onglets = Object.keys(TITRES) as Exclude<Onglet, 'dashboard'>[]
 
 
+  // Le bouton VOICE : allume ou coupe l'écoute, avec les commandes qui
+  // existent déjà. Le mot d'éveil « Voice » viendra côté écoute.
+  const basculerVoix = async () => {
+    if (isListening) {
+      setIsListening(false)
+      await invoke('stop_voice_recognition').catch(() => {})
+      return
+    }
+    try {
+      await invoke('start_voice_recognition')
+      setIsListening(true)
+      setError(null)
+    } catch (err) {
+      setError("L'écoute n'a pas pu démarrer. " + (motifEcoute ?? String(err)))
+    }
+  }
+
   // Les chiffres en tête de chaque page : lus, jamais supposés (tiret si la lecture échoue).
   const bandeau = (onglet: Onglet): Chiffre[] => {
-    const actifs = agents.filter((a) => a.status === 'active').length
+    const actifs = etat.actifs
     switch (onglet) {
       case 'agents':
         return [
-          { valeur: tiret(installes.length), libelle: installes.length > 1 ? 'agents embauchés' : 'agent embauché' },
+          { valeur: tiret(etat.embauches), libelle: installes.length > 1 ? 'agents embauchés' : 'agent embauché' },
           { valeur: tiret(actifs), libelle: actifs > 1 ? 'actifs' : 'actif' },
         ]
       case 'travail':
@@ -265,7 +310,7 @@ function App() {
           { valeur: tiret(lu.metiers), libelle: 'métiers au catalogue' },
           { valeur: tiret(lu.secteurs), libelle: 'secteurs' },
           { valeur: tiret(lu.activites), libelle: 'activités' },
-          { valeur: tiret(installes.length), libelle: 'déjà embauchés' },
+          { valeur: tiret(etat.embauches), libelle: 'déjà embauchés' },
         ]
       case 'connectors':
         return [
@@ -302,6 +347,14 @@ function App() {
         <button className="marque" onClick={() => setActiveTab('dashboard')} title="Revenir au centre">
           <img src={logo} alt="iAgent" />
         </button>
+        <button
+          className={`bouton-demo${demo ? ' demo-actif' : ''}`}
+          onClick={basculerDemo}
+          aria-pressed={demo}
+          title="Chiffres d'exemple, pour une démonstration ou un contrôle"
+        >
+          Démo {demo ? 'activée' : 'coupée'}
+        </button>
         <div className="status-bar">
           {isProcessing ? (
             <span className="listening">Réflexion…</span>
@@ -312,6 +365,12 @@ function App() {
           )}
         </div>
       </header>
+
+      {demo && (
+        <div className="ruban-demo" role="status">
+          Mode démo : les chiffres affichés sont un exemple, pas ceux de ce poste.
+        </div>
+      )}
 
       {isListening && (partialResult || isProcessing || lastResponse) && (
         <div className="voice-display">
@@ -355,33 +414,37 @@ function App() {
       )}
 
       <main className={activeTab === 'dashboard' ? 'app-main app-main-centre' : 'app-main'}>
-        {error && <div className="error-banner">{error}</div>}
-        {motifEcoute && (
-          <div className="error-banner">Écoute indisponible — {motifEcoute}</div>
-        )}
-        {voie && (
-          <div className={voieBascule ? 'error-banner' : 'succes-banner'}>{voie}</div>
-        )}
-        {jauge && jauge.niveau !== 'confortable' && (
-          <div className={jauge.niveau === 'impossible' ? 'error-banner' : 'avertissement-banner'}>
-            {jauge.machine.nom} — {jauge.message}
-          </div>
+        {!demo && (
+          <>
+            {error && <div className="error-banner">{error}</div>}
+            {motifEcoute && (
+              <div className="error-banner">Écoute indisponible — {motifEcoute}</div>
+            )}
+            {voie && (
+              <div className={voieBascule ? 'error-banner' : 'succes-banner'}>{voie}</div>
+            )}
+            {jauge && jauge.niveau !== 'confortable' && (
+              <div className={jauge.niveau === 'impossible' ? 'error-banner' : 'avertissement-banner'}>
+                {jauge.machine.nom} — {jauge.message}
+              </div>
+            )}
+          </>
         )}
         {activeTab === 'dashboard' && (
           <Dashboard
-            agents={agents}
-            installes={installes}
+            etat={etat}
             isListening={isListening}
             isProcessing={isProcessing}
             motifEcoute={motifEcoute}
-            jauge={jauge}
+            voixActive={isListening}
+            onBasculerVoix={basculerVoix}
             onOuvrir={setActiveTab}
           />
         )}
         {activeTab !== 'dashboard' && (
           <div className="page-cadre">
             <BandeauChiffres chiffres={bandeau(activeTab)} />
-            {activeTab === 'machine' && <Machine jauge={jauge} />}
+            {activeTab === 'machine' && <Machine jauge={etat.jauge} />}
             {activeTab === 'agents' && (
               <AgentManager
                 agents={agents}
