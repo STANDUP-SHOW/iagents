@@ -53,7 +53,7 @@ interface CasTemoin {
   intitule: string;
   fiche: { active: boolean; validationHumaine: boolean };
   reglage: Record<string, unknown> | null;
-  attendu: { active: boolean; validationHumaine: boolean };
+  attendu: { active: boolean; validationHumaine: boolean; planification: unknown };
 }
 const temoins = JSON.parse(
   readFileSync(join(ici, 'temoins-planning.json'), 'utf8')
@@ -61,7 +61,7 @@ const temoins = JSON.parse(
 
 verifier(
   `${temoins.cas.length} témoins de planning, autant que côté Rust`,
-  temoins.cas.length >= 7,
+  temoins.cas.length >= 10,
   `${temoins.cas.length} témoins`
 );
 
@@ -85,12 +85,18 @@ for (const cas of temoins.cas) {
   } as unknown as Fiche;
   const planning = cas.reglage ? { ajustements: [{ tacheId: 't', ...cas.reglage }] } : {};
   const obtenu = planningDuClient(fausseFiche, planning as never)[0];
+  // L'heure aussi : le planificateur part dessus et cet écran l'affiche. Lue
+  // autrement d'un côté, le client lirait 19 h et la tâche partirait à 9 h.
+  const vue = JSON.stringify(obtenu.planification);
+  const veutHeure = JSON.stringify(cas.attendu.planification);
   verifier(
     `planning — ${cas.intitule}`,
     obtenu.active === cas.attendu.active &&
-      obtenu.validationHumaine === cas.attendu.validationHumaine,
-    `écran donne active=${obtenu.active} validationHumaine=${obtenu.validationHumaine}, ` +
-      `attendu active=${cas.attendu.active} validationHumaine=${cas.attendu.validationHumaine}`
+      obtenu.validationHumaine === cas.attendu.validationHumaine &&
+      vue === veutHeure,
+    `écran donne active=${obtenu.active} validationHumaine=${obtenu.validationHumaine} ` +
+      `planification=${vue}, attendu active=${cas.attendu.active} ` +
+      `validationHumaine=${cas.attendu.validationHumaine} planification=${veutHeure}`
   );
 }
 

@@ -23,7 +23,16 @@ interface AManquer {
 /** Un poids se lit en Mo, pas en octets : 190085487 ne dit rien à personne. */
 const enMegaoctets = (o: number) => `${Math.round(o / 1_000_000)} Mo`
 
-export default function InstallerVoix() {
+/**
+ * `apresInstallation` est appelé quand des pièces viennent d'arriver.
+ *
+ * Sans lui, le client téléchargeait 190 Mo, lisait « installé », et l'écoute
+ * restait morte jusqu'à ce qu'il pense à relancer l'application — sans que
+ * rien ne le lui dise. `init_voice` n'est appelé qu'une fois, au démarrage : à
+ * ce moment-là le modèle n'était pas encore là, et personne ne rappelait la
+ * commande une fois qu'il l'était.
+ */
+export default function InstallerVoix({ apresInstallation }: { apresInstallation?: () => void }) {
   const [manque, setManque] = useState<AManquer[] | null>(null)
   const [encours, setEncours] = useState(false)
   const [dit, setDit] = useState('')
@@ -48,6 +57,9 @@ export default function InstallerVoix() {
     try {
       setDit(await invoke<string>('voix_installer'))
       await relire()
+      // Les pièces sont là : l'écoute peut démarrer, maintenant et pas au
+      // prochain lancement.
+      apresInstallation?.()
     } catch (e) {
       setRefus(String(e))
     } finally {

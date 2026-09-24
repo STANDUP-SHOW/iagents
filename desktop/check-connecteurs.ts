@@ -255,6 +255,29 @@ for (const { nom, rust, ecran } of TRAVERSENT) {
   }
 }
 
+// Le coût atteint-il l'écran ? Ce dépôt a déjà payé trois fois le champ obligatoire que
+// personne ne lit — appMinimum, profil_risque, les badges de la boutique. Celui-ci décide
+// si le client sait qu'il sera facturé : écrit dans couts.json, porté au catalogue et
+// jamais affiché, il ne protégerait de rien. On vérifie donc qu'il traverse, des deux
+// côtés : la réponse d'activation le rend, et l'écran le pose.
+const activationTs = readFileSync(join(racine, 'desktop/src/agents/connecteurs.ts'), 'utf8');
+const ecranTs = readFileSync(join(racine, 'desktop/src/components/ConnectorSetup.tsx'), 'utf8');
+veut(
+  /coutPourLeClient/.test(activationTs),
+  "demanderActivation ne lit pas coutPourLeClient : le coût s'arrête au catalogue"
+);
+veut(
+  /reponse\.cout/.test(ecranTs),
+  "l'écran des connecteurs n'affiche pas reponse.cout : le client cliquerait sans savoir ce qu'il paie"
+);
+// Et le catalogue le porte vraiment pour chaque connecteur ouvert : un activable sans
+// phrase ferait afficher le repli, qui promet la gratuité.
+for (const c of activables(ref)) {
+  if (c.cout !== 0 && !c.coutPourLeClient) {
+    faute(`${c.nom} est activable à ${c.cout} € sans phrase pour le client`);
+  }
+}
+
 const sansPack = packDuMetier(ref, 'audit');
 console.log(
   `  ⟳ packs du métier : ${ref.packs?.length ?? 0} secteurs outillés ; ` +

@@ -138,6 +138,74 @@ pub fn installation_recevable(contenu: &str) -> Result<(), String> {
             }
         }
 
+        // Même raison qu'au-dessus, sur le réglage qui décide OÙ l'agent
+        // calcule : mal écrit, `selon_le_client` ne le reconnaît pas et rend la
+        // fiche telle quelle. Le client aurait demandé « tout sur ma machine »,
+        // continuerait à payer des jetons, et rien ne le lui dirait. On refuse
+        // plutôt que de deviner ce qu'il a voulu dire.
+        if let Some(v) = agent.get("repartition") {
+            // `selon_le_client` compare après un `trim` : on compare pareil,
+            // sinon on refuserait ici ce que l'application sait lire.
+            let dit = v.as_str().map(str::trim).unwrap_or("");
+            let connus = [
+                crate::modele::CLIENT_TOUT_LOCAL,
+                crate::modele::CLIENT_MIXTE,
+                crate::modele::CLIENT_TOUT_API,
+            ];
+            if !connus.contains(&dit) {
+                let montre = match v.as_str() {
+                    Some(s) => s.to_string(),
+                    None => v.to_string(),
+                };
+                return Err(format!(
+                    "« {} » n'est pas un choix de répartition pour {} : écrire « {} », « {} » ou « {} », sinon le réglage serait ignoré sans que vous le sachiez",
+                    montre, prenom, connus[0], connus[1], connus[2]
+                ));
+            }
+        }
+
+        // Ce que le client a appris à l'agent pendant l'entretien. Le lecteur
+        // (`savoirs`, dans `tache.rs`) rend la liste VIDE dès qu'une seule
+        // entrée ne se lit pas : une compétence mal écrite ferait perdre tout
+        // l'entretien d'un coup, sans un mot. Et une entrée sans titre ni
+        // résumé, il l'écarte : le client aurait appris quelque chose à
+        // personne. On refuse exactement ce que le lecteur perdrait.
+        if let Some(v) = agent.get("competences") {
+            let liste = v.as_array().ok_or_else(|| {
+                format!(
+                    "ce que vous avez appris à {} doit être une liste, sinon tout serait perdu d'un coup",
+                    prenom
+                )
+            })?;
+            for c in liste {
+                if !c.is_object() {
+                    return Err(format!(
+                        "une compétence de {} n'est pas écrite avec un titre et un résumé : tout ce que vous lui avez appris serait perdu d'un coup",
+                        prenom
+                    ));
+                }
+                let mut texte = |cle: &str| -> Result<String, String> {
+                    match c.get(cle) {
+                        None => Ok(String::new()),
+                        Some(x) => x.as_str().map(str::to_string).ok_or_else(|| {
+                            format!(
+                                "le {} d'une compétence de {} n'est pas du texte : tout ce que vous lui avez appris serait perdu d'un coup",
+                                cle, prenom
+                            )
+                        }),
+                    }
+                };
+                let titre = texte("titre")?;
+                let resume = texte("resume")?;
+                if titre.is_empty() && resume.is_empty() {
+                    return Err(format!(
+                        "une compétence de {} n'a ni titre ni résumé : elle serait écartée sans que vous le sachiez",
+                        prenom
+                    ));
+                }
+            }
+        }
+
         let clef = prenom.trim().to_lowercase();
         if prenoms_vus.contains(&clef) {
             return Err(format!("deux agents portent le prénom {}", prenom));
@@ -251,6 +319,117 @@ mod tests {
         }
         // Et sans planning du tout : c'est le cas de la plupart des agents.
         assert!(installation_recevable(r#"{"agents":[{"prenom":"Marie","ficheId":"AG-0001"}]}"#).is_ok());
+    }
+
+    /// Une installation d'un seul agent, avec le champ qu'on éprouve dedans.
+    fn avec(champ: &str, valeur: &str) -> String {
+        format!(
+            r#"{{"agents":[{{"prenom":"Marie","ficheId":"AG-0001","{}":{}}}]}}"#,
+            champ, valeur
+        )
+    }
+
+    #[test]
+    fn une_repartition_mal_ecrite_est_refusee() {
+        // Le client a répondu à l'entretien où l'agent devait calculer. Écrit
+        // autrement qu'avec le libellé de l'écran, `selon_le_client` ne le
+        // reconnaît pas et rend la fiche telle quelle : le client croirait
+        // tourner chez lui et paierait des jetons sans que rien ne le dise.
+        for mauvaise in [
+            r#""local""#,
+            r#""Tout sur ma machine""#,
+            r#""tout par api""#,
+            r#""""#,
+            "null",
+            "3",
+            r#"["Tout par API"]"#,
+        ] {
+            let r = installation_recevable(&avec("repartition", mauvaise));
+            assert!(r.is_err(), "« {} » aurait dû être refusé", mauvaise);
+            let message = r.unwrap_err();
+            // Le message doit dire quoi écrire, pas seulement que c'est faux.
+            assert!(
+                message.contains("Marie")
+                    && message.contains(crate::modele::CLIENT_TOUT_LOCAL)
+                    && message.contains(crate::modele::CLIENT_MIXTE)
+                    && message.contains(crate::modele::CLIENT_TOUT_API),
+                "le message doit nommer l'agent et les trois réponses possibles : {}",
+                message
+            );
+        }
+    }
+
+    #[test]
+    fn les_trois_reponses_du_client_sur_la_repartition_passent() {
+        for bonne in [
+            crate::modele::CLIENT_TOUT_LOCAL,
+            crate::modele::CLIENT_MIXTE,
+            crate::modele::CLIENT_TOUT_API,
+        ] {
+            let contenu = avec("repartition", &format!(r#""{}""#, bonne));
+            assert!(installation_recevable(&contenu).is_ok(), "« {} » refusé à tort", bonne);
+            // Et ce qui passe ici doit être compris là-bas : le validateur ne
+            // sert à rien s'il accepte un libellé que `selon_le_client` ignore.
+            assert_eq!(
+                crate::modele::repartition_du_client(&contenu, "Marie").as_deref(),
+                Some(bonne)
+            );
+        }
+        // `selon_le_client` compare après un `trim` : on accepte donc pareil.
+        let espaces = avec("repartition", r#""  Tout par API  ""#);
+        assert!(installation_recevable(&espaces).is_ok());
+        // Et le cas ordinaire : le client n'a rien réglé, la fiche s'applique.
+        assert!(installation_recevable(r#"{"agents":[{"prenom":"Marie","ficheId":"AG-0001"}]}"#).is_ok());
+    }
+
+    #[test]
+    fn une_competence_mal_ecrite_est_refusee() {
+        // Ce que le client a appris à l'agent pendant l'entretien. Le lecteur
+        // rend la liste vide dès qu'une entrée ne se lit pas : une seule
+        // compétence mal écrite ferait perdre tout l'entretien, sans un mot.
+        for mauvaise in [
+            r#""Nos devis""#,
+            r#"[{"titre":3,"resume":"ils partent en PDF."}]"#,
+            r#"[{"titre":"Nos devis","resume":null}]"#,
+            r#"["Nos devis"]"#,
+            r#"[{}]"#,
+            r#"[{"titre":"","resume":""}]"#,
+            r#"[{"titre":"Nos devis","resume":"ils partent en PDF."},{"titre":[]}]"#,
+        ] {
+            let r = installation_recevable(&avec("competences", mauvaise));
+            assert!(r.is_err(), "{} aurait dû être refusé", mauvaise);
+            assert!(
+                r.unwrap_err().contains("Marie"),
+                "le message doit nommer l'agent : {}",
+                mauvaise
+            );
+        }
+    }
+
+    #[test]
+    fn ce_que_le_client_a_appris_passe_et_se_relit() {
+        // Le validateur doit accepter exactement ce que le lecteur garde.
+        // Plus strict, il refuserait une installation qui marche ; plus large,
+        // il laisserait passer ce qui serait perdu en silence.
+        for bonne in [
+            r#"[]"#,
+            r#"[{"titre":"Nos devis","resume":"ils partent toujours en PDF."}]"#,
+            // Le résumé absent : `Savoir` le remplace par du vide et le filtre
+            // garde l'entrée, puisque le titre, lui, dit quelque chose.
+            r#"[{"titre":"Nos devis"}]"#,
+            r#"[{"resume":"ils partent toujours en PDF."}]"#,
+        ] {
+            let contenu = avec("competences", bonne);
+            assert!(installation_recevable(&contenu).is_ok(), "{} refusé à tort", bonne);
+
+            let config: serde_json::Value = serde_json::from_str(&contenu).unwrap();
+            let brut = config["agents"][0]["competences"].clone();
+            let attendu: usize = brut.as_array().map(Vec::len).unwrap_or(0);
+            let lus: Vec<crate::tache::Savoir> = serde_json::from_value(brut)
+                .unwrap_or_else(|e| panic!("{} accepté mais illisible : {}", bonne, e));
+            let gardes = lus.iter().filter(|s| !s.titre.is_empty() || !s.resume.is_empty()).count();
+            assert_eq!(gardes, attendu, "{} : le lecteur en écarterait", bonne);
+        }
     }
 
     #[test]

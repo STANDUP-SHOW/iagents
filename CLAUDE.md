@@ -333,6 +333,47 @@ par WhatsApp et email.
   d'ouvrir COM010. **Ce qui bloque les neuf autres n'est pas l'accès au web mais
   la page** : leurs pages de quotas s'ouvrent et aucune n'énonce le coût ; c'est
   la page tarifaire qu'il faut, et elle vit sur un autre hôte. Aucun bouton « Se connecter » ne s'affiche sans passer par là.
+  **Au 24/09 au soir : 15 activables** (Asana et ClickUp ajoutés ; ce qui a fait
+  trancher et manquait aux trois autres, c'est un quota CHIFFRÉ en face de
+  l'offre gratuite, qui dit que l'API y est ouverte). Notion reste dehors parce
+  que sa page de tarifs s'est lue deux fois différemment — une page qui se
+  contredit ne chiffre rien.
+- **« 122 connecteurs attendent un prix » n'est pas le chiffre à porter**
+  (mesuré le 24/09/2026). Sur les 137, **39 seulement servent un besoin déclaré
+  par une fiche** ; les 98 autres (SAP, Workday, Epic, Procore…) ne sont
+  atteignables par aucun agent, donc les ouvrir ne change rien pour un client.
+  Et sur ces 39, ce qui est ouvert couvre **quatre besoins sur six** : Microsoft
+  365 et Google Workspace font à eux deux le courrier, l'agenda, les fichiers et
+  la conversation. **Les deux trous sont `whatsapp` (212 fiches) et `telephone`
+  (210), et ce n'est pas une question de prix : il n'y a pas de code.**
+  L'application ne sait ni envoyer ni recevoir un message WhatsApp, et ne sait
+  pas téléphoner — vérifié maillon par maillon. Chiffrer COM001 ou COM010
+  allumerait un bouton « Se connecter » vers une capacité inexistante. Le prix de
+  COM001 est d'ailleurs lu et **nul pour ce qu'un agent fait** : Meta ne facture
+  ni le message qu'un utilisateur envoie à l'entreprise, ni la réponse hors
+  modèle dans la fenêtre de service ouverte. **Et recevoir ne peut pas marcher
+  sur la machine du client** : Meta ne livre un entrant qu'en le poussant vers
+  une adresse publique et n'offre aucune relève, donc il faudrait un relais
+  hébergé — question posée à max le 24/09.
+- **Pire qu'un champ que personne ne lit : du code qui rend `Ok` sans avoir
+  agi.** Le premier attend, le second ment au client dès qu'on l'appelle. Trois
+  retirés le 24/09/2026 : `connectors.rs` (un `connect_whatsapp` qui rangeait la
+  clé dans une HashMap et posait `status = "connected"`, 150 lignes, zéro test,
+  mort) ; les trois fonctions de `telegram.rs` (`send_message` imprimait
+  « Telegram: Would send to … » sur stdout et rendait `Ok("Message sent to
+  Telegram chat …")`, et les trois étaient **enregistrées comme commandes
+  Tauri**, à une ligne d'interface près d'être appelées) ; et
+  `save_connector_credentials` dans `database.rs`, qui écrivait un jeton en clair
+  dans le SQLite avec pour tout garde-fou un commentaire « never store a secret
+  here » sur un champ nommé `credentials`. **Un champ qu'il ne faut jamais
+  remplir n'est pas un garde-fou, c'est une invitation.** Telegram refuse
+  maintenant en français en disant que rien n'est parti, plutôt que de rendre un
+  `Ok` optimiste ou de disparaître (une commande absente donne une erreur
+  opaque). Pour les débusquer : chercher l'appel sortant dans tout module qui
+  parle au monde — pas d'appel plus un `Ok(...)`, il ment — puis regarder s'il
+  est atteignable ; en Rust un item d'un `mod X` ne s'atteint que par `X::` ou
+  `crate::X`, mais une commande Tauri peut être **enregistrée sans que l'écran
+  l'appelle**, et c'est le cas dangereux, pas le cas rassurant.
 - **`desktop/src-tauri/src/mcp.rs` est le seul endroit où un outil extérieur
   peut être appelé**, et quatre refus y sont dans le code, pas dans une consigne
   au modèle : liste blanche par agent (un outil que le serveur ajoute entre deux
@@ -704,9 +745,26 @@ par WhatsApp et email.
   Un fichier sans empreinte publiée (les réglages `.onnx.json`, qui ne sont pas
   un objet LFS) se vérifie par sa lecture, déclarée en toutes lettres
   (`verification_autre`) : sans ça, `null` passerait pour « rien à vérifier ».
-  **Le moteur Piper n'est pas déclaré** — github.com ne se joint pas depuis la
-  session qui a écrit ceci, donc rien n'a pu être relevé chez l'éditeur, et
-  **un poste installé écoute mais ne parle pas**. Le modèle d'écoute est
+  **Le moteur Piper est déclaré depuis le 24/09/2026, pour Windows seulement**,
+  et c'est le seul morceau qui soit une ARCHIVE : `chemin` est alors un dossier,
+  et `poser()` l'ouvre — après l'empreinte, jamais avant, et une archive sans
+  empreinte est refusée d'office (la lecture en JSON qui suffit à un fichier de
+  réglages ne dit rien d'un ZIP). Trois refus de plus, tenus par des bancs : une
+  entrée qui écrirait hors du dossier fait tout refuser **sans rien poser** ; le
+  nombre d'entrées et la taille dépliée sont bornés avant la première écriture
+  (22 Mo comprimés peuvent rendre des gigaoctets) ; le dossier se remplit en
+  `.partiel` et le renommage est la dernière opération, parce qu'un moteur à
+  demi extrait serait vu présent par `ressources.rs`. **Le dossier commun est
+  retiré quand toute l'archive tient dedans** : le résultat ne dépend donc pas
+  de la façon dont l'éditeur range son archive, et sa forme n'a pas eu à être
+  relevée — ce qui compte, puisque la session ne joint pas github.com et n'a
+  jamais ouvert cette archive. L'empreinte, elle, est CALCULÉE par
+  l'intégration continue (`desktop/relever-piper.ts`), GitHub n'en publiant
+  aucune pour une version antérieure au champ. **Windows seulement** parce que
+  l'archive Linux est un `.tar.gz` et que le binaire n'embarque ni tar ni gzip ;
+  ailleurs `ressources.rs` dit toujours où le prendre à la main, et son remède
+  dépend du système. **Non constaté : personne n'a ouvert la vraie archive ni
+  lancé `piper.exe`.** Le modèle d'écoute est
   `ggml-small-q5_1.bin` (190 Mo) et non `medium` (1,5 Go) : c'est le premier
   contact du client avec le produit. Aucune variante `-fr` n'existe chez
   whisper.cpp, vérifié à son API le 24/09.

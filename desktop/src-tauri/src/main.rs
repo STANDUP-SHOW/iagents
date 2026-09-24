@@ -23,17 +23,16 @@ mod telechargement;
 mod pdf;
 mod lecture;
 mod agents;
-mod connectors;
 mod database;
 mod llm;
 mod voiceprint;
 mod telegram;
+mod mise_a_jour;
 
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
 use llm::{LLMService, AgentPersona};
 use voiceprint::{VoicePrintService, VoicePrint};
-use telegram::{TelegramService, TelegramCredentials};
 use database::Database;
 use std::sync::Arc;
 
@@ -41,7 +40,6 @@ pub struct AppState {
     voice: Mutex<Option<VoiceState>>,
     agents: Mutex<AgentRouter>,
     llm: Mutex<Option<LLMService>>,
-    telegram: Mutex<Option<TelegramCredentials>>,
     db: Arc<Mutex<Option<Database>>>,
     /// Ou en est le mot de reveil, et si l'ecoute est allumee. L'etat vit ici
     /// et pas a l'ecran : c'est le code qui doit tenir la regle de max, pas une
@@ -83,11 +81,44 @@ fn voix_ecoute_etat(state: State<'_, AppState>) -> EcouteVue {
 /// l'ecoute reprendrait la ou elle en etait, et le client qui a coupe pour
 /// parler tranquillement retrouverait un agent qui attend son prenom.
 #[tauri::command]
-fn voix_ecoute_basculer(active: bool, state: State<'_, AppState>) -> EcouteVue {
+fn voix_ecoute_basculer(active: bool, state: State<'_, AppState>) -> Result<EcouteVue, String> {
+    // Le micro suit le bouton ICI, et pas a l'ecran. Il y avait deux etats pour
+    // une seule chose — `isListening` en React et `active` en Rust — ce qui est
+    // la garantie qu'un jour le bouton serait vert pendant que l'ecoute est
+    // morte. Un bouton rouge doit vouloir dire que le micro est coupe, pas
+    // seulement que le mot de reveil est ignore.
+    //
+    // Le micro d'abord, l'etat ensuite, et les deux sens ne se valent pas :
+    //
+    // Allumer qui echoue ne s'enregistre pas. La version precedente posait
+    // `active = true` puis jetait l'echec de `micro()` — exactement le bouton
+    // vert sur ecoute morte que le commentaire ci-dessus dit vouloir eviter, et
+    // pas en theorie : `micro()` echoue des que la voix n'est pas prete sur ce
+    // poste, ce qui est le cas de toute installation ou les fichiers de voix
+    // n'ont pas ete poses. L'echec remonte donc a l'ecran, qui garde le bouton
+    // rouge et affiche le motif.
+    //
+    // Couper qui echoue s'enregistre quand meme : le client a demande a couper,
+    // et couper a echoue faute d'ecoute prete, ce qui revient au meme.
+    if active {
+        micro(&state, true)?;
+    } else {
+        let _ = micro(&state, false);
+    }
     let mut e = state.ecoute.lock().unwrap();
     e.active = active;
     e.ou_en_est = reveil::Etat::Dormante;
-    EcouteVue { active: e.active, ou_en_est: e.ou_en_est.clone() }
+    Ok(EcouteVue { active: e.active, ou_en_est: e.ou_en_est.clone() })
+}
+
+/// Allume ou coupe le micro. `Err` quand l'ecoute n'est pas prete sur ce poste
+/// (modele absent) : l'appelant decide si c'est une faute chez lui.
+fn micro(state: &State<'_, AppState>, allume: bool) -> Result<String, String> {
+    let voice_guard = state.voice.lock().unwrap();
+    let Some(voice) = voice_guard.as_ref() else {
+        return Err("L'écoute n'est pas prête sur ce poste.".to_string());
+    };
+    if allume { voice.start_listening() } else { voice.stop_listening() }
 }
 
 /// Ce que l'ecoute conclut de ce qu'elle vient d'entendre.
@@ -144,8 +175,29 @@ fn init_voice(state: State<AppState>) -> Result<String, String> {
     let model_path = voice::chemin_modele_ecoute();
     match VoiceState::new(&model_path) {
         Ok(voice_state) => {
-            let mut voice = state.voice.lock().unwrap();
-            *voice = Some(voice_state);
+            {
+                let mut voice = state.voice.lock().unwrap();
+                *voice = Some(voice_state);
+            }
+            // « L'application est toujours a l'ecoute » (max, 24/09/2026) : le
+            // micro demarre donc seul, sans que le client ait a cliquer. Ce qui
+            // rend ca acceptable est le mot de reveil — rien n'est ecoute POUR
+            // etre suivi tant que « Voice » n'a pas ete prononce (`reveil.rs`).
+            // S'il a coupe le bouton, on respecte son choix.
+            let demarre = state.ecoute.lock().unwrap().active;
+            if demarre {
+                // Meme regle qu'au bouton : le modele charge ne prouve pas que
+                // le micro tourne. Jeter cet echec laissait `active` a vrai, et
+                // `voix_ecoute_etat` repondait « allumee » a un ecran qui
+                // venait de lire « Écoute prête. ».
+                if let Err(motif) = micro(&state, true) {
+                    state.ecoute.lock().unwrap().active = false;
+                    return Err(format!(
+                        "Le modèle d'écoute est chargé mais le micro n'a pas démarré : {}",
+                        motif
+                    ));
+                }
+            }
             Ok("Écoute prête.".to_string())
         }
         // Le fichier est là et ne se charge pas : ce n'est plus le même problème,
@@ -273,6 +325,7 @@ async fn repondre(
     enonce: String,
     state: State<'_, AppState>,
 ) -> Result<ReponseAgent, String> {
+    let _travail = mise_a_jour::travail()?;
     if prompt_systeme.trim().is_empty() {
         return Err("prompt systeme vide : la fiche n a pas ete chargee".to_string());
     }
@@ -337,6 +390,7 @@ async fn executer_tache(
     tache_id: String,
     state: State<'_, AppState>,
 ) -> Result<tache::Resultat, String> {
+    let _travail = mise_a_jour::travail()?;
     let installation = fiches::lire_installation()?;
     let fiche = fiches::lire_fiche(fiche_id.clone())?;
     let maintenant = std::time::SystemTime::now()
@@ -590,69 +644,35 @@ fn verify_voice(
     ))
 }
 
-#[tauri::command]
-fn train_voice(utterances: Vec<String>, state: State<AppState>) -> Result<String, String> {
-    let voice_guard = state.voice.lock().unwrap();
+/// Ce que répond `train_voice`, et pourquoi il ne répond que ça.
+///
+/// La reconnaissance du propriétaire se fait sur du son, pas sur des phrases
+/// écrites : `enroll_voice` calcule les MFCC de vrais échantillons et les range
+/// en base, `verify_voice` s'y compare. Du texte n'apprend rien à personne.
+const APPRENTISSAGE_PAR_LE_SON: &str = "La voix ne s'apprend pas sur des phrases écrites : \
+il faut enregistrer de vrais échantillons de son. Rien n'a été appris.";
 
-    if voice_guard.is_some() {
-        println!("Training voice with {} utterances", utterances.len());
-        // Voice training now done via enroll_voice with actual audio samples
-        Ok(format!(
-            "Voice training prepared. Use enroll_voice with audio samples to complete."
-        ))
-    } else {
-        Err("L'écoute n'est pas prête sur ce poste.".to_string())
-    }
+/// Restait de l'époque où l'on croyait pouvoir apprendre une voix sur du texte.
+///
+/// Elle jetait ses `utterances`, en imprimait le nombre sur la sortie standard,
+/// et rendait `Ok("Voice training prepared…")` — un succès que personne n'avait
+/// gagné, sur une commande que Tauri expose. C'est la même faute que
+/// `telegram.rs` : le premier écran qui l'aurait appelée aurait annoncé au
+/// client que sa voix était apprise. Elle refuse maintenant, en français et en
+/// disant par où passer, plutôt que de disparaître d'un coup du carnet de
+/// commandes où l'interface pourrait encore la chercher.
+#[tauri::command]
+fn train_voice(utterances: Vec<String>) -> Result<String, String> {
+    // Le nom de l'argument reste `utterances` : Tauri en fait la clef
+    // attendue cote interface, et la renommer rendrait une erreur de
+    // desserialisation illisible au lieu du refus en francais.
+    let _ = utterances;
+    Err(APPRENTISSAGE_PAR_LE_SON.to_string())
 }
 
 #[tauri::command]
 async fn text_to_speech(text: String) -> Result<String, String> {
     voice::text_to_speech(&text).await
-}
-
-#[tauri::command]
-async fn connect_telegram(
-    bot_token: String,
-    chat_id: String,
-    state: State<'_, AppState>,
-) -> Result<String, String> {
-    if bot_token.is_empty() || chat_id.is_empty() {
-        return Err("Token and Chat ID cannot be empty".to_string());
-    }
-
-    match TelegramService::connect_telegram(bot_token, chat_id).await {
-        Ok(credentials) => {
-            // Le jeton du bot reste en mémoire, jamais sur le disque : il était
-            // écrit en clair dans le SQLite du poste et jamais relu. Le jour où
-            // la connexion devra survivre à un redémarrage, elle passera par le
-            // coffre du système (Credential Manager, Trousseau), pas par cette base.
-            let mut telegram = state.telegram.lock().unwrap();
-            *telegram = Some(credentials);
-            Ok("Telegram connected successfully".to_string())
-        }
-        Err(e) => Err(format!("Failed to connect Telegram: {}", e)),
-    }
-}
-
-#[tauri::command]
-fn get_telegram_instructions() -> Result<String, String> {
-    Ok(TelegramService::get_connection_instructions())
-}
-
-#[tauri::command]
-async fn send_telegram_message(
-    text: String,
-    state: State<'_, AppState>,
-) -> Result<String, String> {
-    let credentials = {
-        let telegram = state.telegram.lock().unwrap();
-        telegram.clone()
-    };
-
-    match credentials {
-        Some(credentials) => TelegramService::send_message(&credentials, &text).await,
-        None => Err("Telegram not connected. Call connect_telegram first.".to_string()),
-    }
 }
 
 fn main() {
@@ -674,13 +694,17 @@ fn main() {
         voice: Mutex::new(None),
         agents: Mutex::new(AgentRouter::new()),
         llm: Mutex::new(None),
-        telegram: Mutex::new(None),
         db: Arc::new(Mutex::new(db)),
         ecoute: Mutex::new(Ecoute::default()),
     };
 
     tauri::Builder::default()
         .manage(state)
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .setup(|app| {
+            mise_a_jour::demarrer(app.handle());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             greet,
             init_voice,
@@ -698,9 +722,12 @@ fn main() {
             activate_agent,
             deactivate_agent,
             train_voice,
-            connect_telegram,
-            get_telegram_instructions,
-            send_telegram_message,
+            telegram::telegram_brancher,
+            telegram::telegram_branche,
+            telegram::telegram_debrancher,
+            telegram::telegram_envoyer,
+            telegram::telegram_relever,
+            telegram::telegram_mode_d_emploi,
             fiches::lire_installation,
             fiches::lire_fiche,
             fiches::installation_ecrire,
@@ -741,6 +768,7 @@ fn main() {
             navigateur::navigateur_declarer_site,
             navigateur::navigateur_oublier_site,
             navigateur::navigateur_effacer_sessions,
+            mise_a_jour::mise_a_jour_etat,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

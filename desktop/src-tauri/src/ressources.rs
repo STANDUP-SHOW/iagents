@@ -136,7 +136,11 @@ pub fn ressources_de_la_voix() -> Vec<Ressource> {
             chemin: if cfg!(windows) { "piper/piper.exe" } else { "piper/piper" },
             variable: "IAGENT_PIPER",
             livree: false,
-            remede: REMEDE_VOIX,
+            // Téléchargeable sous Windows depuis le 24/09/2026, et là
+            // seulement : l'éditeur publie un .tar.gz pour Linux, que le
+            // binaire ne sait pas ouvrir. Promettre le bouton ailleurs
+            // enverrait le client le chercher là où il n'est pas.
+            remede: if cfg!(windows) { REMEDE_TELECHARGEABLE } else { REMEDE_VOIX },
         },
         Ressource {
             role: "la voix française",
@@ -322,9 +326,16 @@ mod tests {
         ));
         assert!(refus.is_empty(), "lignes écartées : {:?}", refus);
         let connus: Vec<&str> = toutes().iter().map(|r| r.chemin).collect();
+        // Une archive se pose dans un DOSSIER : ce que le code cherche est un
+        // fichier dedans, pas le dossier lui-même. Comparer les deux tels quels
+        // dirait que le moteur se télécharge là où personne ne le lit.
+        let couvre = |d: &crate::telechargement::Source, chemin: &str| -> bool {
+            d.chemin == chemin
+                || (d.archive.is_some() && chemin.starts_with(&format!("{}/", d.chemin)))
+        };
         for d in &declarees {
             assert!(
-                connus.contains(&d.chemin.as_str()),
+                connus.iter().any(|c| couvre(d, c)),
                 "« {} » se téléchargerait vers {}, que le code ne lit nulle part",
                 d.role,
                 d.chemin
@@ -335,25 +346,30 @@ mod tests {
         // personne le remarque, puisque l'écran proposerait toujours le bouton.
         for r in toutes().iter().filter(|r| r.remede == REMEDE_TELECHARGEABLE) {
             assert!(
-                declarees.iter().any(|d| d.chemin == r.chemin),
+                declarees.iter().any(|d| couvre(d, r.chemin)),
                 "« {} » promet un téléchargement mais n'est plus déclarée",
                 r.role
             );
         }
-        assert_eq!(declarees.len(), 3, "trois pièces se téléchargent aujourd'hui");
+        assert_eq!(declarees.len(), 4, "quatre pièces se téléchargent aujourd'hui");
     }
 
-    /// Le moteur Piper n'est pas déclaré : GitHub n'était pas joignable au
-    /// 24/09/2026 pour relever son adresse et son empreinte, et une adresse
-    /// écrite de mémoire ne se découvre fausse que chez le client. Ce banc dit
-    /// l'état, pour qu'on sache que parler ne marchera pas encore.
+    /// Ce banc disait, jusqu'au 24/09/2026, que le moteur Piper restait à poser
+    /// à la main. Il est tombé le jour où l'archive a été déclarée, et c'était
+    /// son but. Il dit maintenant l'état d'après : téléchargé sous Windows,
+    /// posé à la main ailleurs, faute d'un lecteur de .tar.gz dans le binaire.
     #[test]
-    fn le_moteur_piper_reste_a_poser_a_la_main() {
+    fn le_moteur_piper_se_telecharge_sous_windows_et_pas_ailleurs() {
         let moteur = toutes()
             .into_iter()
             .find(|r| r.chemin.starts_with("piper/"))
             .expect("le moteur de voix a disparu de la table");
-        assert_eq!(moteur.remede, REMEDE_VOIX, "il n'est pas téléchargeable");
+        if cfg!(windows) {
+            assert_eq!(moteur.remede, REMEDE_TELECHARGEABLE, "il se télécharge");
+        } else {
+            assert_eq!(moteur.remede, REMEDE_VOIX, "ailleurs, il se pose à la main");
+        }
+        assert!(!moteur.livree, "il n'est toujours pas dans l'installeur");
     }
 
     /// Chaque chemin que le code cherche est nommé une seule fois : deux entrées

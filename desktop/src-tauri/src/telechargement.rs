@@ -30,7 +30,18 @@ use sha2::{Digest, Sha256};
 /// Une liste blanche, et pas une simple vérification du « https » : une
 /// déclaration modifiée sur le disque du client pourrait sinon faire télécharger
 /// un exécutable depuis n'importe où, sous le nom d'un modèle de voix.
-const HOTES_PERMIS: [&str; 1] = ["huggingface.co"];
+/// `github.com` est entré le 24/09/2026 pour le moteur Piper, que son éditeur
+/// ne publie nulle part ailleurs. Ce qui protège n'est pas l'hôte — GitHub sert
+/// n'importe quoi à qui le dépose — mais l'empreinte, obligatoire pour une
+/// archive (voir `source_recevable`). L'adresse redirige vers le stockage de
+/// GitHub, et c'est sans effet : ce qui est vérifié est le contenu reçu, pas le
+/// chemin qu'il a pris.
+const HOTES_PERMIS: [&str; 2] = ["huggingface.co", "github.com"];
+
+/// Ce qu'une archive ne dépassera pas une fois ouverte. Une archive minuscule
+/// peut se déplier en gigaoctets : on borne avant d'écrire, pas après.
+const ENTREES_MAX: usize = 4096;
+const OCTETS_OUVERTS_MAX: u64 = 512 * 1024 * 1024;
 
 /// Ce qu'on vérifie quand l'éditeur ne publie pas d'empreinte.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -39,6 +50,15 @@ pub enum VerificationAutre {
     /// Le fichier doit se lire comme du JSON. Vaut pour un petit fichier de
     /// réglages, dont la panne réaliste est la troncature, pas la substitution.
     Json,
+}
+
+/// Ce qu'une pièce est, quand elle n'est pas un fichier à poser tel quel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Archive {
+    /// Une archive ZIP, ouverte ici. Le lecteur est déjà dans le binaire : il
+    /// sert à relire les `.xlsx` et les `.docx` qu'un agent produit.
+    Zip,
 }
 
 /// Une pièce déclarée : d'où elle vient et comment savoir qu'on l'a bien reçue.
@@ -54,8 +74,26 @@ pub struct Source {
     pub octets: u64,
     #[serde(default)]
     pub verification_autre: Option<VerificationAutre>,
+    /// Présent quand la pièce est une archive : `chemin` est alors le DOSSIER
+    /// où elle s'ouvre, et non un fichier.
+    #[serde(default)]
+    pub archive: Option<Archive>,
+    /// Le système auquel cette pièce s'adresse (`windows`, `linux`, `macos`).
+    /// Absent = tous. Le moteur de voix est un exécutable : le poser sur le
+    /// mauvais système ferait télécharger 22 Mo pour rien, et l'écran
+    /// annoncerait une pièce que le client ne pourra pas employer.
+    #[serde(default)]
+    pub pour: Option<String>,
     #[serde(default)]
     pub licence: String,
+}
+
+/// Cette pièce vaut-elle pour le poste où l'on tourne ?
+pub fn pour_ce_poste(s: &Source) -> bool {
+    match &s.pour {
+        None => true,
+        Some(p) => p == std::env::consts::OS,
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -89,6 +127,15 @@ pub fn source_recevable(s: &Source) -> Result<(), String> {
     }
     if s.octets == 0 {
         return Err(format!("{} : aucune taille annoncée", s.role));
+    }
+    // Une archive s'ouvre, donc son contenu s'exécute ou se charge. La lecture
+    // en JSON, qui suffit pour un petit fichier de réglages, ne dit rien d'un
+    // ZIP : seule l'empreinte le reconnaît, et on n'en ouvre pas sans.
+    if s.archive.is_some() && s.sha256.is_none() {
+        return Err(format!(
+            "{} : une archive ne s'ouvre pas sans son empreinte",
+            s.role
+        ));
     }
     match (&s.sha256, s.verification_autre) {
         (Some(e), _) => {
@@ -193,6 +240,145 @@ pub fn ou_poser(s: &Source) -> std::path::PathBuf {
     crate::fiches::dossier_ressources().join(&s.chemin)
 }
 
+/// Le dossier commun à TOUTES les entrées d'une archive, s'il y en a un.
+///
+/// Une archive d'éditeur tient d'ordinaire dans un seul dossier (`piper/…`) ;
+/// une autre pose ses fichiers à la racine. Retirer ce dossier quand il existe
+/// rend le résultat le même dans les deux cas — ce que la déclaration nomme
+/// dans `chemin` est ce que le client aura, sans qu'on ait eu à relever la
+/// forme de l'archive. On ne retire rien dès qu'une seule entrée sort du lot.
+fn dossier_commun(entrees: &[std::path::PathBuf]) -> Option<String> {
+    let premier = entrees.first()?.components().next()?;
+    let nom = premier.as_os_str().to_str()?.to_string();
+    // Un seul niveau qui contiendrait tout : il faut donc que chaque entrée ait
+    // quelque chose SOUS lui, sinon on retirerait un fichier.
+    for e in entrees {
+        let mut c = e.components();
+        if c.next().map(|x| x.as_os_str()) != Some(premier.as_os_str()) {
+            return None;
+        }
+        if c.next().is_none() {
+            return None;
+        }
+    }
+    Some(nom)
+}
+
+/// Ouvrir une archive vérifiée et poser son contenu dans son dossier.
+///
+/// Les refus, et leur raison :
+///
+/// - **Une entrée qui sortirait du dossier** (`../`, un chemin absolu, un lien)
+///   n'est pas posée du tout, et rien ne l'est : une archive qui essaie d'écrire
+///   ailleurs n'est pas une archive qu'on ouvre à moitié. `enclosed_name` du
+///   lecteur rend `None` dans ces cas, et on redit le motif en français.
+/// - **Un nombre d'entrées et une taille ouverte bornés.** 22 Mo comprimés
+///   peuvent rendre des gigaoctets : on compte AVANT d'écrire, pas pendant.
+/// - **Rien n'est posé sous le nom définitif tant que tout n'est pas sorti.**
+///   Même règle que pour un fichier : le dossier se remplit à côté, sous
+///   `.partiel`, et le renommage est la dernière opération. Un moteur à demi
+///   extrait est pire qu'un moteur absent — `ressources.rs` le verrait présent.
+fn ouvrir_archive(s: &Source, recu: &[u8]) -> Result<std::path::PathBuf, String> {
+    ouvrir_archive_dans(s, recu, ou_poser(s))
+}
+
+/// La même chose, en disant où. Séparée pour être éprouvée sans dossier de
+/// ressources ni variable d'environnement : ce sont les refus qui comptent ici,
+/// et un banc qui ne peut pas l'appeler ne prouverait rien d'eux.
+fn ouvrir_archive_dans(
+    s: &Source,
+    recu: &[u8],
+    cible: std::path::PathBuf,
+) -> Result<std::path::PathBuf, String> {
+    if cible.exists() {
+        return Err(format!("{} : {} existe déjà.", s.role, cible.display()));
+    }
+    let mut zip = zip::ZipArchive::new(std::io::Cursor::new(recu))
+        .map_err(|_| format!("{} : l'archive reçue ne s'ouvre pas.", s.role))?;
+    if zip.len() > ENTREES_MAX {
+        return Err(format!(
+            "{} : l'archive porte {} entrées, bien plus que ce qu'un moteur de voix contient. Rien n'a été installé.",
+            s.role,
+            zip.len()
+        ));
+    }
+
+    // Premier passage : on lit la forme de l'archive sans rien écrire.
+    let mut noms: Vec<std::path::PathBuf> = Vec::with_capacity(zip.len());
+    let mut ouverts: u64 = 0;
+    for i in 0..zip.len() {
+        let e = zip
+            .by_index(i)
+            .map_err(|_| format!("{} : l'archive reçue est abîmée.", s.role))?;
+        let nom = e.enclosed_name().ok_or_else(|| {
+            format!(
+                "{} : une entrée de l'archive écrirait hors de son dossier. Rien n'a été installé.",
+                s.role
+            )
+        })?;
+        ouverts = ouverts.saturating_add(e.size());
+        if ouverts > OCTETS_OUVERTS_MAX {
+            return Err(format!(
+                "{} : l'archive se déplierait sur plus de {} Mo. Rien n'a été installé.",
+                s.role,
+                OCTETS_OUVERTS_MAX / (1024 * 1024)
+            ));
+        }
+        if !e.is_dir() {
+            noms.push(nom);
+        }
+    }
+    if noms.is_empty() {
+        return Err(format!("{} : l'archive reçue ne contient aucun fichier.", s.role));
+    }
+    let a_retirer = dossier_commun(&noms);
+
+    let provisoire = cible.with_extension("partiel");
+    let _ = std::fs::remove_dir_all(&provisoire);
+    std::fs::create_dir_all(&provisoire)
+        .map_err(|e| format!("{} : impossible de créer {} ({})", s.role, provisoire.display(), e))?;
+
+    let sortir = || -> Result<(), String> {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(recu))
+            .map_err(|_| format!("{} : l'archive reçue ne s'ouvre pas.", s.role))?;
+        for i in 0..zip.len() {
+            let mut e = zip
+                .by_index(i)
+                .map_err(|_| format!("{} : l'archive reçue est abîmée.", s.role))?;
+            if e.is_dir() {
+                continue;
+            }
+            let nom = e.enclosed_name().ok_or_else(|| {
+                format!("{} : une entrée de l'archive écrirait hors de son dossier.", s.role)
+            })?;
+            let relatif = match &a_retirer {
+                Some(d) => nom.strip_prefix(d).unwrap_or(&nom).to_path_buf(),
+                None => nom,
+            };
+            let ou = provisoire.join(&relatif);
+            if let Some(parent) = ou.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|er| format!("{} : impossible de créer {} ({})", s.role, parent.display(), er))?;
+            }
+            let mut fichier = std::fs::File::create(&ou)
+                .map_err(|er| format!("{} : impossible d'écrire {} ({})", s.role, relatif.display(), er))?;
+            std::io::copy(&mut e, &mut fichier)
+                .map_err(|er| format!("{} : impossible d'écrire {} ({})", s.role, relatif.display(), er))?;
+        }
+        Ok(())
+    };
+    if let Err(motif) = sortir() {
+        let _ = std::fs::remove_dir_all(&provisoire);
+        return Err(motif);
+    }
+
+    std::fs::rename(&provisoire, &cible).map_err(|e| {
+        let _ = std::fs::remove_dir_all(&provisoire);
+        format!("{} : impossible de poser le dossier ({})", s.role, e)
+    })?;
+    Ok(cible)
+}
+
 /// Poser le contenu vérifié, et seulement lui.
 ///
 /// Le provisoire porte un suffixe qui n'est pas celui du fichier final : même
@@ -200,6 +386,10 @@ pub fn ou_poser(s: &Source) -> std::path::PathBuf {
 /// sous le nom d'un modèle entier. Le renommage est la dernière opération.
 pub fn poser(s: &Source, recu: &[u8]) -> Result<std::path::PathBuf, String> {
     contenu_conforme(s, recu)?;
+    // L'empreinte a été reconnue : c'est seulement maintenant qu'on ouvre.
+    if s.archive == Some(Archive::Zip) {
+        return ouvrir_archive(s, recu);
+    }
     let cible = ou_poser(s);
     if let Some(parent) = cible.parent() {
         std::fs::create_dir_all(parent)
@@ -230,7 +420,7 @@ pub fn a_telecharger() -> Vec<AManquer> {
     let (bonnes, _) = sources();
     bonnes
         .into_iter()
-        .filter(|s| !ou_poser(s).exists())
+        .filter(|s| pour_ce_poste(s) && !ou_poser(s).exists())
         .map(|s| AManquer { role: s.role, octets: s.octets, licence: s.licence })
         .collect()
 }
@@ -291,7 +481,7 @@ pub async fn voix_installer() -> Result<String, String> {
             .unwrap_or_else(|| "rien n'est déclaré à installer".to_string()));
     }
     let mut posees = 0usize;
-    for s in declarees.iter().filter(|s| !ou_poser(s).exists()) {
+    for s in declarees.iter().filter(|s| pour_ce_poste(s) && !ou_poser(s).exists()) {
         telecharger(s).await?;
         posees += 1;
     }
@@ -306,6 +496,141 @@ pub async fn voix_installer() -> Result<String, String> {
 mod tests {
     use super::*;
 
+    /// Une archive écrite ici, pour éprouver l'ouverture sans réseau.
+    fn zip_de(entrees: &[(&str, &[u8])]) -> Vec<u8> {
+        let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        let opt: zip::write::FileOptions<'_, ()> =
+            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        for (nom, contenu) in entrees {
+            w.start_file(*nom, opt).unwrap();
+            std::io::Write::write_all(&mut w, contenu).unwrap();
+        }
+        w.finish().unwrap().into_inner()
+    }
+
+    fn source_archive(octets: usize, recu: &[u8]) -> Source {
+        Source {
+            role: "le moteur de voix".to_string(),
+            chemin: "piper".to_string(),
+            url: "https://github.com/rhasspy/piper/releases/download/x/piper.zip".to_string(),
+            sha256: Some(empreinte(recu)),
+            octets: octets as u64,
+            verification_autre: None,
+            archive: Some(Archive::Zip),
+            pour: None,
+            licence: "MIT".to_string(),
+        }
+    }
+
+    fn dossier_neuf(nom: &str) -> std::path::PathBuf {
+        let d = std::env::temp_dir()
+            .join(format!("iagent-archive-{}-{}", std::process::id(), nom));
+        let _ = std::fs::remove_dir_all(&d);
+        d
+    }
+
+    #[test]
+    fn une_archive_sans_empreinte_ne_s_ouvre_pas() {
+        // Ouvrir, c'est poser un exécutable. La lecture en JSON, qui suffit pour
+        // un fichier de réglages, ne dit rien d'un ZIP.
+        let mut s = source_archive(10, b"x");
+        s.sha256 = None;
+        s.verification_autre = Some(VerificationAutre::Json);
+        let r = source_recevable(&s);
+        assert!(r.is_err(), "une archive sans empreinte devrait être refusée");
+        assert!(r.unwrap_err().contains("empreinte"));
+    }
+
+    #[test]
+    fn une_archive_s_ouvre_dans_son_dossier_sans_son_dossier_a_elle() {
+        // L'archive de l'éditeur tient dans un dossier « piper/ ». Le garder
+        // donnerait <ressources>/piper/piper/piper.exe, que rien ne cherche.
+        let zip = zip_de(&[
+            ("piper/piper.exe", b"MZ"),
+            ("piper/espeak-ng-data/fr_dict", b"dict"),
+        ]);
+        let s = source_archive(zip.len(), &zip);
+        let cible = dossier_neuf("commun");
+        let pose = ouvrir_archive_dans(&s, &zip, cible.clone()).unwrap();
+        assert_eq!(pose, cible);
+        assert_eq!(std::fs::read(cible.join("piper.exe")).unwrap(), b"MZ");
+        assert_eq!(
+            std::fs::read(cible.join("espeak-ng-data/fr_dict")).unwrap(),
+            b"dict"
+        );
+        assert!(!cible.join("piper").exists(), "le dossier de l'archive est retiré");
+        let _ = std::fs::remove_dir_all(&cible);
+    }
+
+    #[test]
+    fn une_archive_a_plat_garde_ses_noms() {
+        // La même déclaration doit rendre le même résultat si l'éditeur change
+        // la forme de son archive : c'est pour ça qu'on ne relève pas sa forme.
+        let zip = zip_de(&[("piper.exe", b"MZ"), ("espeak-ng-data/fr_dict", b"dict")]);
+        let s = source_archive(zip.len(), &zip);
+        let cible = dossier_neuf("plat");
+        ouvrir_archive_dans(&s, &zip, cible.clone()).unwrap();
+        assert_eq!(std::fs::read(cible.join("piper.exe")).unwrap(), b"MZ");
+        assert_eq!(
+            std::fs::read(cible.join("espeak-ng-data/fr_dict")).unwrap(),
+            b"dict"
+        );
+        let _ = std::fs::remove_dir_all(&cible);
+    }
+
+    #[test]
+    fn un_seul_fichier_dans_un_dossier_n_est_pas_retire() {
+        // `dossier_commun` ne doit pas prendre un FICHIER unique pour le
+        // dossier de tout le monde : on écrirait alors un dossier vide.
+        let zip = zip_de(&[("piper.exe", b"MZ")]);
+        let s = source_archive(zip.len(), &zip);
+        let cible = dossier_neuf("unique");
+        ouvrir_archive_dans(&s, &zip, cible.clone()).unwrap();
+        assert_eq!(std::fs::read(cible.join("piper.exe")).unwrap(), b"MZ");
+        let _ = std::fs::remove_dir_all(&cible);
+    }
+
+    #[test]
+    fn une_entree_qui_sortirait_du_dossier_fait_tout_refuser() {
+        // Et rien n'est posé : une archive qui essaie d'écrire ailleurs n'est
+        // pas une archive qu'on ouvre a moitié.
+        let zip = zip_de(&[("piper/piper.exe", b"MZ"), ("../dehors", b"non")]);
+        let s = source_archive(zip.len(), &zip);
+        let cible = dossier_neuf("evasion");
+        let r = ouvrir_archive_dans(&s, &zip, cible.clone());
+        assert!(r.is_err(), "l'entrée « ../dehors » aurait dû faire refuser");
+        assert!(
+            r.unwrap_err().contains("hors de son dossier"),
+            "le motif doit dire pourquoi"
+        );
+        assert!(!cible.exists(), "rien ne doit être posé");
+        assert!(
+            !cible.with_extension("partiel").exists(),
+            "le provisoire doit être effacé"
+        );
+        assert!(!cible.parent().unwrap().join("dehors").exists(), "rien hors du dossier");
+    }
+
+    #[test]
+    fn une_archive_vide_est_refusee() {
+        let zip = zip_de(&[]);
+        let s = source_archive(zip.len(), &zip);
+        let cible = dossier_neuf("vide");
+        assert!(ouvrir_archive_dans(&s, &zip, cible.clone()).is_err());
+        assert!(!cible.exists());
+    }
+
+    #[test]
+    fn ce_qui_ne_sert_pas_a_ce_systeme_n_est_pas_propose() {
+        // 22 Mo de moteur Windows téléchargés sur un poste Linux, c'est une
+        // attente et une pièce que le client ne pourra pas employer.
+        let mut s = source_archive(1, b"x");
+        s.pour = Some("windows".to_string());
+        assert_eq!(pour_ce_poste(&s), std::env::consts::OS == "windows");
+        s.pour = None;
+        assert!(pour_ce_poste(&s), "sans « pour », la pièce vaut partout");
+    }
+
     /// La déclaration livrée avec l'application doit se lire ici, sans rien
     /// écarter : une ligne refusée en silence, c'est une pièce que le client
     /// n'aura jamais et dont personne ne saura pourquoi.
@@ -314,7 +639,7 @@ mod tests {
         let (bonnes, refus) =
             sources_de(include_str!("../sources-ressources.json"));
         assert!(refus.is_empty(), "lignes écartées : {:?}", refus);
-        assert_eq!(bonnes.len(), 3, "trois pièces sont déclarées");
+        assert_eq!(bonnes.len(), 4, "quatre pièces sont déclarées");
         assert!(
             bonnes.iter().any(|s| s.chemin.ends_with(".onnx")),
             "la voix doit être déclarée"
@@ -335,6 +660,8 @@ mod tests {
             sha256: sha.map(str::to_string),
             octets,
             verification_autre: None,
+            archive: None,
+            pour: None,
             licence: "MIT".into(),
         }
     }

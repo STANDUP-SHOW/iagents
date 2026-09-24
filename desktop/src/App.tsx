@@ -15,6 +15,7 @@ import Embauche from './components/Embauche'
 import Travail from './components/Travail'
 import CleApi from './components/CleApi'
 import InstallerVoix from './components/InstallerVoix'
+import MiseAJour from './components/MiseAJour'
 
 
 /** Un agent tel que la bibliothèque le montre : ni prénom brut ni fiche. */
@@ -94,12 +95,22 @@ function App() {
     }
   }, [isListening, activeAgent, agents])
 
+  /**
+   * Prépare l'écoute, et dit en clair ce qui manque quand elle ne peut pas.
+   *
+   * Appelé au démarrage, et à NOUVEAU quand le client vient d'installer les
+   * pièces de la voix : sans ce second appel il aurait téléchargé 190 Mo pour
+   * rien jusqu'à ce qu'il pense à relancer l'application.
+   */
+  const demarrerEcoute = () =>
+    invoke('init_voice')
+      .then(() => setMotifEcoute(null))
+      .catch((err) => setMotifEcoute(String(err)))
+
   const initializeApp = async () => {
     try {
       // L'échec dit quel fichier manque et où : le taire obligerait à deviner.
-      await invoke('init_voice')
-        .then(() => setMotifEcoute(null))
-        .catch((err) => setMotifEcoute(String(err)))
+      await demarrerEcoute()
 
       // L'absence de clé d'API n'est plus une panne : l'agent travaille en
       // local si le poste a le modèle de son palier. C'est `modele_etat`, à
@@ -262,9 +273,14 @@ function App() {
       setVoie(reponse.motif)
       setVoieBascule(reponse.bascule)
 
+      // Le message vient de Rust, qui SAIT laquelle des quatre pièces manque et
+      // quoi en faire (`manque_pour_parler`, en français, avec son remède). Le
+      // remplacer par une phrase générique jetait cette information : elle
+      // disait encore « vérifier que piper et sa voix sont présents » alors que
+      // la voix, elle, se télécharge depuis le 24/09 et qu'il ne manque plus
+      // que le moteur. Le client lisait donc un conseil faux.
       await invoke('text_to_speech', { text: reponse.texte }).catch((err) => {
-        console.error('TTS failed:', err)
-        setError("La synthèse vocale a échoué. Vérifier que piper et sa voix sont présents à côté de l'application.")
+        setError(String(err))
       })
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err)
@@ -285,6 +301,7 @@ function App() {
           ) : (
             <span className="idle">Ready</span>
           )}
+          <MiseAJour />
         </div>
       </header>
 
@@ -393,7 +410,7 @@ function App() {
         {activeTab === 'connectors' && (
           <>
             <CleApi />
-            <InstallerVoix />
+            <InstallerVoix apresInstallation={demarrerEcoute} />
             <ConnectorSetup />
           </>
         )}

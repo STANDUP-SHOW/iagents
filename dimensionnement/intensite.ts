@@ -20,7 +20,10 @@ export interface ReglageIntensite {
   libelle: string;
   /** Multiplie le nombre d'exécutions par mois de chaque tâche planifiée. */
   frequence: number;
-  /** Multiplie le nombre de tours par exécution : recherches et vérifications en plus. */
+  /**
+   * Multiplie le nombre de tours par exécution : recherches et vérifications en plus.
+   * **Cible, pas encore appliquée** — voir `PROFONDEUR_APPLIQUEE`.
+   */
   profondeur: number;
   /** Ce que l'agent en dit au client, en une phrase. */
   phrase: string;
@@ -45,10 +48,34 @@ export const INTENSITES: Record<Intensite, ReglageIntensite> = {
     libelle: 'Soutenu',
     frequence: 2,
     profondeur: 1.5,
+    // La phrase ne promet plus de « creuser chaque dossier » : constaté le
+    // 24/09/2026, rien ne le fait. `executer_tache` fait UN appel au modèle,
+    // écrit le fichier et s'arrête. Ce que « soutenu » change réellement, et
+    // qui est appliqué par le planificateur, c'est la fréquence.
     phrase:
-      "Je surveille en continu, je repasse plusieurs fois par jour et je creuse chaque dossier avant de vous le rendre. C'est le réglage qui consomme le plus.",
+      "Je repasse plusieurs fois par jour, à chaque fois que la situation peut avoir bougé. C'est le réglage qui consomme le plus.",
   },
 };
+
+/**
+ * La profondeur est-elle appliquée quelque part ? **Non, au 24/09/2026.**
+ *
+ * `executer_tache` (desktop/src-tauri/src/tache.rs) fait un seul appel au
+ * modèle, écrit le fichier et s'arrête : il n'y a aucune boucle de tours à
+ * multiplier par 1,5. La fréquence, elle, est bien appliquée — c'est le
+ * planificateur qui la lit.
+ *
+ * Ce drapeau existe parce que le chiffre annoncé au client à l'entretien la
+ * comptait : « Soutenu » était devisé **50 % plus cher** que ce que l'agent
+ * allait réellement consommer, pour un travail qu'il ne fait pas. Devis trop
+ * haut ou trop bas, c'est la même faute — le client choisit sur un nombre qui
+ * ne décrit rien.
+ *
+ * `profondeur: 1.5` reste écrit : c'est la cible, et l'effacer obligerait
+ * quelqu'un à la redécouvrir. Le jour où la boucle de tours existe, passer ce
+ * drapeau à `true` suffit, et le banc de `economie.ts` le dira.
+ */
+export const PROFONDEUR_APPLIQUEE = false;
 
 export interface ReglageRepartition {
   libelle: string;
