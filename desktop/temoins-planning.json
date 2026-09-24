@@ -1,55 +1,193 @@
 {
   "note": "Ce que le client règle dans installation.json doit valoir la même chose des deux côtés de la frontière : l'écran (planningDuClient, src/agents/fiche.ts) et l'exécution (lire_tache, src-tauri/src/tache.rs). Ces témoins sont rejoués par les deux — un test Rust les lit par include_str!, check-travail.ts les lit en TypeScript. Écrite deux fois, la règle aurait fini par dire deux choses ; constaté le 24/09/2026, où elle le disait déjà : l'écran appliquait l'autonomie et l'exécution appliquait la fiche.",
   "regle": "Règle de max : l'agent va seul, sauf si le client met une tâche sous contrôle. Le validationHumaine de la fiche n'est donc PAS appliqué — c'est la proposition que l'agent énonce à l'entretien d'embauche (« il y en a N où j'attends votre accord, je garde ça ou vous voulez en relâcher ? »), et c'est la réponse du client qui devient un réglage. D'où les deux premiers témoins, qui ne regardent pas ce que dit la fiche.",
-  "champs": "fiche = ce que dit la fiche du poste ; reglage = ce que le client a écrit pour SA tâche (absent = il n'a rien réglé) ; attendu = ce que les deux côtés doivent conclure.",
+  "champs": "fiche = ce que dit la fiche du poste (sa tâche est quotidienne à 09:00 des deux côtés) ; reglage = ce que le client a écrit pour SA tâche (absent = il n'a rien réglé) ; attendu = ce que les deux côtés doivent conclure, l'heure comprise.",
   "cas": [
     {
       "intitule": "sans réglage, l'agent va seul, même sur une tâche que la fiche protège",
-      "fiche": { "active": true, "validationHumaine": true },
+      "fiche": {
+        "active": true,
+        "validationHumaine": true
+      },
       "reglage": null,
-      "attendu": { "active": true, "validationHumaine": false }
+      "attendu": {
+        "active": true,
+        "validationHumaine": false,
+        "planification": {
+          "type": "quotidienne",
+          "heure": "09:00"
+        }
+      }
     },
     {
       "intitule": "sans réglage, une fiche autonome donne le même résultat : l'agent va seul",
-      "fiche": { "active": true, "validationHumaine": false },
+      "fiche": {
+        "active": true,
+        "validationHumaine": false
+      },
       "reglage": null,
-      "attendu": { "active": true, "validationHumaine": false }
+      "attendu": {
+        "active": true,
+        "validationHumaine": false,
+        "planification": {
+          "type": "quotidienne",
+          "heure": "09:00"
+        }
+      }
     },
     {
       "intitule": "le client éteint la tâche : elle ne part pas",
-      "fiche": { "active": true, "validationHumaine": true },
-      "reglage": { "active": false },
-      "attendu": { "active": false, "validationHumaine": false }
+      "fiche": {
+        "active": true,
+        "validationHumaine": true
+      },
+      "reglage": {
+        "active": false
+      },
+      "attendu": {
+        "active": false,
+        "validationHumaine": false,
+        "planification": {
+          "type": "quotidienne",
+          "heure": "09:00"
+        }
+      }
     },
     {
       "intitule": "le client met sous contrôle une tâche que la fiche dit autonome",
-      "fiche": { "active": true, "validationHumaine": false },
-      "reglage": { "validationHumaine": true },
-      "attendu": { "active": true, "validationHumaine": true }
+      "fiche": {
+        "active": true,
+        "validationHumaine": false
+      },
+      "reglage": {
+        "validationHumaine": true
+      },
+      "attendu": {
+        "active": true,
+        "validationHumaine": true,
+        "planification": {
+          "type": "quotidienne",
+          "heure": "09:00"
+        }
+      }
     },
     {
       "intitule": "le client relâche une tâche que la fiche protège : elle part seule",
-      "fiche": { "active": true, "validationHumaine": true },
-      "reglage": { "validationHumaine": false },
-      "attendu": { "active": true, "validationHumaine": false }
+      "fiche": {
+        "active": true,
+        "validationHumaine": true
+      },
+      "reglage": {
+        "validationHumaine": false
+      },
+      "attendu": {
+        "active": true,
+        "validationHumaine": false,
+        "planification": {
+          "type": "quotidienne",
+          "heure": "09:00"
+        }
+      }
     },
     {
       "intitule": "un réglage qui ne parle que de l'heure ne met rien sous contrôle",
-      "fiche": { "active": true, "validationHumaine": true },
-      "reglage": { "heureSeulement": true },
-      "attendu": { "active": true, "validationHumaine": false }
+      "fiche": {
+        "active": true,
+        "validationHumaine": true
+      },
+      "reglage": {
+        "heureSeulement": true
+      },
+      "attendu": {
+        "active": true,
+        "validationHumaine": false,
+        "planification": {
+          "type": "quotidienne",
+          "heure": "09:00"
+        }
+      }
     },
     {
       "intitule": "le client rallume une tâche que la fiche laisse éteinte",
-      "fiche": { "active": false, "validationHumaine": true },
-      "reglage": { "active": true },
-      "attendu": { "active": true, "validationHumaine": false }
+      "fiche": {
+        "active": false,
+        "validationHumaine": true
+      },
+      "reglage": {
+        "active": true
+      },
+      "attendu": {
+        "active": true,
+        "validationHumaine": false,
+        "planification": {
+          "type": "quotidienne",
+          "heure": "09:00"
+        }
+      }
     },
     {
       "intitule": "le client rallume ET met sous contrôle : les deux réglages tiennent",
-      "fiche": { "active": false, "validationHumaine": false },
-      "reglage": { "active": true, "validationHumaine": true },
-      "attendu": { "active": true, "validationHumaine": true }
+      "fiche": {
+        "active": false,
+        "validationHumaine": false
+      },
+      "reglage": {
+        "active": true,
+        "validationHumaine": true
+      },
+      "attendu": {
+        "active": true,
+        "validationHumaine": true,
+        "planification": {
+          "type": "quotidienne",
+          "heure": "09:00"
+        }
+      }
+    },
+    {
+      "intitule": "le client déplace l'heure : c'est la sienne qui part, pas celle de la fiche",
+      "fiche": {
+        "active": true,
+        "validationHumaine": true
+      },
+      "reglage": {
+        "planification": {
+          "type": "quotidienne",
+          "heure": "19:00"
+        }
+      },
+      "attendu": {
+        "active": true,
+        "validationHumaine": false,
+        "planification": {
+          "type": "quotidienne",
+          "heure": "19:00"
+        }
+      }
+    },
+    {
+      "intitule": "le client passe la tâche à la semaine : le jour et l'heure viennent de lui, entiers",
+      "fiche": {
+        "active": true,
+        "validationHumaine": false
+      },
+      "reglage": {
+        "planification": {
+          "type": "hebdomadaire",
+          "jour": "lundi",
+          "heure": "07:30"
+        }
+      },
+      "attendu": {
+        "active": true,
+        "validationHumaine": false,
+        "planification": {
+          "type": "hebdomadaire",
+          "jour": "lundi",
+          "heure": "07:30"
+        }
+      }
     }
-  ]
+  ],
+  "heure": "L'heure est entrée dans les témoins le 24/09/2026, quand l'exécution s'est mise à la rendre pour le planificateur : trois lectures de la même chose (l'écran, l'exécution, le planificateur) auraient fini par afficher 19 h et partir à 9 h. La planification du réglage remplace celle de la fiche ENTIÈRE — pas seulement son heure — sinon passer une tâche à la semaine en garderait le type quotidien."
 }
