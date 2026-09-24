@@ -894,13 +894,21 @@ struct SortieDeclaree {
 
 /// La tâche à exécuter, lue dans la fiche installée.
 #[derive(Debug)]
-struct TacheLue {
-    nom: String,
-    description: String,
-    entrees: Vec<String>,
-    sortie: SortieDeclaree,
-    validation_humaine: bool,
-    active: bool,
+pub(crate) struct TacheLue {
+    pub(crate) nom: String,
+    pub(crate) description: String,
+    pub(crate) entrees: Vec<String>,
+    pub(crate) sortie: SortieDeclaree,
+    pub(crate) validation_humaine: bool,
+    pub(crate) active: bool,
+    /// L'heure à laquelle cette tâche part, telle que le schéma l'écrit
+    /// (`{type, heure, ...}`). Celle de la fiche, ou celle que le client a
+    /// posée à sa place. `None` = la tâche ne part pas d'elle-même.
+    ///
+    /// Elle est rendue ici, et pas relue ailleurs, pour que le planificateur
+    /// et l'exécution tranchent sur la MÊME lecture : le client éteint une
+    /// tâche, elle ne doit pas partir à l'heure non plus.
+    pub(crate) planification: Option<serde_json::Value>,
 }
 
 /// L'accord humain attendu pour une tâche : ce que le client a réglé pour elle.
@@ -976,7 +984,7 @@ fn tache_ajoutee<'a>(agent: &'a serde_json::Value, tache_id: &str) -> Option<&'a
 /// - l'accord humain se décidait des deux côtés, et pas pareil.
 ///
 /// `check-travail.ts` rejoue les mêmes cas sur les deux implémentations.
-fn lire_tache(
+pub(crate) fn lire_tache(
     fiche: &serde_json::Value,
     agent: &serde_json::Value,
     tache_id: &str,
@@ -1035,6 +1043,13 @@ fn lire_tache(
         active: booleen(regle.and_then(|r| r.get("active")))
             .or_else(|| booleen(t.get("active")))
             .unwrap_or(ajoutee),
+        // Même sens que les deux au-dessus : ce que le client a réglé
+        // l'emporte sur ce que la fiche propose. Il a répondu « plutôt 19 h »
+        // à l'entretien, c'est 19 h.
+        planification: regle
+            .and_then(|r| r.get("planification"))
+            .or_else(|| t.get("planification"))
+            .cloned(),
     })
 }
 
@@ -1240,6 +1255,7 @@ mod tests {
             active: bool,
             #[serde(rename = "validationHumaine")]
             validation_humaine: bool,
+            planification: serde_json::Value,
         }
         #[derive(serde::Deserialize)]
         struct Cas {
@@ -1255,13 +1271,16 @@ mod tests {
 
         let temoins: Temoins =
             serde_json::from_str(include_str!("../../temoins-planning.json")).unwrap();
-        assert!(temoins.cas.len() >= 7, "les témoins ont maigri");
+        assert!(temoins.cas.len() >= 10, "les témoins ont maigri");
 
         for cas in temoins.cas {
             let fiche = serde_json::json!({
                 "taches": [{
                     "id": "t", "nom": "T", "description": "d",
                     "sorties": [{ "dossier": "x", "format": "md" }],
+                    // La même que côté écran : sans elle, le témoin ne pourrait
+                    // pas dire d'où vient l'heure quand le client n'a rien réglé.
+                    "planification": { "type": "quotidienne", "heure": "09:00" },
                     "active": cas.fiche["active"],
                     "validationHumaine": cas.fiche["validationHumaine"],
                 }]
@@ -1281,6 +1300,15 @@ mod tests {
             assert_eq!(
                 lue.validation_humaine, cas.attendu.validation_humaine,
                 "validationHumaine — {}", cas.intitule
+            );
+            // L'heure : le planificateur part dessus, l'écran l'affiche. Si les
+            // deux ne la lisent pas pareil, le client lit 19 h et la tâche part
+            // à 9 h.
+            assert_eq!(
+                lue.planification.as_ref(),
+                Some(&cas.attendu.planification),
+                "planification — {}",
+                cas.intitule
             );
         }
     }

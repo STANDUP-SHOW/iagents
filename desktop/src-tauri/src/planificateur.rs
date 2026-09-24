@@ -408,62 +408,33 @@ pub struct TacheDuPlanning {
     pub active: bool,
 }
 
-fn booleen(v: Option<&Value>) -> Option<bool> {
-    v.and_then(Value::as_bool)
-}
-
-/// Les tâches de la fiche et celles que le client a ajoutées, réglées par
-/// `planning.ajustements`.
-///
-/// Même règle que `lire_tache` dans `tache.rs`, qui reste le dernier mot :
-/// `executer_tache` refuse de toute façon une tâche éteinte. Les témoins de
-/// `temoins-planning.json` sont rejoués ici aussi pour que le planning ne
-/// lance pas ce que l'exécution refuserait.
+/// Les tâches de la fiche et celles que le client a ajoutées, lues par
+/// `tache::lire_tache` — la même lecture que l'exécution, pour que le planning
+/// ne lance pas ce qu'elle refuserait et parte à l'heure qu'elle retient.
+/// Une tâche que `lire_tache` ne sait pas lire (sans sortie déclarée) ne
+/// partirait pas non plus sur un clic : elle n'entre pas au planning.
 pub fn taches_du_planning(fiche: &Value, agent: &Value) -> Vec<TacheDuPlanning> {
-    let ajustements: Vec<&Value> = agent
-        .pointer("/planning/ajustements")
-        .and_then(Value::as_array)
-        .map(|a| a.iter().collect())
-        .unwrap_or_default();
-    let regle = |id: &str| {
-        ajustements
-            .iter()
-            .copied()
-            .find(|a| a.get("tacheId").and_then(Value::as_str) == Some(id))
-    };
     let vides = Vec::new();
-    let de_la_fiche = fiche.get("taches").and_then(Value::as_array).unwrap_or(&vides);
-    let ajoutees = agent
-        .pointer("/planning/ajoutees")
+    let ids = fiche
+        .get("taches")
         .and_then(Value::as_array)
-        .unwrap_or(&vides);
+        .unwrap_or(&vides)
+        .iter()
+        .chain(agent.pointer("/planning/ajoutees").and_then(Value::as_array).unwrap_or(&vides))
+        .filter_map(|t| t.get("id").and_then(Value::as_str));
 
     let mut vues = HashSet::new();
     let mut taches = Vec::new();
-    for (t, ajoutee) in de_la_fiche
-        .iter()
-        .map(|t| (t, false))
-        .chain(ajoutees.iter().map(|t| (t, true)))
-    {
-        let Some(id) = t.get("id").and_then(Value::as_str) else { continue };
-        // La fiche d'abord, comme `lire_tache` : un identifiant ajouté qui
-        // doublerait celui de la fiche ne s'exécuterait jamais sous ce nom.
+    for id in ids {
         if !vues.insert(id.to_string()) {
             continue;
         }
-        let r = regle(id);
-        let planification = r
-            .and_then(|r| r.get("planification"))
-            .or_else(|| t.get("planification"))
-            .cloned()
-            .unwrap_or(Value::Null);
+        let Ok(lue) = crate::tache::lire_tache(fiche, agent, id) else { continue };
         taches.push(TacheDuPlanning {
             id: id.to_string(),
-            nom: t.get("nom").and_then(Value::as_str).unwrap_or(id).to_string(),
-            planification,
-            active: booleen(r.and_then(|r| r.get("active")))
-                .or_else(|| booleen(t.get("active")))
-                .unwrap_or(ajoutee),
+            nom: lue.nom,
+            planification: lue.planification.unwrap_or(Value::Null),
+            active: lue.active,
         });
     }
     taches
@@ -1198,6 +1169,7 @@ mod tests {
         for cas in temoins["cas"].as_array().unwrap() {
             let fiche = json!({"taches": [{
                 "id": "t", "nom": "T",
+                "sorties": [{"dossier": "x", "format": "md"}],
                 "planification": {"type": "quotidienne", "heure": "09:00"},
                 "active": cas["fiche"]["active"],
             }]});
@@ -1222,14 +1194,17 @@ mod tests {
     #[test]
     fn l_heure_reglee_par_le_client_ou_le_team_holder_remplace_celle_de_la_fiche() {
         let fiche = json!({"taches": [
-            {"id": "etat", "nom": "État", "active": true, "planification": {"type": "quotidienne", "heure": "17:30"}},
+            {"id": "etat", "nom": "État", "active": true, "sorties": [{"dossier": "x", "format": "md"}],
+             "planification": {"type": "quotidienne", "heure": "17:30"}},
         ]});
         let agent = json!({"planning": {
-            "ajustements": [{"tacheId": "etat", "planification": {"type": "quotidienne", "heure": "19:00"}}],
-            "ajoutees": [{"id": "soir", "nom": "Compte rendu", "planification": {"type": "quotidienne", "heure": "19:30"}}]
+            "ajustements": [{"tacheId": "etat", "planification": {"type": "hebdomadaire", "jour": "lundi", "heure": "19:00"}}],
+            "ajoutees": [{"id": "soir", "nom": "Compte rendu", "sorties": [{"dossier": "x", "format": "md"}],
+                          "planification": {"type": "quotidienne", "heure": "19:30"}}]
         }});
         let taches = taches_du_planning(&fiche, &agent);
-        assert_eq!(taches[0].planification["heure"], "19:00");
+        // Le réglage remplace la planification entière, pas seulement l'heure.
+        assert_eq!(taches[0].planification, json!({"type": "hebdomadaire", "jour": "lundi", "heure": "19:00"}));
         assert_eq!(taches[1].id, "soir");
         assert!(taches[1].active, "une tâche que le client vient d'ajouter est allumée");
     }
