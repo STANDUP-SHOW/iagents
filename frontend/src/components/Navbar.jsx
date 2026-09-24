@@ -3,7 +3,7 @@ import logo from '../assets/logo-iagent.png';
 // Stable asset name published by build-windows-msi.yml (PR #10): /latest/download/
 // serves the file itself, so the visitor never lands on a GitHub page.
 const TELECHARGEMENT_MSI =
-  'https://github.com/STANDUP-SHOW/iagents/releases/latest/download/iagent-desktop.msi';
+  'https://github.com/STANDUP-SHOW/iagents/releases/latest/download/iAgent-Windows.msi';
 
 export default function Navbar({ search, onSearchChange }) {
   return (
