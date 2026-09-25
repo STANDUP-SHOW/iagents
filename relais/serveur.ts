@@ -150,8 +150,9 @@ export function depouillerEntrant(charge: unknown): MessageRecu[] {
 
 /**
  * Ce que le relais garde, et le seul endroit qui le garde : en mémoire, borné
- * en nombre et en durée. Le point de reprise (`suite`) est un compteur qui ne
- * recule pas, pour que le poste ne reçoive jamais deux fois le même message.
+ * en nombre et en durée. Le point de reprise (`suite`) ne recule jamais, pour
+ * que le poste ne reçoive jamais deux fois le même message — et il ne recule
+ * pas non plus quand le relais redémarre, voir `poser`.
  */
 export class Boite {
   #messages: Range[] = [];
@@ -160,7 +161,22 @@ export class Boite {
 
   poser(recus: MessageRecu[], maintenant = Date.now()): void {
     for (const recu of recus) {
-      this.#dernierId += 1;
+      // L'identifiant repart de l'horloge, jamais de zéro.
+      //
+      // Compté depuis zéro, il était juste tant que le relais ne s'arrêtait
+      // pas — et faux au premier redéploiement. La boîte vit en mémoire : un
+      // relais qui redémarre repart à 1, pendant que le poste garde son point
+      // de reprise à 42. `depuis(42)` ne rend alors que les messages d'un
+      // identifiant supérieur à 42, c'est-à-dire aucun, et il faut quarante
+      // messages pour que le poste en revoie un. Rien ne lève, rien ne se
+      // journalise : le client n'est plus joignable et personne ne le voit.
+      //
+      // Plancher l'identifiant sur l'heure le règle sans rien changer au
+      // contrat : après un redémarrage les identifiants sont plus hauts que
+      // ceux d'avant, donc le point du poste est en dessous et il reçoit ce
+      // que la boîte porte encore. Le `+ 1` garde l'ordre entre deux messages
+      // de la même milliseconde.
+      this.#dernierId = Math.max(this.#dernierId + 1, maintenant);
       this.#messages.push({ ...recu, id: this.#dernierId, pose_le: maintenant });
     }
     if (this.#messages.length > MESSAGES_MAX) {

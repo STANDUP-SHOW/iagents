@@ -18,6 +18,7 @@ import Courriel from './components/Courriel'
 import Embauche from './components/Embauche'
 import Travail from './components/Travail'
 import CleApi from './components/CleApi'
+import WhatsApp from './components/WhatsApp'
 import InstallerVoix from './components/InstallerVoix'
 import MiseAJour from './components/MiseAJour'
 import Equipe from './components/Equipe'
@@ -636,6 +637,7 @@ function App() {
             {activeTab === 'connectors' && (
               <>
                 <CleApi />
+                <WhatsApp />
                 <InstallerVoix apresInstallation={demarrerEcoute} />
                 <ConnectorSetup />
               </>
