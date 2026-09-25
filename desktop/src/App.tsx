@@ -18,6 +18,7 @@ import Courriel from './components/Courriel'
 import Embauche from './components/Embauche'
 import Travail from './components/Travail'
 import CleApi from './components/CleApi'
+import MoteursIa from './components/MoteursIa'
 import InstallerVoix from './components/InstallerVoix'
 import MiseAJour from './components/MiseAJour'
 import Equipe from './components/Equipe'
@@ -636,6 +637,7 @@ function App() {
             {activeTab === 'connectors' && (
               <>
                 <CleApi />
+                <MoteursIa />
                 <InstallerVoix apresInstallation={demarrerEcoute} />
                 <ConnectorSetup />
               </>

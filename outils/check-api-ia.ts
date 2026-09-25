@@ -86,6 +86,29 @@ for (const a of catalogue.apis.filter((x) => x.branche)) {
 }
 verifier('au moins une API est branchée', catalogue.apis.some((a) => a.branche));
 
+// --- Les comptes : ce que l'écran « Vos moteurs d'IA » montre ------------------------
+
+const comptes = (catalogue as any).comptes as Record<string, { nom: string; site: string; inscription: string; logo: string | null }>;
+const logosDispo = new Set(readdirSync(join(racine, 'desktop/src/assets/logos-ia')));
+for (const [id, c] of Object.entries(comptes)) {
+  verifier(`compte ${id} : sert au moins une API`, catalogue.apis.some((a: any) => a.compte === id));
+  verifier(`compte ${id} : inscription en https`, c.inscription.startsWith('https://'), c.inscription);
+  verifier(`compte ${id} : nom et site écrits`, !!c.nom && !!c.site);
+  if (c.logo) verifier(`compte ${id} : le logo ${c.logo} est livré`, logosDispo.has(c.logo));
+}
+for (const a of catalogue.apis as any[]) {
+  verifier(`${a.nom} : son compte existe`, a.compte in comptes, a.compte);
+  if (a.logo) verifier(`${a.nom} : le logo ${a.logo} est livré`, logosDispo.has(a.logo));
+}
+// Anthropic est le compte que llm.rs lit ; cles_ia.rs doit lui passer la main.
+const clesIa = readFileSync(join(racine, 'desktop/src-tauri/src/cles_ia.rs'), 'utf8');
+verifier('cles_ia.rs confie le compte Anthropic à llm.rs', clesIa.includes('const COMPTE_LLM: &str = "anthropic"') && 'anthropic' in comptes);
+// Les champs de CleCompte traversent avec leurs noms Rust (pas de rename_all).
+const ecran = readFileSync(join(racine, 'desktop/src/components/MoteursIa.tsx'), 'utf8');
+for (const champ of ['compte', 'rangee', 'employee']) {
+  verifier(`le champ ${champ} de CleCompte est lu par l'écran`, clesIa.includes(`pub ${champ}:`) && ecran.includes(`${champ}: `));
+}
+
 // --- Les fiches atteignent leurs API ------------------------------------------------
 
 let fiches = 0;
