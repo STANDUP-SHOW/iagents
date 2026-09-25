@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import AgentSimulator from './AgentSimulator.jsx';
+import { devisAgent, euros } from '../data/offres.js';
+import { FINANCEMENT } from '../../../dimensionnement/offre-box.ts';
 import { estimateMonthlyPrice, getRiskProfile, economieDe, tachesAReliretConseillees } from '../data/loader.js';
 
 /** Les onglets, nommes une seule fois : le banc les parcourt tous. */
@@ -9,7 +11,7 @@ export const ONGLETS = ['overview', 'taches', 'connecteurs', 'economie'];
 // un rendu sans lui ne montre que « overview » et ne prouve rien des trois
 // autres. C'est comme ca que quatre variables inexistantes dans l'onglet
 // « economie » ont passe une construction verte le 23/09.
-export default function FicheDetail({ agent, onClose, ongletInitial = 'overview' }) {
+export default function FicheDetail({ agent, onClose, ongletInitial = 'overview', installation = null }) {
   const [activeTab, setActiveTab] = useState(ongletInitial);
   const [showSimulator, setShowSimulator] = useState(false);
 
@@ -23,6 +25,8 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'overview'
   // soient. Le vrai calcul est dans dimensionnement/economie.ts, et ses
   // hypothèses sont dans tarifs-api.json.
   const eco = economieDe(agent);
+  // What this agent costs on each installation, read from dimensionnement/offre-box.ts.
+  const devis = devisAgent(agent);
   const conseillees = tachesAReliretConseillees(agent);
   const apiCallsPerDay = agent.execution?.appelsParJourEstimes ?? 0;
 
@@ -224,6 +228,33 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'overview'
                   <p className="text-sm text-nuit-400 mb-1">Coût matériel</p>
                   <p className="text-2xl font-bold text-nuit-200">{eco ? Math.round(eco.materielPartage + eco.poste) : '—'}€/mois</p>
                 </div>
+              </div>
+
+              <div className="bg-nuit-800 border border-nuit-600 p-4 rounded-lg">
+                <p className="text-sm text-nuit-200 font-semibold mb-2">Ce que cet agent vous coûte selon votre installation</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs text-nuit-400">
+                      <tr><th className="py-1 pr-3">Installation</th><th className="pr-3">Où il travaille</th><th className="pr-3">Coût de l'agent</th><th className="pr-3">Par API seule</th><th>Économie</th></tr>
+                    </thead>
+                    <tbody>
+                      {devis.map((l) => (
+                        <tr key={l.offre} className={`border-t border-nuit-700 ${l.offre === installation ? 'bg-neon-400/10' : ''}`}>
+                          <td className="py-2 pr-3 text-white">{l.nom}{l.offre === installation && <span className="text-xs text-neon-300"> (la vôtre)</span>}</td>
+                          <td className="pr-3 text-nuit-300" title={l.motif}>{l.enLocal ? 'chez vous' : 'par API'}</td>
+                          <td className="pr-3 text-nuit-200">{euros(l.coutAgent)}/mois</td>
+                          <td className="pr-3 text-nuit-400">{euros(l.apiSeule)}/mois</td>
+                          <td className={l.economie > 0 ? 'text-green-300' : 'text-nuit-400'}>{l.economie > 0 ? `${euros(l.economie)}/mois` : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {(() => {
+                  const l = devis.find((d) => d.offre === installation);
+                  return l ? <p className="text-xs text-nuit-300 mt-2">{l.motif}{l.mensualite > 0 && ` La machine elle-même : ${euros(l.mensualite)} HT par mois sur ${FINANCEMENT.mois} mois${l.rembourseSeul ? ', que cet agent rembourse à lui seul.' : '.'}`}</p> : null;
+                })()}
+                {devis.some((d) => d.aConfirmer) && <p className="text-xs text-braise-300 mt-1">Certains prix de machines restent à confirmer.</p>}
               </div>
 
               <div className="bg-rose-600/20 border border-rose-600 p-4 rounded-lg">
