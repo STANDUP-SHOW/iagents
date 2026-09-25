@@ -107,8 +107,6 @@ const SANS_APPELANT = [
   'start_voice_recognition',
   'stop_voice_recognition',
   'process_voice_audio',
-  'enroll_voice',
-  'verify_voice',
   'call_agent_llm',
   'route_voice_command',
   'get_agents',
@@ -167,6 +165,13 @@ const STRUCTURES: { rust: string; ecran: string; nom: string }[] = [
   // qu'une, générique, dans le crochet partagé : le banc la compare aux deux.
   { rust: 'desktop/src-tauri/src/whatsapp.rs', ecran: 'desktop/src/components/useReleve.ts', nom: 'Releve' },
   { rust: 'desktop/src-tauri/src/telegram.rs', ecran: 'desktop/src/components/useReleve.ts', nom: 'Releve' },
+  // L'empreinte vocale : trois nombres et une phrase, et c'est tout ce que le
+  // son laisse sortir de Rust.
+  {
+    rust: 'desktop/src-tauri/src/voiceprint.rs',
+    ecran: 'desktop/src/components/VoiceTraining.tsx',
+    nom: 'Comparaison',
+  },
 ];
 
 /** Le corps d'un bloc nommé, de son `{` à l'accolade qui lui répond. */
