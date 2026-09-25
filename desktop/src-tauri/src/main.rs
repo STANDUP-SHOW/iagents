@@ -3,10 +3,11 @@
   windows_subsystem = "windows"
 )]
 
-use tauri::State;
+use tauri::{Manager, State};
 use std::sync::Mutex;
 
 mod voice;
+mod chemins;
 mod fiches;
 mod courriel;
 mod journal;
@@ -34,12 +35,18 @@ mod mise_a_jour;
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
 use llm::{LLMService, AgentPersona};
-use voiceprint::{VoicePrintService, VoicePrint};
+use voiceprint::Comparaison;
 use database::Database;
 use std::sync::Arc;
 
 pub struct AppState {
     voice: Mutex<Option<VoiceState>>,
+    /// Les phrases enregistrées pendant l'entretien, le temps de l'entretien.
+    ///
+    /// Le son ne traverse jamais l'écran : ce qui en sort est une empreinte de
+    /// douze nombres. Faire l'aller-retour en JSON coûterait un mégaoctet par
+    /// empreinte et mettrait la voix du client dans la fenêtre du navigateur.
+    empreinte_en_cours: Mutex<Vec<Vec<i16>>>,
     agents: Mutex<AgentRouter>,
     llm: Mutex<Option<LLMService>>,
     db: Arc<Mutex<Option<Database>>>,
@@ -156,9 +163,17 @@ fn prenoms_embauches() -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// Enrollment and verification must extract features at the same rate, or the
-/// frames do not line up and the comparison is meaningless.
-const TAUX_ECHANTILLONNAGE: u32 = 44_100;
+/// Un seul propriétaire par poste.
+///
+/// Les agents répondent à la personne qui les a embauchés, et rien dans le
+/// produit ne distingue encore deux humains sur la même machine. Une clef en dur
+/// dit ça franchement, là où un identifiant inventé par l'écran laisserait croire
+/// à plusieurs comptes.
+const PROPRIETAIRE: &str = "proprietaire";
+
+/// Combien de phrases l'entretien enregistre au plus. Trois suffisent à mesurer
+/// ce que la voix a de constant ; au-delà, on remplit la mémoire pour rien.
+const PHRASES_MAXIMUM: usize = 5;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -556,101 +571,121 @@ fn deactivate_agent(agent_id: String, state: State<AppState>) -> Result<serde_js
     }
 }
 
+/// Enregistre une phrase de plus pour l'empreinte, et dit combien sont prêtes.
+///
+/// Le refus tombe ici, phrase par phrase : le dire après la troisième
+/// obligerait le client à tout refaire parce que la première était muette.
 #[tauri::command]
-fn enroll_voice(
-    user_id: String,
-    audio_samples: Vec<Vec<i16>>,
-    state: State<AppState>,
-) -> Result<String, String> {
-    if audio_samples.is_empty() {
-        return Err("No audio samples provided".to_string());
+async fn empreinte_capturer(secondes: f32, etat: State<'_, AppState>) -> Result<usize, String> {
+    // `spawn_blocking` parce que l'enregistrement dort trois secondes : sur le
+    // fil de l'interface, la fenêtre se figerait.
+    let echantillons = tokio::task::spawn_blocking(move || voice::capturer(secondes))
+        .await
+        .map_err(|e| format!("enregistrement interrompu : {}", e))??;
+
+    voiceprint::signature(&echantillons, voiceprint::TAUX_EMPREINTE)?;
+
+    let mut phrases = etat.empreinte_en_cours.lock().unwrap();
+    if phrases.len() >= PHRASES_MAXIMUM {
+        return Err(format!(
+            "{} phrases sont déjà enregistrées : enregistrez l'empreinte ou recommencez.",
+            phrases.len()
+        ));
     }
-
-    let voice_print = VoicePrintService::create_voice_print(&user_id, audio_samples, TAUX_ECHANTILLONNAGE)
-        .map_err(|e| format!("Voice enrollment failed: {}", e))?;
-
-    // An enrollment that was not persisted cannot be verified later. Reporting
-    // success on a failed write would leave the user believing their voice is
-    // known, while every verification would find nothing to compare against.
-    let mfcc_json = serde_json::to_string(&voice_print.mfcc_features)
-        .map_err(|e| format!("Voice enrollment failed: {}", e))?;
-
-    let verrou = state
-        .db
-        .lock()
-        .map_err(|_| "Voice enrollment failed: database is locked".to_string())?;
-    let db = verrou
-        .as_ref()
-        .ok_or("Voice enrollment failed: no database on this machine")?;
-    db.save_voice_print(&user_id, &mfcc_json)
-        .map_err(|e| format!("Voice enrollment failed: {}", e))?;
-
-    Ok(format!(
-        "Voice enrollment complete. Voice print ID: {}",
-        voice_print.id
-    ))
+    phrases.push(echantillons);
+    Ok(phrases.len())
 }
 
-/// Compare a sample against the voice print enrolled for this user.
-///
-/// The score is real, but the features behind it are not a biometric: the
-/// extractor in `voiceprint.rs` computes zero-crossing rate, energy and a
-/// spectral approximation, not true MFCCs. Two different speakers in the same
-/// room score close together. **This score must not, on its own, grant access
-/// to anything.** Until the extractor is replaced by a real one and measured
-/// against a false-acceptance target, the interface says the agent answers to
-/// its first name, not to a voice.
+/// Oublie les phrases en cours. Le bouton « Recommencer » de l'écran.
 #[tauri::command]
-fn verify_voice(
-    user_id: String,
-    audio_sample: Vec<i16>,
-    state: State<AppState>,
-) -> Result<f32, String> {
-    if audio_sample.is_empty() {
-        return Err("No audio sample provided".to_string());
-    }
+fn empreinte_oublier(etat: State<AppState>) -> usize {
+    let mut phrases = etat.empreinte_en_cours.lock().unwrap();
+    phrases.clear();
+    phrases.len()
+}
 
-    let stocke = {
-        let verrou = state
+/// Range l'empreinte du propriétaire, à partir des phrases enregistrées.
+///
+/// Une empreinte qui n'a pas été écrite ne peut pas être comparée plus tard :
+/// annoncer le succès sur une écriture échouée laisserait le client croire que sa
+/// voix est connue, alors que chaque vérification ne trouverait rien.
+#[tauri::command]
+fn empreinte_enregistrer(etat: State<AppState>) -> Result<usize, String> {
+    let phrases = etat.empreinte_en_cours.lock().unwrap().clone();
+    let empreinte = voiceprint::empreinte(&phrases, voiceprint::TAUX_EMPREINTE)?;
+    let combien = empreinte.signatures.len();
+
+    let brut = serde_json::to_string(&empreinte)
+        .map_err(|e| format!("écriture de l'empreinte : {}", e))?;
+
+    let verrou = etat
+        .db
+        .lock()
+        .map_err(|_| "la base du poste est verrouillée".to_string())?;
+    let base = verrou
+        .as_ref()
+        .ok_or("aucune base sur ce poste : l'empreinte ne pourrait pas être relue")?;
+    base.save_voice_print(PROPRIETAIRE, &brut)
+        .map_err(|e| format!("enregistrement de l'empreinte : {}", e))?;
+    drop(verrou);
+
+    etat.empreinte_en_cours.lock().unwrap().clear();
+    Ok(combien)
+}
+
+/// Une empreinte est-elle rangée sur ce poste ?
+///
+/// L'écran le demande en s'ouvrant : sans ça il proposerait de vérifier une voix
+/// que personne n'a enregistrée, et le refus arriverait après l'enregistrement.
+#[tauri::command]
+fn empreinte_presente(etat: State<AppState>) -> Result<bool, String> {
+    let verrou = etat
+        .db
+        .lock()
+        .map_err(|_| "la base du poste est verrouillée".to_string())?;
+    match verrou.as_ref() {
+        Some(base) => Ok(base.get_voice_print(PROPRIETAIRE)?.is_some()),
+        None => Ok(false),
+    }
+}
+
+/// Enregistre une phrase et la compare à l'empreinte rangée.
+///
+/// **Le score n'ouvre rien.** Les marges du verdict ne sont pas mesurées sur de
+/// vraies personnes : `voiceprint` dit pourquoi, et l'écran le répète au client.
+#[tauri::command]
+async fn empreinte_verifier(
+    secondes: f32,
+    etat: State<'_, AppState>,
+) -> Result<Comparaison, String> {
+    let rangee = {
+        let verrou = etat
             .db
             .lock()
-            .map_err(|_| "Database is locked".to_string())?;
-        let db = verrou
+            .map_err(|_| "la base du poste est verrouillée".to_string())?;
+        let base = verrou
             .as_ref()
-            .ok_or("No database on this machine: nothing was ever enrolled")?;
-        db.get_voice_print(&user_id)?
+            .ok_or("aucune base sur ce poste : rien n'a jamais été enregistré")?;
+        base.get_voice_print(PROPRIETAIRE)?
+            .ok_or("aucune empreinte enregistrée sur ce poste")?
     };
+    let empreinte: voiceprint::Empreinte = serde_json::from_str(&rangee.mfcc_data).map_err(|_| {
+        "l'empreinte rangée est illisible : enregistrez votre voix à nouveau.".to_string()
+    })?;
 
-    // No enrollment means no comparison. Returning a passing score here was the
-    // whole bug: an unknown speaker scored as well as the owner.
-    let stocke = stocke.ok_or_else(|| format!("No voice print enrolled for {}", user_id))?;
+    let echantillons = tokio::task::spawn_blocking(move || voice::capturer(secondes))
+        .await
+        .map_err(|e| format!("enregistrement interrompu : {}", e))??;
 
-    let mfcc_features: Vec<Vec<f32>> = serde_json::from_str(&stocke.mfcc_data)
-        .map_err(|e| format!("Stored voice print is unreadable: {}", e))?;
-    if mfcc_features.is_empty() {
-        return Err(format!("Voice print enrolled for {} is empty", user_id));
-    }
-
-    let empreinte = VoicePrint {
-        id: stocke.id,
-        user_id: stocke.user_id,
-        mfcc_features,
-        enrollment_date: stocke.created_at,
-        is_active: true,
-    };
-
-    Ok(VoicePrintService::verify_voice(
-        &audio_sample,
-        &empreinte,
-        TAUX_ECHANTILLONNAGE,
-    ))
+    voiceprint::comparer(&echantillons, &empreinte, voiceprint::TAUX_EMPREINTE)
 }
 
 /// Ce que répond `train_voice`, et pourquoi il ne répond que ça.
 ///
 /// La reconnaissance du propriétaire se fait sur du son, pas sur des phrases
-/// écrites : `enroll_voice` calcule les MFCC de vrais échantillons et les range
-/// en base, `verify_voice` s'y compare. Du texte n'apprend rien à personne.
+/// écrites : `empreinte_capturer` prend de vrais échantillons au microphone,
+/// `empreinte_enregistrer` en range la signature et `empreinte_verifier` s'y
+/// compare. Du texte n'apprend rien à personne.
 const APPRENTISSAGE_PAR_LE_SON: &str = "La voix ne s'apprend pas sur des phrases écrites : \
 il faut enregistrer de vrais échantillons de son. Rien n'a été appris.";
 
@@ -677,26 +712,55 @@ async fn text_to_speech(text: String) -> Result<String, String> {
     voice::text_to_speech(&text).await
 }
 
-fn main() {
-    // Initialize database
-    let db = match Database::new("iagent.db") {
-        Ok(database) => {
-            if let Err(e) = database.init() {
-                eprintln!("Failed to initialize database: {}", e);
+/// Ouvre la base du poste, une fois le dossier de données connu.
+///
+/// Elle s'ouvrait dans `main` sur `"iagent.db"`, un chemin **relatif au dossier
+/// courant**. Constaté chez max le 25/09/2026 : lancée depuis la fin de
+/// l'installeur, l'application avait posé sa base dans son dossier de
+/// téléchargements ; lancée le lendemain depuis le menu Démarrer, elle n'y
+/// retournait pas et ses embauches semblaient perdues.
+///
+/// Un échec ici ne ferme pas l'application : les commandes qui ont besoin de la
+/// base le disent une par une, ce qui vaut mieux qu'un démarrage refusé sans
+/// dire pourquoi.
+fn ouvrir_la_base(app: &tauri::App) {
+    match app.path().app_local_data_dir() {
+        Ok(dossier) => {
+            if let Err(motif) = chemins::poser_dossier_donnees(dossier) {
+                eprintln!("{}", motif);
             }
-            Some(database)
         }
         Err(e) => {
-            eprintln!("Failed to create database: {}", e);
-            None
+            eprintln!(
+                "dossier de données introuvable ({}) : l'application écrira dans un \
+                 dossier de secours et ne retrouvera rien au prochain lancement.",
+                e
+            );
+            return;
         }
-    };
+    }
 
+    let chemin = chemins::pour_ecrire("iagent.db");
+    match Database::new(&chemin) {
+        Ok(base) => {
+            if let Err(e) = base.init() {
+                eprintln!("initialisation de {} : {}", chemin.display(), e);
+            }
+            *app.state::<AppState>().db.lock().unwrap() = Some(base);
+        }
+        Err(motif) => eprintln!("{}", motif),
+    }
+}
+
+fn main() {
     let state = AppState {
         voice: Mutex::new(None),
+        empreinte_en_cours: Mutex::new(Vec::new()),
         agents: Mutex::new(AgentRouter::new()),
         llm: Mutex::new(None),
-        db: Arc::new(Mutex::new(db)),
+        // La base ne s'ouvre pas ici : son chemin dépend du dossier de données du
+        // poste, que seul Tauri sait nommer, et qui n'existe pas avant `setup`.
+        db: Arc::new(Mutex::new(None)),
         ecoute: Mutex::new(Ecoute::default()),
     };
 
@@ -704,6 +768,9 @@ fn main() {
         .manage(state)
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            // Avant tout le reste : sans dossier de données, une embauche ne
+            // s'écrit pas et les pièces de la voix ne se téléchargent pas.
+            ouvrir_la_base(app);
             mise_a_jour::demarrer(app.handle());
             Ok(())
         })
@@ -715,8 +782,11 @@ fn main() {
             process_voice_audio,
             get_partial_result,
             text_to_speech,
-            enroll_voice,
-            verify_voice,
+            empreinte_capturer,
+            empreinte_oublier,
+            empreinte_enregistrer,
+            empreinte_presente,
+            empreinte_verifier,
             init_llm,
             call_agent_llm,
             route_voice_command,

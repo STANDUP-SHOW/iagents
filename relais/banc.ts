@@ -182,24 +182,52 @@ console.log('\nLe relais ne démarre pas sans ses secrets');
 console.log('\nLe point de reprise ne recule pas, et ne resserre jamais deux fois');
 
 {
+  // Horloge explicite d'un bout à l'autre. Sans elle, `balayer()` compare des
+  // messages posés à une heure écrite ici avec `Date.now()` et les oublie tous :
+  // le banc passerait en ne mesurant rien.
+  const T = 1_700_000_000_000;
   const boite = new Boite();
   const un = { de: '336', nom: 'A', texte: 'un', recu_le: '1' };
   const deux = { de: '337', nom: 'B', texte: 'deux', recu_le: '2' };
-  boite.poser([un]);
-  const p1 = boite.depuis(0);
+  boite.poser([un], T);
+  const p1 = boite.depuis(0, T);
+  // On éprouve la propriété, pas la valeur : l'identifiant est planché sur
+  // l'horloge, donc il ne vaut pas 1 et n'a pas à valoir un nombre écrit ici.
   verifier('la première relève rend le message et avance la suite',
-    p1.messages.length === 1 && p1.suite === 1, JSON.stringify(p1));
-  const p2 = boite.depuis(p1.suite);
+    p1.messages.length === 1 && p1.suite >= T, JSON.stringify(p1));
+  const p2 = boite.depuis(p1.suite, T);
   verifier('la relève suivante ne le rend pas une deuxième fois',
-    p2.messages.length === 0 && p2.suite === 1, JSON.stringify(p2));
-  boite.poser([deux]);
-  const p3 = boite.depuis(p2.suite);
-  verifier('le message d’après arrive seul', p3.messages.length === 1 && p3.messages[0]?.texte === 'deux');
-  verifier('une relève vide rend le point demandé, pas zéro', boite.depuis(9).suite === 9);
+    p2.messages.length === 0 && p2.suite === p1.suite, JSON.stringify(p2));
+  verifier('une relève vide rend le point demandé, pas zéro',
+    boite.depuis(p1.suite + 9, T).suite === p1.suite + 9);
+  boite.poser([deux], T + 1000);
+  const p3 = boite.depuis(p2.suite, T + 1000);
+  verifier('le message d’après arrive seul',
+    p3.messages.length === 1 && p3.messages[0]?.texte === 'deux');
+  verifier('et son point est plus haut que le précédent', p3.suite > p1.suite, JSON.stringify(p3));
   const vieux = new Boite();
   vieux.poser([un], 0);
   verifier('un message oublié après sa durée de vie ne revient pas',
     vieux.depuis(0, 11 * 60 * 1000).messages.length === 0);
+
+  // Le cas qui a fait écrire la règle : le relais redémarre, sa boîte est
+  // neuve, et le poste garde son point de reprise. Comptés depuis zéro, les
+  // nouveaux identifiants repartaient sous ce point et le poste ne recevait
+  // plus rien — sans une erreur nulle part, et jusqu'à ce qu'il rebranche.
+  const apresRedemarrage = new Boite();
+  apresRedemarrage.poser([deux], T + 2000);
+  const p4 = apresRedemarrage.depuis(p3.suite, T + 2000);
+  verifier('après un redémarrage du relais, le poste reçoit encore',
+    p4.messages.length === 1 && p4.suite > p3.suite, JSON.stringify(p4));
+
+  // Deux messages de la même milliseconde gardent deux identifiants, sinon le
+  // second se resservirait à chaque relève.
+  const memeInstant = new Boite();
+  memeInstant.poser([un, deux], T);
+  const p5 = memeInstant.depuis(0, T);
+  verifier('deux messages du même instant gardent deux identifiants',
+    p5.messages.length === 2 && memeInstant.depuis(p5.suite, T).messages.length === 0,
+    JSON.stringify(p5));
 }
 
 console.log('\nLes trois routes, contre un vrai serveur');
@@ -208,6 +236,8 @@ const serveur = creerRelais(REGLAGES);
 await new Promise<void>((r) => serveur.listen(0, '127.0.0.1', () => r()));
 const port = (serveur.address() as AddressInfo).port;
 const base = `http://127.0.0.1:${port}`;
+/** Le point de reprise, transmis d'un cas à l'autre comme le ferait un poste. */
+let point = 0;
 const releve = (depuis: number, attente = 0, secret = REGLAGES.secretDuRelais) =>
   fetch(`${base}/messages?depuis=${depuis}&attente=${attente}`, {
     headers: { authorization: `Bearer ${secret}` },
@@ -247,8 +277,12 @@ try {
     verifier('une charge bien signée est acceptée', accepte.status === 200);
     const lue = await (await releve(0)).json();
     verifier('le message est relevable, avec son nom de profil',
-      lue.messages.length === 1 && lue.messages[0]?.nom === 'Sheena Nelson' && lue.suite === 1,
+      lue.messages.length === 1 && lue.messages[0]?.nom === 'Sheena Nelson' && lue.suite > 0,
       JSON.stringify(lue));
+    // Les cas suivants repartent de CE point, comme le ferait un poste. Écrits
+    // en clair (0, 1, 99), ils passaient sous les identifiants et relevaient un
+    // message déjà lu — le banc mesurait autre chose que ce qu'il annonçait.
+    point = lue.suite;
   }
 
   {
@@ -260,7 +294,7 @@ try {
   {
     // La longue attente : la ligne reste ouverte, et le message la réveille.
     const debut = Date.now();
-    const enAttente = releve(1, 30);
+    const enAttente = releve(point, 30);
     await new Promise((r) => setTimeout(r, 150));
     const corps = JSON.stringify({ entry: [{ changes: [{ value: {
       contacts: [{ profile: { name: 'Zoé' }, wa_id: '33611' }],
@@ -276,6 +310,7 @@ try {
     verifier('la longue attente rend la main dès qu’un message arrive',
       rendu.messages.length === 1 && rendu.messages[0]?.nom === 'Zoé' && duree < 10_000,
       `${duree} ms, ${JSON.stringify(rendu)}`);
+    point = rendu.suite;
   }
 
   {
@@ -308,7 +343,7 @@ try {
   }
 
   {
-    const vide = await releve(99, 1);
+    const vide = await releve(point, 1);
     verifier('une attente sans message rend une liste vide, pas une erreur',
       vide.status === 200 && (await vide.json()).messages.length === 0);
     verifier('une route inconnue rend 404', (await fetch(`${base}/autre`)).status === 404);
