@@ -1,24 +1,5 @@
-import { useMemo } from 'react';
-import { PACKS_ENTREPRISE, machinePourAgents } from '../data/offres.js';
-
-function MachineDuPack({ ids }) {
-  const machine = useMemo(() => machinePourAgents(ids), [ids]);
-  if (!machine) return null;
-  return (
-    <div className="text-xs text-nuit-300 space-y-1">
-      {machine.boitiers.map((b, i) => (
-        <p key={i}>
-          <span className="text-neon-300 font-semibold">iAgent Box gamme {b.gamme}</span> · {b.description} · {b.agents} agents
-        </p>
-      ))}
-      {machine.horsLocal.length > 0 && (
-        <p className="text-braise-300">
-          {machine.horsLocal.length} agent{machine.horsLocal.length > 1 ? 's' : ''} (image, vidéo ou son) en mode API
-        </p>
-      )}
-    </div>
-  );
-}
+import { PACKS_ENTREPRISE } from '../data/offres.js';
+import ConseilMachine from './ConseilMachine.jsx';
 
 /** The 43 business packs, one per sector. Opening one shows its agents. */
 export default function PacksEntreprise({ packOuvert, onOuvrir }) {
@@ -39,7 +20,7 @@ export default function PacksEntreprise({ packOuvert, onOuvrir }) {
         <p className="text-xs text-nuit-400 mt-3">Déroulé : {pack.workflow}</p>
         <p className="text-xs text-nuit-400">Connexions : {pack.connecteurs}</p>
         <div className="mt-3 pt-3 border-t border-nuit-700">
-          <MachineDuPack ids={pack.agents} />
+          <ConseilMachine ids={pack.agents} compact />
         </div>
       </div>
     );

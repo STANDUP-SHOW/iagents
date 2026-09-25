@@ -9,11 +9,11 @@ import packsSecteurs from '../../../catalogue/reference/packs-secteurs.json';
 import catalogue from '../../../catalogue/catalogue.json';
 import activitesJson from '../../../catalogue/activites.json';
 import {
-  machinesPourPack,
-  agentsParMachine,
-  materielPour,
-  BUNDLES,
-} from '../../../dimensionnement/calculer.ts';
+  OFFRES,
+  coutInstallation,
+  devisParBox,
+  conseillerBox,
+} from '../../../dimensionnement/offre-box.ts';
 
 const parId = new Map(agents.map((a) => [a.id, a]));
 export const ficheDe = (id) => parId.get(id);
@@ -86,39 +86,23 @@ export function activitesPourIdee(idee, limite = 3) {
     .map((r) => r.activite);
 }
 
-// What a machine offers, in words, from its measured memory. No model name and
-// no price: max has not published the iAgent Box offers yet.
-export function descriptionMachine(machine) {
-  return machine.memoireUnifiee
-    ? `mini-PC, ${machine.ram} Go de mémoire partagée`
-    : `carte graphique dédiée ${machine.vram} Go`;
-}
+// The machine offer (dimensionnement/offre-box.ts): six installations, each with
+// its purchase price and its 24-month instalment. The shop reads, it never
+// recomputes; every price stays marked provisional until max sets it.
+export const INSTALLATIONS = OFFRES.map((o) => ({ ...o, cout: coutInstallation(o) }));
+export const installationDe = (id) => INSTALLATIONS.find((o) => o.id === id);
 
-/** Pack -> the machine that runs it, from the sizing engine. */
-export function machinePourAgents(ids) {
+/** A team -> the installation to advise, with every installation's quote beside it. */
+export function conseilPour(ids) {
   const fiches = ids.map(ficheDe).filter(Boolean);
   if (!fiches.length) return null;
-  const plan = machinesPourPack(fiches.map((f) => ({ id: f.id, modeles: f.modeles })));
-  return {
-    boitiers: plan.machines.map((m) => ({ gamme: m.machine.gamme, description: descriptionMachine(m.machine), agents: m.agents.length })),
-    horsLocal: plan.impossibles.map(ficheDe).filter(Boolean),
-  };
+  const { conseil, devis } = conseillerBox(fiches);
+  return { conseil, devis, fiches };
 }
 
-/** Is this fiche runnable locally at all? Image, video and music agents are not on these machines. */
-export const classeGpuDe = (fiche) => materielPour(fiche.modeles).gpu.libelle;
+/** One line per installation for a single agent. */
+export const devisAgent = (fiche) => devisParBox(fiche);
 
-// The iAgent Box ranges, and how many copies of an office agent the best
-// machine of each range carries. An estimate from the sizing tables, to be
-// confirmed on real machines.
-const ORDRE_GAMMES = ['S', 'M', 'L', 'XL', 'Flotte'];
-const AGENT_DE_BUREAU = 'AG-0001'; // Secrétaire administratif, the office post of outils/packs.ts
-export function gammesBox() {
-  const reference = ficheDe(AGENT_DE_BUREAU);
-  return ORDRE_GAMMES.map((gamme) => {
-    const machines = BUNDLES.filter((m) => m.gamme === gamme);
-    const capacite = reference ? Math.max(0, ...machines.map((m) => agentsParMachine(m, reference))) : 0;
-    const dediee = machines.some((m) => !m.memoireUnifiee);
-    return { gamme, machines: machines.length, capacite, dediee };
-  }).filter((g) => g.machines > 0);
-}
+/** « 1 234 € », the way the shop writes money. */
+export const euros = (x) =>
+  `${Math.round(x).toLocaleString('fr-FR').replace(/\u202f/g, '\u00a0')}\u00a0€`;

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import agents from '../data/loader.js';
-import { CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee, machinePourAgents } from '../data/offres.js';
+import { CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee } from '../data/offres.js';
+import ConseilMachine from './ConseilMachine.jsx';
 
 function LigneAgent({ id, coche, onBasculer }) {
   const fiche = ficheDe(id);
@@ -38,7 +39,6 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
   const activites = useMemo(() => activitesPourIdee(idee), [idee]);
   const cycle1 = CYCLE_1.flatMap((e) => e.agents);
   const pack = [...new Set([...cycle1, ...CYCLE_2, ...ajoutes])].filter((id) => !retires.has(id));
-  const machine = useMemo(() => machinePourAgents(pack), [pack.join(',')]);
 
   const trouves = useMemo(() => {
     const q = recherche.trim().toLowerCase();
@@ -112,22 +112,7 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
 
       <div className="card border-2 border-neon-400/60">
         <h3 className="font-display text-lg text-white mb-1">Votre pack : {pack.length} agents</h3>
-        {machine ? (
-          <div className="text-sm text-nuit-200 space-y-1">
-            <p>La machine qui le fait tourner, calculée sur les modèles de chaque agent :</p>
-            {machine.boitiers.map((b, i) => (
-              <p key={i}>
-                <span className="text-neon-300 font-semibold">iAgent Box gamme {b.gamme}</span> · {b.description} · {b.agents} agents
-              </p>
-            ))}
-            {machine.horsLocal.length > 0 && (
-              <p className="text-braise-300">{machine.horsLocal.map((f) => f.nom).join(', ')} : en mode API, aucune de nos machines ne les porte en local.</p>
-            )}
-            <p className="text-xs text-nuit-400">Estimation du dimensionnement, à confirmer sur la machine réelle. Offres et prix des iAgent Box : bientôt.</p>
-          </div>
-        ) : (
-          <p className="text-sm text-nuit-300">Cochez au moins un agent pour voir la machine qui le porte.</p>
-        )}
+        <ConseilMachine ids={pack} />
       </div>
     </div>
   );

@@ -4,8 +4,8 @@ import FicheList from './components/FicheList.jsx';
 import FicheDetail from './components/FicheDetail.jsx';
 import PacksEntreprise from './components/PacksEntreprise.jsx';
 import CreezEntreprise from './components/CreezEntreprise.jsx';
-import IAgentBox from './components/IAgentBox.jsx';
-import { AGENTS_RESEAUX, PACKS_ENTREPRISE, ficheDe } from './data/offres.js';
+import IAgentBox, { CarteInstallation } from './components/IAgentBox.jsx';
+import { AGENTS_RESEAUX, PACKS_ENTREPRISE, INSTALLATIONS, ficheDe, installationDe } from './data/offres.js';
 import agents, {
   filterAgents,
   getSectors,
@@ -25,13 +25,25 @@ export const VUES = [
   { id: 'packs', libelle: 'Packs entreprise' },
 ];
 
+// The chosen installation survives page changes and reloads; storage can be
+// missing (private window, SSR bench), so every access is guarded.
+const CLE_INSTALLATION = 'iagent-installation';
+const lireInstallation = () => {
+  try { return installationDe(globalThis.localStorage?.getItem(CLE_INSTALLATION))?.id ?? null; } catch { return null; }
+};
+const ecrireInstallation = (id) => {
+  try { globalThis.localStorage?.setItem(CLE_INSTALLATION, id); } catch { /* per-visitor convenience only */ }
+};
+
 const onglet = (actif) =>
   `px-4 py-3 rounded-lg text-sm md:text-base font-semibold transition min-h-[44px] ${
     actif ? 'bg-neon-400/15 text-neon-300 border border-neon-400 shadow-neon' : 'bg-nuit-800 text-nuit-300 border border-nuit-700 hover:bg-nuit-700'
   }`;
 
-export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier' }) {
+export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier', installationInitiale }) {
   const [page, setPage] = useState(pageInitiale);
+  const [installation, setInstallationEtat] = useState(() => installationInitiale ?? lireInstallation());
+  const choisirInstallation = (id) => { setInstallationEtat(id); ecrireInstallation(id); };
   const [vue, setVue] = useState(vueInitiale);
   const [packOuvert, setPackOuvert] = useState(null);
   const [search, setSearch] = useState('');
@@ -71,8 +83,15 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
         ))}
       </nav>
 
+      {installation && (
+        <div className="bg-nuit-800 border-b border-nuit-700 px-4 py-2 text-sm text-nuit-300 flex flex-wrap items-center gap-2">
+          Votre installation : <span className="text-neon-300 font-semibold">{installationDe(installation).nom}</span>
+          <button onClick={() => setPage('box')} className="underline text-nuit-200 hover:text-white min-h-[44px] px-2">changer</button>
+        </div>
+      )}
+
       {page === 'entreprise' && <div className="p-4 md:p-8 max-w-7xl mx-auto"><CreezEntreprise /></div>}
-      {page === 'box' && <div className="p-4 md:p-8 max-w-7xl mx-auto"><IAgentBox /></div>}
+      {page === 'box' && <div className="p-4 md:p-8 max-w-7xl mx-auto"><IAgentBox installation={installation} onChoisir={(id) => { choisirInstallation(id); setPage('catalogue'); }} /></div>}
 
       {page === 'catalogue' && <div className="flex">
         {/* Sidebar Filters */}
@@ -184,6 +203,16 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
               ))}
             </div>
 
+            {!installation && (
+              <div className="mb-6">
+                <h2 className="font-display text-xl text-white mb-1">D'abord, votre installation</h2>
+                <p className="text-sm text-nuit-300 mb-3">Elle décide de ce que chaque agent vous coûte, chez vous ou par API. Vous pourrez la changer à tout moment.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {INSTALLATIONS.map((o) => <CarteInstallation key={o.id} o={o} compact onChoisir={choisirInstallation} />)}
+                </div>
+              </div>
+            )}
+
             {vue === 'packs' && <div className="mb-6"><PacksEntreprise packOuvert={packOuvert} onOuvrir={setPackOuvert} /></div>}
 
             {montrerListe && <>
@@ -229,6 +258,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
       {selectedAgent && (
         <FicheDetail
           agent={selectedAgent}
+          installation={installation}
           onClose={() => setSelectedAgent(null)}
         />
       )}

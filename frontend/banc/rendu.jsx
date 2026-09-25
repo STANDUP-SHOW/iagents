@@ -17,7 +17,7 @@ import App, { PAGES, VUES } from '../src/App.jsx';
 import CreezEntreprise from '../src/components/CreezEntreprise.jsx';
 import IAgentBox from '../src/components/IAgentBox.jsx';
 import PacksEntreprise from '../src/components/PacksEntreprise.jsx';
-import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee, machinePourAgents, gammesBox } from '../src/data/offres.js';
+import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee, INSTALLATIONS, conseilPour } from '../src/data/offres.js';
 
 let n = 0;
 const ok = (m) => { n++; console.log('  ok  ' + m); };
@@ -118,7 +118,7 @@ for (const page of PAGES) {
   for (const vue of page.id === 'catalogue' ? VUES : [{ id: 'metier' }]) {
     try {
       const html = renderToString(<App pageInitiale={page.id} vueInitiale={vue.id} />);
-      const attendu = { catalogue: vue.id === 'packs' ? 'PACK-01' : 'AG-0', entreprise: 'Cycle 1', box: 'Gamme' }[page.id];
+      const attendu = { catalogue: vue.id === 'packs' ? 'PACK-01' : 'AG-0', entreprise: 'Cycle 1', box: 'Box Commandeur' }[page.id];
       if (!html.includes(attendu)) echoue(`page « ${page.libelle} »${vue.libelle ? `, vue « ${vue.libelle} »` : ''} : « ${attendu} » absent`);
       else ok(`page « ${page.libelle} »${vue.libelle ? `, vue « ${vue.libelle} »` : ''} se rend`);
     } catch (e) {
@@ -135,22 +135,41 @@ for (const page of PAGES) {
   const html = renderToString(<CreezEntreprise ideeInitiale="ouvrir une boulangerie bio" />);
   if (!html.includes('Activité reconnue')) echoue("la page ne montre pas l'activité reconnue");
   else ok("la page montre l'activité reconnue");
-  const machine = machinePourAgents([...CYCLE_1.flatMap((e) => e.agents), ...CYCLE_2]);
-  if (!machine?.boitiers.length) echoue('le pack de création ne trouve aucune machine');
-  else ok(`le pack de création tient sur ${machine.boitiers.map((b) => 'gamme ' + b.gamme).join(' + ')}`);
+  const avis = conseilPour([...CYCLE_1.flatMap((e) => e.agents), ...CYCLE_2]);
+  if (!avis) echoue('le pack de création ne reçoit aucun conseil de machine');
+  else ok(`le pack de création : ${avis.conseil.nom} conseillée`);
+  if (!html.includes('Installation conseillée')) echoue("la page de création ne conseille pas d'installation");
+  else ok("la page de création conseille une installation");
   const packHtml = renderToString(<PacksEntreprise packOuvert="PACK-01" onOuvrir={() => {}} />);
-  if (!packHtml.includes('iAgent Box gamme')) echoue("un pack ouvert ne propose pas de machine");
-  else ok('un pack ouvert propose sa machine');
+  if (!packHtml.includes('Installation conseillée')) echoue("un pack ouvert ne conseille pas d'installation");
+  else ok('un pack ouvert conseille son installation');
 }
 
-// 11. Aucun prix ni nom de modèle sur les machines : max n'a pas encore donné ses offres.
+// 11. L'offre machines se lit dans dimensionnement/offre-box.json : six
+//     installations, un prix provisoire dit comme tel, aucun fournisseur du
+//     relevé nommé au client, et le choix passe avant le catalogue.
 {
   const html = renderToString(<IAgentBox />);
-  const interdits = ['€', 'Firebat', 'RTX', 'Ryzen', 'Jetson', 'GMKtec', 'Chuwi'];
-  const trouves = interdits.filter((m) => html.includes(m));
-  if (trouves.length) echoue(`iAgent Box affiche ${trouves.join(', ')}`);
-  else if (gammesBox().some((g) => g.capacite < 1)) echoue('une gamme ne porte aucun agent de bureau');
-  else ok(`iAgent Box : ${gammesBox().length} gammes, sans prix ni modèle`);
+  const manquantes = INSTALLATIONS.filter((o) => !html.includes(o.nom.replace(/'/g, '&#x27;')));
+  if (INSTALLATIONS.length !== 6 || manquantes.length) echoue(`iAgent Box : ${INSTALLATIONS.length} installations, absentes ${manquantes.map((o) => o.id).join(', ')}`);
+  else ok('iAgent Box : les six installations');
+  const provisoires = INSTALLATIONS.filter((o) => o.cout.aConfirmer).length;
+  const dits = html.split('Prix provisoire').length - 1;
+  if (dits < provisoires) echoue(`${provisoires} prix provisoires, ${dits} dits comme tels`);
+  else ok(`${provisoires} prix provisoires, tous dits comme tels`);
+  const fournisseurs = ['Firebat', 'RTX', 'Jetson', 'GMKtec', 'Chuwi', 'Radeon'].filter((m) => html.includes(m));
+  if (fournisseurs.length) echoue(`iAgent Box nomme ${fournisseurs.join(', ')}`);
+  else ok('aucun fournisseur du relevé nommé');
+  const sans = renderToString(<App installationInitiale={null} />);
+  if (!sans.includes("D&#x27;abord, votre installation")) echoue("le catalogue ne demande pas l'installation d'abord");
+  else ok("le catalogue demande l'installation d'abord");
+  const avec = renderToString(<App installationInitiale="box-max" />);
+  if (avec.includes("D&#x27;abord, votre installation") || !avec.includes('Votre installation')) echoue("l'installation choisie n'est pas gardée");
+  else ok("l'installation choisie est gardée");
+  const fiche = renderToString(<FicheDetail agent={ficheDe('AG-0001')} onClose={() => {}} ongletInitial="economie" installation="box-max" />);
+  const lignes = INSTALLATIONS.filter((o) => fiche.includes(o.nom.replace(/'/g, '&#x27;'))).length;
+  if (lignes !== 6 || !fiche.includes('(la vôtre)')) echoue(`fiche : ${lignes} installations au devis`);
+  else ok('la fiche donne son coût sur les six installations');
 }
 
 console.log(`\n${n} attentes tenues — boutique ok`);
