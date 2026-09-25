@@ -13,6 +13,11 @@ import { renderToString } from 'react-dom/server';
 import agents, { passes3xTest, ratio3x, economieDe, getSectors, getFamilles } from '../src/data/loader.js';
 import FicheList from '../src/components/FicheList.jsx';
 import FicheDetail, { ONGLETS } from '../src/components/FicheDetail.jsx';
+import App, { PAGES, VUES } from '../src/App.jsx';
+import CreezEntreprise from '../src/components/CreezEntreprise.jsx';
+import IAgentBox from '../src/components/IAgentBox.jsx';
+import PacksEntreprise from '../src/components/PacksEntreprise.jsx';
+import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee, machinePourAgents, gammesBox } from '../src/data/offres.js';
 
 let n = 0;
 const ok = (m) => { n++; console.log('  ok  ' + m); };
@@ -92,6 +97,60 @@ else ok(`${getSectors().length} secteurs, ${getFamilles().length} familles`);
       ok(`${agent.id} (${quoi}) : la fiche dit « travaille seul », comme le produit`);
     }
   }
+}
+
+// 8. Les offres ne citent que des fiches qui existent. Une fiche renumérotée
+//    ferait disparaître un agent du parcours sans que rien ne casse à l'écran.
+{
+  const cites = [...AGENTS_RESEAUX, ...CYCLE_1.flatMap((e) => e.agents), ...CYCLE_2];
+  const perdus = cites.filter((id) => !ficheDe(id));
+  if (perdus.length) echoue(`offres : fiches introuvables ${perdus.join(', ')}`);
+  else ok(`offres : les ${cites.length} fiches citées existent`);
+  if (AGENTS_RESEAUX.length < 8) echoue(`${AGENTS_RESEAUX.length} agents réseaux seulement`);
+  else ok(`${AGENTS_RESEAUX.length} agents réseaux`);
+  const vides = PACKS_ENTREPRISE.filter((p) => !p.secteur || p.agents.length === 0);
+  if (PACKS_ENTREPRISE.length !== 43 || vides.length) echoue(`packs entreprise : ${PACKS_ENTREPRISE.length} packs, ${vides.length} sans agent (${vides.map((p) => p.id).join(', ')})`);
+  else ok('43 packs entreprise, chacun avec ses agents');
+}
+
+// 9. Chaque page et chaque façon de parcourir se rend, depuis l'application entière.
+for (const page of PAGES) {
+  for (const vue of page.id === 'catalogue' ? VUES : [{ id: 'metier' }]) {
+    try {
+      const html = renderToString(<App pageInitiale={page.id} vueInitiale={vue.id} />);
+      const attendu = { catalogue: vue.id === 'packs' ? 'PACK-01' : 'AG-0', entreprise: 'Cycle 1', box: 'Gamme' }[page.id];
+      if (!html.includes(attendu)) echoue(`page « ${page.libelle} »${vue.libelle ? `, vue « ${vue.libelle} »` : ''} : « ${attendu} » absent`);
+      else ok(`page « ${page.libelle} »${vue.libelle ? `, vue « ${vue.libelle} »` : ''} se rend`);
+    } catch (e) {
+      echoue(`page « ${page.libelle} » : ${e.message}`);
+    }
+  }
+}
+
+// 10. L'idée tapée est reconnue parmi les activités, et le pack a sa machine.
+{
+  const reconnues = activitesPourIdee('ouvrir une boulangerie bio');
+  if (!reconnues.length) echoue('« boulangerie » ne reconnaît aucune activité');
+  else ok(`« boulangerie » → ${reconnues[0].nom}`);
+  const html = renderToString(<CreezEntreprise ideeInitiale="ouvrir une boulangerie bio" />);
+  if (!html.includes('Activité reconnue')) echoue("la page ne montre pas l'activité reconnue");
+  else ok("la page montre l'activité reconnue");
+  const machine = machinePourAgents([...CYCLE_1.flatMap((e) => e.agents), ...CYCLE_2]);
+  if (!machine?.boitiers.length) echoue('le pack de création ne trouve aucune machine');
+  else ok(`le pack de création tient sur ${machine.boitiers.map((b) => 'gamme ' + b.gamme).join(' + ')}`);
+  const packHtml = renderToString(<PacksEntreprise packOuvert="PACK-01" onOuvrir={() => {}} />);
+  if (!packHtml.includes('iAgent Box gamme')) echoue("un pack ouvert ne propose pas de machine");
+  else ok('un pack ouvert propose sa machine');
+}
+
+// 11. Aucun prix ni nom de modèle sur les machines : max n'a pas encore donné ses offres.
+{
+  const html = renderToString(<IAgentBox />);
+  const interdits = ['€', 'Firebat', 'RTX', 'Ryzen', 'Jetson', 'GMKtec', 'Chuwi'];
+  const trouves = interdits.filter((m) => html.includes(m));
+  if (trouves.length) echoue(`iAgent Box affiche ${trouves.join(', ')}`);
+  else if (gammesBox().some((g) => g.capacite < 1)) echoue('une gamme ne porte aucun agent de bureau');
+  else ok(`iAgent Box : ${gammesBox().length} gammes, sans prix ni modèle`);
 }
 
 console.log(`\n${n} attentes tenues — boutique ok`);
