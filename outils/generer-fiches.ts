@@ -22,6 +22,7 @@ import { Ajv2020 } from 'ajv/dist/2020.js';
 import { materielPour, appelsParJourEstimes } from '../dimensionnement/calculer.ts';
 import { logicielsDesTaches } from './logiciels-metier.ts';
 import { logicielsPoste } from '../usine/logiciels-poste.ts';
+import { logicielsCreation } from './creation-locale.ts';
 
 /**
  * A key created at organisation level (not inside a workspace) must name the
@@ -36,7 +37,8 @@ function clientAnthropic() {
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const lire = (p: string) => readFileSync(join(racine, p), 'utf8');
 const catalogue = JSON.parse(lire('catalogue/catalogue.json'));
-const categoriesLogiciels = new Set<string>(JSON.parse(lire('catalogue/logiciels.json')).categories);
+const referentielLogiciels = JSON.parse(lire('catalogue/logiciels.json'));
+const categoriesLogiciels = new Set<string>(referentielLogiciels.categories);
 const usine = JSON.parse(lire('usine/logiciels.json'));
 const schema = JSON.parse(lire('contrat/paquet-agent.schema.json'));
 const contrat = lire('contrat/paquet-agent.md');
@@ -129,6 +131,7 @@ function assembler(a: any, fiche: any) {
       ...fiche.acces,
       logiciels: logicielsDesTaches(fiche.taches, categoriesLogiciels),
       logicielsPoste: logicielsPoste(logicielsDesTaches(fiche.taches, categoriesLogiciels), usine.logiciels),
+      logicielsCreation: logicielsCreation(logicielsDesTaches(fiche.taches, categoriesLogiciels), referentielLogiciels.logiciels),
     }, modeles,
     execution: { modes: ['local', 'api'], defaut: 'local', bascule: 'automatique',
       api: { capacites: Object.fromEntries(Object.keys(modeles).filter((k) => k in API_CAPACITES).map((k) => [k, API_CAPACITES[k]])) },

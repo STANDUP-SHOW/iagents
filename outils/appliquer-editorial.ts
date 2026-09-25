@@ -13,6 +13,7 @@
 import { readdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { logicielsDesTaches } from './logiciels-metier.ts';
 import { logicielsPoste } from '../usine/logiciels-poste.ts';
+import { logicielsCreation } from './creation-locale.ts';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -28,6 +29,7 @@ const categoriesLogiciels = new Set<string>(
   JSON.parse(readFileSync(join(racine, 'catalogue/logiciels.json'), 'utf8')).categories,
 );
 const usine = JSON.parse(readFileSync(join(racine, 'usine/logiciels.json'), 'utf8'));
+const referentiel = JSON.parse(readFileSync(join(racine, 'catalogue/logiciels.json'), 'utf8'));
 const parId = new Map<string, any>(catalogue.agents.map((a: any) => [a.id, a]));
 const editorial = JSON.parse(
   readFileSync(join(racine, 'outils/editorial', `${secteur}.json`), 'utf8')
@@ -75,7 +77,8 @@ for (const e of editorial.agents) {
   paquet.connecteurs = e.connecteurs;
   // Ce que l'agent a le droit d'ouvrir se lit dans ses tâches : l'éditorial ne le redit pas.
   const familles = logicielsDesTaches(e.taches, categoriesLogiciels);
-  paquet.acces = { ...e.acces, logiciels: familles, logicielsPoste: logicielsPoste(familles, usine.logiciels) };
+  paquet.acces = { ...e.acces, logiciels: familles, logicielsPoste: logicielsPoste(familles, usine.logiciels),
+    logicielsCreation: logicielsCreation(familles, referentiel.logiciels) };
   paquet.modeles = e.modeles;
   paquet.resume_metier = e.resume_metier;
   // Le relais dit de quel poste la fiche reçoit et à quel poste elle transmet : sans lui,

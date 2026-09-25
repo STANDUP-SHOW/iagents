@@ -29,6 +29,7 @@ function plusRecenteQue(a: string, b: string): boolean {
 }
 import { logicielsDesTaches, remplacement } from './logiciels-metier.ts';
 import { logicielsPoste } from '../usine/logiciels-poste.ts';
+import { logicielsCreation } from './creation-locale.ts';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const schema = JSON.parse(readFileSync(join(racine, 'contrat/paquet-agent.schema.json'), 'utf8'));
@@ -280,6 +281,13 @@ for (const { dossier, f } of fichiers) {
   if (JSON.stringify(posteAttendu) !== JSON.stringify(paquet.acces.logicielsPoste)) {
     if (corriger) { paquet.acces.logicielsPoste = posteAttendu; modifie = true; }
     else faute(f, `acces.logicielsPoste ≠ ce que ses familles demandent au poste : attendu ${JSON.stringify(posteAttendu)}`);
+  }
+  // Les logiciels de création installés sur le poste (Photoshop, AutoCAD, Blender…) que
+  // l'agent peut employer : ceux des familles qu'il ouvre (outils/creation-locale.ts).
+  const creationAttendue = logicielsCreation(accesAttendu, logiciels.logiciels);
+  if (JSON.stringify(creationAttendue) !== JSON.stringify(paquet.acces.logicielsCreation)) {
+    if (corriger) { paquet.acces.logicielsCreation = creationAttendue; modifie = true; }
+    else faute(f, `acces.logicielsCreation ≠ les logiciels de création de ses familles : attendu ${JSON.stringify(creationAttendue)}`);
   }
 
   // Une fiche sans qualifications échappait au contrôle ci-dessous : c'est pourtant
