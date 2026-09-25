@@ -256,9 +256,12 @@ par WhatsApp et email.
   livrées chacune avec une Box Commandeur ; achat ou financement. `offre-box.ts`
   rend la ligne par installation d'une fiche (`devisParBox`), le devis d'une
   équipe (`devisPack`) et le conseil (`conseillerBox`, sur deux fois la durée du
-  financement). **Prix, machines et financement (36 mois à 7 %) viennent du
-  catalogue matériel de max du 25/09**, et le banc retrouve au centime ses
-  mensualités. **Les machines de l'offre ne rejoignent pas `machines.json`** :
+  financement). **Prix et machines viennent du catalogue matériel de max du
+  25/09** (le banc retrouve au centime ses mensualités à 36 mois) ; **le
+  financement est sur 24 mois** (max, 25/09 18h19), taux du catalogue repris à
+  confirmer. **Les prix restent séparés** : une Power et sa Box Commandeur sont
+  deux lignes, et l'abonnement de chaque box s'ajoute au prix des agents et
+  entre dans la comparaison avec l'API. **Les machines de l'offre ne rejoignent pas `machines.json`** :
   essayé, elles déplaçaient le placement de tout le relevé, donc la règle des
   3×. **Elles ne forment pas une échelle** : la Box Max (58 Go unifiés) tient 23
   fiches que la Power N1 (carte 24 Go) ne tient pas, et la N1 en tient 24 que le
