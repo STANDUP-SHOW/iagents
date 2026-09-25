@@ -237,7 +237,7 @@ pub fn contenu_conforme(s: &Source, recu: &[u8]) -> Result<(), String> {
 
 /// Où cette pièce se posera sur ce poste.
 pub fn ou_poser(s: &Source) -> std::path::PathBuf {
-    crate::fiches::dossier_ressources().join(&s.chemin)
+    crate::chemins::pour_ecrire(&s.chemin)
 }
 
 /// Le dossier commun à TOUTES les entrées d'une archive, s'il y en a un.

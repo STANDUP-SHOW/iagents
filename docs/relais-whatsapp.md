@@ -134,6 +134,18 @@ GET {relais}/messages?depuis=<n>&attente=<s>
   recule jamais** : si le relais rend un `suite` plus bas que le `depuis`
   demandé, le poste garde le sien, sinon l'agent répondrait deux fois au même
   message.
+- **Et le relais ne recule pas non plus quand il redémarre.** C'est la faute
+  trouvée le 25/09/2026 en branchant l'écran : sa boîte vit en mémoire, donc un
+  redéploiement la vide, et un compteur parti de zéro redonnait des
+  identifiants 1, 2, 3 à un poste qui gardait son point à 42. `depuis(42)` ne
+  rend que ce qui est au-dessus de 42, c'est-à-dire rien — le client n'était
+  plus joignable, sans une erreur nulle part, jusqu'à ce qu'il rebranche.
+  L'identifiant est donc planché sur l'horloge (`Math.max(dernier + 1,
+  maintenant)`) : après un redémarrage il est plus haut qu'avant, et le poste
+  reçoit ce que la boîte porte encore. Un banc rejoue le redémarrage et échoue
+  si on revient au compteur. Conséquence pour qui écrirait un autre relais :
+  **un identifiant doit croître d'un lancement à l'autre**, ce n'est pas un
+  compteur de messages.
 - Le secret est porté en en-tête, donc l'adresse doit être en `https://` — le
   poste refuse toute autre adresse, sauf la boucle locale où tourne le banc.
 

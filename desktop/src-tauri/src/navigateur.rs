@@ -40,13 +40,6 @@ pub struct SiteConnecte {
     pub declare_le: u64,
 }
 
-fn dossier_ressources() -> PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|exe| exe.parent().map(std::path::Path::to_path_buf))
-        .unwrap_or_else(|| PathBuf::from("."))
-}
-
 /// Le profil ne va pas à côté de l'exécutable : sous Windows, une installation
 /// par MSI pose l'application dans un dossier où l'utilisateur n'écrit pas, et
 /// les cookies seraient perdus à chaque fermeture.
@@ -61,10 +54,11 @@ fn dossier_profil(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(profil)
 }
 
+/// Les sites que le client a déclarés. Le profil du navigateur était déjà posé
+/// sous `app_local_data_dir` deux fonctions plus haut, pour la raison exacte qui
+/// manquait ici.
 fn fichier_sites() -> PathBuf {
-    dossier_ressources()
-        .join("config")
-        .join("navigateur-sites.json")
+    crate::chemins::pour_ecrire("config/navigateur-sites.json")
 }
 
 /// Seuls `http` et `https` ouvrent une page. Sans ce contrôle, une adresse

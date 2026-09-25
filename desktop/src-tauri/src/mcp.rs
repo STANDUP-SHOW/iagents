@@ -1357,11 +1357,12 @@ fn est_embauche(installation: &str, prenom: &str, fiche_id: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// Le journal des outils d'un agent, à côté de l'application.
+/// Le journal des outils d'un agent, sous la racine inscriptible.
 fn chemin_du_journal(prenom: &str) -> Result<std::path::PathBuf, String> {
-    Ok(crate::fiches::dossier_ressources()
-        .join("config")
-        .join(format!("outils-{}.json", crate::journal::nom_propre(prenom)?)))
+    Ok(crate::chemins::pour_ecrire(&format!(
+        "config/outils-{}.json",
+        crate::journal::nom_propre(prenom)?
+    )))
 }
 
 /// Ajoute au journal ce que l'agent vient de faire des accès du client.

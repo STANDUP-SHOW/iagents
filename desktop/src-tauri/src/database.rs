@@ -36,18 +36,21 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn new(db_path: &str) -> Result<Self, String> {
-        let path = Path::new(db_path);
-
-        // Ensure database directory exists
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| format!("Failed to create database directory: {}", e))?;
+    /// Ouvre la base du poste au chemin donné.
+    ///
+    /// Elle prenait une chaîne, et `main` lui passait `"iagent.db"` : un chemin
+    /// relatif au dossier courant, c'est-à-dire au dossier d'où l'application a
+    /// été lancée. Un `Path` ne corrige pas ça tout seul, mais il rend visible
+    /// que l'appelant doit dire OÙ.
+    pub fn new(db_path: &Path) -> Result<Self, String> {
+        if let Some(parent) = db_path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| {
+                format!("création de {} : {}", parent.display(), e)
+            })?;
         }
 
-        // Open or create database
         let conn = Connection::open(db_path)
-            .map_err(|e| format!("Failed to open database: {}", e))?;
+            .map_err(|e| format!("ouverture de {} : {}", db_path.display(), e))?;
 
         Ok(Database {
             conn: Arc::new(Mutex::new(conn)),
