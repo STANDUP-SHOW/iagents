@@ -248,6 +248,17 @@ par WhatsApp et email.
   une énumération, et un plancher qui voyage hors de son usage, se paient pareil :
   en chiffres justes en apparence.** Le banc lit maintenant les six planifications
   dans le schéma et refuse qu'une seule ne soit pas comptée ; une inconnue lève.
+- **Le client choisit sa machine avant tout, et c'est elle qui fixe le prix de
+  chaque agent en local contre son prix en API** (max, 25/09/2026). Six
+  installations dans `dimensionnement/offre-box.json` : sans machine, Box
+  Commandeur (poste de commande, **aucune puissance** : ses agents passent par
+  l'API), Box Max (Ryzen 9, la première puissance), trois machines de puissance
+  livrées chacune avec une Box Commandeur ; achat ou financement sur 24 mois.
+  `offre-box.ts` rend la ligne par installation d'une fiche (`devisParBox`), le
+  devis d'une équipe (`devisPack`) et le conseil (`conseillerBox`, sur 48 mois).
+  **Prix, spécifications et taux sont provisoires** (`aConfirmer`) tant que max
+  ne les a pas donnés ; `check-offre-box.ts` refuse un prix confirmé sans source
+  ni date. Voir `docs/offre-box.md`.
 - **Les fiches sont écrites par Claude Code sur l'abonnement de Max, pas par
   l'API** (19/09/2026). Le workflow Batch reste dans le dépôt (il a servi au
   lot Administration, 24 fiches pour 0,60 $) mais ne se relance plus : les
