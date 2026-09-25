@@ -77,3 +77,29 @@ provisoires.
 5. Un panier d'agents affiche `conseillerBox(fiches)` : l'installation conseillée pour
    cette équipe, son total mensuel pendant et après le financement, et le total tout par
    API en face.
+
+## Carte graphique : ce que le moteur local accélère vraiment
+
+Relu le 25/09/2026 dans la page « Hardware support » d'Ollama
+(`github.com/ollama/ollama`, `docs/gpu.mdx`, branche `main`). Rien de ceci n'a été
+essayé sur une machine.
+
+- **NVIDIA** : il faut seulement le pilote (version 550 ou plus récente) ; la page ne
+  demande aucune installation de CUDA à part. Les RTX 50xx et RTX PRO 6000 Blackwell
+  des machines de puissance provisoires sont dans la liste.
+- **AMD par ROCm** : sous Linux, les Radeon RX 6800 à 9070, et parmi les puces à
+  graphique intégré **seulement les Ryzen AI 9 HX 370/375, Ryzen AI 9 365 et 465, et
+  Ryzen AI Max 385/390/395**. **Sous Windows, aucune puce à graphique intégré**, seulement des
+  Radeon RX 7600 à 7900 XTX et des Radeon PRO W7000.
+- **Le Radeon 780M** (Ryzen 7 H255, Ryzen 9 8945HS, celui de la Box Max provisoire)
+  **n'est dans aucune des deux listes ROCm**. Il ne peut passer que par Vulkan, qu'Ollama
+  décrit comme un soutien supplémentaire activé par défaut, sans dire à quelle vitesse.
+  S'il n'est pas pris, le modèle tourne sur le processeur, beaucoup plus lentement que
+  ce que suppose `capaciteGpu: 0.2`.
+
+Conséquence pour les spécifications : une Box Max en Ryzen AI Max+ 395 sous Linux est
+la seule Ryzen 9 dont l'accélération graphique est documentée, avec jusqu'à 128 Go de
+mémoire unifiée. Mais la Box Max porte aussi l'application desktop, qui est une
+application Windows, et sous Windows ce graphique intégré ne passe que par Vulkan. Les
+machines de puissance n'ont pas à être NVIDIA, mais NVIDIA est le cas le mieux
+couvert, sous Windows comme sous Linux.
