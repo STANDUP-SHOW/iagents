@@ -97,9 +97,9 @@ essayé sur une machine.
   S'il n'est pas pris, le modèle tourne sur le processeur, beaucoup plus lentement que
   ce que suppose `capaciteGpu: 0.2`.
 
-Conséquence pour les spécifications : une Box Max en Ryzen AI Max+ 395 sous Linux est
-la seule Ryzen 9 dont l'accélération graphique est documentée, avec jusqu'à 128 Go de
-mémoire unifiée. Mais la Box Max porte aussi l'application desktop, qui est une
+Conséquence pour les spécifications : pour que l'accélération graphique d'une Box Max
+soit documentée, il faut un Ryzen AI 9 (HX 370, par exemple) ou un Ryzen AI Max+ 395,
+qui monte à 128 Go de mémoire unifiée, sous Linux ; un Ryzen 9 à Radeon 780M ne l'est pas. Mais la Box Max porte aussi l'application desktop, qui est une
 application Windows, et sous Windows ce graphique intégré ne passe que par Vulkan. Les
 machines de puissance n'ont pas à être NVIDIA, mais NVIDIA est le cas le mieux
 couvert, sous Windows comme sous Linux.
