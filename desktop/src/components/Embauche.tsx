@@ -18,6 +18,20 @@ import {
   type Reponse,
 } from '../agents/entretien'
 import type { Sexe } from '../agents/fiche'
+import {
+  AUCUN_DE_CEUX_LA,
+  competencesDepuisComposition,
+  composer,
+  lireDemande,
+  questionSuivante,
+  repondre,
+  resumeComposition,
+  type Composition,
+  type Lecture,
+  type Poste,
+  type QuestionComposition,
+  type Referentiels,
+} from '../agents/composition'
 
 /**
  * Le parcours d'embauche.
@@ -30,7 +44,7 @@ import type { Sexe } from '../agents/fiche'
  * le client confirme ou corrige.
  */
 
-type Etape = 'identite' | 'visage' | 'entretien' | 'recapitulatif'
+type Etape = 'demande' | 'identite' | 'visage' | 'entretien' | 'recapitulatif'
 
 /** Tel que `catalogue/catalogue.json` l'écrit : ni « nom » ni « titre ». */
 type EntreeCatalogue = { id: string; metier: string; secteur: string; slug: string }
@@ -38,6 +52,7 @@ type EntreeCatalogue = { id: string; metier: string; secteur: string; slug: stri
 const LIMITE_POSTES = 80
 
 const ETAPES: { cle: Etape; titre: string }[] = [
+  { cle: 'demande', titre: 'Ce que vous cherchez' },
   { cle: 'identite', titre: 'Qui vous rejoint' },
   { cle: 'visage', titre: 'Sa voix, son visage' },
   { cle: 'entretien', titre: "L'entretien" },
@@ -45,7 +60,7 @@ const ETAPES: { cle: Etape; titre: string }[] = [
 ]
 
 export default function Embauche() {
-  const [etape, setEtape] = useState<Etape>('identite')
+  const [etape, setEtape] = useState<Etape>('demande')
   const [erreur, setErreur] = useState('')
   const [enregistre, setEnregistre] = useState('')
 
@@ -64,6 +79,14 @@ export default function Embauche() {
   const [activite, setActivite] = useState<Activite | null>(null)
   const [reponsesCadre, setReponsesCadre] = useState<Record<string, string>>({})
   const [reponsesOutils, setReponsesOutils] = useState<Record<string, string>>({})
+
+  // Le moteur de composition : la demande dite librement, la question en cours,
+  // et ce qu'il en a tiré. Les postes ne se chargent qu'à la première lecture.
+  const [postes, setPostes] = useState<Poste[] | null>(null)
+  const [demande, setDemande] = useState('')
+  const [lecture, setLecture] = useState<Lecture | null>(null)
+  const [reponseLibre, setReponseLibre] = useState('')
+  const [composition, setComposition] = useState<Composition | null>(null)
 
   useEffect(() => {
     invoke<string>('lire_referentiel', { nom: 'catalogue' })
@@ -87,6 +110,59 @@ export default function Embauche() {
     } catch (e) {
       setErreur(String(e))
     }
+  }
+
+  const referentiels = (): Referentiels | null =>
+    postes && ref && refActivites ? { postes, logiciels: ref, activites: refActivites } : null
+
+  const lire = async () => {
+    setErreur('')
+    let liste = postes
+    if (!liste) {
+      try {
+        liste = JSON.parse(await invoke<string>('lire_postes')) as Poste[]
+        setPostes(liste)
+      } catch (e) {
+        setErreur(String(e))
+        return
+      }
+    }
+    if (!ref || !refActivites) return
+    const l = lireDemande(demande, { postes: liste, logiciels: ref, activites: refActivites })
+    setLecture(l)
+    setComposition(questionSuivante(l) ? null : composer(l))
+  }
+
+  const question: QuestionComposition | null = useMemo(
+    () => (lecture ? questionSuivante(lecture) : null),
+    [lecture]
+  )
+
+  const repondreA = (reponse: string) => {
+    const refs = referentiels()
+    if (!lecture || !question || !refs || !reponse.trim()) return
+    const { lecture: suivante } = repondre(lecture, question, reponse, refs)
+    setLecture(suivante)
+    setReponseLibre('')
+    setComposition(questionSuivante(suivante) ? null : composer(suivante))
+  }
+
+  // Le poste composé devient la fiche de l'embauche ; l'activité et les
+  // logiciels déjà nommés entrent dans l'entretien comme réponses, que le
+  // client pourra encore corriger : on ne lui repose pas ce qu'il a dit.
+  const prendreLaComposition = async () => {
+    if (!composition || !lecture) return
+    await chargerFiche(composition.posteId)
+    if (lecture.activite) {
+      setActivite(lecture.activite)
+      setReponsesCadre((r) => ({ ...r, activite: lecture.activite!.nom }))
+    }
+    const outils: Record<string, string> = {}
+    for (const b of composition.branchements) {
+      if (b.deLaFiche) outils[b.logiciel.categorie] = b.logiciel.nom
+    }
+    setReponsesOutils((r) => ({ ...outils, ...r }))
+    setEtape('identite')
   }
 
   // Au-delà de cette limite la liste déroulante devient inutilisable, et le
@@ -162,7 +238,25 @@ export default function Embauche() {
       // `tache.rs` et la conversation lisent déjà ; où l'agent calcule devient
       // un réglage que `modele::choisir` applique.
       const regle = reglagesDepuisEntretien(cadre, reponsesCadre)
-      if (regle.competences.length) nouveau.competences = regle.competences
+      // Ce que la demande a ajouté au poste entre dans la consigne par le même
+      // chemin : des savoirs que la conversation et `tache.rs` lisent déjà. Les
+      // logiciels retenus sont écrits par identifiant, pour que le branchement,
+      // le jour où il existera, lise ce que le client a demandé plutôt que de
+      // le redemander.
+      const competences = [
+        ...regle.competences,
+        ...(composition && composition.posteId === ficheId
+          ? competencesDepuisComposition(composition, lecture?.demande ?? demande)
+          : []),
+      ]
+      if (competences.length) nouveau.competences = competences
+      const logiciels = [
+        ...(configuration?.retenus.map((o) => o.logiciel.id) ?? []),
+        ...(composition && composition.posteId === ficheId
+          ? composition.branchements.map((b) => b.logiciel.id)
+          : []),
+      ]
+      if (logiciels.length) nouveau.logiciels = [...new Set(logiciels)]
       if (regle.repartition) nouveau.repartition = regle.repartition
 
       const contenu = JSON.stringify(
@@ -193,6 +287,90 @@ export default function Embauche() {
 
       {erreur && <div className="error-banner">{erreur}</div>}
       {enregistre && <div className="succes-banner">{enregistre}</div>}
+
+      {etape === 'demande' && (
+        <section>
+          <h3>Ce que vous cherchez</h3>
+          <p>
+            Dites-le comme à un cabinet de recrutement : le poste, ce qu'il fait, avec quels
+            logiciels, ce dont il aura besoin. Je pars du poste le plus proche de mon catalogue
+            et je le complète avec ce que vous dites.
+          </p>
+          <textarea
+            rows={6}
+            placeholder="J'ai besoin d'un graphiste pour la réception des fichiers clients, le montage des bons à tirer, sur Caldera, Photoshop et Illustrator…"
+            value={demande}
+            onChange={(e) => setDemande(e.target.value)}
+          />
+          <div className="ligne">
+            <button disabled={!demande.trim() || !ref || !refActivites} onClick={lire}>
+              Lire ma demande
+            </button>
+            <button className="lien" onClick={() => setEtape('identite')}>
+              Je choisis le poste moi-même
+            </button>
+          </div>
+
+          {lecture && (
+            <div className="relecture">
+              {lecture.logiciels.reconnus.length > 0 && (
+                <p className="precision">
+                  Logiciels reconnus : {lecture.logiciels.reconnus.map((l) => l.nom).join(', ')}.
+                </p>
+              )}
+              {lecture.activite && (
+                <p className="precision">Votre activité : {lecture.activite.nom}.</p>
+              )}
+
+              {question && (
+                <div className="question">
+                  <p className="dit">{question.intitule}</p>
+                  {'options' in question && question.options.length > 0 ? (
+                    question.options.map((o) => (
+                      <div key={o.id} className="ligne">
+                        <button
+                          className={o.id === AUCUN_DE_CEUX_LA ? 'lien' : ''}
+                          onClick={() => repondreA(o.id)}
+                        >
+                          {o.libelle}
+                        </button>
+                        {'detail' in o && <span className="precision">{o.detail}</span>}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="ligne">
+                      <input
+                        type="text"
+                        placeholder="votre réponse"
+                        value={reponseLibre}
+                        onChange={(e) => setReponseLibre(e.target.value)}
+                      />
+                      <button onClick={() => repondreA(reponseLibre)}>Répondre</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {composition && (
+                <>
+                  {resumeComposition(composition).map((ligne, i) => (
+                    <p key={i} className="dit">
+                      {ligne}
+                    </p>
+                  ))}
+                  <p className="precision">
+                    Rien n'est encore branché : je dis seulement ce qu'il faudra ouvrir, et vous
+                    l'ouvrirez vous-même.
+                  </p>
+                  <button onClick={prendreLaComposition}>
+                    Continuer avec ce poste : {composition.posteNom}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       {etape === 'identite' && (
         <section>
