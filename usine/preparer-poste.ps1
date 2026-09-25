@@ -28,6 +28,18 @@
   Identifiants du groupe "option" a installer en plus, par exemple
   -Avec <id d'Outlook dans logiciels.json>.
 
+.PARAMETER Agents
+  Identifiants des agents embauches sur ce poste (AG-0123,AG-0456). Le script
+  lit leur fiche et installe les logiciels de leur metier, ecrits dans la fiche
+  sous acces.logicielsPoste (GIMP pour un graphiste, OmegaT pour un traducteur).
+
+.PARAMETER TousMetiers
+  Installe tous les logiciels par metier, quel que soit l'agent.
+
+.PARAMETER Fiches
+  Dossier des fiches d'agents, si elles ne sont ni a cote du dossier usine
+  (depot iAgent) ni dans l'application installee.
+
 .PARAMETER SansIAgent
   N'installe pas l'application iAgent.
 
@@ -41,6 +53,8 @@
   powershell -NoProfile -ExecutionPolicy Bypass -File .\preparer-poste.ps1 -Modeles
 .EXAMPLE
   powershell -NoProfile -ExecutionPolicy Bypass -File .\preparer-poste.ps1 -Developpeur
+.EXAMPLE
+  powershell -NoProfile -ExecutionPolicy Bypass -File .\preparer-poste.ps1 -Agents AG-0123,AG-0456
 #>
 [CmdletBinding()]
 param(
@@ -48,6 +62,9 @@ param(
   [switch]$Developpeur,
   [switch]$Modeles,
   [string[]]$Avec = @(),
+  [string[]]$Agents = @(),
+  [switch]$TousMetiers,
+  [string]$Fiches,
   [switch]$SansIAgent,
   [string]$EmpreinteIAgent
 )
@@ -121,7 +138,34 @@ if ($Developpeur) { $groupes += 'developpeur' }
 # Lance par -File (le .cmd), "-Avec a,b" arrive en une seule chaine.
 $Avec = @($Avec | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
-$aInstaller = @($liste.logiciels | Where-Object { $groupes -contains $_.groupe -or $Avec -contains $_.id })
+# --- Les logiciels du metier des agents ---------------------------------------
+# Chaque fiche porte sous acces.logicielsPoste ce que son metier demande au poste,
+# derive de ses taches par le depot. On le lit, on ne le recalcule pas ici.
+
+$Agents = @($Agents | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$metier = @()
+if ($TousMetiers) {
+  $metier = @($liste.logiciels | Where-Object { $_.groupe -eq 'metier' } | ForEach-Object { $_.id })
+} elseif ($Agents.Count -gt 0) {
+  $candidats = @($Fiches, (Join-Path $ici '..\agents'), (Join-Path $ici '..\socle'))
+  if ($env:LOCALAPPDATA) {
+    $candidats += @((Join-Path $env:LOCALAPPDATA 'iAgent Desktop\agents'), (Join-Path $env:LOCALAPPDATA 'iAgent Desktop\socle'))
+  }
+  $dossiers = @($candidats | Where-Object { $_ -and (Test-Path $_) })
+  foreach ($a in $Agents) {
+    $fiche = $dossiers | ForEach-Object { Get-ChildItem -Path $_ -Filter "$a-*.json" -ErrorAction SilentlyContinue } | Select-Object -First 1
+    if (-not $fiche) {
+      Noter $a 'metier' 'echec' '(fiche introuvable : donner -Fiches <dossier des fiches>)'
+      continue
+    }
+    $paquet = Get-Content -Raw -Encoding UTF8 -Path $fiche.FullName | ConvertFrom-Json
+    $propres = @($paquet.acces.logicielsPoste)
+    Ecrire ("{0} ({1}) demande : {2}" -f $a, $paquet.nom, $(if ($propres.Count) { $propres -join ', ' } else { 'rien de plus' }))
+    $metier += $propres
+  }
+}
+
+$aInstaller = @($liste.logiciels | Where-Object { $groupes -contains $_.groupe -or $Avec -contains $_.id -or $metier -contains $_.id })
 foreach ($id in $Avec) {
   if (-not ($liste.logiciels | Where-Object { $_.id -eq $id })) {
     Noter $id 'option' 'echec' "(absent de logiciels.json)"

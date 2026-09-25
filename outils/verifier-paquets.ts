@@ -28,6 +28,7 @@ function plusRecenteQue(a: string, b: string): boolean {
   return false;
 }
 import { logicielsDesTaches, remplacement } from './logiciels-metier.ts';
+import { logicielsPoste } from '../usine/logiciels-poste.ts';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const schema = JSON.parse(readFileSync(join(racine, 'contrat/paquet-agent.schema.json'), 'utf8'));
@@ -37,6 +38,7 @@ const catalogue = JSON.parse(readFileSync(join(racine, 'catalogue/catalogue.json
 const logiciels = JSON.parse(readFileSync(join(racine, 'catalogue/logiciels.json'), 'utf8'));
 const logicielsParId = new Map<string, any>(logiciels.logiciels.map((l: any) => [l.id, l]));
 const categoriesLogiciels = new Set<string>(logiciels.categories);
+const usine = JSON.parse(readFileSync(join(racine, 'usine/logiciels.json'), 'utf8'));
 const corriger = process.argv.includes('--corriger');
 
 const LISTE = 'catalogue/identite-a-reecrire.json';
@@ -270,6 +272,14 @@ for (const { dossier, f } of fichiers) {
   if (JSON.stringify(accesAttendu) !== JSON.stringify(paquet.acces.logiciels)) {
     if (corriger) { paquet.acces.logiciels = accesAttendu; modifie = true; }
     else faute(f, `acces.logiciels ≠ ce que les tâches ouvrent : attendu ${JSON.stringify(accesAttendu)}`);
+  }
+  // Ce que le poste doit porter pour cet agent (GIMP pour un graphiste, OmegaT pour un
+  // traducteur) se lit dans les familles qu'il ouvre et dans la liste d'usine : c'est ce que
+  // le script d'usine installe pour un agent embauché. Écrit à la main, il dériverait.
+  const posteAttendu = logicielsPoste(accesAttendu, usine.logiciels);
+  if (JSON.stringify(posteAttendu) !== JSON.stringify(paquet.acces.logicielsPoste)) {
+    if (corriger) { paquet.acces.logicielsPoste = posteAttendu; modifie = true; }
+    else faute(f, `acces.logicielsPoste ≠ ce que ses familles demandent au poste : attendu ${JSON.stringify(posteAttendu)}`);
   }
 
   // Une fiche sans qualifications échappait au contrôle ci-dessous : c'est pourtant

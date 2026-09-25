@@ -28,6 +28,7 @@ type Logiciel = {
   libre: boolean;
   role: string;
   argumentsInstalleur?: string;
+  familles?: string[];
 };
 const liste = JSON.parse(lire('logiciels.json')) as {
   iagent: { adresse: string };
@@ -39,6 +40,7 @@ const script = lire('preparer-poste.ps1');
 const lanceur = lire('preparer-poste.cmd');
 const flux = lire('../.github/workflows/build-windows-msi.yml');
 const modele = lire('../desktop/src-tauri/src/modele.rs');
+const referentiel = JSON.parse(lire('../catalogue/logiciels.json')) as { categories: string[] };
 const paliers = JSON.parse(lire('../dimensionnement/paliers-modeles.json')) as {
   paliers: Record<string, { exemples: string[] }>;
 };
@@ -85,9 +87,23 @@ verifier(
 const whatsapp = liste.logiciels.find((l) => l.id === '9NKSQGP7F2NH');
 verifier('WhatsApp est dit pour l\'usage humain', !!whatsapp && /usage humain/.test(whatsapp.role));
 
+// Un logiciel de métier ne s'installe que par les familles qu'il sert : sans elles,
+// aucune fiche ne le demanderait jamais. Une famille mal écrite ne correspondrait à
+// aucune tâche, en silence.
+const familles = new Set(referentiel.categories);
+for (const l of liste.logiciels) {
+  if (l.groupe === 'metier') verifier(`${l.id} : sert au moins une famille`, (l.familles ?? []).length > 0);
+  for (const f of l.familles ?? []) verifier(`${l.id} : « ${f} » est une famille du référentiel`, familles.has(f));
+}
+
+// La maintenance à distance ouvre le poste à quelqu'un d'autre : le client la choisit.
+const rustdesk = liste.logiciels.find((l) => l.id === 'RustDesk.RustDesk');
+verifier('RustDesk ne s\'installe que sur demande', !rustdesk || rustdesk.groupe === 'option');
+
 // --- Le script lit la liste, il ne la recopie pas -----------------------------
 
 verifier('le script lit logiciels.json', script.includes("'logiciels.json'"));
+verifier('le script lit les logiciels de métier dans la fiche', script.includes('acces.logicielsPoste'));
 for (const id of ids) {
   verifier(`le script ne recopie pas ${id}`, !script.includes(id));
 }

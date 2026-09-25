@@ -16,12 +16,30 @@ n'est pas toujours permise, et on installe ainsi toujours leur dernière version
 
 ## Ce qui est installé
 
-**Sur chaque poste** : Ollama (le moteur local des agents), LibreOffice,
-Thunderbird, Telegram Desktop, WhatsApp, Firefox, SumatraPDF, 7-Zip, VLC, puis
-iAgent.
+**Sur chaque poste** (liste validée par max le 25/09/2026) : Ollama (le moteur
+local des agents), LibreOffice, ONLYOFFICE, Thunderbird, Firefox, Telegram,
+WhatsApp, Signal, SumatraPDF, PDFsam, NAPS2 (scanner vers PDF lisible),
+KeePassXC, draw.io, ShareX, Notepad++, 7-Zip, VLC, puis iAgent.
 
-**En option** (`-Avec`) : Outlook, pour un client qui vit dans Microsoft 365.
-Il n'est pas libre, donc pas installé par défaut.
+**En option** (`-Avec <id>`) :
+- **RustDesk, la maintenance à distance** : il nous permet de dépanner le poste.
+  Le client choisit de l'installer ou non ; il ne s'installe jamais d'office
+  (le banc le refuse).
+- Linphone, pour un client qui a une ligne téléphonique par internet (SIP).
+- Outlook, pour un client qui vit dans Microsoft 365. Il n'est pas libre.
+
+**Selon le métier des agents** (`-Agents AG-0123,AG-0456`) : chaque fiche porte
+sous `acces.logicielsPoste` les logiciels libres que son métier demande au
+poste, dérivés de ses tâches (`npm run verifier -- --corriger`). Un graphiste
+reçoit GIMP, Inkscape et Scribus, un traducteur OmegaT, un chef de projet
+ProjectLibre ; une secrétaire, rien de plus. 222 fiches sur 1 250 en demandent
+au moins un. `-TousMetiers` installe tout le groupe.
+
+Les logiciels propres à une activité (gestion immobilière, logiciel
+d'imprimerie, caisse…) ne sont pas ici : ce sont les qualifications de la fiche
+(`qualifications.logiciels`, référentiel `catalogue/logiciels.json`), presque
+toujours en ligne et payants, sur l'abonnement du client. L'agent s'en sert par
+le navigateur intégré ou leur API.
 
 **Avec `-Developpeur`**, pour nos machines de préparation : Git, Node.js,
 Rust, les outils C++ de Microsoft (sans eux Rust ne compile pas sous Windows)
@@ -31,9 +49,12 @@ et VSCodium.
 un par palier courant. Les paliers plus lourds dépendent de la machine et se
 tirent à la main (`ollama pull <nom>`).
 
-LibreOffice remplace Apache OpenOffice, qui n'est presque plus maintenu. Tout
-est libre sauf WhatsApp (aucun équivalent) et les outils C++ de Microsoft
-(aucun autre éditeur de liens ne sert à Rust sous Windows).
+Tout est libre sauf WhatsApp (aucun équivalent), Outlook (option) et les outils
+C++ de Microsoft (aucun autre éditeur de liens ne sert à Rust sous Windows).
+
+**Box et sans box.** Sur une Box, tout est posé en atelier. Pour un client sans
+Box, ce même pack est ce qu'on lui donne en lien : c'est à lui de le lancer, et
+c'est un des avantages de la Box de ne pas avoir à le faire.
 
 ## Les gestes
 
@@ -56,7 +77,8 @@ dit ce qu'il ferait. Les autres options se combinent :
 ```bat
 preparer-poste.cmd -Modeles
 preparer-poste.cmd -Developpeur
-preparer-poste.cmd -Avec 9NRX63209R7B
+preparer-poste.cmd -Avec RustDesk.RustDesk
+preparer-poste.cmd -Agents AG-0201,AG-0322
 preparer-poste.cmd -EmpreinteIAgent <SHA-256 attendu>
 ```
 
@@ -97,3 +119,10 @@ dans LibreOffice.
 - **iAgent n'est pas signé** : le journal l'écrit (`NotSigned`). Que SmartScreen
   intervienne ou non sur un installeur lancé par ce script, ce n'est pas
   constaté.
+- **Où `-Agents` trouve les fiches** : `-Fiches <dossier>` s'il est donné,
+  sinon `agents/` et `socle/` à côté du dossier `usine` (le dépôt), sinon
+  l'application installée (`%LOCALAPPDATA%\iAgent Desktop\agents`). Ce dernier
+  chemin est celui que l'installeur NSIS de Tauri devrait choisir ; il n'est pas
+  constaté sur une vraie installation.
+- **Une vingtaine d'identifiants ajoutés le 25/09 sont écrits de mémoire**
+  (ONLYOFFICE, GIMP, OmegaT…). L'essai les confirme ou les signale.
