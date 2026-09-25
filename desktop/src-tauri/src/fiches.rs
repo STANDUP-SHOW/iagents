@@ -241,6 +241,66 @@ pub fn installation_ecrire(contenu: String) -> Result<String, String> {
 }
 
 
+/// Ce que le moteur de composition lit d'une fiche pour la reconnaître dans une
+/// demande libre (`src/agents/composition.ts`, `posteDepuisFiche`) : nom, accroche,
+/// résumé, tâches et logiciels qualifiés, rien de plus. Les 1 249 fiches entières
+/// traverseraient la frontière pour douze mégaoctets ; réduites, quelques centaines
+/// de kilo-octets. Les noms de champs sont ceux de `Poste` côté TypeScript, et
+/// `check-composition.ts` les compare aux deux fichiers.
+pub fn poste_depuis_fiche(fiche: &serde_json::Value) -> Option<serde_json::Value> {
+    use serde_json::{json, Value};
+    let texte = |v: &Value, cle: &str| v.get(cle).and_then(Value::as_str).unwrap_or("").to_string();
+    let id = fiche.get("id")?.as_str()?;
+    let taches: Vec<Value> = fiche
+        .get("taches")
+        .and_then(Value::as_array)
+        .map(|t| {
+            t.iter()
+                .map(|t| json!({ "id": texte(t, "id"), "nom": texte(t, "nom"), "description": texte(t, "description") }))
+                .collect()
+        })
+        .unwrap_or_default();
+    let logiciels = fiche
+        .get("qualifications")
+        .and_then(|q| q.get("logiciels"))
+        .cloned()
+        .unwrap_or_else(|| json!([]));
+    Some(json!({
+        "id": id,
+        "nom": texte(fiche, "nom"),
+        "secteur": texte(fiche, "secteur"),
+        "accroche": texte(fiche, "accroche"),
+        "resumeMetier": texte(fiche, "resume_metier"),
+        "taches": taches,
+        "logiciels": logiciels,
+    }))
+}
+
+/// Les postes du catalogue, réduits pour le moteur de composition. Seul `agents/`
+/// est lu : le Team Holder du socle ne s'embauche pas sur une demande.
+#[tauri::command]
+pub fn lire_postes() -> Result<String, String> {
+    let dossier = dossier_ressources().join("agents");
+    let mut postes = Vec::new();
+    let mut entrees: Vec<_> = std::fs::read_dir(&dossier)
+        .map_err(|e| format!("lecture de {} : {}", dossier.display(), e))?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "json"))
+        .collect();
+    entrees.sort();
+    for chemin in entrees {
+        let brut = std::fs::read_to_string(&chemin)
+            .map_err(|e| format!("lecture de {} : {}", chemin.display(), e))?;
+        let fiche: serde_json::Value = serde_json::from_str(&brut)
+            .map_err(|e| format!("{} illisible : {}", chemin.display(), e))?;
+        if let Some(p) = poste_depuis_fiche(&fiche) {
+            postes.push(p);
+        }
+    }
+    serde_json::to_string(&postes).map_err(|e| e.to_string())
+}
+
 /// Les seuls catalogues que l'interface peut demander.
 ///
 /// Sans cette liste, le nom viendrait de la vue et servirait à lire n'importe
@@ -285,6 +345,22 @@ pub fn catalogue_connu(nom: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{catalogue_connu, comparer_versions, identifiant_valide, installation_recevable, version_app, version_insuffisante_pour};
+
+    #[test]
+    fn un_poste_se_reduit_a_ce_que_le_moteur_lit() {
+        let dossier = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../agents");
+        let brut = std::fs::read_to_string(dossier.join("AG-0296-designer-print.json")).unwrap();
+        let fiche: serde_json::Value = serde_json::from_str(&brut).unwrap();
+        let p = super::poste_depuis_fiche(&fiche).unwrap();
+        assert_eq!(p["id"], "AG-0296");
+        assert_eq!(p["nom"], "Designer print");
+        assert!(p["resumeMetier"].as_str().unwrap().contains("imprimeur"));
+        assert_eq!(p["taches"].as_array().unwrap().len(), fiche["taches"].as_array().unwrap().len());
+        assert!(p["taches"][0]["description"].as_str().unwrap().len() > 10);
+        assert_eq!(p["logiciels"], fiche["qualifications"]["logiciels"]);
+        // Ni l'expert, ni le matériel, ni la description : ils ne servent pas à reconnaître.
+        assert!(p.get("expert").is_none() && p.get("materiel").is_none());
+    }
 
     #[test]
     fn un_reglage_mal_ecrit_est_refuse_a_l_ecriture() {

@@ -808,6 +808,7 @@ fn main() {
             fiches::lire_fiche,
             fiches::installation_ecrire,
             fiches::lire_referentiel,
+            fiches::lire_postes,
             mcp::mcp_serveurs,
             mcp::mcp_ranger_secret,
             mcp::mcp_outils_permis,
