@@ -350,6 +350,19 @@ par WhatsApp et email.
   récent. Il ne lit que les fichiers des dossiers de sortie des tâches de chaque
   agent. `check-team-holder.ts` compare les réglages et les noms de champs aux
   deux côtés.
+- **Les API d'IA se rattachent aux fiches par leurs capacités, les logiciels de
+  création par leurs familles** (demande de max, 25/09/2026). `catalogue/api-ia.json`
+  liste 98 API (modèles de texte, image, vidéo, publicité, avatar, voix, musique, 3D,
+  traduction, OCR) relevées dans le référentiel du 21/09 ; une fiche n'en recopie
+  aucune, `apisPourFiche()` les joint à `execution.api.capacites`. **Une seule est
+  branchée dans l'application (Anthropic)** : `branche: true` ailleurs est refusé par
+  `check-api-ia.ts` tant que `llm.rs` ne l'appelle pas. Les logiciels de création
+  locaux (Photoshop, Final Cut, AutoCAD, Blender, GIMP… 105) se reconnaissent par la
+  règle de `outils/creation-locale.ts` (famille de création, pas uniquement en ligne),
+  et `acces.logicielsCreation` est dérivé comme `logicielsPoste`. Masterprint
+  (Ecoffi, ERP d'imprimeur) est au référentiel depuis le 25/09 et dans les packs
+  Imprimerie et Reprographie : c'est la combinaison poste × activité × logiciel que
+  les pages SEO de la boutique déclinent.
 - **Une fiche dit de quel poste elle reçoit et à quel poste elle transmet**
   (bloc `relais`). Un groupe d'agents doit pouvoir faire tourner une entreprise sans
   humain intermédiaire ; sans ce bloc, chaque fiche est un îlot. Quand le relais

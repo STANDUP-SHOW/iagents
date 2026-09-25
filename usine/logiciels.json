@@ -1,0 +1,429 @@
+{
+  "version": "2026-09-25",
+  "note": "Ce que preparer-poste.ps1 installe sur un poste LocalAgent en usine. Le script lit CE fichier et rien d'autre : ajouter un logiciel, c'est ajouter une ligne ici. Chaque logiciel est telecharge chez son editeur au moment de l'installation (winget), jamais embarque dans le depot : la redistribution des installeurs d'autres editeurs n'est pas toujours permise. Les identifiants sont reverifies par `winget show` avant chaque installation ; un identifiant qui ne repond plus est signale dans le journal au lieu d'etre devine.",
+  "iagent": {
+    "adresse": "https://github.com/STANDUP-SHOW/iagents/releases/latest/download/iAgent-Windows-setup.exe",
+    "note": "L'installeur NSIS, par utilisateur, et non le MSI : avec le MSI, Windows demande l'administrateur a chaque mise a jour silencieuse. Il s'installe donc dans le compte qui sera livre au client."
+  },
+  "groupes": {
+    "poste": "Installe sur chaque poste livre.",
+    "option": "Installe seulement si on le demande (-Avec <id>).",
+    "metier": "Installe seulement pour un agent dont les taches ouvrent une de ses familles (-Agents AG-xxxx ou -TousMetiers). La liste d'un agent est ecrite dans sa fiche, acces.logicielsPoste, derivee de ses taches.",
+    "developpeur": "Installe avec -Developpeur : de quoi construire iAgent depuis le depot, sur nos machines de preparation."
+  },
+  "logiciels": [
+    {
+      "id": "Ollama.Ollama",
+      "source": "winget",
+      "nom": "Ollama",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Le moteur local : les agents y tournent sans aucun jeton facture (modele.rs parle a 127.0.0.1:11434)."
+    },
+    {
+      "id": "TheDocumentFoundation.LibreOffice",
+      "source": "winget",
+      "nom": "LibreOffice",
+      "groupe": "poste",
+      "libre": true,
+      "role": "La bureautique libre. Remplace Apache OpenOffice, qui n'est presque plus maintenu. Sert au client qui ouvre les fichiers : l'application ecrit elle-meme xlsx, docx et pdf."
+    },
+    {
+      "id": "Mozilla.Thunderbird.fr",
+      "source": "winget",
+      "nom": "Thunderbird (francais)",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Le courrier. Ouvre en redaction les brouillons .eml que les agents deposent (X-Unsent: 1)."
+    },
+    {
+      "id": "Telegram.TelegramDesktop",
+      "source": "winget",
+      "nom": "Telegram Desktop",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Pour l'usage humain du poste. L'agent, lui, passe par l'API de bots de Telegram (telegram.rs), pas par cette fenetre."
+    },
+    {
+      "id": "9NKSQGP7F2NH",
+      "source": "msstore",
+      "nom": "WhatsApp",
+      "groupe": "poste",
+      "libre": false,
+      "role": "Pour l'usage humain du poste. WhatsApp n'existe plus sur Windows que par le Microsoft Store. L'agent n'y touche pas : Meta interdit l'automatisation de l'application, il passe par l'API WhatsApp Business et le relais (whatsapp.rs, relais/)."
+    },
+    {
+      "id": "Mozilla.Firefox.fr",
+      "source": "winget",
+      "nom": "Firefox (francais)",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Un navigateur libre pour le client. Les agents utilisent le navigateur integre a iAgent."
+    },
+    {
+      "id": "SumatraPDF.SumatraPDF",
+      "source": "winget",
+      "nom": "SumatraPDF",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Lire les PDF que les agents produisent."
+    },
+    {
+      "id": "7zip.7zip",
+      "source": "winget",
+      "nom": "7-Zip",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Archives zip et 7z."
+    },
+    {
+      "id": "VideoLAN.VLC",
+      "source": "winget",
+      "nom": "VLC",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Relire les enregistrements audio et video."
+    },
+    {
+      "id": "ONLYOFFICE.DesktopEditors",
+      "source": "winget",
+      "nom": "ONLYOFFICE Desktop Editors",
+      "groupe": "poste",
+      "libre": true,
+      "role": "La bureautique la plus fidele aux fichiers Word, Excel et PowerPoint que le client recoit, a cote de LibreOffice."
+    },
+    {
+      "id": "OpenWhisperSystems.Signal",
+      "source": "winget",
+      "nom": "Signal",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Messagerie chiffree, pour l'usage humain du poste."
+    },
+    {
+      "id": "PDFsam.PDFsam",
+      "source": "winget",
+      "nom": "PDFsam Basic",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Fusionner, decouper et pivoter des PDF."
+    },
+    {
+      "id": "Cyanfish.NAPS2",
+      "source": "winget",
+      "nom": "NAPS2",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Numeriser au scanner vers un PDF dont le texte se lit (reconnaissance de caracteres) : la matiere que les agents relisent."
+    },
+    {
+      "id": "KeePassXCTeam.KeePassXC",
+      "source": "winget",
+      "nom": "KeePassXC",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Coffre de mots de passe du client, sur son poste."
+    },
+    {
+      "id": "JGraph.Draw",
+      "source": "winget",
+      "nom": "draw.io Desktop",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Schemas, organigrammes, logigrammes."
+    },
+    {
+      "id": "ShareX.ShareX",
+      "source": "winget",
+      "nom": "ShareX",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Captures d'ecran et enregistrements courts."
+    },
+    {
+      "id": "Notepad++.Notepad++",
+      "source": "winget",
+      "nom": "Notepad++",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Lire et corriger du texte brut, du CSV, du JSON."
+    },
+    {
+      "id": "9NRX63209R7B",
+      "source": "msstore",
+      "nom": "Outlook (nouveau)",
+      "groupe": "option",
+      "libre": false,
+      "role": "Pour un client qui vit dans Microsoft 365. Pas libre, donc pas installe par defaut."
+    },
+    {
+      "id": "BelledonneCommunications.Linphone",
+      "source": "winget",
+      "nom": "Linphone",
+      "groupe": "option",
+      "libre": true,
+      "role": "Telephone par internet (SIP), pour un client qui a une ligne SIP."
+    },
+    {
+      "id": "RustDesk.RustDesk",
+      "source": "winget",
+      "nom": "RustDesk",
+      "groupe": "option",
+      "libre": true,
+      "role": "Maintenance a distance : nous permet de depanner le poste. Le client choisit de l'installer ou non ; sans son accord, il ne s'installe pas."
+    },
+    {
+      "id": "GIMP.GIMP.3",
+      "source": "winget",
+      "nom": "GIMP",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Retouche photo.",
+      "familles": [
+        "design-creation",
+        "dam-marque"
+      ]
+    },
+    {
+      "id": "Inkscape.Inkscape",
+      "source": "winget",
+      "nom": "Inkscape",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Logos et dessin vectoriel.",
+      "familles": [
+        "design-creation",
+        "dam-marque",
+        "animation-interactive"
+      ]
+    },
+    {
+      "id": "KDE.Krita",
+      "source": "winget",
+      "nom": "Krita",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Dessin et illustration.",
+      "familles": [
+        "design-creation"
+      ]
+    },
+    {
+      "id": "Scribus.Scribus",
+      "source": "winget",
+      "nom": "Scribus",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Mise en page : plaquettes, affiches, documents a imprimer.",
+      "familles": [
+        "design-creation",
+        "dam-marque"
+      ]
+    },
+    {
+      "id": "KDE.Kdenlive",
+      "source": "winget",
+      "nom": "Kdenlive",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Montage video.",
+      "familles": [
+        "montage-video"
+      ]
+    },
+    {
+      "id": "Meltytech.Shotcut",
+      "source": "winget",
+      "nom": "Shotcut",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Montage video simple.",
+      "familles": [
+        "montage-video"
+      ]
+    },
+    {
+      "id": "OBSProject.OBSStudio",
+      "source": "winget",
+      "nom": "OBS Studio",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Enregistrer l'ecran, diffuser en direct.",
+      "familles": [
+        "montage-video",
+        "creation-elearning"
+      ]
+    },
+    {
+      "id": "HandBrake.HandBrake",
+      "source": "winget",
+      "nom": "HandBrake",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Convertir et compresser des videos.",
+      "familles": [
+        "montage-video"
+      ]
+    },
+    {
+      "id": "Audacity.Audacity",
+      "source": "winget",
+      "nom": "Audacity",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Enregistrer et monter le son.",
+      "familles": [
+        "audio-production",
+        "transcription-sous-titres",
+        "creation-elearning"
+      ]
+    },
+    {
+      "id": "Nikse.SubtitleEdit",
+      "source": "winget",
+      "nom": "Subtitle Edit",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Sous-titres.",
+      "familles": [
+        "transcription-sous-titres"
+      ]
+    },
+    {
+      "id": "OmegaT.OmegaT",
+      "source": "winget",
+      "nom": "OmegaT",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Traduction assistee, avec memoire de traduction.",
+      "familles": [
+        "traduction"
+      ]
+    },
+    {
+      "id": "ProjectLibre.ProjectLibre",
+      "source": "winget",
+      "nom": "ProjectLibre",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Plannings et diagrammes de Gantt.",
+      "familles": [
+        "gestion-projet"
+      ]
+    },
+    {
+      "id": "FreeCAD.FreeCAD",
+      "source": "winget",
+      "nom": "FreeCAD",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Conception 3D et maquette de batiment.",
+      "familles": [
+        "cao-dao",
+        "bim-maquette"
+      ]
+    },
+    {
+      "id": "LibreCAD.LibreCAD",
+      "source": "winget",
+      "nom": "LibreCAD",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Plans en 2D.",
+      "familles": [
+        "cao-dao",
+        "metre-estimation"
+      ]
+    },
+    {
+      "id": "DigitalScholar.Zotero",
+      "source": "winget",
+      "nom": "Zotero",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Bibliographie et sources.",
+      "familles": [
+        "references-bibliographiques",
+        "bases-scientifiques",
+        "donnees-recherche"
+      ]
+    },
+    {
+      "id": "dbeaver.dbeaver",
+      "source": "winget",
+      "nom": "DBeaver Community",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Interroger les bases de donnees.",
+      "familles": [
+        "base-de-donnees",
+        "data-plateforme"
+      ]
+    },
+    {
+      "id": "DBBrowserForSQLite.DBBrowserForSQLite",
+      "source": "winget",
+      "nom": "DB Browser for SQLite",
+      "groupe": "metier",
+      "libre": true,
+      "role": "Ouvrir et corriger une base SQLite.",
+      "familles": [
+        "base-de-donnees"
+      ]
+    },
+    {
+      "id": "Git.Git",
+      "source": "winget",
+      "nom": "Git",
+      "groupe": "developpeur",
+      "libre": true,
+      "role": "Recuperer le depot.",
+      "familles": [
+        "developpement"
+      ]
+    },
+    {
+      "id": "OpenJS.NodeJS.LTS",
+      "source": "winget",
+      "nom": "Node.js LTS",
+      "groupe": "developpeur",
+      "libre": true,
+      "role": "Les bancs et la boutique (Node 22 au moins, pour --experimental-strip-types)."
+    },
+    {
+      "id": "Rustlang.Rustup",
+      "source": "winget",
+      "nom": "Rust (rustup)",
+      "groupe": "developpeur",
+      "libre": true,
+      "role": "Le coeur de l'application (Tauri v2)."
+    },
+    {
+      "id": "Microsoft.VisualStudio.2022.BuildTools",
+      "source": "winget",
+      "nom": "Outils de compilation C++ de Microsoft",
+      "groupe": "developpeur",
+      "libre": false,
+      "argumentsInstalleur": "--quiet --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended",
+      "role": "L'editeur de liens que Rust demande sous Windows. Sans lui, cargo s'arrete a la premiere compilation."
+    },
+    {
+      "id": "VSCodium.VSCodium",
+      "source": "winget",
+      "nom": "VSCodium",
+      "groupe": "developpeur",
+      "libre": true,
+      "role": "Un editeur de code libre.",
+      "familles": [
+        "developpement"
+      ]
+    }
+  ],
+  "modeles": {
+    "note": "Tires dans Ollama avec -Modeles. Un modele par palier resident courant de dimensionnement/paliers-modeles.json ; les paliers plus lourds dependent de la machine et se tirent a la main.",
+    "noms": [
+      "qwen2.5:3b",
+      "llama3.1:8b"
+    ]
+  }
+}
