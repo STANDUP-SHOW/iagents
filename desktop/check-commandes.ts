@@ -69,8 +69,146 @@ for (const [nom, ou] of [...appelees].sort()) {
   }
 }
 
+// --- L'autre sens : enregistrée, mais que personne n'appelle -----------------
+//
+// C'est le cas que le mémo du dépôt appelle dangereux, et le seul des deux que
+// ce banc ne regardait pas. Une commande enregistrée sans appelant a l'air
+// vivante : elle passe la construction, elle passe le sens ci-dessus, et
+// personne ne voit qu'elle ne sert à rien. Les cinq commandes WhatsApp ont
+// vécu comme ça — `whatsapp.rs` savait envoyer et relever, `main.rs` les
+// exposait, et sur un poste installé le client n'avait aucun moyen de poser son
+// jeton.
+//
+// La liste ci-dessous n'est pas une liste de dispenses : c'est l'inventaire de
+// ce qui est dans cet état AUJOURD'HUI, mesuré et non supposé. Elle ne peut que
+// rétrécir — brancher une commande oblige à la retirer d'ici, et enregistrer
+// une commande sans appelant fait échouer le banc en la nommant.
+const SANS_APPELANT = [
+  // Les commandes anglaises du premier jet, d'avant les écrans français.
+  // Aucune n'est atteignable ; aucune n'a encore été relue pour être retirée.
+  'greet',
+  'start_voice_recognition',
+  'stop_voice_recognition',
+  'process_voice_audio',
+  'enroll_voice',
+  'verify_voice',
+  'call_agent_llm',
+  'route_voice_command',
+  'get_agents',
+  'activate_agent',
+  'deactivate_agent',
+  'train_voice',
+  // Telegram : le même trou que WhatsApp, pas encore comblé.
+  'telegram_brancher',
+  'telegram_branche',
+  'telegram_debrancher',
+  'telegram_envoyer',
+  'telegram_relever',
+  'telegram_mode_d_emploi',
+  // MCP : le portier est complet, le passage n'est pas écrit. C'est documenté
+  // dans le mémo et attendu, pas oublié.
+  'mcp_outils_permis',
+  'mcp_appeler',
+  'mcp_journal',
+  // Le courrier : l'écran sait rédiger et envoyer, pas relever.
+  'courriel_enregistrer_motdepasse',
+  'courriel_motdepasse_present',
+  'courriel_relever',
+  // Le Team Holder lit les sorties des autres agents ; l'écran ne les montre pas.
+  'equipe_productions',
+  'equipe_lire_production',
+  // Le journal de reprise : écrit et relu par Rust seul pour l'instant.
+  'journal_lire',
+  'journal_ajouter',
+  // Le navigateur se ferme par sa fenêtre, pas par un bouton de l'écran.
+  'navigateur_fermer',
+];
+
+const attendues = new Set(SANS_APPELANT);
+for (const nom of [...enregistrees].sort()) {
+  if (appelees.has(nom) || attendues.has(nom)) continue;
+  faute(
+    `main.rs enregistre « ${nom} », que l'écran n'appelle jamais : branchez-la, ` +
+      'ou inscrivez-la dans SANS_APPELANT en disant pourquoi'
+  );
+}
+
+// La liste ne doit pas pourrir : ni garder une commande devenue atteignable, ni
+// nommer une commande que Rust n'enregistre plus.
+for (const nom of SANS_APPELANT) {
+  if (appelees.has(nom)) {
+    faute(`« ${nom} » est appelée par l'écran : retirez-la de SANS_APPELANT`);
+  } else if (!enregistrees.has(nom)) {
+    faute(`SANS_APPELANT nomme « ${nom} », que main.rs n'enregistre pas`);
+  }
+}
+
+// --- Les noms de champs, des deux côtés de la frontière ----------------------
+//
+// Le dépôt n'emploie pas `rename_all` : un champ d'une structure Rust traverse
+// vers l'écran avec SON nom, `recu_le` et non `recuLe`. Écrit en camelCase côté
+// React, il ne fait échouer ni le compilateur ni l'exécution — il rend
+// `undefined`, et l'heure d'un message disparaît de l'écran sans un mot.
+//
+// Le banc lit donc les deux fichiers. Les ARGUMENTS d'une commande, eux, sont
+// bien convertis par Tauri (`numeroId` en JavaScript arrive en `numero_id`) :
+// ce n'est que les champs des structures qui ne le sont pas.
+const STRUCTURES: { rust: string; ecran: string; nom: string }[] = [
+  { rust: 'desktop/src-tauri/src/whatsapp.rs', ecran: 'desktop/src/components/WhatsApp.tsx', nom: 'MessageRecu' },
+  { rust: 'desktop/src-tauri/src/whatsapp.rs', ecran: 'desktop/src/components/WhatsApp.tsx', nom: 'Releve' },
+];
+
+/** Le corps d'un bloc nommé, de son `{` à l'accolade qui lui répond. */
+const corps = (texte: string, ouverture: RegExp): string | null => {
+  const debut = texte.match(ouverture);
+  if (!debut || debut.index === undefined) return null;
+  let profondeur = 0;
+  for (let i = texte.indexOf('{', debut.index); i < texte.length; i += 1) {
+    if (texte[i] === '{') profondeur += 1;
+    else if (texte[i] === '}') {
+      profondeur -= 1;
+      if (profondeur === 0) return texte.slice(texte.indexOf('{', debut.index) + 1, i);
+    }
+  }
+  return null;
+};
+
+for (const s of STRUCTURES) {
+  const rust = corps(
+    readFileSync(join(racine, s.rust), 'utf8'),
+    new RegExp(`pub struct ${s.nom}\\b[^{]*`)
+  );
+  const ecran = corps(
+    readFileSync(join(racine, s.ecran), 'utf8'),
+    new RegExp(`type ${s.nom}\\b[^{]*=[^{]*`)
+  );
+  if (rust === null) {
+    faute(`${s.nom} : la structure est introuvable dans ${s.rust}`);
+    continue;
+  }
+  if (ecran === null) {
+    faute(`${s.nom} : le type est introuvable dans ${s.ecran}`);
+    continue;
+  }
+  const champsRust = [...rust.matchAll(/^\s*pub ([a-z_0-9]+)\s*:/gm)].map((m) => m[1]);
+  const champsEcran = [...ecran.matchAll(/^\s*([A-Za-z_0-9]+)\s*:/gm)].map((m) => m[1]);
+  if (champsRust.length === 0) faute(`${s.nom} : aucun champ lu côté Rust, le banc ne compare rien`);
+  if (champsEcran.length === 0) faute(`${s.nom} : aucun champ lu côté écran, le banc ne compare rien`);
+  for (const c of champsRust) {
+    if (!champsEcran.includes(c)) {
+      faute(`${s.nom} : Rust envoie « ${c} », que ${s.ecran} ne déclare pas`);
+    }
+  }
+  for (const c of champsEcran) {
+    if (!champsRust.includes(c)) {
+      faute(`${s.nom} : ${s.ecran} attend « ${c} », que Rust n'envoie pas (il rendrait undefined)`);
+    }
+  }
+}
+
 console.log(
-  `  ⟳ ${appelees.size} commande(s) appelée(s) par l'écran, ${enregistrees.size} enregistrée(s) en Rust`
+  `  ⟳ ${appelees.size} commande(s) appelée(s) par l'écran, ${enregistrees.size} enregistrée(s) en Rust, ` +
+    `${SANS_APPELANT.length} sans appelant`
 );
 console.log(`commandes : ${fautes} faute(s)`);
 if (fautes) process.exit(1);
