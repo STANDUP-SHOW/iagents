@@ -1,9 +1,9 @@
-import { COMMANDEUR } from '../../../dimensionnement/offre-box.ts';
+import { COMMANDEUR, FINANCEMENT } from '../../../dimensionnement/offre-box.ts';
 import { INSTALLATIONS, euros } from '../data/offres.js';
 
 const fondChoisi = 'border-neon-400 shadow-neon';
 
-/** One installation: what it is, what it costs to buy, and per month over 24 months. */
+/** One installation: what it is, what it costs to buy, and per month over the financing term. */
 export function CarteInstallation({ o, choisie, onChoisir, compact = false }) {
   const { cout } = o;
   return (
@@ -18,10 +18,10 @@ export function CarteInstallation({ o, choisie, onChoisir, compact = false }) {
         ) : (
           <>
             <p className="text-2xl font-bold text-neon-300">
-              {euros(cout.mensualite)}<span className="text-sm text-nuit-300 font-normal"> / mois sur 24 mois</span>
+              {euros(cout.mensualite)}<span className="text-sm text-nuit-300 font-normal"> HT / mois sur {FINANCEMENT.mois} mois</span>
             </p>
             <p className="text-sm text-nuit-300">
-              ou {euros(cout.prixAchat)} à l'achat{o.avecCommandeur && ', Box Commandeur comprise'}
+              ou {euros(cout.prixAchat)} HT à l'achat{o.avecCommandeur && ', Box Commandeur comprise'}
             </p>
           </>
         )}
@@ -38,8 +38,8 @@ export function CarteInstallation({ o, choisie, onChoisir, compact = false }) {
 
 /**
  * The machine offer: six installations read from dimensionnement/offre-box.json.
- * Prices there are provisional until max sets them, and the page says so on
- * every card that carries one.
+ * A price still to confirm is said so on its card; the financing term is read
+ * from the same file, never written here.
  */
 export default function IAgentBox({ installation = null, onChoisir }) {
   return (
@@ -48,7 +48,7 @@ export default function IAgentBox({ installation = null, onChoisir }) {
         <h2 className="font-display text-2xl text-white mb-1">iAgent Box</h2>
         <p className="text-nuit-300">
           Choisissez d'abord votre installation : c'est elle qui dit, pour chaque agent, ce qu'il coûte chez vous contre ce qu'il coûte par API.
-          Toutes les machines s'achètent ou se financent sur 24 mois.
+          Toutes les machines s'achètent ou se financent sur {FINANCEMENT.mois} mois.
         </p>
         <div className="grid md:grid-cols-2 gap-4 mt-4">
           <div className="rounded-lg bg-nuit-900 border border-nuit-600 p-4">
@@ -68,7 +68,7 @@ export default function IAgentBox({ installation = null, onChoisir }) {
         ))}
       </div>
       <p className="text-xs text-nuit-400">
-        Prix et spécifications provisoires, en attente de l'offre définitive. Capacités estimées depuis nos tables de dimensionnement, à confirmer sur les machines réelles.
+        Prix hors taxes. Nombre d'agents tenus par machine estimé depuis nos tables de dimensionnement, à confirmer sur les machines réelles.
       </p>
     </div>
   );

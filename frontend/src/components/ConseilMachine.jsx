@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
+import { FINANCEMENT } from '../../../dimensionnement/offre-box.ts';
 import { conseilPour, euros, ficheDe } from '../data/offres.js';
 
 const PROVISOIRE = 'prix provisoire';
 
 /**
  * The installation to advise for a team, read from conseillerBox: its monthly
- * total during and after the 24-month financing, against the same team all by
+ * total during and after the financing term, against the same team all by
  * API. Agents the machine cannot hold are named, they stay by API.
  */
 export default function ConseilMachine({ ids, compact = false }) {
@@ -24,7 +25,7 @@ export default function ConseilMachine({ ids, compact = false }) {
       ) : (
         <>
           <p>
-            {euros(c.totalPendant)} par mois pendant les 24 mois de financement, puis {euros(c.totalApres)} par mois,
+            {euros(c.totalPendant)} HT par mois pendant les {FINANCEMENT.mois} mois de financement, puis {euros(c.totalApres)} par mois,
             contre <span className="text-rose-300">{euros(c.toutApi)}</span> tout par API.
           </p>
           {!compact && (
@@ -41,7 +42,7 @@ export default function ConseilMachine({ ids, compact = false }) {
           )}
         </>
       )}
-      <p className="text-xs text-nuit-400">Estimation calculée sur les tâches de chaque agent. Prix des machines provisoires, en attente de l'offre définitive.</p>
+      <p className="text-xs text-nuit-400">Estimation calculée sur les tâches de chaque agent, prix hors taxes.</p>
     </div>
   );
 }

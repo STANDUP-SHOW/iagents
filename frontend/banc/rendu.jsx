@@ -18,6 +18,7 @@ import CreezEntreprise from '../src/components/CreezEntreprise.jsx';
 import IAgentBox from '../src/components/IAgentBox.jsx';
 import PacksEntreprise from '../src/components/PacksEntreprise.jsx';
 import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee, INSTALLATIONS, conseilPour } from '../src/data/offres.js';
+import { FINANCEMENT } from '../../dimensionnement/offre-box.ts';
 
 let n = 0;
 const ok = (m) => { n++; console.log('  ok  ' + m); };
@@ -146,8 +147,9 @@ for (const page of PAGES) {
 }
 
 // 11. L'offre machines se lit dans dimensionnement/offre-box.json : six
-//     installations, un prix provisoire dit comme tel, aucun fournisseur du
-//     relevé nommé au client, et le choix passe avant le catalogue.
+//     installations, un prix provisoire dit comme tel, la durée du financement
+//     lue dans le fichier, aucune ligne interne du catalogue, et le choix passe
+//     avant le catalogue.
 {
   const html = renderToString(<IAgentBox />);
   const manquantes = INSTALLATIONS.filter((o) => !html.includes(o.nom.replace(/'/g, '&#x27;')));
@@ -157,9 +159,14 @@ for (const page of PAGES) {
   const dits = html.split('Prix provisoire').length - 1;
   if (dits < provisoires) echoue(`${provisoires} prix provisoires, ${dits} dits comme tels`);
   else ok(`${provisoires} prix provisoires, tous dits comme tels`);
-  const fournisseurs = ['Firebat', 'RTX', 'Jetson', 'GMKtec', 'Chuwi', 'Radeon'].filter((m) => html.includes(m));
-  if (fournisseurs.length) echoue(`iAgent Box nomme ${fournisseurs.join(', ')}`);
-  else ok('aucun fournisseur du relevé nommé');
+  // The term is read from the file: a hardcoded one would outlive max's choice.
+  const termes = [...html.matchAll(/sur (?:<!-- -->)?(\d+)(?:<!-- -->)? mois/g)].map((m) => Number(m[1]));
+  const fausses = termes.filter((t) => t !== FINANCEMENT.mois);
+  if (!termes.length || fausses.length) echoue(`durée de financement affichée ${[...new Set(termes)].join(', ')}, fichier ${FINANCEMENT.mois}`);
+  else ok(`financement dit sur ${FINANCEMENT.mois} mois, comme le fichier`);
+  const internes = INSTALLATIONS.flatMap((o) => o.autresLignesDuCatalogue ?? []).filter((l) => html.includes(l));
+  if (internes.length) echoue(`iAgent Box affiche des lignes internes du catalogue : ${internes.slice(0, 3).join(' ; ')}`);
+  else ok('aucune ligne interne du catalogue affichée');
   const sans = renderToString(<App installationInitiale={null} />);
   if (!sans.includes("D&#x27;abord, votre installation")) echoue("le catalogue ne demande pas l'installation d'abord");
   else ok("le catalogue demande l'installation d'abord");
