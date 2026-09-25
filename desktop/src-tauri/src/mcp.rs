@@ -2204,7 +2204,10 @@ mod tests {
             "phrase peu utile : {} | refus : {:?} | requêtes reçues : {}",
             phrase, refus, vues
         );
-        assert!(!phrase.contains("401"), "code technique à l'écran : {}", phrase);
+        // The message names the host, and a random port can itself contain "401"
+        // (34013): only the words around it must stay free of the status code.
+        let hote = url.trim_start_matches("http://").split('/').next().unwrap_or("");
+        assert!(!phrase.replace(hote, "").contains("401"), "code technique à l'écran : {}", phrase);
     }
 
     /// Un lot de réponses dans un seul corps se défait : sinon le client attend
