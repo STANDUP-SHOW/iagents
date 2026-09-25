@@ -3,9 +3,14 @@
 Choix de max, 24/09/2026 : **relais hébergé**, pour que l'agent reçoive et
 réponde, et pas seulement qu'il envoie.
 
-Ce document dit ce que le relais doit faire. La moitié poste est déjà écrite et
-éprouvée (`desktop/src-tauri/src/whatsapp.rs`) ; c'est elle qui fixe le contrat
-ci-dessous.
+Ce document dit ce que le relais fait. Les deux moitiés sont écrites : le poste
+(`desktop/src-tauri/src/whatsapp.rs`, 13 bancs Rust) et le relais lui-même
+(`relais/serveur.ts`, 39 contrôles). C'est le poste qui fixe le contrat ci-dessous,
+parce que c'est lui le client.
+
+**Reste à mettre en ligne et à éprouver avec un vrai message** : les gestes à
+faire chez Railway et chez Meta sont dans `relais/README.md`, et le compte Meta
+Business de max est nécessaire pour le dernier.
 
 ## Pourquoi il existe
 
@@ -93,8 +98,16 @@ relais range donc le message et répond tout de suite ; c'est `GET /messages`,
 plus bas, qui fait le travail quand le poste vient chercher. Traiter avant de
 répondre ferait rejouer la notification par Meta.
 
-Tant que cette vérification n'est pas écrite, le relais ne doit pas être ouvert
-au public.
+**C'est écrit, et le banc le prouve dans les deux sens** (`relais/banc.ts`) : une
+signature calculée sur les octets reçus est acceptée, et une signature calculée
+sur le JSON réécrit est refusée. Vérifié en remettant le bogue — en faisant hacher
+au relais la forme réécrite, le banc tombe sur ces deux lignes-là et sort 1.
+`signatureValide()` prend un `Buffer` et non un objet, pour que le type interdise
+de se tromper : la signature se vérifie avant tout `JSON.parse`.
+
+La comparaison passe par `timingSafeEqual`, comme celle du secret du relais et
+celle du mot de la poignée : un secret qui se compare caractère par caractère se
+devine essai par essai.
 
 ### `GET /messages` — ce que le poste vient chercher
 
@@ -124,38 +137,59 @@ GET {relais}/messages?depuis=<n>&attente=<s>
 - Le secret est porté en en-tête, donc l'adresse doit être en `https://` — le
   poste refuse toute autre adresse, sauf la boucle locale où tourne le banc.
 
-## Ce qui reste à décider
+## Où il vit : Railway
 
-**Où il est hébergé, et sous quel compte.** Le dépôt a déjà un projet Vercel
-pour la boutique, et c'est ce qui avait été proposé le 24/09 comme chemin le plus
-court. **Deux choses relevées depuis disent que ce n'est pas si simple**, et il
-faut les poser avant de décider :
+**Choix du 25/09/2026**, déduit de ce que max a ouvert dans son navigateur et non
+écrit par lui en toutes lettres : Railway, c'est-à-dire la première des deux
+formes ci-dessous. S'il voulait l'autre, le code ne change pas.
 
-- Le compte est au forfait gratuit et **il en a déjà atteint la limite le
-  24/09** : le robot de Vercel a refusé un déploiement d'aperçu sur la PR #19 en
-  disant « Resource is limited - try again in 24 hours (more than 100, code:
-  "api-deployments-free-per-day") ». Ce n'est pas propre au relais, mais ça dit
-  l'état du compte.
+Ce qui avait été proposé le 24/09 — le compte Vercel de la boutique — était une
+mauvaise idée, pour deux raisons relevées depuis :
+
+- Le compte est au forfait gratuit et **il en a atteint la limite le 24/09** : le
+  robot de Vercel a refusé un déploiement d'aperçu sur la PR #19 en disant
+  « Resource is limited - try again in 24 hours (more than 100, code:
+  "api-deployments-free-per-day") ».
 - Surtout, **une fonction serverless est facturée au temps passé**, et une ligne
   gardée ouverte 25 secondes le passe entièrement. Un seul agent qui relève sans
-  cesse tiendrait une fonction ouverte à peu près en permanence, et on multiplie
-  par le nombre de clients. C'est le contraire de ce pour quoi ce modèle est
-  fait.
+  cesse tiendrait une fonction ouverte à peu près en permanence.
 
-**Les deux formes qui marchent**, et le poste accepte les deux sans changer :
+**Les deux formes qui marchent**, et le poste accepte les deux sans changer une
+ligne — vérifié dans `relever()` : une relève vide est un succès ordinaire, pas
+une erreur :
 
-1. **Un petit processus qui tourne en permanence** (un VPS à quelques euros par
-   mois, ou un hébergeur de conteneurs). Garder une ligne ouverte 25 secondes n'y
-   coûte rien de plus, donc la vraie longue attente est possible et un message
-   arrive à l'agent en moins d'une seconde.
+1. **Un processus qui tourne en permanence** (Railway, ou un VPS à quelques euros
+   par mois). Garder une ligne ouverte 25 secondes n'y coûte rien de plus, donc la
+   vraie longue attente est possible et un message arrive à l'agent en moins d'une
+   seconde. C'est ce qui est retenu, et ce que `relais/serveur.ts` fait.
 2. **Une fonction serverless qui répond tout de suite**, le poste redemandant
-   toutes les quelques secondes. Chaque appel dure alors quelques millisecondes
-   au lieu de 25 secondes. Le prix devient négligeable ; le coût est la latence,
-   quelques secondes avant qu'un agent voie un message — ce qui, pour répondre à
-   un client, ne se remarque pas.
+   toutes les quelques secondes. Le prix devient négligeable ; le coût est la
+   latence. `serveur.ts` marcherait aussi ainsi, mais il lui faudrait une base
+   externe : ses messages vivent en mémoire, ce qu'une fonction sans état perd
+   entre deux appels.
 
-Mêler la vitrine et la correspondance des clients dans le même projet reste par
-ailleurs une question en soi. C'est un choix qui appartient à max, pas au code.
+**Ce que le relais garde, et pour combien de temps.** En mémoire, dix minutes au
+plus, mille messages au plus, et rien sur disque. Le contrat plus haut disait
+« effacé dès qu'il a été relevé » ; c'est une durée de vie courte à la place, et
+c'est délibéré : avec un point de reprise, c'est le curseur du poste qui empêche
+de resservir un message, pas l'effacement. Effacer à la lecture perdrait le
+message si la ligne tombait entre l'envoi et sa prise en compte, et le poste n'a
+alors aucun moyen de le redemander.
 
-Tant qu'il n'est pas fait, la moitié poste ne sert à rien toute seule — et c'est
-voulu : elle refuse proprement plutôt que de faire semblant.
+**Ce qui n'est pas journalisé, et pourquoi c'est dans cette liste.** Aucun contenu
+de message, aucun numéro, aucun secret. Le relais promet de ne rien archiver ; un
+texte recopié dans les journaux de l'hébergeur serait archivé quand même, et
+lisible par qui a accès au tableau de bord.
+
+## Ce qui reste
+
+- **Mettre en ligne** : les gestes du tableau de bord Railway sont dans
+  `relais/README.md`. Ils sont à faire par max ou par la session qui pilote son
+  navigateur, pas d'ici.
+- **Le compte Meta Business de max**, pour déclarer l'adresse du relais et
+  éprouver un vrai message de bout en bout. Rien de ce qui est écrit n'a encore
+  parlé au vrai Meta : le banc parle à un serveur écrit à la main sur la boucle
+  locale, et la charge qu'il rejoue est recopiée de la page de Meta.
+- **L'écran** n'appelle encore aucune des cinq commandes WhatsApp du poste, donc
+  un client ne peut pas brancher WhatsApp par l'interface même une fois le relais
+  en ligne.
