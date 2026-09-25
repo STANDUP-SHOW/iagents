@@ -26,6 +26,7 @@ mod lecture;
 mod agents;
 mod database;
 mod llm;
+mod cles_ia;
 mod voiceprint;
 mod telegram;
 mod whatsapp;
@@ -823,6 +824,9 @@ fn main() {
             llm::cle_api_ranger,
             llm::cle_api_presente,
             llm::cle_api_retirer,
+            cles_ia::cles_ia_etat,
+            cles_ia::cle_ia_ranger,
+            cles_ia::cle_ia_retirer,
             executer_tache,
             tache::dossier_de_travail,
             repondre,
