@@ -33,13 +33,29 @@ const sources = (dossier: string): string[] =>
     return /\.tsx?$/.test(n) ? [chemin] : [];
   });
 
-// Ce que l'écran appelle. On accepte les deux écritures employées dans le
-// dépôt : invoke('x') et invoke<Type>('x').
+/** Le texte d'un fichier, commentaires retirés, pour ne pas lire un nom cité en prose. */
+const sansCommentaires = (texte: string): string =>
+  texte.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+// Ce que l'écran appelle DIRECTEMENT. On accepte les écritures employées dans le
+// dépôt : invoke('x'), invoke<Type>('x'), et `invoquer('x')` — l'invoke que
+// `team-holder.ts` reçoit en paramètre pour être éprouvé sans Tauri. C'est cette
+// liste, et pas la suivante, qui sert à repérer un nom mal orthographié : elle ne
+// contient que des noms dont on est sûr qu'ils partent vers Tauri.
 const appelees = new Map<string, string>();
+// Et ce que l'écran NOMME, où que ce soit — y compris un nom passé à un crochet
+// partagé, comme `useReleve('whatsapp_relever', …)`. Sans cette seconde lecture,
+// sortir une boucle dans un crochet suffisait à faire croire au banc que la
+// commande n'était plus branchée. Les commentaires sont retirés d'abord : un nom
+// cité en prose n'est pas un appel.
+const nommees = new Set<string>();
 for (const f of sources(join(racine, 'desktop/src'))) {
   const texte = readFileSync(f, 'utf8');
-  for (const m of texte.matchAll(/invoke(?:<[^>]*>)?\(\s*'([a-z_0-9]+)'/g)) {
+  for (const m of texte.matchAll(/invoke[a-z]*(?:<[^>]*>)?\(\s*'([a-z_0-9]+)'/g)) {
     if (!appelees.has(m[1])) appelees.set(m[1], f.slice(racine.length + 1));
+  }
+  for (const m of sansCommentaires(texte).matchAll(/['"`]([a-z][a-z_0-9]{3,})['"`]/g)) {
+    nommees.add(m[1]);
   }
 }
 
@@ -61,6 +77,7 @@ const enregistrees = new Set(
 // Le banc ne sert à rien s'il ne lit rien : une expression régulière qui cesse
 // de trouver passerait pour un dépôt sans faute.
 if (appelees.size === 0) faute("aucun invoke() trouvé dans desktop/src : le banc ne lit plus rien");
+if (nommees.size === 0) faute('aucun nom de commande lu dans desktop/src : le banc ne lit plus rien');
 if (enregistrees.size === 0) faute('aucune commande enregistrée trouvée dans main.rs');
 
 for (const [nom, ou] of [...appelees].sort()) {
@@ -98,13 +115,6 @@ const SANS_APPELANT = [
   'activate_agent',
   'deactivate_agent',
   'train_voice',
-  // Telegram : le même trou que WhatsApp, pas encore comblé.
-  'telegram_brancher',
-  'telegram_branche',
-  'telegram_debrancher',
-  'telegram_envoyer',
-  'telegram_relever',
-  'telegram_mode_d_emploi',
   // MCP : le portier est complet, le passage n'est pas écrit. C'est documenté
   // dans le mémo et attendu, pas oublié.
   'mcp_outils_permis',
@@ -114,11 +124,8 @@ const SANS_APPELANT = [
   'courriel_enregistrer_motdepasse',
   'courriel_motdepasse_present',
   'courriel_relever',
-  // Le Team Holder lit les sorties des autres agents ; l'écran ne les montre pas.
-  'equipe_productions',
-  'equipe_lire_production',
-  // Le journal de reprise : écrit et relu par Rust seul pour l'instant.
-  'journal_lire',
+  // Le journal de reprise : le Team Holder lit les reproches du client,
+  // personne n'en ajoute depuis l'écran.
   'journal_ajouter',
   // Le navigateur se ferme par sa fenêtre, pas par un bouton de l'écran.
   'navigateur_fermer',
@@ -126,7 +133,7 @@ const SANS_APPELANT = [
 
 const attendues = new Set(SANS_APPELANT);
 for (const nom of [...enregistrees].sort()) {
-  if (appelees.has(nom) || attendues.has(nom)) continue;
+  if (nommees.has(nom) || attendues.has(nom)) continue;
   faute(
     `main.rs enregistre « ${nom} », que l'écran n'appelle jamais : branchez-la, ` +
       'ou inscrivez-la dans SANS_APPELANT en disant pourquoi'
@@ -136,7 +143,7 @@ for (const nom of [...enregistrees].sort()) {
 // La liste ne doit pas pourrir : ni garder une commande devenue atteignable, ni
 // nommer une commande que Rust n'enregistre plus.
 for (const nom of SANS_APPELANT) {
-  if (appelees.has(nom)) {
+  if (nommees.has(nom)) {
     faute(`« ${nom} » est appelée par l'écran : retirez-la de SANS_APPELANT`);
   } else if (!enregistrees.has(nom)) {
     faute(`SANS_APPELANT nomme « ${nom} », que main.rs n'enregistre pas`);
@@ -155,7 +162,11 @@ for (const nom of SANS_APPELANT) {
 // ce n'est que les champs des structures qui ne le sont pas.
 const STRUCTURES: { rust: string; ecran: string; nom: string }[] = [
   { rust: 'desktop/src-tauri/src/whatsapp.rs', ecran: 'desktop/src/components/WhatsApp.tsx', nom: 'MessageRecu' },
-  { rust: 'desktop/src-tauri/src/whatsapp.rs', ecran: 'desktop/src/components/WhatsApp.tsx', nom: 'Releve' },
+  { rust: 'desktop/src-tauri/src/telegram.rs', ecran: 'desktop/src/components/Telegram.tsx', nom: 'MessageRecu' },
+  // Les deux `Releve` de Rust ont la même forme exprès, et l'écran n'en tient
+  // qu'une, générique, dans le crochet partagé : le banc la compare aux deux.
+  { rust: 'desktop/src-tauri/src/whatsapp.rs', ecran: 'desktop/src/components/useReleve.ts', nom: 'Releve' },
+  { rust: 'desktop/src-tauri/src/telegram.rs', ecran: 'desktop/src/components/useReleve.ts', nom: 'Releve' },
 ];
 
 /** Le corps d'un bloc nommé, de son `{` à l'accolade qui lui répond. */
@@ -173,15 +184,28 @@ const corps = (texte: string, ouverture: RegExp): string | null => {
   return null;
 };
 
+/** Un fichier lu sans lever : un banc doit rendre une faute, pas une pile d'appels. */
+const lire = (chemin: string): string | null => {
+  try {
+    return readFileSync(join(racine, chemin), 'utf8');
+  } catch {
+    return null;
+  }
+};
+
 for (const s of STRUCTURES) {
-  const rust = corps(
-    readFileSync(join(racine, s.rust), 'utf8'),
-    new RegExp(`pub struct ${s.nom}\\b[^{]*`)
-  );
-  const ecran = corps(
-    readFileSync(join(racine, s.ecran), 'utf8'),
-    new RegExp(`type ${s.nom}\\b[^{]*=[^{]*`)
-  );
+  const texteRust = lire(s.rust);
+  const texteEcran = lire(s.ecran);
+  if (texteRust === null) {
+    faute(`${s.nom} : ${s.rust} est introuvable`);
+    continue;
+  }
+  if (texteEcran === null) {
+    faute(`${s.nom} : ${s.ecran} est introuvable`);
+    continue;
+  }
+  const rust = corps(texteRust, new RegExp(`pub struct ${s.nom}\\b[^{]*`));
+  const ecran = corps(texteEcran, new RegExp(`type ${s.nom}\\b[^{]*=[^{]*`));
   if (rust === null) {
     faute(`${s.nom} : la structure est introuvable dans ${s.rust}`);
     continue;

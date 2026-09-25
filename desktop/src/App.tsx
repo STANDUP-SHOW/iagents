@@ -19,6 +19,7 @@ import Embauche from './components/Embauche'
 import Travail from './components/Travail'
 import CleApi from './components/CleApi'
 import WhatsApp from './components/WhatsApp'
+import Telegram from './components/Telegram'
 import InstallerVoix from './components/InstallerVoix'
 import MiseAJour from './components/MiseAJour'
 import Equipe from './components/Equipe'
@@ -638,6 +639,7 @@ function App() {
               <>
                 <CleApi />
                 <WhatsApp />
+                <Telegram />
                 <InstallerVoix apresInstallation={demarrerEcoute} />
                 <ConnectorSetup />
               </>

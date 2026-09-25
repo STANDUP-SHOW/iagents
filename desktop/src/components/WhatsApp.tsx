@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { parConversation, useReleve } from './useReleve'
 
 /**
  * WhatsApp : où le client branche son compte, et où arrivent les messages.
@@ -32,27 +33,8 @@ type MessageRecu = {
   recu_le: string
 }
 
-type Releve = {
-  messages: MessageRecu[]
-  suite: number
-}
-
-/**
- * Combien de temps attendre avant de rappeler le relais après un échec.
- *
- * Sans cette pause, un secret refusé ferait tourner la boucle à pleine vitesse
- * contre le relais. La relève elle-même tient la ligne 25 secondes, donc une
- * boucle qui réussit n'a besoin d'aucune pause.
- */
-const PAUSE_APRES_ECHEC_MS = 30_000
-
-/** Au-delà, on arrête et on le dit, plutôt que de frapper une porte fermée. */
-const ECHECS_AVANT_ARRET = 3
-
 /** Ce que le relais garde, d'après son propre contrat, avant d'oublier. */
 const GARDE_DU_RELAIS = '10 minutes'
-
-const dors = (ms: number) => new Promise((f) => setTimeout(f, ms))
 
 /** L'horodatage de Meta en heure lisible. Vide ou illisible : on n'invente rien. */
 function heure(recuLe: string): string {
@@ -76,36 +58,9 @@ export default function WhatsApp() {
   const [refus, setRefus] = useState('')
   const [occupe, setOccupe] = useState(false)
 
-  const [messages, setMessages] = useState<MessageRecu[]>([])
-  const [ecoute, setEcoute] = useState(false)
-  const [arret, setArret] = useState('')
   /** Le brouillon de réponse, par numéro : deux conversations ne le partagent pas. */
   const [brouillons, setBrouillons] = useState<Record<string, string>>({})
   const [envoi, setEnvoi] = useState('')
-
-  /**
-   * Le drapeau d'arrêt de la boucle de relève.
-   *
-   * Il est dans une `ref` et non dans un état : la boucle le relit à chaque
-   * tour, et un état capturé dans sa fermeture resterait à sa valeur de départ.
-   * Une boucle qui ne s'arrête jamais continuerait d'appeler le relais après
-   * que le client a quitté le panneau.
-   *
-   * Il tient aussi lieu de verrou, et c'est ce qui interdit deux boucles à la
-   * fois : `boucler` le pose avant son premier `await`, donc un second appel
-   * repart aussitôt. Deux boucles ne peuvent coexister que si la première l'a
-   * vu retomber — et dans ce cas elle sort sans rien écrire.
-   */
-  const tourne = useRef(false)
-
-  /**
-   * Le point de reprise, gardé d'une boucle à l'autre.
-   *
-   * Dans la boucle seule, un « Réessayer » repartirait de zéro et le relais
-   * resservirait les messages déjà affichés : le client lirait deux fois la même
-   * demande et pourrait y répondre deux fois.
-   */
-  const depuis = useRef(0)
 
   const relire = useCallback(
     () =>
@@ -122,53 +77,13 @@ export default function WhatsApp() {
     relire()
   }, [relire])
 
-  /**
-   * La boucle de relève. Chaînée, jamais périodique : chaque appel tient la
-   * ligne jusqu'à 25 secondes, donc un `setInterval` empilerait des appels.
-   *
-   * Le point de reprise est une `ref` et non un état, pour la même raison que
-   * `tourne` : relu depuis une fermeture, il resterait à sa valeur de départ et
-   * le relais resservirait indéfiniment les mêmes messages.
-   */
-  const boucler = useCallback(async () => {
-    if (tourne.current) return
-    tourne.current = true
-    setEcoute(true)
-    setArret('')
-    let echecs = 0
-    while (tourne.current) {
-      try {
-        const releve = await invoke<Releve>('whatsapp_relever', { depuis: depuis.current })
-        if (!tourne.current) break
-        echecs = 0
-        depuis.current = releve.suite
-        if (releve.messages.length > 0) {
-          setMessages((avant) => [...releve.messages].reverse().concat(avant))
-        }
-      } catch (e) {
-        if (!tourne.current) break
-        echecs += 1
-        if (echecs >= ECHECS_AVANT_ARRET) {
-          setArret(String(e))
-          break
-        }
-        await dors(PAUSE_APRES_ECHEC_MS)
-      }
-    }
-    tourne.current = false
-    setEcoute(false)
-  }, [])
-
-  // La relève suit le panneau : elle démarre dès qu'il est ouvert sur un compte
-  // branché, et s'arrête quand le client s'en va. Sans cet arrêt, la boucle
-  // survivrait au panneau et continuerait de tenir une ligne vers le relais.
-  useEffect(() => {
-    if (branche !== true) return
-    void boucler()
-    return () => {
-      tourne.current = false
-    }
-  }, [branche, boucler])
+  // La relève vient de `useReleve`, partagée avec Telegram : les deux côtés
+  // Rust rendent exprès la même forme, et une boucle écrite deux fois aurait
+  // fini par dire deux choses.
+  const { messages, ecoute, arret, relancer, vider } = useReleve<MessageRecu>(
+    'whatsapp_relever',
+    branche === true
+  )
 
   const brancher = async () => {
     setDit('')
@@ -194,13 +109,9 @@ export default function WhatsApp() {
     setDit('')
     setRefus('')
     setOccupe(true)
-    tourne.current = false
+    vider()
     try {
       setDit(await invoke<string>('whatsapp_debrancher'))
-      setMessages([])
-      // Le prochain branchement peut viser un autre relais : son point de
-      // reprise n'a rien à voir avec celui-ci.
-      depuis.current = 0
       await relire()
     } catch (e) {
       setRefus(String(e))
@@ -225,40 +136,22 @@ export default function WhatsApp() {
     }
   }
 
-  /**
-   * Les messages rangés par personne, la conversation la plus récente en haut.
-   *
-   * Un brouillon de réponse appartient à une conversation et non à un message :
-   * affiché sous chaque message, celui d'une personne qui en a écrit deux se
-   * serait montré deux fois, et le client aurait vu sa frappe apparaître dans
-   * une case qu'il ne touchait pas.
-   */
-  const conversations = messages.reduce<
-    { de: string; nom: string; messages: MessageRecu[] }[]
-  >((rangees, m) => {
-    const deja = rangees.find((c) => c.de === m.de)
-    if (deja) {
-      deja.messages.push(m)
-      if (!deja.nom) deja.nom = m.nom
-      return rangees
-    }
-    return [...rangees, { de: m.de, nom: m.nom, messages: [m] }]
-  }, [])
+  const conversations = parConversation(messages, (m) => m.de, (m) => m.nom)
 
   return (
-    <section className="whatsapp">
+    <section className="canal">
       <h3>WhatsApp</h3>
-      <p className="whatsapp-explication">
+      <p className="canal-explication">
         Vos agents répondent aux personnes qui écrivent au numéro WhatsApp de votre
         entreprise. Vos réponses partent d'ici vers Meta avec votre jeton, qui reste dans le
         coffre de cet ordinateur. Les messages reçus, eux, passent par votre relais : Meta ne
         les livre qu'à une adresse publique, et un poste n'en a pas.
       </p>
 
-      {branche === null && <p className="whatsapp-etat">Lecture du coffre…</p>}
+      {branche === null && <p className="canal-etat">Lecture du coffre…</p>}
 
       {branche === false && (
-        <div className="whatsapp-saisie">
+        <div className="canal-saisie">
           <label htmlFor="whatsapp-jeton">Votre jeton d'accès Meta</label>
           <input
             id="whatsapp-jeton"
@@ -305,7 +198,7 @@ export default function WhatsApp() {
           >
             Brancher WhatsApp
           </button>
-          <p className="whatsapp-ou">
+          <p className="canal-ou">
             Le jeton et l'identifiant du numéro sont sur developers.facebook.com, dans votre
             application WhatsApp Business. L'adresse et le secret sont ceux de votre relais.
           </p>
@@ -313,8 +206,8 @@ export default function WhatsApp() {
       )}
 
       {branche === true && (
-        <div className="whatsapp-branche">
-          <p className="whatsapp-etat">
+        <div className="canal-branche">
+          <p className="canal-etat">
             WhatsApp est branché sur cet ordinateur.{' '}
             {ecoute
               ? 'Les messages reçus arrivent ci-dessous.'
@@ -327,52 +220,52 @@ export default function WhatsApp() {
       )}
 
       {branche === true && (
-        <div className="whatsapp-recus">
-          <p className="whatsapp-precision">
+        <div className="canal-recus">
+          <p className="canal-precision">
             Ces messages sont relevés pendant que cette page est ouverte. Votre relais les
             garde {GARDE_DU_RELAIS} : un message arrivé alors que l'application est fermée
             n'est pas encore ramassé. Et c'est vous qui écrivez la réponse, pas l'agent.
           </p>
 
           {arret && (
-            <div className="whatsapp-arret">
+            <div className="canal-arret">
               <p className="refus">{arret}</p>
-              <button onClick={() => void boucler()} disabled={occupe}>
+              <button onClick={relancer} disabled={occupe}>
                 Réessayer
               </button>
             </div>
           )}
 
           {messages.length === 0 && !arret && (
-            <p className="whatsapp-etat">Aucun message pour l'instant.</p>
+            <p className="canal-etat">Aucun message pour l'instant.</p>
           )}
 
           {conversations.map((c) => (
-            <article key={c.de} className="whatsapp-message">
+            <article key={c.cle} className="canal-message">
               <header>
-                <span className="whatsapp-qui">{c.nom || c.de}</span>
+                <span className="canal-qui">{c.nom || c.cle}</span>
                 {heure(c.messages[0]!.recu_le) && (
-                  <span className="whatsapp-quand">{heure(c.messages[0]!.recu_le)}</span>
+                  <span className="canal-quand">{heure(c.messages[0]!.recu_le)}</span>
                 )}
               </header>
               {c.messages.map((m, i) => (
-                <p key={`${m.recu_le}-${i}`} className="whatsapp-texte">
+                <p key={`${m.recu_le}-${i}`} className="canal-texte">
                   {m.texte}
                 </p>
               ))}
-              <div className="whatsapp-reponse">
+              <div className="canal-reponse">
                 <input
                   type="text"
-                  aria-label={`Votre réponse à ${c.nom || c.de}`}
+                  aria-label={`Votre réponse à ${c.nom || c.cle}`}
                   placeholder="Votre réponse"
-                  value={brouillons[c.de] ?? ''}
+                  value={brouillons[c.cle] ?? ''}
                   onChange={(e) =>
-                    setBrouillons((avant) => ({ ...avant, [c.de]: e.target.value }))
+                    setBrouillons((avant) => ({ ...avant, [c.cle]: e.target.value }))
                   }
                 />
                 <button
-                  onClick={() => repondre(c.de)}
-                  disabled={occupe || !(brouillons[c.de] ?? '').trim()}
+                  onClick={() => repondre(c.cle)}
+                  disabled={occupe || !(brouillons[c.cle] ?? '').trim()}
                 >
                   Répondre
                 </button>
