@@ -1,0 +1,140 @@
+{
+  "version": "2026-09-25",
+  "note": "Ce que preparer-poste.ps1 installe sur un poste LocalAgent en usine. Le script lit CE fichier et rien d'autre : ajouter un logiciel, c'est ajouter une ligne ici. Chaque logiciel est telecharge chez son editeur au moment de l'installation (winget), jamais embarque dans le depot : la redistribution des installeurs d'autres editeurs n'est pas toujours permise. Les identifiants sont reverifies par `winget show` avant chaque installation ; un identifiant qui ne repond plus est signale dans le journal au lieu d'etre devine.",
+  "iagent": {
+    "adresse": "https://github.com/STANDUP-SHOW/iagents/releases/latest/download/iAgent-Windows-setup.exe",
+    "note": "L'installeur NSIS, par utilisateur, et non le MSI : avec le MSI, Windows demande l'administrateur a chaque mise a jour silencieuse. Il s'installe donc dans le compte qui sera livre au client."
+  },
+  "groupes": {
+    "poste": "Installe sur chaque poste livre.",
+    "option": "Installe seulement si on le demande (-Avec <id>).",
+    "developpeur": "Installe avec -Developpeur : de quoi construire iAgent depuis le depot, sur nos machines de preparation."
+  },
+  "logiciels": [
+    {
+      "id": "Ollama.Ollama",
+      "source": "winget",
+      "nom": "Ollama",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Le moteur local : les agents y tournent sans aucun jeton facture (modele.rs parle a 127.0.0.1:11434)."
+    },
+    {
+      "id": "TheDocumentFoundation.LibreOffice",
+      "source": "winget",
+      "nom": "LibreOffice",
+      "groupe": "poste",
+      "libre": true,
+      "role": "La bureautique libre. Remplace Apache OpenOffice, qui n'est presque plus maintenu. Sert au client qui ouvre les fichiers : l'application ecrit elle-meme xlsx, docx et pdf."
+    },
+    {
+      "id": "Mozilla.Thunderbird.fr",
+      "source": "winget",
+      "nom": "Thunderbird (francais)",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Le courrier. Ouvre en redaction les brouillons .eml que les agents deposent (X-Unsent: 1)."
+    },
+    {
+      "id": "Telegram.TelegramDesktop",
+      "source": "winget",
+      "nom": "Telegram Desktop",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Pour l'usage humain du poste. L'agent, lui, passe par l'API de bots de Telegram (telegram.rs), pas par cette fenetre."
+    },
+    {
+      "id": "9NKSQGP7F2NH",
+      "source": "msstore",
+      "nom": "WhatsApp",
+      "groupe": "poste",
+      "libre": false,
+      "role": "Pour l'usage humain du poste. WhatsApp n'existe plus sur Windows que par le Microsoft Store. L'agent n'y touche pas : Meta interdit l'automatisation de l'application, il passe par l'API WhatsApp Business et le relais (whatsapp.rs, relais/)."
+    },
+    {
+      "id": "Mozilla.Firefox.fr",
+      "source": "winget",
+      "nom": "Firefox (francais)",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Un navigateur libre pour le client. Les agents utilisent le navigateur integre a iAgent."
+    },
+    {
+      "id": "SumatraPDF.SumatraPDF",
+      "source": "winget",
+      "nom": "SumatraPDF",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Lire les PDF que les agents produisent."
+    },
+    {
+      "id": "7zip.7zip",
+      "source": "winget",
+      "nom": "7-Zip",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Archives zip et 7z."
+    },
+    {
+      "id": "VideoLAN.VLC",
+      "source": "winget",
+      "nom": "VLC",
+      "groupe": "poste",
+      "libre": true,
+      "role": "Relire les enregistrements audio et video."
+    },
+    {
+      "id": "9NRX63209R7B",
+      "source": "msstore",
+      "nom": "Outlook (nouveau)",
+      "groupe": "option",
+      "libre": false,
+      "role": "Pour un client qui vit dans Microsoft 365. Pas libre, donc pas installe par defaut."
+    },
+    {
+      "id": "Git.Git",
+      "source": "winget",
+      "nom": "Git",
+      "groupe": "developpeur",
+      "libre": true,
+      "role": "Recuperer le depot."
+    },
+    {
+      "id": "OpenJS.NodeJS.LTS",
+      "source": "winget",
+      "nom": "Node.js LTS",
+      "groupe": "developpeur",
+      "libre": true,
+      "role": "Les bancs et la boutique (Node 22 au moins, pour --experimental-strip-types)."
+    },
+    {
+      "id": "Rustlang.Rustup",
+      "source": "winget",
+      "nom": "Rust (rustup)",
+      "groupe": "developpeur",
+      "libre": true,
+      "role": "Le coeur de l'application (Tauri v2)."
+    },
+    {
+      "id": "Microsoft.VisualStudio.2022.BuildTools",
+      "source": "winget",
+      "nom": "Outils de compilation C++ de Microsoft",
+      "groupe": "developpeur",
+      "libre": false,
+      "argumentsInstalleur": "--quiet --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended",
+      "role": "L'editeur de liens que Rust demande sous Windows. Sans lui, cargo s'arrete a la premiere compilation."
+    },
+    {
+      "id": "VSCodium.VSCodium",
+      "source": "winget",
+      "nom": "VSCodium",
+      "groupe": "developpeur",
+      "libre": true,
+      "role": "Un editeur de code libre."
+    }
+  ],
+  "modeles": {
+    "note": "Tires dans Ollama avec -Modeles. Un modele par palier resident courant de dimensionnement/paliers-modeles.json ; les paliers plus lourds dependent de la machine et se tirent a la main.",
+    "noms": ["qwen2.5:3b", "llama3.1:8b"]
+  }
+}
