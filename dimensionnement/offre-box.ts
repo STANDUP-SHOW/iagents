@@ -5,7 +5,7 @@
  *
  * Six installations : sans machine, Box Commandeur seule (aucune puissance), Box Max (la
  * première puissance), et trois machines de puissance livrées chacune avec une Box
- * Commandeur. Toutes à l'achat ou en financement sur 24 mois.
+ * Commandeur. Toutes à l'achat ou en financement (durée et taux dans `offre-box.json`).
  *
  * Deux calculs, parce qu'ils ne répondent pas à la même question :
  *   - `devisParBox(fiche)` : sur la fiche d'un agent, une ligne par installation — tient-il
@@ -17,12 +17,12 @@
  *
  * Aucune machine n'est supposée infinie : les agents se placent sur la machine par ordre
  * d'économie décroissante, tant que `tientSur` le permet, et les autres restent en API —
- * le devis le dit agent par agent. Tous les prix de `offre-box.json` sont provisoires tant
- * que max ne les a pas donnés.
+ * le devis le dit agent par agent. Prix et machines viennent du catalogue matériel de max
+ * (25/09/2026).
  */
 import offreJson from './offre-box.json' with { type: 'json' };
 import tarifs from './tarifs-api.json' with { type: 'json' };
-import { MACHINES, tientSur, type Machine } from './calculer.ts';
+import { tientSur, type Machine } from './calculer.ts';
 import { coutApiMensuel, type PaquetEco } from './economie.ts';
 import { INTENSITE_DEFAUT, REPARTITIONS, REPARTITION_DEFAUT, type Intensite, type Repartition } from './intensite.ts';
 
@@ -30,7 +30,10 @@ export type RoleOffre = 'aucune' | 'commande' | 'puissance';
 export interface OffreBox {
   id: string; nom: string; role: RoleOffre; phrase: string; specifications?: string;
   prixAchat: number; aConfirmer: boolean; source?: string; lueLe?: string;
-  capaciteDe: string | null; posteDe?: string; avecCommandeur: boolean;
+  /** Catalogue columns copied as they are, for the shop: cost, price incl. VAT, lease and subscription per month. */
+  catalogueId?: string; coutHT?: number; prixTTC?: number; leasingMensuelHT?: number; abonnementMensuel?: number;
+  /** The machine agents are placed on. Kept out of machines.json, whose survey backs the 3x rule. */
+  machine: Machine | null; avecCommandeur: boolean;
 }
 
 export const OFFRES: OffreBox[] = offreJson.offres as OffreBox[];
@@ -44,12 +47,9 @@ export function offre(id: string): OffreBox {
   return o;
 }
 
-/** La machine du relevé dont l'offre emprunte la capacité, ou rien pour une offre sans puissance. */
+/** The machine agents run on for this offer, or nothing for an offer without power. */
 export function machineDe(o: OffreBox): Machine | undefined {
-  if (!o.capaciteDe) return undefined;
-  const m = MACHINES.find((x) => x.id === o.capaciteDe);
-  if (!m) throw new Error(`${o.id} emprunte la capacité de ${o.capaciteDe}, absent de machines.json`);
-  return m;
+  return o.machine ?? undefined;
 }
 
 /** Mensualité d'un prix financé sur `FINANCEMENT.mois`, au taux annuel du fichier (annuité constante). */
@@ -83,7 +83,7 @@ export interface LigneDevis {
   coutAgent: number;
   apiSeule: number;
   economie: number;
-  /** Mensualité (24 mois) et électricité de l'installation entière. */
+  /** Mensualité (durée du financement) et électricité de l'installation entière. */
   mensualite: number; electricite: number;
   /** Vrai si l'économie de cet agent seul couvre la mensualité et l'électricité. */
   rembourseSeul: boolean;
@@ -166,7 +166,7 @@ export function devisPack(
 
 /**
  * L'installation à conseiller pour une équipe : la moins chère sur toute la durée du
- * financement puis autant après (48 mois), parce qu'une machine se garde au-delà de ses
+ * financement puis autant après (72 mois à 36 mois de financement), parce qu'une machine se garde au-delà de ses
  * mensualités. À coût égal, la plus petite. « Sans machine » est une réponse possible, et
  * c'est la bonne pour une équipe peu sollicitée (règle de max du 24/09).
  */
