@@ -47,6 +47,28 @@ jobs:
         run: npm install
         working-directory: desktop
 
+      # Signature des installeurs par Azure Artifact Signing, sur une étiquette
+      # seulement et quand les secrets et variables AZURE_* / IAGENT_SIGNATURE_*
+      # sont posés (voir desktop/SIGNATURE-WINDOWS.md). Sans eux, rien ne
+      # s'installe et la construction reste non signée.
+      - name: Install signing tool
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          IAGENT_SIGNATURE_POINT: ${{ vars.IAGENT_SIGNATURE_POINT }}
+          IAGENT_SIGNATURE_COMPTE: ${{ vars.IAGENT_SIGNATURE_COMPTE }}
+          IAGENT_SIGNATURE_PROFIL: ${{ vars.IAGENT_SIGNATURE_PROFIL }}
+        run: |
+          if node signature-windows.mjs actif; then
+            cargo install artifact-signing-cli --locked
+          else
+            echo "Signature Windows non configurée : installeurs non signés."
+          fi
+        working-directory: desktop
+
       # Construit l'interface puis empaquette : tauri build enchaîne lui-même
       # le build Vite via beforeBuildCommand.
       #
@@ -63,10 +85,17 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ startsWith(github.ref, 'refs/tags/') && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
           IAGENT_MAJ_CLE_PUBLIQUE: ${{ vars.IAGENT_MAJ_CLE_PUBLIQUE }}
           IAGENT_MAJ_ADRESSE: ${{ vars.IAGENT_MAJ_ADRESSE }}
+          AZURE_CLIENT_ID: ${{ startsWith(github.ref, 'refs/tags/') && secrets.AZURE_CLIENT_ID || '' }}
+          AZURE_CLIENT_SECRET: ${{ startsWith(github.ref, 'refs/tags/') && secrets.AZURE_CLIENT_SECRET || '' }}
+          AZURE_TENANT_ID: ${{ startsWith(github.ref, 'refs/tags/') && secrets.AZURE_TENANT_ID || '' }}
+          IAGENT_SIGNATURE_POINT: ${{ vars.IAGENT_SIGNATURE_POINT }}
+          IAGENT_SIGNATURE_COMPTE: ${{ vars.IAGENT_SIGNATURE_COMPTE }}
+          IAGENT_SIGNATURE_PROFIL: ${{ vars.IAGENT_SIGNATURE_PROFIL }}
         run: |
           CONF=$(node version-signee.mjs config)
+          CONF=$(node signature-windows.mjs config "$CONF")
           if [ -n "$CONF" ]; then
-            echo "Version signée pour les postes : $CONF"
+            echo "Réglages de construction : $CONF"
             npm run build -- --config "$CONF"
             node version-signee.mjs manifeste
           else

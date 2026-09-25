@@ -10,6 +10,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { lireReglages, configuration, manifeste, nomInstalleur } from './version-signee.mjs';
+import { lireSignature, fusionner } from './signature-windows.mjs';
 
 let fautes = 0;
 function verifier(condition: boolean, quoi: string) {
@@ -91,6 +92,46 @@ verifier(
 verifier(tauri.bundle.targets.includes('nsis'), "l'installeur NSIS est construit");
 const capacites = readFileSync(new URL('./src-tauri/capabilities/default.json', import.meta.url), 'utf8');
 verifier(!capacites.includes('updater'), "l'écran ne peut ni chercher ni installer : seul le cœur décide");
+
+// Signature des installeurs Windows (Azure Artifact Signing).
+const signature = {
+  GITHUB_REF: 'refs/tags/v0.2.1',
+  AZURE_CLIENT_ID: 'id',
+  AZURE_CLIENT_SECRET: 'secret',
+  AZURE_TENANT_ID: 'tenant',
+  IAGENT_SIGNATURE_POINT: 'https://weu.codesigning.azure.net/',
+  IAGENT_SIGNATURE_COMPTE: 'iagent-signature',
+  IAGENT_SIGNATURE_PROFIL: 'iagent-public',
+};
+verifier(lireSignature({}) === null, 'sans réglage de signature, installeurs non signés comme avant');
+verifier(
+  lireSignature({ ...signature, GITHUB_REF: 'refs/pull/30/merge' }) === null,
+  'une PR ne consomme pas le quota de signatures',
+);
+const { AZURE_CLIENT_SECRET: _s, ...sansSecret } = signature;
+verifier(
+  leve(() => lireSignature(sansSecret)).includes('AZURE_CLIENT_SECRET'),
+  'une signature à moitié configurée échoue en nommant ce qui manque',
+);
+verifier(
+  leve(() => lireSignature({ ...signature, IAGENT_SIGNATURE_POINT: 'http://weu.codesigning.azure.net' })) !== '',
+  "le point de terminaison n'est accepté qu'en https chez Azure",
+);
+verifier(
+  leve(() => lireSignature({ ...signature, IAGENT_SIGNATURE_PROFIL: 'x; rm -rf /' })) !== '',
+  'un nom de compte ou de profil ne peut rien glisser dans la ligne de commande',
+);
+const signee = fusionner(configuration(lireReglages(complet)!), lireSignature(signature)!);
+verifier(
+  signee.bundle.windows.signCommand ===
+    'artifact-signing-cli -e https://weu.codesigning.azure.net -a iagent-signature -c iagent-public -d iAgent %1',
+  'la commande de signature suit la syntaxe relevée chez Tauri',
+);
+verifier(
+  signee.bundle.createUpdaterArtifacts === true && signee.plugins.updater.endpoints.length === 1,
+  'signer les installeurs ne perd rien des réglages de mise à jour',
+);
+verifier(tauri.bundle.windows?.signCommand === undefined, 'aucune commande de signature écrite au dépôt');
 
 if (fautes > 0) {
   console.error(`check-mise-a-jour : ${fautes} faute(s)`);
