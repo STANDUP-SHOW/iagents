@@ -13,17 +13,31 @@ côté dans `dimensionnement/offre-box.json` pour la boutique.
 
 ## Les six installations
 
-| Installation | Machine (ligne du catalogue) | Fait tourner des agents | Prix HT | Mensualité HT |
-|---|---|---|---|---|
-| Sans machine | — | non | 0 € | — |
-| Box Commandeur | S1 Minisforum MS-01, i9-12900H, 32 Go | **non** | 1 586,25 € | 48,98 € |
-| Box Max | M1 GMKtec EVO-X2, Ryzen AI Max+ 395, 64 Go unifiés | oui | 2 828,11 € | 87,32 € |
-| Power N1 + Box Commandeur | B2 MS-02 Ultra + RTX PRO 4000 SFF 24 Go | oui | 5 983 € + 1 586,25 € | 233,72 € |
-| Power N2 + Box Commandeur | N2a MSI EdgeXpert GB10, 128 Go unifiés | oui | 7 196,08 € + 1 586,25 € | 271,17 € |
-| Power N3 + Box Commandeur | B4 Ryzen 9 9950X + RTX PRO 6000 Max-Q 96 Go | oui | 19 618,54 € + 1 586,25 € | 654,74 € |
+Réponses de max du 25/09 à 18h19 : **24 mois**, **toujours séparer les prix**,
+l'abonnement de la box **en plus de l'agent**, **58 Go** utilisables sur la Box Max.
 
-Financement : 36 mois à 7 % (onglet « Hypothèses »). Le banc retrouve au centime les sept
-mensualités de la colonne « Leasing HT/mois » du catalogue.
+| Installation | Lignes de prix (catalogue) | Fait tourner des agents | Prix HT | Mensualité 24 mois | Abonnement |
+|---|---|---|---|---|---|
+| Sans machine | — | non | 0 € | — | — |
+| Box Commandeur | S1 Minisforum MS-01, i9-12900H, 32 Go | **non** | 1 586,25 € | 71,02 € | 49 € |
+| Box Max | M1 GMKtec EVO-X2, Ryzen AI Max+ 395, 64 Go unifiés | oui | 2 828,11 € | 126,62 € | 129 € |
+| Power N1 | B2 MS-02 Ultra + RTX PRO 4000 SFF 24 Go | oui | 5 983 € | 267,87 € | 199 € |
+| | + Box Commandeur livrée avec | | 1 586,25 € | 71,02 € | 49 € |
+| Power N2 | N2a MSI EdgeXpert GB10, 128 Go unifiés | oui | 7 196,08 € | 322,19 € | 299 € |
+| | + Box Commandeur livrée avec | | 1 586,25 € | 71,02 € | 49 € |
+| Power N3 | B4 Ryzen 9 9950X + RTX PRO 6000 Max-Q 96 Go | oui | 19 618,54 € | 878,37 € | 499 € |
+| | + Box Commandeur livrée avec | | 1 586,25 € | 71,02 € | 49 € |
+
+`coutInstallation(offre).lignes` rend une ligne par box, chacune avec son prix, sa
+mensualité et son abonnement : la boutique affiche les lignes, jamais un total fondu.
+Les totaux servent seulement à la comparaison avec l'API. Le prix des agents (9,90 €/mois
+chacun) s'ajoute par-dessus et ne change pas la comparaison : il est le même sur toutes
+les installations.
+
+Financement : **24 mois** (max). Le catalogue ne donne un taux que pour 36 mois (7 %) ;
+7 % est repris pour 24 mois, marqué `aConfirmer` jusqu'au taux de l'organisme retenu. Le
+banc retrouve au centime, à 36 mois, les sept mensualités de la colonne « Leasing HT/mois »
+du catalogue ; ce n'est **pas** la mensualité affichée.
 
 Deux lignes du catalogue n'entrent dans aucune des six installations et ne servent pas au
 calcul (`autresLignesDuCatalogue`) : la BOX Ryzen AI 9 64 Go (A2, 1 946,96 € HT) et la Box
@@ -51,17 +65,18 @@ Capacité de calcul = bande passante mémoire / 504 Go/s, comme dans le relevé 
   facture de la même équipe tout par API, et nombre de mois pour que les économies paient
   la machine.
 - **Le conseil** (`conseillerBox`) : l'installation la moins chère sur deux fois la durée
-  du financement (36 mois de mensualités, 36 après). « Sans machine » est une réponse
+  du financement (24 mois de mensualités, 24 après, abonnements compris). « Sans machine » est une réponse
   possible, et c'est la bonne pour une équipe peu sollicitée (décision de max du 24/09).
   La Box Commandeur seule n'est jamais la moins chère : elle n'ajoute que du coût, c'est un
   confort de travail.
 
-Exemples aux prix du catalogue : la secrétaire administrative (AG-0001) coûte
-287,92 €/mois en API seule et 57,58 €/mois de jetons sur la Box Max, dont la mensualité est
-de 87,32 € HT : elle rembourse seule la Box Max, aucune machine de puissance. Les cinq
-agents les plus sollicités : 6 920 €/mois tout par API contre 1 667 €/mois sur la Power N1
-(mensualité comprise). Trois agents pris au hasard dans le catalogue : Box Max conseillée,
-278 €/mois contre 526 € en API.
+Exemples aux prix du catalogue, sur 24 mois, abonnement compris : la secrétaire
+administrative (AG-0001) coûte 287,92 €/mois en API seule ; sur la Box Max, 57,58 € de
+jetons, mais la box coûte 126,62 € de mensualité, 129 € d'abonnement et 23,40 €
+d'électricité. **Seule, elle ne rembourse donc plus la Box Max** (elle la remboursait
+avant l'abonnement). Trois agents pris au hasard : Box Max conseillée, 446 €/mois contre
+526 € en API. Dix : Box Max, 1 016 € contre 1 343 €. Les cinq agents les plus sollicités :
+2 020 €/mois sur la Power N1 contre 6 920 € tout par API.
 
 `dimensionnement/check-offre-box.ts` (dans `npm run controle`) tient ces règles : aucun
 agent ne tourne sans machine ni sur la Box Commandeur, un prix confirmé porte sa source
@@ -80,20 +95,24 @@ de la Box Max, trop lente pour les agents les plus sollicités. Le banc vérifie
 que la Power N3 tient tout ce que tiennent les autres, et affiche les deux écarts en
 « attention ».
 
-**La Box Max annonce 48 Go pour l'IA, la règle du dépôt en compte 58.** La règle
-(`reserveMemoireUnifiee` de `paliers-modeles.json`) laisse 6 Go au système sur une
-mémoire unifiée ; le catalogue en réserve 16. Le banc impose la règle du dépôt, qui vaut
-pour toutes les machines ; si 48 est le vrai chiffre (sous Windows, la part graphique se
-fixe dans le BIOS), c'est la règle qu'il faut changer, pas la ligne.
+**La Box Max : 58 Go utilisables par l'IA** (max, 25/09 18h19), comme le dit la règle du
+dépôt (RAM moins `reserveMemoireUnifiee`), et non les 48 Go de la colonne « Mémoire IA »
+du catalogue.
+
+**L'abonnement pèse plus que la machine sur la décision.** Pendant les 24 mois, la Box
+Max coûte 279 €/mois tout compris (mensualité, abonnement, électricité), dont 129 €
+d'abonnement qui continuent après. Un agent seul ne la rembourse plus ; il faut une
+petite équipe.
 
 ## Ce que la boutique doit changer (pour le fil « Charte néon et tableau de bord »)
 
 1. La section iAgent Box passe de cinq gammes (S à Flotte) à **six installations** :
    Sans machine, Box Commandeur, Box Max, machines de puissance 1, 2 et 3. Chaque
    machine de puissance s'affiche **avec** sa Box Commandeur et le prix des deux.
-2. Chaque machine affiche son prix d'achat **et** sa mensualité sur la durée du
-   financement (`coutInstallation(offre).mensualite`, 36 mois à 7 % aujourd'hui), avec la
-   mention « prix provisoire » si `aConfirmer` redevient vrai. Les prix sont HT.
+2. Chaque box est une ligne à part (`coutInstallation(offre).lignes`) : prix HT,
+   mensualité sur 24 mois et abonnement mensuel. Une Power montre deux lignes, la sienne
+   et celle de la Box Commandeur livrée avec. Jamais un total fondu. « Taux à confirmer »
+   à côté de la mensualité tant que `mensualiteAConfirmer` est vrai.
 3. Le choix de l'installation vient **avant** le catalogue d'agents et se garde pendant
    la navigation.
 4. Sur la fiche détaillée d'un agent, un tableau lu dans `devisParBox(fiche)` : une

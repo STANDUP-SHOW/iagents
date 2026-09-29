@@ -36,16 +36,24 @@ for (const o of OFFRES) {
   const inst = coutInstallation(o);
   if (o.aConfirmer) assert.ok(inst.aConfirmer && devisParBox(lire('AG-0001')).find((l) => l.offre === o.id)!.aConfirmer, `${o.id} : un prix provisoire doit le dire sur le devis`);
 }
-assert.ok(coutInstallation(OFFRES.find((o) => o.id === 'puissance-1')!).prixAchat > OFFRES.find((o) => o.id === 'puissance-1')!.prixAchat, 'le commandeur livre avec la machine est compte');
-ok('un prix confirme porte sa source et sa date ; un prix provisoire est marque sur chaque devis ; le commandeur livre est compte');
+// Prices stay apart (max, 25/09): a power machine is two lines, its own and the commander's.
+const p1 = coutInstallation(OFFRES.find((o) => o.id === 'puissance-1')!);
+assert.deepEqual(p1.lignes.map((l) => l.id), ['puissance-1', COMMANDEUR.id], 'machine de puissance : sa ligne puis celle du commandeur');
+assert.equal(p1.prixAchat, p1.lignes[0].prixAchat + p1.lignes[1].prixAchat);
+assert.ok(p1.lignes.every((l) => l.abonnement > 0), 'chaque box porte son abonnement');
+assert.deepEqual(coutInstallation(OFFRES.find((o) => o.id === 'aucune')!).lignes, []);
+ok('un prix confirme porte sa source et sa date ; une machine de puissance et son commandeur sont deux lignes, chacune avec son abonnement');
 
 // 4. Financing: 0 % over 24 months is the price divided by 24; a positive rate always costs more.
 // The file's rate and term must give back, to the cent, the lease column of max's catalogue.
 assert.equal(mensualite(2400, 0, 24), 100);
 assert.ok(mensualite(2400, 0.06, 24) > 100 && Math.abs(mensualite(2400, 0.06, 24) - 106.37) < 0.01, `a 6 % : ${mensualite(2400, 0.06, 24)}`);
+// The catalogue's lease column is at ITS term (36 months); the shop's term is max's (24 months).
+const cat = offreJson.financement.catalogue;
 const lignes = [...OFFRES, ...offreJson.autresLignesDuCatalogue.lignes] as { nom: string; prixAchat: number; leasingMensuelHT?: number }[];
-for (const l of lignes.filter((l) => l.leasingMensuelHT)) assert.ok(Math.abs(mensualite(l.prixAchat) - l.leasingMensuelHT!) < 0.01, `${l.nom} : ${mensualite(l.prixAchat).toFixed(2)} calcule, ${l.leasingMensuelHT} au catalogue`);
-ok(`financement : 2 400 € sur 24 mois = 100 €/mois a 0 % ; ${lignes.filter((l) => l.leasingMensuelHT).length} mensualites du catalogue retrouvees au centime`);
+for (const l of lignes.filter((l) => l.leasingMensuelHT)) assert.ok(Math.abs(mensualite(l.prixAchat, cat.tauxAnnuel, cat.mois) - l.leasingMensuelHT!) < 0.01, `${l.nom} : ${mensualite(l.prixAchat, cat.tauxAnnuel, cat.mois).toFixed(2)} calcule, ${l.leasingMensuelHT} au catalogue`);
+assert.equal(offreJson.financement.mois, 24, 'max, 25/09 : 24 mois');
+ok(`financement : 2 400 € sur 24 mois = 100 €/mois a 0 % ; ${lignes.filter((l) => l.leasingMensuelHT).length} mensualites du catalogue (36 mois) retrouvees au centime ; la boutique finance sur 24`);
 
 // 5. The commander is an extension of the desk: no agent ever runs on it, nor without a machine.
 for (const p of tous) for (const l of devisParBox(p).filter((l) => l.offre === 'aucune' || l.offre === COMMANDEUR.id)) {
@@ -71,8 +79,8 @@ for (let i = 1; i < 3; i++) {
 const sec = devisParBox(lire('AG-0001'));
 const api = coutApiMensuel(lire('AG-0001')).total;
 for (const l of sec.filter((l) => l.enLocal)) assert.equal(Math.round(l.coutAgent * 100), Math.round(api * 0.2 * 100));
-for (const l of sec) assert.equal(l.rembourseSeul, l.mensualite + l.electricite > 0 && l.economie >= l.mensualite + l.electricite);
-ok(`secretaire : ${sec[0].apiSeule} €/mois en API, ${sec.find((l) => l.offre === 'box-max')!.coutAgent} €/mois sur la Box Max ; « rembourse seul » = economie >= mensualite + electricite`);
+for (const l of sec) assert.equal(l.rembourseSeul, l.mensualite + l.abonnement + l.electricite > 0 && l.economie >= l.mensualite + l.abonnement + l.electricite);
+ok(`secretaire : ${sec[0].apiSeule} €/mois en API, ${sec.find((l) => l.offre === 'box-max')!.coutAgent} €/mois sur la Box Max ; « rembourse seul » = economie >= mensualite + abonnement + electricite`);
 
 // 8. A team: never more agents placed than the machine holds; without a machine the total is the API bill.
 const equipe = tous.filter((_, i) => i % 50 === 0);

@@ -61,16 +61,32 @@ export function mensualite(prix: number, tauxAnnuel: number = FINANCEMENT.tauxAn
 const watts = (gamme: string) => (tarifs.electricite.wattsParGamme as Record<string, number>)[gamme] ?? 100;
 const electriciteMensuelle = (w: number) => (w * 24 * JOURS / 1000) * tarifs.electricite.prixKwhEur;
 
-/** Ce que l'installation coûte par mois, sans aucun agent : prix d'achat (commandeur compris) et électricité. */
+/** One priced item of an installation. Prices are always shown apart (max, 25/09/2026): the
+ * commander delivered with a power machine is its own line, never folded into the machine's price. */
+export interface LigneInstallation { id: string; nom: string; prixAchat: number; mensualite: number; abonnement: number }
+
+/**
+ * What the installation costs, without any agent: one line per box (machine, then the commander
+ * delivered with it), each with its price, its monthly payment and its subscription, which comes
+ * ON TOP of the agents' own price (max, 25/09/2026). The totals are what the comparison with the
+ * API uses; the shop shows the lines. `mensualiteAConfirmer` is the financing rate, not the prices.
+ */
 export function coutInstallation(o: OffreBox) {
-  const prixAchat = o.prixAchat + (o.avecCommandeur ? COMMANDEUR.prixAchat : 0);
+  const boxes = o.prixAchat > 0 ? [o, ...(o.avecCommandeur ? [COMMANDEUR] : [])] : [];
+  const lignes: LigneInstallation[] = boxes.map((b) => ({
+    id: b.id, nom: b.nom, prixAchat: b.prixAchat, mensualite: mensualite(b.prixAchat), abonnement: b.abonnementMensuel ?? 0,
+  }));
+  const somme = (k: 'prixAchat' | 'mensualite' | 'abonnement') => lignes.reduce((t, l) => t + l[k], 0);
   const m = machineDe(o);
   const w = (m ? watts(m.gamme) : 0) + (o.role === 'commande' || o.avecCommandeur ? watts('poste') : 0);
   return {
-    prixAchat,
-    mensualite: mensualite(prixAchat),
+    lignes,
+    prixAchat: somme('prixAchat'),
+    mensualite: somme('mensualite'),
+    abonnement: somme('abonnement'),
     electricite: electriciteMensuelle(w),
-    aConfirmer: o.aConfirmer || (o.avecCommandeur && COMMANDEUR.aConfirmer) || (prixAchat > 0 && FINANCEMENT.aConfirmer),
+    aConfirmer: boxes.some((b) => b.aConfirmer),
+    mensualiteAConfirmer: boxes.length > 0 && FINANCEMENT.aConfirmer,
   };
 }
 
@@ -83,9 +99,9 @@ export interface LigneDevis {
   coutAgent: number;
   apiSeule: number;
   economie: number;
-  /** Mensualité (durée du financement) et électricité de l'installation entière. */
-  mensualite: number; electricite: number;
-  /** Vrai si l'économie de cet agent seul couvre la mensualité et l'électricité. */
+  /** Mensualité (durée du financement), abonnement des boxes et électricité de l'installation entière. */
+  mensualite: number; abonnement: number; electricite: number;
+  /** Vrai si l'économie de cet agent seul couvre la mensualité, l'abonnement et l'électricité. */
   rembourseSeul: boolean;
   motif: string;
 }
@@ -102,7 +118,7 @@ export function devisParBox(
     const enLocal = !!m && tientSur(m, [paquet]);
     const coutAgent = enLocal ? apiSeule * REPARTITIONS[repartition].partApi : apiSeule;
     const economie = apiSeule - coutAgent;
-    const fixe = inst.mensualite + inst.electricite;
+    const fixe = inst.mensualite + inst.abonnement + inst.electricite;
     const motif = !m
       ? o.role === 'aucune' ? "Tout par API." : "La Box Commandeur ne fait pas tourner d'agent : celui-ci travaille par API."
       : enLocal ? `Tourne sur ${o.nom} ; ${Math.round(REPARTITIONS[repartition].partApi * 100)} % reste par API.`
@@ -110,7 +126,7 @@ export function devisParBox(
     return {
       offre: o.id, nom: o.nom, aConfirmer: inst.aConfirmer, enLocal,
       coutAgent: r(coutAgent), apiSeule: r(apiSeule), economie: r(economie),
-      mensualite: r(inst.mensualite), electricite: r(inst.electricite),
+      mensualite: r(inst.mensualite), abonnement: r(inst.abonnement), electricite: r(inst.electricite),
       rembourseSeul: fixe > 0 && economie >= fixe,
       motif,
     };
@@ -120,7 +136,7 @@ export function devisParBox(
 export interface DevisPack {
   offre: string; nom: string; aConfirmer: boolean;
   enLocal: string[]; enApi: string[];
-  mensualite: number; electricite: number; api: number;
+  mensualite: number; abonnement: number; electricite: number; api: number;
   /** Total par mois pendant le financement, puis une fois la machine payée. */
   totalPendant: number; totalApres: number;
   /** Ce que coûterait la même équipe tout par API. */
@@ -153,12 +169,12 @@ export function devisPack(
     if (m && tientSur(m, [...places, p])) { places.push(p); enLocal.push(p.id); api += c * partApi; }
     else { enApi.push(p.id); api += c; }
   }
-  const economieMensuelle = toutApi - api - inst.electricite;
+  const economieMensuelle = toutApi - api - inst.electricite - inst.abonnement;
   return {
     offre: o.id, nom: o.nom, aConfirmer: inst.aConfirmer, enLocal, enApi,
-    mensualite: r(inst.mensualite), electricite: r(inst.electricite), api: r(api),
-    totalPendant: r(inst.mensualite + inst.electricite + api),
-    totalApres: r(inst.electricite + api),
+    mensualite: r(inst.mensualite), abonnement: r(inst.abonnement), electricite: r(inst.electricite), api: r(api),
+    totalPendant: r(inst.mensualite + inst.abonnement + inst.electricite + api),
+    totalApres: r(inst.abonnement + inst.electricite + api),
     toutApi: r(toutApi),
     moisPourRembourser: inst.prixAchat === 0 ? 0 : economieMensuelle > 0 ? Math.ceil(inst.prixAchat / economieMensuelle) : Infinity,
   };
@@ -166,7 +182,7 @@ export function devisPack(
 
 /**
  * L'installation à conseiller pour une équipe : la moins chère sur toute la durée du
- * financement puis autant après (72 mois à 36 mois de financement), parce qu'une machine se garde au-delà de ses
+ * financement puis autant après (48 mois à 24 mois de financement), parce qu'une machine se garde au-delà de ses
  * mensualités. À coût égal, la plus petite. « Sans machine » est une réponse possible, et
  * c'est la bonne pour une équipe peu sollicitée (règle de max du 24/09).
  */
