@@ -16,14 +16,20 @@ export function CarteInstallation({ o, choisie, onChoisir, compact = false }) {
         {cout.prixAchat === 0 ? (
           <p className="text-sm text-nuit-200">Aucun achat : vous payez vos agents à l'usage.</p>
         ) : (
-          <>
-            <p className="text-2xl font-bold text-neon-300">
-              {euros(cout.mensualite)}<span className="text-sm text-nuit-300 font-normal"> HT / mois sur {FINANCEMENT.mois} mois</span>
-            </p>
-            <p className="text-sm text-nuit-300">
-              ou {euros(cout.prixAchat)} HT à l'achat{o.avecCommandeur && ', Box Commandeur comprise'}
-            </p>
-          </>
+          <div className="space-y-2">
+            {cout.lignes.map((l) => (
+              <div key={l.id} className="rounded-lg bg-nuit-900 border border-nuit-700 p-2">
+                {cout.lignes.length > 1 && <p className="text-xs text-rose-300 font-semibold">{l.nom}</p>}
+                <p className="text-lg font-bold text-neon-300">
+                  {euros(l.mensualite)}<span className="text-xs text-nuit-300 font-normal"> HT / mois sur {FINANCEMENT.mois} mois</span>
+                </p>
+                <p className="text-xs text-nuit-300">ou {euros(l.prixAchat)} HT à l'achat</p>
+                <p className="text-xs text-nuit-200">Abonnement de la box : {euros(l.abonnement)} / mois</p>
+              </div>
+            ))}
+            <p className="text-xs text-nuit-400">L'abonnement de la box s'ajoute à celui de chaque agent.</p>
+            {cout.mensualiteAConfirmer && <p className="text-xs text-braise-300">Taux du financement à confirmer</p>}
+          </div>
         )}
         {cout.aConfirmer && <p className="text-xs text-braise-300 mt-1">Prix provisoire</p>}
       </div>

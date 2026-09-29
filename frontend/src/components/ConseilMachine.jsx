@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { FINANCEMENT } from '../../../dimensionnement/offre-box.ts';
-import { conseilPour, euros, ficheDe } from '../data/offres.js';
+import { conseilPour, euros, ficheDe, installationDe } from '../data/offres.js';
 
 const PROVISOIRE = 'prix provisoire';
 
@@ -14,6 +14,7 @@ export default function ConseilMachine({ ids, compact = false }) {
   if (!avis) return <p className="text-sm text-nuit-300">Cochez au moins un agent pour voir l'installation conseillée.</p>;
   const { conseil: c } = avis;
   const sansMachine = c.offre === 'aucune';
+  const { cout } = installationDe(c.offre);
   return (
     <div className="text-sm text-nuit-200 space-y-1">
       <p>
@@ -25,9 +26,20 @@ export default function ConseilMachine({ ids, compact = false }) {
       ) : (
         <>
           <p>
-            {euros(c.totalPendant)} HT par mois pendant les {FINANCEMENT.mois} mois de financement, puis {euros(c.totalApres)} par mois,
+            Pour comparer : {euros(c.totalPendant)} par mois au total pendant les {FINANCEMENT.mois} mois de financement, puis {euros(c.totalApres)} par mois,
             contre <span className="text-rose-300">{euros(c.toutApi)}</span> tout par API.
           </p>
+          {!compact && (
+            <ul className="text-xs text-nuit-300 space-y-0.5">
+              {cout.lignes.map((b) => (
+                <li key={b.id}>{b.nom} : {euros(b.mensualite)} HT par mois pendant {FINANCEMENT.mois} mois, abonnement {euros(b.abonnement)} par mois</li>
+              ))}
+              <li>Électricité : {euros(c.electricite)} par mois</li>
+              <li>Part restée par API : {euros(c.api)} par mois</li>
+              <li>Plus l'abonnement de chaque agent</li>
+            </ul>
+          )}
+          {cout.mensualiteAConfirmer && <p className="text-xs text-braise-300">Taux du financement à confirmer</p>}
           {!compact && (
             <p className="text-xs text-nuit-400">
               {c.enLocal.length} agent{c.enLocal.length > 1 ? 's' : ''} en local

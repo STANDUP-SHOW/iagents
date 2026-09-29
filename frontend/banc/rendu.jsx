@@ -15,9 +15,9 @@ import FicheList from '../src/components/FicheList.jsx';
 import FicheDetail, { ONGLETS } from '../src/components/FicheDetail.jsx';
 import App, { PAGES, VUES } from '../src/App.jsx';
 import CreezEntreprise from '../src/components/CreezEntreprise.jsx';
-import IAgentBox from '../src/components/IAgentBox.jsx';
+import IAgentBox, { CarteInstallation } from '../src/components/IAgentBox.jsx';
 import PacksEntreprise from '../src/components/PacksEntreprise.jsx';
-import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee, INSTALLATIONS, conseilPour } from '../src/data/offres.js';
+import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee, INSTALLATIONS, conseilPour, euros } from '../src/data/offres.js';
 import { FINANCEMENT } from '../../dimensionnement/offre-box.ts';
 
 let n = 0;
@@ -167,6 +167,18 @@ for (const page of PAGES) {
   const internes = INSTALLATIONS.flatMap((o) => o.autresLignesDuCatalogue ?? []).filter((l) => html.includes(l));
   if (internes.length) echoue(`iAgent Box affiche des lignes internes du catalogue : ${internes.slice(0, 3).join(' ; ')}`);
   else ok('aucune ligne interne du catalogue affichée');
+  // Prices stay apart (max, 25/09): each box its own line with its own subscription,
+  // the lease column of the catalogue (36 months) never shown.
+  for (const o of INSTALLATIONS.filter((x) => x.cout.lignes.length)) {
+    const carte = renderToString(<CarteInstallation o={o} />);
+    const manque = o.cout.lignes.filter((l) => !carte.includes(euros(l.mensualite)) || !carte.includes(euros(l.abonnement)));
+    if (manque.length) echoue(`${o.nom} : ligne sans sa mensualité ou son abonnement (${manque.map((l) => l.nom).join(', ')})`);
+    if (o.avecCommandeur && o.cout.lignes.length !== 2) echoue(`${o.nom} : la Box Commandeur n'a pas sa ligne à part`);
+    const bail = o.leasingMensuelHT && euros(o.leasingMensuelHT);
+    if (bail && carte.includes(bail) && !o.cout.lignes.some((l) => [euros(l.mensualite), euros(l.abonnement)].includes(bail))) echoue(`${o.nom} affiche la mensualité du catalogue sur 36 mois`);
+    if (o.cout.mensualiteAConfirmer && !carte.includes('Taux du financement à confirmer')) echoue(`${o.nom} : taux à confirmer non dit`);
+  }
+  ok('chaque box a sa ligne, sa mensualité et son abonnement, taux à confirmer dit');
   const sans = renderToString(<App installationInitiale={null} />);
   if (!sans.includes("D&#x27;abord, votre installation")) echoue("le catalogue ne demande pas l'installation d'abord");
   else ok("le catalogue demande l'installation d'abord");

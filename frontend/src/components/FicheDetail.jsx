@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import AgentSimulator from './AgentSimulator.jsx';
-import { devisAgent, euros } from '../data/offres.js';
+import { devisAgent, euros, installationDe } from '../data/offres.js';
 import { FINANCEMENT } from '../../../dimensionnement/offre-box.ts';
 import { estimateMonthlyPrice, getRiskProfile, economieDe, tachesAReliretConseillees } from '../data/loader.js';
 
@@ -252,7 +252,18 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'overview'
                 </div>
                 {(() => {
                   const l = devis.find((d) => d.offre === installation);
-                  return l ? <p className="text-xs text-nuit-300 mt-2">{l.motif}{l.mensualite > 0 && ` La machine elle-même : ${euros(l.mensualite)} HT par mois sur ${FINANCEMENT.mois} mois${l.rembourseSeul ? ', que cet agent rembourse à lui seul.' : '.'}`}</p> : null;
+                  if (!l) return null;
+                  const { cout } = installationDe(installation);
+                  return (
+                    <div className="text-xs text-nuit-300 mt-2 space-y-1">
+                      <p>{l.motif}</p>
+                      {cout.lignes.map((b) => (
+                        <p key={b.id}>{b.nom} : {euros(b.mensualite)} HT par mois sur {FINANCEMENT.mois} mois, plus son abonnement de {euros(b.abonnement)} par mois.</p>
+                      ))}
+                      {cout.lignes.length > 0 && <p>{l.rembourseSeul ? 'Cet agent rembourse à lui seul la machine, son abonnement et son électricité.' : "Cet agent seul ne rembourse pas la machine : elle se rentabilise avec plusieurs agents."}</p>}
+                      {cout.mensualiteAConfirmer && <p className="text-braise-300">Taux du financement à confirmer</p>}
+                    </div>
+                  );
                 })()}
                 {devis.some((d) => d.aConfirmer) && <p className="text-xs text-braise-300 mt-1">Certains prix de machines restent à confirmer.</p>}
               </div>
