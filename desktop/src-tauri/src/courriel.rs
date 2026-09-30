@@ -183,12 +183,7 @@ fn horodatage() -> u64 {
 }
 
 fn fichier_envois() -> std::path::PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|exe| exe.parent().map(std::path::Path::to_path_buf))
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("config")
-        .join("courriels-envoyes.json")
+    crate::chemins::pour_ecrire("config/courriels-envoyes.json")
 }
 
 #[tauri::command]
