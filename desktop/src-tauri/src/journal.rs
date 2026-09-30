@@ -11,13 +11,6 @@ pub struct Entree {
     pub raison: String,
 }
 
-fn dossier_ressources() -> PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|exe| exe.parent().map(std::path::Path::to_path_buf))
-        .unwrap_or_else(|| PathBuf::from("."))
-}
-
 /// Le prénom vient de l'interface : sans ce contrôle, il servirait à écrire
 /// n'importe où sur le poste. Partagé avec `mcp.rs`, qui tient son propre
 /// journal — deux fichiers par agent, un seul nettoyage de nom.
@@ -38,7 +31,12 @@ fn nom_de_fichier_sur(prenom: &str) -> Result<String, String> {
 }
 
 fn chemin(prenom: &str) -> Result<PathBuf, String> {
-    Ok(dossier_ressources().join("config").join(nom_de_fichier_sur(prenom)?))
+    // Un journal n'est jamais livré : il n'existe que parce que le client a
+    // reproché quelque chose. Il se lit donc là où il s'écrit.
+    Ok(crate::chemins::pour_ecrire(&format!(
+        "config/{}",
+        nom_de_fichier_sur(prenom)?
+    )))
 }
 
 #[tauri::command]

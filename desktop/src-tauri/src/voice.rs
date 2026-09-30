@@ -64,69 +64,8 @@ impl VoiceState {
     }
 
     fn ouvrir_flux(&self) -> Result<(), String> {
-        let hote = cpal::default_host();
-        let peripherique = hote
-            .default_input_device()
-            .ok_or_else(|| "aucun microphone disponible".to_string())?;
-
-        let config = peripherique
-            .default_input_config()
-            .map_err(|e| format!("configuration du microphone : {}", e))?;
-
-        let taux = config.sample_rate();
-        let canaux = config.channels() as usize;
-        if taux % TAUX_WHISPER != 0 {
-            return Err(format!(
-                "microphone à {} Hz : seuls les multiples de {} Hz sont pris en charge \
-                 (48000 et 16000 couvrent la quasi-totalité des appareils).",
-                taux, TAUX_WHISPER
-            ));
-        }
-        let pas = (taux / TAUX_WHISPER) as usize;
-
-        let tampon = Arc::clone(&self.tampon);
-        let ecoute = Arc::clone(&self.is_listening);
-        let format = config.sample_format();
-        let config: cpal::StreamConfig = config.into();
-
-        let sur_erreur = |e| eprintln!("flux audio : {}", e);
-
-        let flux = match format {
-            SampleFormat::F32 => peripherique.build_input_stream(
-                &config,
-                move |donnees: &[f32], _: &cpal::InputCallbackInfo| {
-                    if !*ecoute.lock().unwrap() {
-                        return;
-                    }
-                    let mut t = tampon.lock().unwrap();
-                    t.extend(reduire(donnees, canaux, pas));
-                },
-                sur_erreur,
-                None,
-            ),
-            SampleFormat::I16 => peripherique.build_input_stream(
-                &config,
-                move |donnees: &[i16], _: &cpal::InputCallbackInfo| {
-                    if !*ecoute.lock().unwrap() {
-                        return;
-                    }
-                    let en_f32: Vec<f32> = donnees
-                        .iter()
-                        .map(|e| *e as f32 / i16::MAX as f32)
-                        .collect();
-                    let mut t = tampon.lock().unwrap();
-                    t.extend(reduire(&en_f32, canaux, pas));
-                },
-                sur_erreur,
-                None,
-            ),
-            autre => return Err(format!("format audio non pris en charge : {:?}", autre)),
-        }
-        .map_err(|e| format!("ouverture du flux audio : {}", e))?;
-
-        flux.play().map_err(|e| format!("démarrage du flux : {}", e))?;
+        let flux = ouvrir_entree(Arc::clone(&self.tampon), Arc::clone(&self.is_listening))?;
         *self.audio_stream.lock().unwrap() = Some(flux);
-
         Ok(())
     }
 
@@ -197,6 +136,126 @@ impl VoiceState {
     }
 }
 
+/// Ouvre le microphone par défaut et verse ce qu'il donne, en mono 16 kHz, dans
+/// `tampon`, tant que `actif` est vrai.
+///
+/// **Le seul endroit du dépôt qui ouvre une entrée audio.** Il y en avait un, lié
+/// à `VoiceState`, donc au modèle d'écoute : atteindre le microphone supposait
+/// 190 Mo téléchargés et une transcription. L'empreinte vocale n'a rien à
+/// transcrire, et elle attendait pourtant ce téléchargement.
+fn ouvrir_entree(
+    tampon: Arc<Mutex<Vec<f32>>>,
+    actif: Arc<Mutex<bool>>,
+) -> Result<Stream, String> {
+    let hote = cpal::default_host();
+    let peripherique = hote
+        .default_input_device()
+        .ok_or_else(|| "aucun microphone disponible".to_string())?;
+
+    let config = peripherique
+        .default_input_config()
+        .map_err(|e| format!("configuration du microphone : {}", e))?;
+
+    let taux = config.sample_rate();
+    let canaux = config.channels() as usize;
+    if taux % TAUX_WHISPER != 0 {
+        return Err(format!(
+            "microphone à {} Hz : seuls les multiples de {} Hz sont pris en charge \
+             (48000 et 16000 couvrent la quasi-totalité des appareils).",
+            taux, TAUX_WHISPER
+        ));
+    }
+    let pas = (taux / TAUX_WHISPER) as usize;
+
+    let format = config.sample_format();
+    let config: cpal::StreamConfig = config.into();
+
+    let sur_erreur = |e| eprintln!("flux audio : {}", e);
+
+    let tampon_f32 = Arc::clone(&tampon);
+    let actif_f32 = Arc::clone(&actif);
+    let flux = match format {
+        SampleFormat::F32 => peripherique.build_input_stream(
+            &config,
+            move |donnees: &[f32], _: &cpal::InputCallbackInfo| {
+                if !*actif_f32.lock().unwrap() {
+                    return;
+                }
+                let mut t = tampon_f32.lock().unwrap();
+                t.extend(reduire(donnees, canaux, pas));
+            },
+            sur_erreur,
+            None,
+        ),
+        SampleFormat::I16 => peripherique.build_input_stream(
+            &config,
+            move |donnees: &[i16], _: &cpal::InputCallbackInfo| {
+                if !*actif.lock().unwrap() {
+                    return;
+                }
+                let en_f32: Vec<f32> = donnees
+                    .iter()
+                    .map(|e| *e as f32 / i16::MAX as f32)
+                    .collect();
+                let mut t = tampon.lock().unwrap();
+                t.extend(reduire(&en_f32, canaux, pas));
+            },
+            sur_erreur,
+            None,
+        ),
+        autre => return Err(format!("format audio non pris en charge : {:?}", autre)),
+    }
+    .map_err(|e| format!("ouverture du flux audio : {}", e))?;
+
+    flux.play().map_err(|e| format!("démarrage du flux : {}", e))?;
+    Ok(flux)
+}
+
+/// Les deux côtés de la capture doivent parler du même taux.
+///
+/// `capturer` rend du 16 kHz parce que c'est ce que veut le modèle d'écoute, et
+/// `voiceprint` découpe ses trames sur `TAUX_EMPREINTE`. Écrits deux fois, les
+/// deux nombres finiraient par différer, et l'empreinte se calculerait sur des
+/// trames décalées — une comparaison qui ne dirait plus rien, sans une erreur.
+/// Vérifié à la compilation plutôt que jamais.
+const _: () = assert!(TAUX_WHISPER == crate::voiceprint::TAUX_EMPREINTE);
+
+/// Capte le microphone pendant `secondes` et rend les échantillons en mono
+/// 16 kHz, sans rien transcrire.
+///
+/// Le flux cpal n'est pas `Send` : il naît et meurt dans cet appel, et seuls les
+/// échantillons en sortent. L'appelant est une commande `async` qui passe par
+/// `spawn_blocking`, sinon l'attente gèlerait l'interface.
+pub fn capturer(secondes: f32) -> Result<Vec<i16>, String> {
+    if !(0.5..=30.0).contains(&secondes) {
+        return Err(format!(
+            "durée d'enregistrement hors bornes : {} s (de 0,5 à 30 s)",
+            secondes
+        ));
+    }
+
+    let tampon = Arc::new(Mutex::new(Vec::new()));
+    let actif = Arc::new(Mutex::new(true));
+    let flux = ouvrir_entree(Arc::clone(&tampon), Arc::clone(&actif))?;
+
+    std::thread::sleep(std::time::Duration::from_secs_f32(secondes));
+    *actif.lock().unwrap() = false;
+    drop(flux);
+
+    let capte = std::mem::take(&mut *tampon.lock().unwrap());
+    if capte.is_empty() {
+        return Err(
+            "le microphone n'a rien donné : vérifiez qu'il est branché et que l'application \
+             a le droit de l'écouter."
+                .to_string(),
+        );
+    }
+    Ok(capte
+        .iter()
+        .map(|v| (v.clamp(-1.0, 1.0) * i16::MAX as f32) as i16)
+        .collect())
+}
+
 /// Ramène un bloc multicanal au mono 16 kHz : moyenne des canaux, puis moyenne
 /// glissante sur `pas` échantillons plutôt qu'une décimation sèche, qui
 /// replierait les aigus sur la voix.
@@ -215,20 +274,13 @@ fn reduire(donnees: &[f32], canaux: usize, pas: usize) -> Vec<f32> {
         .collect()
 }
 
-/// Les ressources se cherchent à côté de l'exécutable, jamais depuis le dossier
-/// courant : une application installée est lancée depuis n'importe où, et un
-/// chemin relatif ne tomberait juste que par hasard.
-fn dossier_ressources() -> std::path::PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|exe| exe.parent().map(std::path::Path::to_path_buf))
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-}
-
 fn ressource(variable: &str, defaut: &str) -> std::path::PathBuf {
     match std::env::var_os(variable) {
         Some(v) => std::path::PathBuf::from(v),
-        None => dossier_ressources().join(defaut),
+        // Ces quatre pièces sont téléchargées au premier lancement, donc sous la
+        // racine inscriptible ; `pour_lire` retombe sur le dossier de
+        // l'exécutable au cas où un installeur viendrait à les livrer.
+        None => crate::chemins::pour_lire(defaut),
     }
 }
 

@@ -65,6 +65,54 @@ par WhatsApp et email.
   lisait. `desktop/src-tauri/src/modele.rs` est maintenant le seul endroit où la
   voie se choisit, et `choisir()` est une fonction pure qu'on éprouve sans rien
   joindre.
+- **Deux racines, et un seul endroit qui dit laquelle**
+  (`desktop/src-tauri/src/chemins.rs`, 25/09/2026). Ce que l'installeur livre se
+  lit à côté de l'exécutable ; ce que le client produit s'écrit sous
+  `app_local_data_dir`. Avant, **tout** passait par le dossier de l'exécutable :
+  sur la 0.2.0 installée par MSI dans `C:\Program Files`, où
+  `BUILTIN\Utilisateurs` n'a que la lecture et où l'application tourne sans
+  élévation, **rien de ce qu'elle écrit ne pouvait s'écrire** — une embauche ne
+  se sauvegardait pas, les quatre pièces de la voix ne se téléchargeaient pas,
+  les journaux n'étaient pas tenus. Et son frère : `Database::new("iagent.db")`,
+  relatif au dossier **courant**, donc la base atterrissait dans le dossier d'où
+  l'application avait été lancée — depuis la fin de l'installeur, les
+  téléchargements ; depuis le menu Démarrer le lendemain, ailleurs, et elle
+  semblait vide. `pour_ecrire` vise l'inscriptible, `pour_lire` regarde ce que le
+  client a écrit **d'abord** et le livré ensuite (l'ordre compte :
+  `installation.json` est livré avec trois agents de démonstration ET réécrit à
+  chaque embauche). `main` pose la racine dans son `setup`, avant toute commande.
+  **Aucune construction ne peut voir ce défaut** : le code compile, les bancs
+  passent, et le poste de développement écrit où il veut puisque son exécutable
+  est dans `target/debug` — ça ne se découvre que sur une vraie installation, et
+  ça s'est découvert par un symptôme lointain (« l'empreinte vocale n'est pas
+  disponible »). D'où `desktop/check-chemins.ts`, vérifié en remettant la faute.
+  **Le remède existait déjà, appliqué à UN endroit** (`navigateur::dossier_profil`
+  posait le profil du navigateur au bon endroit, avec la bonne raison écrite) :
+  une règle écrite une fois et appliquée une fois ne protège que cet endroit.
+  Conséquence à connaître : l'installeur NSIS (`setup.exe`) installe par défaut
+  pour l'utilisateur courant, donc **il marchait par accident** ; le MSI et
+  winget (le pack d'usine) posent pour la machine et tombaient dans le piège.
+- **L'empreinte vocale reconnaît, elle n'autorise rien** (25/09/2026,
+  `voiceprint.rs`). L'écran refusait exprès, et il avait raison deux fois : rien
+  ne captait le microphone hors de la transcription (la capture vivait sur l'état
+  du modèle d'écoute, donc derrière 190 Mo jamais téléchargés — d'où
+  `voice::capturer`), et l'extracteur **ne distinguait pas deux voix**. Il
+  s'appelait « MFCC » sans en être : taux de passage par zéro, énergie,
+  pseudo-centroïde, comparés **trame i contre trame i** avec `1/(1+écart)`, donc
+  tous les scores dans 0,977-0,992. Mesuré : séparation **−0,015**, la meilleure
+  ressemblance du jeu étant une paire de DEUX locuteurs différents. Remplacé par
+  une vraie chaîne cepstrale sans bibliothèque (Hamming 25 ms, FFT 512, 26
+  filtres mel, DCT-II, coefficients 1 à 12 — le 0 est le volume et on le jette) :
+  séparation **+0,130**, le banc rejoue la mesure. La signature est la MOYENNE
+  des trames sonores, donc le client n'a pas à redire la même phrase ; les trames
+  silencieuses sont écartées, sinon la moyenne décrit le silence de la pièce. Le
+  verdict se compare à la cohérence des propres phrases du client — sa voix, son
+  micro — plutôt qu'à un seuil universel inventé ici. **Aucun taux de fausse
+  acceptation n'a été mesuré sur de vraies personnes** (la mesure est faite sur
+  des voix de synthèse) : le score reste une indication affichée, l'écran le dit
+  au client, et les agents répondent à leur prénom. Le son ne traverse pas
+  l'écran : Rust garde les phrases le temps de l'entretien et n'en sort que douze
+  nombres.
 - **La clé d'API du client vit dans le coffre du système, jamais ailleurs**
   (23/09/2026). Elle ne venait que de la variable d'environnement
   `ANTHROPIC_API_KEY` : après une installation par MSI, un client n'avait aucun
@@ -856,11 +904,13 @@ grep -v '^[[:space:]]*\(#\|$\)' desktop/dependances-systeme.txt \
    type Ollama, Playwright pour le navigateur) : parcours minimal installer →
    se connecter → télécharger un agent → une tâche s'exécute → résultat dans le
    dossier → conversation vocale.
-   Fiches, catalogues et configuration partent avec l'installeur
-   (`bundle.resources` de `tauri.conf.json`) et se lisent à la même place à
-   l'exécution ; un test le vérifie plutôt que d'attendre une installation
-   Windows pour découvrir une faute de frappe. `IAGENT_RESSOURCES` déplace
-   cette racine en développement, où l'installeur n'a rien copié.
+   Fiches, catalogues et configuration de démonstration partent avec
+   l'installeur (`bundle.resources` de `tauri.conf.json`) et se lisent à la même
+   place à l'exécution ; un test le vérifie plutôt que d'attendre une
+   installation Windows pour découvrir une faute de frappe. `IAGENT_RESSOURCES`
+   déplace cette racine en développement, où l'installeur n'a rien copié. **Ce
+   que le client écrit ne va PAS là** mais sous la racine inscriptible, et
+   `chemins.rs` est le seul endroit qui tranche : voir la règle des deux racines.
    **Le MSI se construit, et sur Windows** : `build-windows-msi.yml` tourne sur
    `windows-latest` à chaque poussée touchant `desktop/`, et dépose un artefact
    `iagent-desktop-msi` d'environ 9 Mo (constaté le 23/09/2026, run n°246 sur
