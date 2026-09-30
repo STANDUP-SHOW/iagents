@@ -34,8 +34,7 @@ Les totaux servent seulement à la comparaison avec l'API. Le prix des agents (9
 chacun) s'ajoute par-dessus et ne change pas la comparaison : il est le même sur toutes
 les installations.
 
-Financement : **24 mois** (max). Le catalogue ne donne un taux que pour 36 mois (7 %) ;
-7 % est repris pour 24 mois, marqué `aConfirmer` jusqu'au taux de l'organisme retenu. Le
+Financement : **24 mois à 7 %**, confirmés par max le 30/09/2026. Le
 banc retrouve au centime, à 36 mois, les sept mensualités de la colonne « Leasing HT/mois »
 du catalogue ; ce n'est **pas** la mensualité affichée.
 
@@ -111,8 +110,8 @@ petite équipe.
    machine de puissance s'affiche **avec** sa Box Commandeur et le prix des deux.
 2. Chaque box est une ligne à part (`coutInstallation(offre).lignes`) : prix HT,
    mensualité sur 24 mois et abonnement mensuel. Une Power montre deux lignes, la sienne
-   et celle de la Box Commandeur livrée avec. Jamais un total fondu. « Taux à confirmer »
-   à côté de la mensualité tant que `mensualiteAConfirmer` est vrai.
+   et celle de la Box Commandeur livrée avec. Jamais un total fondu. Le taux est confirmé
+   (`mensualiteAConfirmer` faux) : aucune mention « à confirmer ».
 3. Le choix de l'installation vient **avant** le catalogue d'agents et se garde pendant
    la navigation.
 4. Sur la fiche détaillée d'un agent, un tableau lu dans `devisParBox(fiche)` : une

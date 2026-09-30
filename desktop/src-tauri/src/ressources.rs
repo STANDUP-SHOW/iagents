@@ -181,7 +181,10 @@ pub fn chemin_de(r: &Ressource) -> std::path::PathBuf {
             };
         }
     }
-    crate::fiches::dossier_ressources().join(r.chemin)
+    // Les pièces livrées sont à côté de l'exécutable, celles que l'application
+    // télécharge sous la racine inscriptible : `pour_lire` regarde les deux, dans
+    // cet ordre, et la table n'a pas à dire laquelle est laquelle.
+    crate::chemins::pour_lire(r.chemin)
 }
 
 /// Ce qui manque vraiment sur ce poste, dans l'ordre de la table.

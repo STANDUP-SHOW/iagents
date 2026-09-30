@@ -20,7 +20,7 @@ pub fn dossier_ressources() -> PathBuf {
 
 #[tauri::command]
 pub fn lire_installation() -> Result<String, String> {
-    let chemin = dossier_ressources().join("config/installation.json");
+    let chemin = crate::chemins::pour_lire("config/installation.json");
     std::fs::read_to_string(&chemin)
         .map_err(|e| format!("lecture de {} : {}", chemin.display(), e))
 }
@@ -225,11 +225,11 @@ pub fn installation_recevable(contenu: &str) -> Result<(), String> {
 pub fn installation_ecrire(contenu: String) -> Result<String, String> {
     installation_recevable(&contenu)?;
 
-    let chemin = dossier_ressources().join("config").join("installation.json");
-    if let Some(parent) = chemin.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("création de {} : {}", parent.display(), e))?;
-    }
+    // L'équipe du client s'écrit sous la racine inscriptible, jamais à côté de
+    // l'exécutable : sous `C:\Program Files` ce `write` était refusé, et une
+    // embauche ne pouvait pas être sauvegardée.
+    let chemin = crate::chemins::pour_ecrire("config/installation.json");
+    crate::chemins::preparer(&chemin)?;
 
     let provisoire = chemin.with_extension("json.nouveau");
     std::fs::write(&provisoire, contenu.as_bytes())
