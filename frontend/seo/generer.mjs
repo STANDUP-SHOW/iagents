@@ -1,6 +1,7 @@
 // Static pages for search engines, built from the repository's data after
-// `vite build`: one page per job, per activity, per software, and per job ×
-// software the job is qualified on, plus robots.txt and a sitemap index.
+// `vite build`: one page per job, per activity, per software, per job ×
+// software the job is qualified on, and per cross-trade job × activity (level
+// 3, max's choice of 30/09/2026), plus robots.txt and a sitemap index.
 // Every page carries text that is its own (the fiche's sentence about what
 // the agent does in that software), never a template with a name swapped in.
 //
@@ -58,6 +59,14 @@ for (const id of [...cites].sort()) {
 }
 const urlPosteLogiciel = (f, id) => `${urlFiche.get(f.id)}/${urlLogiciel.get(id).split('/').pop()}`;
 
+// Level 3: jobs every business has (office, accounting, HR, sales, purchasing,
+// marketing), each in each activity. Jobs written for one trade ("assistant
+// médical administratif") are left out: in a sawmill they would be nonsense.
+const SECTEURS_TRANSVERSAUX = new Set(['administration', 'comptabilite', 'ressources-humaines', 'commercial', 'achats', 'marketing']);
+const METIER_PROPRE = /immobilier|médical|juridique|cabinet de recrutement/i;
+const transversaux = fiches.filter((f) => SECTEURS_TRANSVERSAUX.has(f.secteur) && !METIER_PROPRE.test(f.nom));
+const urlPosteActivite = (f, a) => `${urlActivite.get(a.id)}/${f.slug}`;
+
 // --- layout ---------------------------------------------------------------
 const STYLE = `
 :root{--fond:#0b0d17;--carte:#141827;--trait:#262c44;--texte:#e6e8f2;--doux:#a3a9c2;--neon:#03f3ff;--rose:#e65090;--braise:#f28e44}
@@ -80,7 +89,7 @@ function page({ url, titre, description, fil = [], corps }) {
 <title>${echapper(titre)} | iAgent</title>
 <meta name="description" content="${echapper(description.slice(0, 300))}">
 <link rel="canonical" href="${SITE}${url}"><link rel="icon" type="image/png" href="/puce-cerveau.png">
-<style>${STYLE}</style></head>
+<link rel="stylesheet" href="/seo.css"></head>
 <body><header><a href="/">iAgent</a></header>
 <main>${filHtml}${corps}
 <a class="cta" href="/">Voir le catalogue des agents</a></main>
@@ -110,7 +119,8 @@ for (const f of fiches) {
 <h2>Ce qu'il fait chaque jour</h2>
 ${liste(f.taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}</li>`))}
 <h2>Les logiciels qu'il sait tenir</h2>
-${liste(quals.map((q) => `<li>${lien(logParId.get(q.logiciel).nom, urlPosteLogiciel(f, q.logiciel))} : ${echapper(q.usage)}</li>`))}`,
+${liste(quals.map((q) => `<li>${lien(logParId.get(q.logiciel).nom, urlPosteLogiciel(f, q.logiciel))} : ${echapper(q.usage)}</li>`))}
+${transversaux.includes(f) ? `<h2>Dans votre activité</h2><p>${activites.map((a) => lien(a.nom, urlPosteActivite(f, a))).join(', ')}</p>` : ''}`,
   }));
 
   for (const q of quals) {
@@ -176,15 +186,46 @@ for (const a of activites) {
 ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
 ${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
 ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}
-${p.logiciels?.length ? `<h2>Les logiciels de l'activité</h2>${liste(p.logiciels.map((id) => `<li>${lien(logParId.get(id).nom, urlLogiciel.get(id))}</li>`))}` : ''}`,
+${p.logiciels?.length ? `<h2>Les logiciels de l'activité</h2>${liste(p.logiciels.map((id) => `<li>${lien(logParId.get(id).nom, urlLogiciel.get(id))}</li>`))}` : ''}
+<h2>Les postes pour votre activité</h2><p>${transversaux.map((f) => lien(f.nom, urlPosteActivite(f, a))).join(', ')}</p>`,
   }));
+}
+
+// Each page joins what the fiche says about the job and what the activity's
+// pack says about the trade: its vocabulary, documents, rules, and the
+// activity's software the job actually works in (same family as one of its
+// tasks), which then goes into the title: "… pour imprimerie, sur Masterprint".
+for (const a of activites) {
+  const p = a.pack ?? {};
+  for (const f of transversaux) {
+    const url = reserver(urlPosteActivite(f, a), `${f.id}×${a.id}`);
+    const familles = new Set(f.taches.flatMap((t) => t.logiciels ?? []));
+    const outils = (p.logiciels ?? []).map((id) => logParId.get(id)).filter((l) => familles.has(l.categorie));
+    const sur = outils.length ? `, sur ${outils.map((l) => l.nom).join(' ou ')}` : '';
+    const activite = a.nom.toLowerCase();
+    pages.set(url, page({
+      url,
+      titre: `${f.nom} pour ${activite}${sur}`,
+      description: `${f.nom} pour ${activite}${sur}. ${f.accroche} ${a.trait}`,
+      fil: [[a.nom, urlActivite.get(a.id)], [f.nom, urlFiche.get(f.id)]],
+      corps: `<h1>Un agent ${echapper(f.nom.toLowerCase())} pour ${echapper(activite)}${echapper(sur)}</h1>
+<p class="accroche">${echapper(f.accroche)}</p>
+<div class="carte"><p>${echapper(a.trait)}</p><p>Il reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p></div>
+<h2>Ce qu'il fait chaque jour</h2>
+${liste(f.taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}</li>`))}
+${outils.length ? `<h2>Les logiciels de votre activité qu'il tient</h2>${liste(outils.map((l) => `<li>${lien(l.nom, urlLogiciel.get(l.id))}${l.editeur ? `, de ${echapper(l.editeur)}` : ''}</li>`))}` : ''}
+${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
+${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
+${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}`,
+    }));
+  }
 }
 
 // --- checks, then write ---------------------------------------------------
 const cibles = new Set(pages.keys());
 for (const [url, html] of pages) {
   for (const [, href] of html.matchAll(/href="(\/[^"]*)"/g)) {
-    if (href === '/' || href === '/puce-cerveau.png') continue;
+    if (href === '/' || href === '/puce-cerveau.png' || href === '/seo.css') continue;
     if (!cibles.has(href)) throw new Error(`${url} renvoie vers ${href}, page non générée`);
   }
 }
@@ -203,8 +244,10 @@ lots.forEach((lot, i) => writeFileSync(join(SORTIE, `sitemap-${i + 1}.xml`),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${lot.map((u) => `<url><loc>${SITE}${u}</loc></url>`).join('\n')}\n</urlset>\n`));
 writeFileSync(join(SORTIE, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${lots.map((_, i) => `<sitemap><loc>${SITE}/sitemap-${i + 1}.xml</loc></sitemap>`).join('\n')}\n</sitemapindex>\n`);
+writeFileSync(join(SORTIE, 'seo.css'), STYLE.trim() + '\n');
 writeFileSync(join(SORTIE, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`);
 
 const compte = (prefixe) => [...pages.keys()].filter((u) => u.startsWith(prefixe)).length;
-const postesLogiciels = [...pages.keys()].filter((u) => u.split('/').length === 4).length;
-console.log(`pages : ${fiches.length} postes, ${compte('/activites/')} activités, ${compte('/logiciels/')} logiciels, ${postesLogiciels} poste × logiciel — ${pages.size} en tout, ${lots.length} sitemap(s)`);
+const postesLogiciels = [...pages.keys()].filter((u) => u.startsWith('/agents/') && u.split('/').length === 4).length;
+const postesActivites = [...pages.keys()].filter((u) => u.startsWith('/activites/') && u.split('/').length === 4).length;
+console.log(`pages : ${fiches.length} postes, ${compte('/activites/') - postesActivites} activités, ${compte('/logiciels/')} logiciels, ${postesLogiciels} poste × logiciel, ${postesActivites} poste × activité — ${pages.size} en tout, ${lots.length} sitemap(s)`);
