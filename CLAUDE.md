@@ -258,8 +258,7 @@ par WhatsApp et email.
   équipe (`devisPack`) et le conseil (`conseillerBox`, sur deux fois la durée du
   financement). **Prix et machines viennent du catalogue matériel de max du
   25/09** (le banc retrouve au centime ses mensualités à 36 mois) ; **le
-  financement est sur 24 mois** (max, 25/09 18h19), taux du catalogue repris à
-  confirmer. **Les prix restent séparés** : une Power et sa Box Commandeur sont
+  financement est sur 24 mois à 7 %** (max, 25/09 et 30/09). **Les prix restent séparés** : une Power et sa Box Commandeur sont
   deux lignes, et l'abonnement de chaque box s'ajoute au prix des agents et
   entre dans la comparaison avec l'API. **Les machines de l'offre ne rejoignent pas `machines.json`** :
   essayé, elles déplaçaient le placement de tout le relevé, donc la règle des
