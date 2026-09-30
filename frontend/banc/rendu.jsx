@@ -178,7 +178,7 @@ for (const page of PAGES) {
     if (bail && carte.includes(bail) && !o.cout.lignes.some((l) => [euros(l.mensualite), euros(l.abonnement)].includes(bail))) echoue(`${o.nom} affiche la mensualité du catalogue sur 36 mois`);
     if (o.cout.mensualiteAConfirmer && !carte.includes('Taux du financement à confirmer')) echoue(`${o.nom} : taux à confirmer non dit`);
   }
-  ok('chaque box a sa ligne, sa mensualité et son abonnement, taux à confirmer dit');
+  ok('chaque box a sa ligne, sa mensualité et son abonnement');
   const sans = renderToString(<App installationInitiale={null} />);
   if (!sans.includes("D&#x27;abord, votre installation")) echoue("le catalogue ne demande pas l'installation d'abord");
   else ok("le catalogue demande l'installation d'abord");
