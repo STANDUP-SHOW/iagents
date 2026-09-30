@@ -2,6 +2,10 @@ import { useState, useMemo } from 'react';
 import Navbar from './components/Navbar.jsx';
 import FicheList from './components/FicheList.jsx';
 import FicheDetail from './components/FicheDetail.jsx';
+import PacksEntreprise from './components/PacksEntreprise.jsx';
+import CreezEntreprise from './components/CreezEntreprise.jsx';
+import IAgentBox, { CarteInstallation } from './components/IAgentBox.jsx';
+import { AGENTS_RESEAUX, PACKS_ENTREPRISE, INSTALLATIONS, ficheDe, installationDe } from './data/offres.js';
 import agents, {
   filterAgents,
   getSectors,
@@ -9,7 +13,39 @@ import agents, {
   groupBySetor
 } from './data/loader.js';
 
-export default function App() {
+// The shop's three pages, and the three ways to browse the catalogue.
+export const PAGES = [
+  { id: 'catalogue', libelle: 'Catalogue' },
+  { id: 'entreprise', libelle: 'Créez votre entreprise' },
+  { id: 'box', libelle: 'iAgent Box' },
+];
+export const VUES = [
+  { id: 'metier', libelle: 'Agents métier' },
+  { id: 'reseaux', libelle: 'Agents réseaux' },
+  { id: 'packs', libelle: 'Packs entreprise' },
+];
+
+// The chosen installation survives page changes and reloads; storage can be
+// missing (private window, SSR bench), so every access is guarded.
+const CLE_INSTALLATION = 'iagent-installation';
+const lireInstallation = () => {
+  try { return installationDe(globalThis.localStorage?.getItem(CLE_INSTALLATION))?.id ?? null; } catch { return null; }
+};
+const ecrireInstallation = (id) => {
+  try { globalThis.localStorage?.setItem(CLE_INSTALLATION, id); } catch { /* per-visitor convenience only */ }
+};
+
+const onglet = (actif) =>
+  `px-4 py-3 rounded-lg text-sm md:text-base font-semibold transition min-h-[44px] ${
+    actif ? 'bg-neon-400/15 text-neon-300 border border-neon-400 shadow-neon' : 'bg-nuit-800 text-nuit-300 border border-nuit-700 hover:bg-nuit-700'
+  }`;
+
+export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier', installationInitiale }) {
+  const [page, setPage] = useState(pageInitiale);
+  const [installation, setInstallationEtat] = useState(() => installationInitiale ?? lireInstallation());
+  const choisirInstallation = (id) => { setInstallationEtat(id); ecrireInstallation(id); };
+  const [vue, setVue] = useState(vueInitiale);
+  const [packOuvert, setPackOuvert] = useState(null);
   const [search, setSearch] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
   const [selectedFamille, setSelectedFamille] = useState('');
@@ -20,16 +56,44 @@ export default function App() {
   const familles = useMemo(() => getFamilles(), []);
   const groupedAgents = useMemo(() => groupBySetor(agents), []);
 
+  // The list the filters apply to: the whole catalogue, the network agents, or
+  // the agents of the business pack that is open.
+  const base = useMemo(() => {
+    if (vue === 'reseaux') return AGENTS_RESEAUX.map(ficheDe).filter(Boolean);
+    if (vue === 'packs' && packOuvert) return PACKS_ENTREPRISE.find((p) => p.id === packOuvert).agents.map(ficheDe);
+    return agents;
+  }, [vue, packOuvert]);
+
   const filteredAgents = useMemo(() =>
-    filterAgents(agents, search, selectedSector, selectedFamille),
-    [search, selectedSector, selectedFamille]
+    filterAgents(base, search, selectedSector, selectedFamille),
+    [base, search, selectedSector, selectedFamille]
   );
+
+  const montrerListe = vue !== 'packs' || packOuvert;
 
   return (
     <div className="min-h-screen bg-nuit-900">
-      <Navbar search={search} onSearchChange={setSearch} />
+      <Navbar search={search} onSearchChange={(q) => { setSearch(q); setPage('catalogue'); }} />
 
-      <div className="flex">
+      <nav className="bg-nuit-900 border-b border-nuit-700 px-4 py-3 flex flex-wrap gap-2" aria-label="Sections de la boutique">
+        {PAGES.map((p) => (
+          <button key={p.id} onClick={() => setPage(p.id)} className={onglet(page === p.id)} aria-current={page === p.id ? 'page' : undefined}>
+            {p.libelle}
+          </button>
+        ))}
+      </nav>
+
+      {installation && (
+        <div className="bg-nuit-800 border-b border-nuit-700 px-4 py-2 text-sm text-nuit-300 flex flex-wrap items-center gap-2">
+          Votre installation : <span className="text-neon-300 font-semibold">{installationDe(installation).nom}</span>
+          <button onClick={() => setPage('box')} className="underline text-nuit-200 hover:text-white min-h-[44px] px-2">changer</button>
+        </div>
+      )}
+
+      {page === 'entreprise' && <div className="p-4 md:p-8 max-w-7xl mx-auto"><CreezEntreprise /></div>}
+      {page === 'box' && <div className="p-4 md:p-8 max-w-7xl mx-auto"><IAgentBox installation={installation} onChoisir={(id) => { choisirInstallation(id); setPage('catalogue'); }} /></div>}
+
+      {page === 'catalogue' && <div className="flex">
         {/* Sidebar Filters */}
         <div className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-nuit-800 border-r border-nuit-700 overflow-y-auto transition-all duration-300 shadow-lg`}>
           <div className="p-4 space-y-6">
@@ -125,6 +189,33 @@ export default function App() {
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-8 max-w-7xl mx-auto">
+            <div className="mb-6 flex flex-wrap gap-2" role="tablist" aria-label="Parcourir le catalogue">
+              {VUES.map((v) => (
+                <button
+                  key={v.id}
+                  role="tab"
+                  aria-selected={vue === v.id}
+                  onClick={() => { setVue(v.id); setPackOuvert(null); setSelectedSector(''); setSelectedFamille(''); }}
+                  className={onglet(vue === v.id)}
+                >
+                  {v.libelle}
+                </button>
+              ))}
+            </div>
+
+            {!installation && (
+              <div className="mb-6">
+                <h2 className="font-display text-xl text-white mb-1">D'abord, votre installation</h2>
+                <p className="text-sm text-nuit-300 mb-3">Elle décide de ce que chaque agent vous coûte, chez vous ou par API. Vous pourrez la changer à tout moment.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {INSTALLATIONS.map((o) => <CarteInstallation key={o.id} o={o} compact onChoisir={choisirInstallation} />)}
+                </div>
+              </div>
+            )}
+
+            {vue === 'packs' && <div className="mb-6"><PacksEntreprise packOuvert={packOuvert} onOuvrir={setPackOuvert} /></div>}
+
+            {montrerListe && <>
             {/* Header Stats */}
             <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-nuit-800 rounded-lg p-4 border border-nuit-700">
@@ -158,14 +249,16 @@ export default function App() {
                 <p className="text-nuit-500">Essayez de modifier les filtres</p>
               </div>
             )}
+            </>}
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Detail Modal */}
       {selectedAgent && (
         <FicheDetail
           agent={selectedAgent}
+          installation={installation}
           onClose={() => setSelectedAgent(null)}
         />
       )}
