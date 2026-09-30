@@ -74,18 +74,49 @@ const DEMANDE_GRAPHISTE =
     `activité : ${l.activite?.nom ?? 'aucune'}`,
   );
 
-  // Graphiste de production, Designer print, Designer packaging se valent sur cette demande :
-  // le moteur demande, il ne choisit pas.
-  const q = questionSuivante(l);
-  verifier('graphiste : le poste se demande', q?.sujet === 'poste', `question : ${q?.sujet}`);
+  // Depuis le 30/09/2026 le catalogue a le poste exact : la demande y mène sans question.
+  verifier(
+    'graphiste : la demande mène au Graphiste prépresse',
+    l.poste.etat === 'reconnu' && l.poste.poste.id === 'AG-1257',
+    l.poste.etat === 'reconnu' ? l.poste.poste.nom : l.poste.etat,
+  );
+  verifier('graphiste : rien à demander, poste et activité sont dits', questionSuivante(l) === null, questionSuivante(l)?.sujet);
+  const p = composer(l);
+  if (p) {
+    const caldera = p.branchements.find((b) => b.logiciel.id === idLogiciel('Caldera'));
+    verifier(
+      'prépresse : Caldera est dans la fiche, atteint par un dossier partagé',
+      caldera?.deLaFiche === true && caldera.portee === 'fichier' && /dossier partagé/.test(caldera.aPreparer),
+      caldera?.aPreparer,
+    );
+    verifier(
+      'prépresse : les tracés de découpe sont couverts par le poste',
+      !p.missionsNonCouvertes.some((m) => /découpe/.test(m)),
+      p.missionsNonCouvertes.join(' ; '),
+    );
+    verifier(
+      'prépresse : le tableau des fournitures et les supports seront demandés',
+      p.pieces.some((x) => /fournitures/.test(x)) && p.pieces.some((x) => /supports/.test(x)),
+      p.pieces.join(' ; '),
+    );
+    verifier('prépresse : le RIP est un accès à ouvrir', p.acces.some((a) => /RIP Caldera/.test(a)), p.acces.join(' ; '));
+    const dit = resumeComposition(p).join(' ');
+    verifier('prépresse : le résumé ne dit jamais « connecté »', !/connect[ée]/i.test(dit.replace(/Vos connexions/g, '')), dit);
+  } else verifier('prépresse : la composition existe', false);
+
+  // Sans cette fiche, le moteur doit retomber sur une question : Graphiste de production,
+  // Designer print et Designer packaging se valent, il ne choisit pas à la place du client.
+  const sans = lireDemande(DEMANDE_GRAPHISTE, refs, ['AG-1257']);
+  const q = questionSuivante(sans);
+  verifier('sans la fiche prépresse : le poste se demande', q?.sujet === 'poste', `question : ${q?.sujet}`);
   const proposes = q?.sujet === 'poste' ? q.options.map((o) => o.id) : [];
   for (const id of ['AG-0276', 'AG-0296']) {
-    verifier(`graphiste : ${id} est proposé`, proposes.includes(id), `proposés : ${proposes.join(', ')}`);
+    verifier(`sans la fiche prépresse : ${id} est proposé`, proposes.includes(id), `proposés : ${proposes.join(', ')}`);
   }
-  verifier('graphiste : « aucun de ceux-là » est proposé', proposes.includes(AUCUN_DE_CEUX_LA));
+  verifier('sans la fiche prépresse : « aucun de ceux-là » est proposé', proposes.includes(AUCUN_DE_CEUX_LA));
 
   // Le client choisit le Designer print : l'activité est connue, plus rien à demander.
-  const { lecture } = repondre(l, q!, 'AG-0296', refs);
+  const { lecture } = repondre(sans, q!, 'AG-0296', refs);
   verifier('graphiste : plus de question une fois le poste choisi', questionSuivante(lecture) === null);
   const c = composer(lecture);
   verifier('graphiste : la composition existe', c !== null);
@@ -138,7 +169,7 @@ const DEMANDE_GRAPHISTE =
   }
 
   // « Aucun de ceux-là » : les candidats sont écartés et le moteur demande de décrire.
-  const r = repondre(l, q!, AUCUN_DE_CEUX_LA, refs).lecture;
+  const r = repondre(sans, q!, AUCUN_DE_CEUX_LA, refs).lecture;
   verifier('aucun de ceux-là : le moteur demande une description', questionSuivante(r)?.sujet === 'decrire');
   const decrit = repondre(r, questionSuivante(r)!, 'il prépare les fichiers pour le RIP et les tracés de découpe', refs).lecture;
   const qd = questionSuivante(decrit);
@@ -181,6 +212,12 @@ const DEMANDE_GRAPHISTE =
     m?.sujet === 'activite' && m.options.filter((o) => /Menuiserie/.test(o.libelle)).length === 3,
     JSON.stringify(m),
   );
+  const pp = lireDemande('Il me faut un graphiste prépresse', refs);
+  verifier(
+    '« prépresse » ne contient pas l’activité tabac-presse',
+    pp.activite === null && questionSuivante(pp)?.sujet === 'activite',
+    pp.activite?.nom,
+  );
   verifier('une demande vide ne reconnaît rien', lireDemande('', refs).poste.etat === 'inconnu');
 }
 
@@ -197,7 +234,7 @@ const DEMANDE_GRAPHISTE =
   const ecran = readFileSync(join(racine, 'desktop/src/components/Embauche.tsx'), 'utf8');
   verifier("l'écran d'embauche appelle lire_postes", ecran.includes("invoke<string>('lire_postes')"));
   verifier("l'écran d'embauche écrit la composition", ecran.includes('competencesDepuisComposition('));
-  verifier('toutes les fiches se réduisent', postes.length === 1249 && postes.every((p) => p.id && p.nom), `${postes.length}`);
+  verifier('toutes les fiches se réduisent', postes.length === 1250 && postes.every((p) => p.id && p.nom), `${postes.length}`);
 }
 
 console.log(echecs === 0 ? `${postes.length} postes — moteur de composition ok` : `${echecs} attente(s) non tenue(s)`);

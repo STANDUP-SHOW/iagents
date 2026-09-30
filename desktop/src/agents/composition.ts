@@ -435,8 +435,9 @@ export interface Referentiels {
  */
 export function activitesDansLaDemande(demande: string, ref: ReferentielActivites): Activite[] {
   const d = normaliser(demande);
-  const exact = reconnaitreActivite(demande, ref);
-  if (exact.etat === 'reconnu') return [exact.activite];
+  // Mots entiers seulement : `reconnaitreActivite` compare par sous-chaîne, ce qui convient à une
+  // réponse courte de l'entretien mais pas à une phrase libre — « prépresse » y contenait « presse »
+  // et le graphiste partait chez le marchand de journaux.
   const entieres = ref.activites.filter((a) =>
     [a.nom, ...(a.alias ?? [])].some((m) => {
       const n = normaliser(m);
@@ -697,7 +698,7 @@ export function composer(l: Lecture): Composition | null {
 export function resumeComposition(c: Composition): string[] {
   const lignes: string[] = [];
   lignes.push(
-    `Je prends le poste ${/^[aeiouyh]/i.test(normaliser(c.posteNom)) ? "d'" : 'de '}${c.posteNom.toLowerCase()}${c.activiteNom ? `, pour une maison d'${c.activiteNom.toLowerCase()}` : ''}.`
+    `Je prends le poste ${/^[aeiouyh]/i.test(normaliser(c.posteNom)) ? "d'" : 'de '}${c.posteNom.toLowerCase()}${c.activiteNom ? `, pour une maison ${/^[aeiouyh]/i.test(normaliser(c.activiteNom)) ? "d'" : 'de '}${c.activiteNom.toLowerCase()}` : ''}.`
   );
   for (const b of c.branchements) {
     lignes.push(

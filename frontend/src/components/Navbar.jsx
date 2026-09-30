@@ -14,7 +14,7 @@ export default function Navbar({ search, onSearchChange }) {
             <img src={logo} alt="iAgent" className="h-9 w-auto drop-shadow-[0_0_6px_rgba(3,243,255,0.5)]" />
             <div>
               <h1 className="sr-only">iAgent</h1>
-              <p className="text-xs text-nuit-400">1249 fiches d'agents métier</p>
+              <p className="text-xs text-nuit-400">1250 fiches d'agents métier</p>
             </div>
           </div>
 
