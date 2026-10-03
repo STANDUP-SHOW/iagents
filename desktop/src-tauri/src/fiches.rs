@@ -153,6 +153,14 @@ pub fn enregistrer_fiche_composee(contenu: String) -> Result<String, String> {
     crate::chemins::preparer(&chemin)?;
     let texte = serde_json::to_string_pretty(&fille).map_err(|e| e.to_string())?;
     std::fs::write(&chemin, texte).map_err(|e| format!("écriture de {} : {}", chemin.display(), e))?;
+    // Elle remonte au catalogue commun (choix de max du 03/10/2026), par sa seule
+    // recette. Rien de ce côté ne doit faire échouer l'embauche : la fiche est écrite.
+    match crate::partage::mettre_en_file(&fille) {
+        Ok(()) => {
+            tauri::async_runtime::spawn(crate::partage::envoyer_la_file());
+        }
+        Err(motif) => eprintln!("catalogue commun : {}", motif),
+    }
     Ok(id)
 }
 

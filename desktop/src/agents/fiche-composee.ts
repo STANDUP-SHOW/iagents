@@ -14,8 +14,14 @@
  * Rien de personnel n'y entre : ni prénom, ni voix, ni la phrase dite par le client. Ceux-là
  * restent dans `installation.json`. La fiche ne décrit que la combinaison poste × activité ×
  * logiciels, et son identifiant en est l'empreinte : deux employeurs qui composent le même
- * agent obtiennent la même fiche. C'est ce qui permettrait un jour de les rassembler ; les
- * faire sortir du poste est une décision qui reste à max.
+ * agent obtiennent la même fiche.
+ *
+ * Elle remonte au catalogue commun (choix de max du 03/10/2026 : « Automatique »), mais ce
+ * qui part n'est pas la fiche : c'est sa RECETTE, le bloc `compose`, fait d'identifiants et
+ * de rien d'autre. Le catalogue commun refait la fiche depuis ses propres sources avec
+ * `ficheDepuisRecette`. Rien de ce que le poste a écrit ne voyage donc, pas même une phrase
+ * qu'un écran fautif y aurait glissée, et deux recettes égales donnent la même fiche des deux
+ * côtés.
  */
 import type { Activite, Logiciel, Qualification } from './entretien.ts';
 import { phrasePortee } from './entretien.ts';
@@ -34,8 +40,6 @@ export interface FicheMere {
 export interface LogicielTenu {
   logiciel: Logiciel;
   remplace?: Qualification;
-  /** Ce que la fiche disait déjà en faire, quand la demande l'a reconnu dans le poste. */
-  usage?: string;
 }
 
 export interface Specialisation {
@@ -70,15 +74,24 @@ function ajoutes(mere: FicheMere, s: Specialisation): LogicielTenu[] {
     .sort((a, b) => a.logiciel.id.localeCompare(b.logiciel.id));
 }
 
+/** Logiciel ajouté → logiciel de la mère qu'il remplace, clés dans l'ordre des ajouts. */
+function remplacements(plus: LogicielTenu[]): Record<string, string> {
+  return Object.fromEntries(plus.filter((t) => t.remplace).map((t) => [t.logiciel.id, t.remplace!.logiciel]));
+}
+
 export function identifiantCompose(mere: FicheMere, s: Specialisation): string {
-  const cle = [mere.id, s.activite?.id ?? '', ...ajoutes(mere, s).map((t) => t.logiciel.id)].join('|');
+  // Le remplacement entre dans l'empreinte : il change la phrase d'usage, donc la fiche.
+  const cle = [
+    mere.id,
+    s.activite?.id ?? '',
+    ...ajoutes(mere, s).map((t) => (t.remplace ? `${t.logiciel.id}>${t.remplace.logiciel}` : t.logiciel.id)),
+  ].join('|');
   return `${mere.id}-${empreinte(cle)}`;
 }
 
 const minuscule = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 
 function usageAjoute(t: LogicielTenu, nomDe: (id: string) => string | undefined): string {
-  if (t.usage) return t.usage;
   const portee = phrasePortee(t.logiciel);
   if (t.remplace) {
     const ancien = nomDe(t.remplace.logiciel) ?? 'l’outil de ma fiche';
@@ -141,6 +154,99 @@ export function ficheComposee(
       mere: mere.id,
       activite: activite?.id ?? null,
       logicielsAjoutes: plus.map((t) => t.logiciel.id),
+      remplacements: remplacements(plus),
     },
   };
+}
+
+/** Ce qui remonte au catalogue commun : des identifiants, et rien d'autre. */
+export interface RecetteComposee {
+  format: number;
+  mere: string;
+  activite: string | null;
+  logicielsAjoutes: string[];
+  remplacements: Record<string, string>;
+}
+
+const CLES_DE_LA_RECETTE = ['format', 'mere', 'activite', 'logicielsAjoutes', 'remplacements'];
+const ID_FICHE = /^AG-\d{4}$/;
+const ID_ACTIVITE = /^ACT-\d{4}$/;
+const ID_LOGICIEL = /^LOG-\d{4}$/;
+
+/**
+ * La recette, si elle n'est faite que d'identifiants bien formés ; sinon la raison du refus.
+ * Le même contrôle tourne côté poste (`partage::recette_de`, en Rust) et côté catalogue
+ * commun : une clé de plus, un texte à la place d'un identifiant, et rien ne part.
+ */
+export function recetteRecevable(brute: unknown): RecetteComposee | string {
+  if (brute === null || typeof brute !== 'object' || Array.isArray(brute)) return 'la recette n’est pas un objet';
+  const r = brute as Record<string, unknown>;
+  const cles = Object.keys(r).sort();
+  if (JSON.stringify(cles) !== JSON.stringify([...CLES_DE_LA_RECETTE].sort())) {
+    return `la recette porte ${cles.join(', ')} au lieu de ${CLES_DE_LA_RECETTE.join(', ')}`;
+  }
+  if (r.format !== FORMAT_COMPOSE) return `format ${String(r.format)} inconnu`;
+  if (typeof r.mere !== 'string' || !ID_FICHE.test(r.mere)) return 'fiche mère mal nommée';
+  if (r.activite !== null && (typeof r.activite !== 'string' || !ID_ACTIVITE.test(r.activite))) {
+    return 'activité mal nommée';
+  }
+  const l = r.logicielsAjoutes;
+  if (!Array.isArray(l) || l.length > 50 || !l.every((x) => typeof x === 'string' && ID_LOGICIEL.test(x))) {
+    return 'logiciels mal nommés';
+  }
+  const m = r.remplacements;
+  if (m === null || typeof m !== 'object' || Array.isArray(m)) return 'remplacements mal formés';
+  for (const [k, v] of Object.entries(m)) {
+    if (!l.includes(k) || typeof v !== 'string' || !ID_LOGICIEL.test(v)) return 'remplacements mal formés';
+  }
+  return r as unknown as RecetteComposee;
+}
+
+/** JSON aux clés triées : le poste (Rust) et l'écran ne rangent pas les clés dans le même ordre. */
+export function canonique(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(canonique).join(',')}]`;
+  if (v !== null && typeof v === 'object') {
+    const o = v as Record<string, unknown>;
+    return `{${Object.keys(o).sort().map((k) => `${JSON.stringify(k)}:${canonique(o[k])}`).join(',')}}`;
+  }
+  return JSON.stringify(v);
+}
+
+/** La recette d'une fiche fille : son bloc `compose`, revérifié. */
+export function recetteDe(fille: { compose: Record<string, unknown> }): RecetteComposee | string {
+  return recetteRecevable(fille.compose);
+}
+
+/**
+ * Refait la fiche depuis sa recette et les sources du catalogue. C'est ce que fait le
+ * catalogue commun en recevant une recette : il ne croit pas la fiche du poste, il la refait,
+ * et refuse une recette qui ne retombe pas exactement sur elle-même (logiciel déjà dans la
+ * mère, remplacement d'un logiciel que la mère n'a pas, ordre non canonique).
+ */
+export function ficheDepuisRecette(
+  recette: RecetteComposee,
+  sources: { mere: FicheMere; activites: Activite[]; logiciels: Logiciel[] }
+): (FicheMere & { compose: Record<string, unknown> }) | string {
+  const { mere } = sources;
+  if (mere.id !== recette.mere) return 'la fiche mère ne correspond pas';
+  let activite: Activite | null = null;
+  if (recette.activite) {
+    activite = sources.activites.find((a) => a.id === recette.activite) ?? null;
+    if (!activite) return `activité ${recette.activite} inconnue`;
+  }
+  const qualifs = mere.qualifications?.logiciels ?? [];
+  const tenus: LogicielTenu[] = [];
+  for (const id of recette.logicielsAjoutes) {
+    const logiciel = sources.logiciels.find((x) => x.id === id);
+    if (!logiciel) return `logiciel ${id} inconnu`;
+    const ancien = recette.remplacements[id];
+    const remplace = ancien ? qualifs.find((q) => q.logiciel === ancien) : undefined;
+    if (ancien && !remplace) return `${id} remplacerait ${ancien}, que la fiche mère ne tient pas`;
+    tenus.push({ logiciel, remplace });
+  }
+  const nomDe = (id: string) => sources.logiciels.find((x) => x.id === id)?.nom;
+  const fiche = ficheComposee(mere, { activite, logiciels: tenus }, nomDe);
+  if (!fiche) return 'la recette n’ajoute rien à la fiche mère';
+  if (canonique(fiche.compose) !== canonique(recette)) return 'la recette ne retombe pas sur elle-même';
+  return fiche;
 }
