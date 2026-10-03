@@ -809,6 +809,7 @@ fn main() {
             fiches::installation_ecrire,
             fiches::lire_referentiel,
             fiches::lire_postes,
+            fiches::enregistrer_fiche_composee,
             mcp::mcp_serveurs,
             mcp::mcp_ranger_secret,
             mcp::mcp_outils_permis,

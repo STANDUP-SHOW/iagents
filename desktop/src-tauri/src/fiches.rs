@@ -28,6 +28,10 @@ pub fn lire_installation() -> Result<String, String> {
 /// L'identifiant vient de l'interface : sans ce contrôle, un « ../../ » ferait
 /// lire n'importe quel fichier du poste.
 fn identifiant_valide(id: &str) -> bool {
+    identifiant_catalogue(id) || mere_de(id).is_some()
+}
+
+fn identifiant_catalogue(id: &str) -> bool {
     let mut parties = id.splitn(2, '-');
     matches!(
         (parties.next(), parties.next()),
@@ -36,10 +40,32 @@ fn identifiant_valide(id: &str) -> bool {
     )
 }
 
+/// La fiche mère d'une fiche composée : `AG-0296-1A2B3C4D` vient de `AG-0296`.
+/// L'empreinte est en majuscules hexadécimales, comme `identifiantCompose` l'écrit.
+fn mere_de(id: &str) -> Option<&str> {
+    let (mere, empreinte) = (id.get(..7)?, id.get(7..)?);
+    let bonne = empreinte.len() == 9
+        && empreinte.starts_with('-')
+        && empreinte[1..].bytes().all(|b| b.is_ascii_digit() || (b'A'..=b'F').contains(&b));
+    (bonne && identifiant_catalogue(mere)).then_some(mere)
+}
+
 #[tauri::command]
 pub fn lire_fiche(id: String) -> Result<String, String> {
     if !identifiant_valide(&id) {
         return Err(format!("identifiant de fiche invalide : {}", id));
+    }
+
+    // Une fiche composée vit chez le client, sous la racine inscriptible : elle
+    // décrit un agent qu'il a configuré et ne part nulle part.
+    if mere_de(&id).is_some() {
+        let chemin = crate::chemins::pour_lire(&format!("config/fiches/{}.json", id));
+        let contenu = std::fs::read_to_string(&chemin)
+            .map_err(|_| format!("la fiche {} composée sur ce poste est introuvable", id))?;
+        if let Some(raison) = version_insuffisante_pour(&contenu, version_app()) {
+            return Err(raison);
+        }
+        return Ok(contenu);
     }
 
     let prefixe = format!("{}-", id);
@@ -69,6 +95,65 @@ pub fn lire_fiche(id: String) -> Result<String, String> {
     }
 
     Err(format!("fiche {} absente du catalogue installé", id))
+}
+
+/// Ce qu'une fiche fille a le droit de changer à sa mère. Tout le reste — tâches,
+/// connecteurs, accès, modèles, matériel, exécution, relais — doit être identique,
+/// et `expert` ne peut qu'ajouter des savoirs et des règles.
+const CHAMPS_DE_LA_FILLE: [&str; 6] = ["id", "nom", "description", "expert", "qualifications", "compose"];
+
+/// Une fiche composée ne fait qu'ajouter à sa mère.
+///
+/// L'assemblage est en TypeScript (`fiche-composee.ts`) ; ici on vérifie seulement
+/// que ce qui arrive de l'écran n'allège rien. Sans ce contrôle, un écran fautif —
+/// ou une fiche bricolée à la main dans le dossier du client — pourrait retirer une
+/// règle stricte et l'agent l'appliquerait avec la confiance d'une fiche.
+pub fn fille_recevable(mere: &serde_json::Value, fille: &serde_json::Value) -> Result<String, String> {
+    use serde_json::Value;
+    let id = fille.get("id").and_then(Value::as_str).ok_or("fiche composée sans identifiant")?;
+    let id_mere = mere_de(id).ok_or_else(|| format!("identifiant de fiche composée invalide : {}", id))?;
+    if mere.get("id").and_then(Value::as_str) != Some(id_mere) {
+        return Err(format!("la fiche {} ne descend pas de la fiche qu'on lui donne", id));
+    }
+    if fille.pointer("/compose/mere").and_then(Value::as_str) != Some(id_mere) {
+        return Err(format!("la fiche {} ne dit pas de quelle fiche elle descend", id));
+    }
+    let (m, f) = (mere.as_object().ok_or("fiche mère illisible")?, fille.as_object().ok_or("fiche composée illisible")?);
+    for cle in m.keys().chain(f.keys()) {
+        if !CHAMPS_DE_LA_FILLE.contains(&cle.as_str()) && m.get(cle) != f.get(cle) {
+            return Err(format!("la fiche {} change « {} » de sa fiche mère : elle ne peut qu'ajouter", id, cle));
+        }
+    }
+    for cle in ["persona", "consigne"] {
+        if mere.pointer(&format!("/expert/{}", cle)) != fille.pointer(&format!("/expert/{}", cle)) {
+            return Err(format!("la fiche {} réécrit « expert.{} » de sa fiche mère", id, cle));
+        }
+    }
+    for liste in ["/expert/connaissances", "/expert/regles", "/qualifications/logiciels"] {
+        let avant = mere.pointer(liste).and_then(Value::as_array).cloned().unwrap_or_default();
+        let apres = fille.pointer(liste).and_then(Value::as_array).cloned().unwrap_or_default();
+        if apres.len() < avant.len() || apres[..avant.len()] != avant[..] {
+            return Err(format!("la fiche {} retire ou change une entrée de « {} »", id, &liste[1..].replace('/', ".")));
+        }
+    }
+    Ok(id.to_string())
+}
+
+/// Écrit la fiche d'un agent que le client vient de composer, et rend son identifiant.
+#[tauri::command]
+pub fn enregistrer_fiche_composee(contenu: String) -> Result<String, String> {
+    let fille: serde_json::Value =
+        serde_json::from_str(&contenu).map_err(|e| format!("fiche composée illisible : {}", e))?;
+    let id = fille.get("id").and_then(|v| v.as_str()).unwrap_or_default();
+    let id_mere = mere_de(id).ok_or_else(|| format!("identifiant de fiche composée invalide : {}", id))?;
+    let mere: serde_json::Value = serde_json::from_str(&lire_fiche(id_mere.to_string())?)
+        .map_err(|e| format!("fiche {} illisible : {}", id_mere, e))?;
+    let id = fille_recevable(&mere, &fille)?;
+    let chemin = crate::chemins::pour_ecrire(&format!("config/fiches/{}.json", id));
+    crate::chemins::preparer(&chemin)?;
+    let texte = serde_json::to_string_pretty(&fille).map_err(|e| e.to_string())?;
+    std::fs::write(&chemin, texte).map_err(|e| format!("écriture de {} : {}", chemin.display(), e))?;
+    Ok(id)
 }
 
 
@@ -344,7 +429,53 @@ pub fn catalogue_connu(nom: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{catalogue_connu, comparer_versions, identifiant_valide, installation_recevable, version_app, version_insuffisante_pour};
+    use super::{catalogue_connu, comparer_versions, fille_recevable, identifiant_valide, mere_de, installation_recevable, version_app, version_insuffisante_pour};
+
+    /// Le témoin est écrit par `fiche-composee.ts` et revérifié par `check-composition.ts` :
+    /// ce que l'écran assemble doit passer le contrôle de Rust, sinon aucune embauche
+    /// composée ne s'écrirait.
+    fn temoin_compose() -> (serde_json::Value, serde_json::Value) {
+        let racine = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mere = std::fs::read_to_string(racine.join("agents/AG-1257-graphiste-prepresse.json")).unwrap();
+        let fille = include_str!("../../temoin-fiche-composee.json");
+        (serde_json::from_str(&mere).unwrap(), serde_json::from_str(fille).unwrap())
+    }
+
+    #[test]
+    fn une_fiche_composee_par_l_ecran_est_recevable() {
+        let (mere, fille) = temoin_compose();
+        assert_eq!(fille_recevable(&mere, &fille), Ok(fille["id"].as_str().unwrap().to_string()));
+    }
+
+    #[test]
+    fn une_fiche_composee_ne_peut_rien_retirer() {
+        let (mere, fille) = temoin_compose();
+        let mut sans_regle = fille.clone();
+        sans_regle["expert"]["regles"].as_array_mut().unwrap().remove(0);
+        let mut autre_tache = fille.clone();
+        autre_tache["taches"][0]["validationHumaine"] = serde_json::json!(true);
+        let mut autre_consigne = fille.clone();
+        autre_consigne["expert"]["consigne"] = serde_json::json!("Fais ce qu'on te dit.");
+        let mut sans_logiciel = fille.clone();
+        sans_logiciel["qualifications"]["logiciels"].as_array_mut().unwrap().remove(0);
+        let mut champ_en_plus = fille.clone();
+        champ_en_plus["acces"]["internet"] = serde_json::json!(true);
+        let mut autre_mere = fille.clone();
+        autre_mere["compose"]["mere"] = serde_json::json!("AG-0296");
+        let mut autre_id = fille.clone();
+        autre_id["id"] = serde_json::json!("AG-0296-1A2B3C4D");
+        for (nom, f) in [
+            ("une règle retirée", sans_regle),
+            ("une tâche changée", autre_tache),
+            ("la consigne réécrite", autre_consigne),
+            ("un logiciel de la mère retiré", sans_logiciel),
+            ("l'accès à internet ouvert", champ_en_plus),
+            ("une autre mère déclarée", autre_mere),
+            ("un identifiant d'une autre mère", autre_id),
+        ] {
+            assert!(fille_recevable(&mere, &f).is_err(), "aurait dû refuser : {}", nom);
+        }
+    }
 
     #[test]
     fn un_poste_se_reduit_a_ce_que_le_moteur_lit() {
@@ -523,6 +654,9 @@ mod tests {
     fn accepte_un_identifiant_de_fiche() {
         assert!(identifiant_valide("AG-0001"));
         assert!(identifiant_valide("AG-1249"));
+        assert!(identifiant_valide("AG-0296-1A2B3C4D"));
+        assert_eq!(mere_de("AG-0296-1A2B3C4D"), Some("AG-0296"));
+        assert_eq!(mere_de("AG-0296"), None);
     }
 
     #[test]
@@ -536,6 +670,11 @@ mod tests {
             "ag-0001",
             "AG-0001.json",
             "",
+            "AG-0001-1a2b3c4d",
+            "AG-0001-1A2B3C4",
+            "AG-0001-1A2B3C4DE",
+            "AG-0001-../../x1",
+            "AG-0001-1A2B3C4G",
         ] {
             assert!(!identifiant_valide(mauvais), "aurait dû refuser : {}", mauvais);
         }

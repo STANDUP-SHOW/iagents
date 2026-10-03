@@ -7,7 +7,7 @@
  * aucune mission maquillée en tâche, aucun poste choisi à la place du client quand deux se
  * valent, et aucun « branché » écrit pour un outil qui ne l'est pas.
  */
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import {
@@ -23,6 +23,7 @@ import {
   type Poste,
   type Referentiels,
 } from './src/agents/composition.ts';
+import { IDENTIFIANT_COMPOSE, ficheComposee, identifiantCompose, type FicheMere } from './src/agents/fiche-composee.ts';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const lireJson = (chemin: string) => JSON.parse(readFileSync(join(racine, chemin), 'utf8'));
@@ -235,6 +236,85 @@ const DEMANDE_GRAPHISTE =
   verifier("l'écran d'embauche appelle lire_postes", ecran.includes("invoke<string>('lire_postes')"));
   verifier("l'écran d'embauche écrit la composition", ecran.includes('competencesDepuisComposition('));
   verifier('toutes les fiches se réduisent', postes.length === 1250 && postes.every((p) => p.id && p.nom), `${postes.length}`);
+}
+
+// --- L'agent configuré devient sa propre fiche ------------------------------
+// Demande de max du 03/10/2026 : poste × activité × logiciels = un expert de plus.
+// Le témoin est relu par Rust (`fiches::fille_recevable`) : ce que l'écran assemble
+// doit passer le contrôle qui l'écrira. `--temoin` le réécrit.
+{
+  const brute = (id: string): FicheMere => {
+    const f = readdirSync(join(racine, 'agents')).find((n) => n.startsWith(`${id}-`))!;
+    return lireJson(`agents/${f}`);
+  };
+  const log = (id: string) => refs.logiciels.logiciels.find((l) => l.id === id)!;
+  const nomDe = (id: string) => refs.logiciels.logiciels.find((l) => l.id === id)?.nom;
+  const mere = brute('AG-1257');
+  const imprimerie = refs.activites.activites.find((a) => a.id === 'ACT-0243')!;
+  const bureautique = mere.qualifications!.logiciels!.find((q) => q.logiciel === 'LOG-0568')!;
+  const tenus = [
+    { logiciel: log('LOG-0565'), remplace: bureautique },
+    { logiciel: log('LOG-0659') },
+    { logiciel: log('LOG-1600') },
+  ];
+  const fille = ficheComposee(mere, { activite: imprimerie, logiciels: tenus }, nomDe)!;
+  verifier('fiche composée : elle existe', fille !== null);
+  verifier(
+    'fiche composée : son identifiant dit de quelle fiche elle descend',
+    IDENTIFIANT_COMPOSE.test(fille.id) && fille.id.startsWith('AG-1257-') && (fille.compose as any).mere === 'AG-1257',
+    fille.id,
+  );
+  verifier(
+    'fiche composée : la même configuration donne la même fiche, dans n’importe quel ordre',
+    identifiantCompose(mere, { activite: imprimerie, logiciels: [...tenus].reverse() }) === fille.id,
+  );
+  verifier(
+    'fiche composée : une autre activité donne une autre fiche',
+    identifiantCompose(mere, { activite: refs.activites.activites[0], logiciels: tenus }) !== fille.id,
+  );
+  verifier(
+    'fiche composée : Caldera, déjà dans la fiche mère, n’est pas ajouté deux fois',
+    JSON.stringify((fille.compose as any).logicielsAjoutes) === JSON.stringify(['LOG-0565', 'LOG-0659']),
+    JSON.stringify((fille.compose as any).logicielsAjoutes),
+  );
+  verifier(
+    'fiche composée : les règles de la branche s’ajoutent après celles du poste',
+    JSON.stringify(fille.expert!.regles) ===
+      JSON.stringify([...mere.expert!.regles!, ...(imprimerie.pack?.regles ?? [])]) && (imprimerie.pack?.regles ?? []).length > 0,
+  );
+  verifier(
+    'fiche composée : Google Workspace remplace Microsoft 365 et le dit',
+    fille.qualifications!.logiciels!.some((q) => q.logiciel === 'LOG-0565' && /Microsoft 365/.test(q.usage)),
+  );
+  verifier(
+    'fiche composée : tâches, connecteurs et accès sont ceux de la mère',
+    ['taches', 'connecteurs', 'acces', 'materiel', 'execution'].every((k) => JSON.stringify(fille[k]) === JSON.stringify(mere[k])),
+  );
+  verifier('fiche composée : rien de personnel n’y entre', !JSON.stringify(fille).includes('Voice'));
+  verifier(
+    'fiche composée : sans activité ni logiciel de plus, l’agent garde la fiche du catalogue',
+    ficheComposee(mere, { activite: null, logiciels: [{ logiciel: log('LOG-1600') }] }) === null,
+  );
+
+  const temoin = join(racine, 'desktop/temoin-fiche-composee.json');
+  const attendu = JSON.stringify(fille, null, 2) + '\n';
+  if (process.argv.includes('--temoin')) writeFileSync(temoin, attendu);
+  let ecrit = '';
+  try {
+    ecrit = readFileSync(temoin, 'utf8');
+  } catch {}
+  verifier(
+    'fiche composée : le témoin relu par Rust est celui que l’écran assemble',
+    ecrit === attendu,
+    'relancer avec --temoin',
+  );
+  const main = readFileSync(join(racine, 'desktop/src-tauri/src/main.rs'), 'utf8');
+  verifier('enregistrer_fiche_composee est enregistrée', main.includes('fiches::enregistrer_fiche_composee'));
+  const ecran = readFileSync(join(racine, 'desktop/src/components/Embauche.tsx'), 'utf8');
+  verifier(
+    "l'écran d'embauche écrit la fiche composée et embauche sur elle",
+    ecran.includes("invoke<string>('enregistrer_fiche_composee'") && ecran.includes('nouveau.ficheId = await'),
+  );
 }
 
 console.log(echecs === 0 ? `${postes.length} postes — moteur de composition ok` : `${echecs} attente(s) non tenue(s)`);

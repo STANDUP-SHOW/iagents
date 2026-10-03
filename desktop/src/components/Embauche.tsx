@@ -32,6 +32,7 @@ import {
   type QuestionComposition,
   type Referentiels,
 } from '../agents/composition'
+import { ficheComposee, type FicheMere, type LogicielTenu } from '../agents/fiche-composee'
 
 /**
  * Le parcours d'embauche.
@@ -259,13 +260,38 @@ export default function Embauche() {
       if (logiciels.length) nouveau.logiciels = [...new Set(logiciels)]
       if (regle.repartition) nouveau.repartition = regle.repartition
 
+      // L'agent ainsi configuré devient sa propre fiche : le poste du catalogue,
+      // plus l'activité de la maison et les logiciels qu'elle tient en plus.
+      // Rien de personnel n'y entre — prénom, voix et phrase dite restent ici.
+      const tenus: LogicielTenu[] = [
+        ...(configuration?.retenus.map((o) => ({
+          logiciel: o.logiciel,
+          remplace: o.qualification.logiciel !== o.logiciel.id ? o.qualification : undefined,
+        })) ?? []),
+        ...(composition && composition.posteId === ficheId
+          ? composition.branchements.map((b) => ({ logiciel: b.logiciel }))
+          : []),
+      ]
+      const fille = fiche
+        ? ficheComposee(fiche as unknown as FicheMere, { activite, logiciels: tenus }, (id) =>
+            ref?.logiciels.find((l) => l.id === id)?.nom
+          )
+        : null
+      let composee = ''
+      if (fille) {
+        nouveau.ficheId = await invoke<string>('enregistrer_fiche_composee', {
+          contenu: JSON.stringify(fille),
+        })
+        composee = ` Sa fiche « ${fille.nom} » est écrite sur ce poste.`
+      }
+
       const contenu = JSON.stringify(
         { ...existant, agents: [...agents, nouveau] },
         null,
         2
       )
       const chemin = await invoke<string>('installation_ecrire', { contenu })
-      setEnregistre(`${prenom.trim()} est embauché. Configuration écrite dans ${chemin}.`)
+      setEnregistre(`${prenom.trim()} est embauché.${composee} Configuration écrite dans ${chemin}.`)
     } catch (e) {
       setErreur(String(e))
     }
