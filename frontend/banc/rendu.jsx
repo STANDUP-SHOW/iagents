@@ -24,14 +24,14 @@ let n = 0;
 const ok = (m) => { n++; console.log('  ok  ' + m); };
 const echoue = (m) => { console.error('  ✗   ' + m); process.exitCode = 1; };
 
-if (agents.length !== 1249) echoue(`${agents.length} fiches chargees, 1249 attendues`);
+if (agents.length !== 1250) echoue(`${agents.length} fiches chargees, 1250 attendues`);
 else ok(`${agents.length} fiches chargees`);
 
 // 1. La liste se rend : c'est la page d'accueil.
 try {
   const html = renderToString(<FicheList agents={agents} onSelectAgent={() => {}} selectedAgent={null} />);
   if (!html.includes('AG-0001')) echoue('la liste ne montre pas AG-0001');
-  else ok('la liste des 1 249 fiches se rend');
+  else ok('la liste des 1 250 fiches se rend');
 } catch (e) {
   echoue(`la liste ne se rend pas : ${e.message}`);
 }
@@ -73,7 +73,7 @@ else ok('chaque badge allume porte un ratio affichable');
 //    « — » silencieux sur une partie du catalogue serait passe inapercu.
 const sansEco = agents.filter((a) => economieDe(a) === null);
 if (sansEco.length) echoue(`${sansEco.length} fiches sans calcul economique (ex. ${sansEco[0].id})`);
-else ok('les 1 249 fiches ont un detail economique calculable');
+else ok('les 1 250 fiches ont un detail economique calculable');
 
 if (getSectors().length < 20) echoue(`${getSectors().length} secteurs seulement`);
 else ok(`${getSectors().length} secteurs, ${getFamilles().length} familles`);

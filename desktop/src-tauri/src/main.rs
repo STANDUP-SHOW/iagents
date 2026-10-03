@@ -30,6 +30,7 @@ mod voiceprint;
 mod telegram;
 mod whatsapp;
 mod mise_a_jour;
+mod partage;
 
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
@@ -771,6 +772,8 @@ fn main() {
             // s'écrit pas et les pièces de la voix ne se téléchargent pas.
             ouvrir_la_base(app);
             mise_a_jour::demarrer(app.handle());
+            // Les recettes que le catalogue commun n'a pas encore reçues.
+            tauri::async_runtime::spawn(partage::envoyer_la_file());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -808,6 +811,8 @@ fn main() {
             fiches::lire_fiche,
             fiches::installation_ecrire,
             fiches::lire_referentiel,
+            fiches::lire_postes,
+            fiches::enregistrer_fiche_composee,
             mcp::mcp_serveurs,
             mcp::mcp_ranger_secret,
             mcp::mcp_outils_permis,
