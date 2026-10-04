@@ -235,7 +235,7 @@ const DEMANDE_GRAPHISTE =
   const ecran = readFileSync(join(racine, 'desktop/src/components/Embauche.tsx'), 'utf8');
   verifier("l'écran d'embauche appelle lire_postes", ecran.includes("invoke<string>('lire_postes')"));
   verifier("l'écran d'embauche écrit la composition", ecran.includes('competencesDepuisComposition('));
-  verifier('toutes les fiches se réduisent', postes.length === 1250 && postes.every((p) => p.id && p.nom), `${postes.length}`);
+  verifier('toutes les fiches se réduisent', postes.length === lireJson('catalogue/catalogue.json').agents.length && postes.every((p) => p.id && p.nom), `${postes.length}`);
 }
 
 // --- L'agent configuré devient sa propre fiche ------------------------------
