@@ -304,6 +304,35 @@ pub fn chemin_modele_ecoute() -> std::path::PathBuf {
     ressource("IAGENT_MODELE_ECOUTE", "modeles/ggml-small-q5_1.bin")
 }
 
+/// The agent speaks: through the client's voice API when a key is saved,
+/// locally otherwise. When the API fails, the local voice takes over and the
+/// reason is said, so a dead key never silences the agent without a word.
+pub async fn parler(prenom: Option<&str>, text: &str) -> Result<String, String> {
+    if text.trim().is_empty() {
+        return Ok("rien à prononcer".to_string());
+    }
+    let motif = match crate::voix_api::parler(prenom, text).await {
+        None => None,
+        Some(Ok(wav)) => {
+            let fichier = std::env::temp_dir().join(format!("iagent-api-{}.wav", std::process::id()));
+            std::fs::write(&fichier, &wav).map_err(|_| "le son reçu n'a pas pu être posé sur le poste".to_string())?;
+            let joue = jouer_wav(&fichier);
+            let _ = std::fs::remove_file(&fichier);
+            match joue {
+                Ok(()) => return Ok("texte prononcé".to_string()),
+                Err(e) => Some(e),
+            }
+        }
+        Some(Err(e)) => Some(e),
+    };
+    match (text_to_speech(text).await, motif) {
+        (Ok(_), Some(m)) => Ok(format!("voix du poste, faute de mieux : {}", m)),
+        (Ok(r), None) => Ok(r),
+        (Err(e), Some(m)) => Err(format!("{} ; et la voix du poste non plus : {}", m, e)),
+        (Err(e), None) => Err(e),
+    }
+}
+
 pub async fn text_to_speech(text: &str) -> Result<String, String> {
     use std::io::Write;
     use std::process::{Command, Stdio};

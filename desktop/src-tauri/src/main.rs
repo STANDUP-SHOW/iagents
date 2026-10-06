@@ -32,6 +32,7 @@ mod whatsapp;
 mod mise_a_jour;
 mod partage;
 mod mission;
+mod voix_api;
 
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
@@ -709,8 +710,8 @@ fn train_voice(utterances: Vec<String>) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn text_to_speech(text: String) -> Result<String, String> {
-    voice::text_to_speech(&text).await
+async fn text_to_speech(text: String, prenom: Option<String>) -> Result<String, String> {
+    voice::parler(prenom.as_deref(), &text).await
 }
 
 /// Ouvre la base du poste, une fois le dossier de données connu.
@@ -833,6 +834,9 @@ fn main() {
             mission::mission_lancer,
             mission::mission_historique,
             mission::mission_ouvrir,
+            voix_api::voix_api_etat,
+            voix_api::voix_api_ranger,
+            voix_api::voix_api_retirer,
             tache::dossier_de_travail,
             repondre,
             courriel::courriel_enregistrer_motdepasse,
