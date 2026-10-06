@@ -113,6 +113,14 @@ if (lue) {
   verifier('le business plan cite « Création de business plan », pas toute la phrase', bp?.entendu[0] === 'Création de business plan', bp?.entendu[0]);
   const levee = lue.membres.find((m) => m.posteId === 'AG-1258');
   verifier('le chargé de levée vient pour les business angels et la prise de contact', (levee?.entendu.length ?? 0) >= 2, levee?.entendu.join(' | '));
+  // Constaté sur le PC de max le 06/10 : les financements publics citaient la phrase des rendez-vous.
+  const agenda = lue.membres.find((m) => m.posteId === 'AG-0012');
+  const publics = lue.membres.find((m) => m.posteId === 'AG-0070');
+  verifier(
+    'les financements publics et l’agenda ne citent pas la même phrase',
+    !publics?.entendu.some((d) => /rendez/i.test(d)),
+    `${publics?.entendu.join(' | ')} / ${agenda?.entendu.join(' | ')}`
+  );
   verifier("l'activité est l'intelligence artificielle", lue.activite?.nom === 'Données et intelligence artificielle', lue.activite?.nom);
   const resume = resumeEquipe(lue).join(' ');
   verifier("la limite LinkedIn est dite avant l'embauche", /LinkedIn interdit le recueil automatique/.test(resume));

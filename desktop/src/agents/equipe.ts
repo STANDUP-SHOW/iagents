@@ -190,10 +190,13 @@ function typeReconnu(demande: string, equipes: ReferentielEquipes): EquipeType |
  * donc monter une équipe qui va consister à faire ces démarches création de business plan »)
  * se cite à partir de l'action qui précède le mot de mission, pas en entier.
  */
-export function citation(besoin: string, mission: string): string {
+export function citation(besoin: string, mission: string, depuisLeMot = false): string {
   const jetons = [...besoin.matchAll(/[\p{L}\p{N}]+/gu)].map((j) => ({ index: j.index ?? 0, n: normaliser(j[0]) }));
   const cherches = mission.split(' ');
   const debut = jetons.findIndex((_, i) => cherches.every((c, k) => jetons[i + k]?.n === c));
+  // Deux rôles nommés dans le même morceau : le second se cite à partir de son propre mot, sans
+  // quoi les deux portent la même phrase (« obtenir des rendez-vous… auprès d'agences locales »).
+  if (depuisLeMot && debut >= 0) return besoin.slice(jetons[debut].index).trim();
   if (debut < 0 || jetons.length <= 8) return besoin;
   for (let i = debut; i >= Math.max(0, debut - 4); i--) {
     if (ACTIONS.has(jetons[i].n)) return besoin.slice(jetons[i].index).trim();
@@ -250,10 +253,13 @@ export function lireDemandeEquipe(
 
   for (const besoin of besoins) {
     const roles = type ? rolesDuBesoin(besoin, type) : [];
+    const b = normaliser(besoin);
+    const motDe = (r: RoleEquipe) => r.missions.find((x) => contientMot(b, x)) ?? '';
+    const place = (r: RoleEquipe) => ` ${b} `.indexOf(` ${motDe(r)} `);
+    const premier = Math.min(...roles.map(place));
     for (const r of roles) {
       rolesNommes.add(r.agent);
-      const b = normaliser(besoin);
-      const dit = citation(besoin, r.missions.find((x) => contientMot(b, x)) ?? '');
+      const dit = citation(besoin, motDe(r), roles.length > 1 && place(r) > premier);
       const m = membres.get(r.agent);
       if (m) {
         if (!m.entendu.includes(dit)) m.entendu.push(dit);

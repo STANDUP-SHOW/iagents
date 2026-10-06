@@ -14,6 +14,7 @@ import {
 } from '../agents/equipe'
 import { ficheComposee, type FicheMere } from '../agents/fiche-composee'
 import { FICHE_TEAM_HOLDER } from '../agents/team-holder'
+import { AGENTS_MAX_PAR_POSTE } from '../agents/fiche'
 
 /**
  * L'équipe proposée pour une demande, et son embauche en une fois.
@@ -86,6 +87,11 @@ export default function EmbaucheEquipe({
   const prenomsUniques =
     new Set([...choisis.map((m) => (prenoms[m.posteId] ?? '').trim().toLowerCase()), ...dejaInstalles.map((a) => a.prenom.toLowerCase())])
       .size === choisis.length + dejaInstalles.length
+
+  // Au-delà de dix agents, l'application refuse l'installation entière au démarrage (constaté le
+  // 06/10 sur le PC de max : trois agents déjà là, huit de plus, plus aucun ne se chargeait).
+  const places = AGENTS_MAX_PAR_POSTE - dejaInstalles.length
+  const tropNombreux = choisis.length > places
 
   const embaucher = async () => {
     setErreur('')
@@ -242,7 +248,7 @@ export default function EmbaucheEquipe({
       ) : (
         <div className="ligne">
           <button
-            disabled={enCours || choisis.length === 0 || lecture.aChoisir.length > 0 || !prenomsValides || !prenomsUniques}
+            disabled={enCours || tropNombreux || choisis.length === 0 || lecture.aChoisir.length > 0 || !prenomsValides || !prenomsUniques}
             onClick={embaucher}
           >
             {enCours ? 'Embauche en cours…' : `Embaucher l'équipe (${choisis.length})`}
@@ -251,6 +257,13 @@ export default function EmbaucheEquipe({
             Non, je cherche un seul agent
           </button>
         </div>
+      )}
+      {tropNombreux && (
+        <p className="precision">
+          Ce poste accepte {AGENTS_MAX_PAR_POSTE} agents. {dejaInstalles.length} y travaillent déjà (
+          {dejaInstalles.map((a) => a.prenom).join(', ')}) : il reste {Math.max(0, places)} place(s). Décochez{' '}
+          {choisis.length - Math.max(0, places)} agent(s) pour embaucher les autres.
+        </p>
       )}
       {!prenomsUniques && <p className="precision">Deux agents ne peuvent pas porter le même prénom.</p>}
       {lecture.aChoisir.length > 0 && <p className="precision">Tranchez d'abord les postes ci-dessus.</p>}
