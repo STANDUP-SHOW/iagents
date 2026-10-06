@@ -31,6 +31,7 @@ mod telegram;
 mod whatsapp;
 mod mise_a_jour;
 mod partage;
+mod mission;
 
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
@@ -829,6 +830,9 @@ fn main() {
             llm::cle_api_presente,
             llm::cle_api_retirer,
             executer_tache,
+            mission::mission_lancer,
+            mission::mission_historique,
+            mission::mission_ouvrir,
             tache::dossier_de_travail,
             repondre,
             courriel::courriel_enregistrer_motdepasse,
