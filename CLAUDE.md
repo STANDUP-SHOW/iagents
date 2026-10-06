@@ -8,7 +8,8 @@ en attendant iagent.agency.
 
 ## Ce que fait le projet
 
-Une bibliothèque d'agents IA « employés » (1075 postes, 43 secteurs), vendus
+Une bibliothèque d'agents IA « employés » (1 249 métiers en 44 familles, à poser
+dans 282 activités clientes : 182 490 postes possibles, `npm run postes`), vendus
 sur iagent.agency, exécutés par l'application desktop iAgent **en local sans
 tokens facturés** ou **par API au choix du client**, et livrés préinstallés sur
 les mini-PC de LocalAgent. Chaque agent est un expert de 25 ans d'expérience,
