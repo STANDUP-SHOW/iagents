@@ -40,13 +40,13 @@ const onglet = (actif) =>
     actif ? 'bg-neon-400/15 text-neon-300 border border-neon-400 shadow-neon' : 'bg-nuit-800 text-nuit-300 border border-nuit-700 hover:bg-nuit-700'
   }`;
 
-export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier', installationInitiale }) {
+export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier', installationInitiale, rechercheInitiale = '', ideeInitiale = '' }) {
   const [page, setPage] = useState(pageInitiale);
   const [installation, setInstallationEtat] = useState(() => installationInitiale ?? lireInstallation());
   const choisirInstallation = (id) => { setInstallationEtat(id); ecrireInstallation(id); };
   const [vue, setVue] = useState(vueInitiale);
   const [packOuvert, setPackOuvert] = useState(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(rechercheInitiale);
   const [selectedSector, setSelectedSector] = useState('');
   const [selectedFamille, setSelectedFamille] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(null);
@@ -90,7 +90,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
         </div>
       )}
 
-      {page === 'entreprise' && <div className="p-4 md:p-8 max-w-7xl mx-auto"><CreezEntreprise /></div>}
+      {page === 'entreprise' && <div className="p-4 md:p-8 max-w-7xl mx-auto"><CreezEntreprise ideeInitiale={ideeInitiale} /></div>}
       {page === 'box' && <div className="p-4 md:p-8 max-w-7xl mx-auto"><IAgentBox installation={installation} onChoisir={(id) => { choisirInstallation(id); setPage('catalogue'); }} /></div>}
 
       {page === 'catalogue' && <div className="flex">
