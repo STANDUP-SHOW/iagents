@@ -8,14 +8,11 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { slugifier } from '../seo/slug.mjs';
+import { PRIX_AGENT } from '../src/data/prix.js';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const lire = (chemin) => JSON.parse(readFileSync(join(RACINE, chemin), 'utf8'));
 
-// max's price per agent (docs/cadrage.md, catalogue V6 of 21/09/2026): it is
-// not in the fiches, whose prixMensuel is the study's market range. Always
-// shown apart from the machine and the box subscription.
-const PRIX_AGENT = { mensuel: 9.9, achat: 49.9 };
 
 // The people of the page, each standing for a real fiche of the catalogue.
 // The first name and the portrait are the page's; the job, the sector, the

@@ -1,7 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App, { PAGES } from './App';
-import './index.css';
+import './accueil/accueil.css';
+import './bibliotheque/bibliotheque.css';
 
 // The home page sends visitors here with what they asked for:
 // /catalogue?page=entreprise&idee=…, /catalogue?page=box, /catalogue?q=…
