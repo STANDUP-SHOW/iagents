@@ -10,8 +10,15 @@ const ENTREES = [
   { libelle: 'Entreprise', href: '/#confiance', evenement: 'enterprise_click' },
 ];
 
-/** Very light over the hero, more opaque once the reader has moved on. */
-export default function GlobalNav({ page = 'accueil', seuil = 240 }) {
+const Loupe = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" fill="none" /><path d="M20 20l-4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+);
+
+/**
+ * The site's header, as on max's mockups: logo, the five entries, a search
+ * field that opens the catalogue on the words typed, and the download.
+ */
+export default function GlobalNav({ page = 'accueil', seuil = 24 }) {
   const [opaque, setOpaque] = useState(false);
   const [ouvert, setOuvert] = useState(false);
 
@@ -32,18 +39,23 @@ export default function GlobalNav({ page = 'accueil', seuil = 240 }) {
   return (
     <header className={`entete ${opaque || ouvert ? 'entete-opaque' : ''}`}>
       <div className="entete-ligne">
-        <a href="/" aria-label="iAgent, accueil" className="flex-none"><Logo className="h-[22px] md:h-6 w-auto" /></a>
-        <nav className="entete-nav hidden xl:flex items-center gap-7 ml-6" aria-label="Navigation principale">
+        <a href="/" aria-label="iAgent, accueil" className="flex-none"><Logo className="h-[22px] md:h-[26px] w-auto" /></a>
+        <nav className="entete-nav hidden xl:flex items-center gap-7 ml-8" aria-label="Navigation principale">
           {ENTREES.map((e) => (
             <a key={e.libelle} href={e.href} aria-current={page === 'catalogue' && e.href === LIENS.catalogue ? 'page' : undefined} onClick={() => e.evenement && suivre(e.evenement)}>{e.libelle}</a>
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-3">
-          <a href="/catalogue" className="hidden md:inline-flex items-center justify-center w-11 h-11 rounded-xl text-[var(--texte-doux)] hover:text-white" aria-label="Rechercher un agent ou un métier" onClick={() => suivre('catalog_click', { depuis: 'recherche' })}>
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" fill="none" /><path d="M20 20l-4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+          <form action="/catalogue" method="get" role="search" className="entete-recherche hidden lg:flex" onSubmit={() => suivre('catalog_click', { depuis: 'recherche' })}>
+            <Loupe />
+            <label htmlFor="recherche-entete" className="sr-only">Rechercher un agent, un métier</label>
+            <input id="recherche-entete" name="q" type="search" placeholder="Rechercher un agent, un métier…" autoComplete="off" />
+          </form>
+          <a href="/catalogue" className="lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-xl text-[var(--texte-doux)] hover:text-white" aria-label="Rechercher un agent ou un métier"><Loupe /></a>
+          <a href={TELECHARGEMENT} className="bouton bouton-braise !min-h-[40px] !px-4 !text-sm hidden sm:inline-flex">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v11H3z M8 20h8 M12 16v4" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinejoin="round" /></svg>
+            Télécharger l'app
           </a>
-          <a href={TELECHARGEMENT} className="hidden md:inline-flex bouton bouton-contour !min-h-[40px] !px-4 !text-sm">Télécharger l'application</a>
-          <a href="/#commencer" className="bouton bouton-plein !min-h-[40px] !px-4 !text-sm" onClick={() => suivre('hero_start', { depuis: 'entete' })}>Commencer</a>
           <button type="button" className="xl:hidden w-11 h-11 inline-flex items-center justify-center rounded-xl border border-[var(--trait-fort)]" aria-expanded={ouvert} aria-controls="menu-mobile" aria-label={ouvert ? 'Fermer le menu' : 'Ouvrir le menu'} onClick={() => setOuvert(!ouvert)}>
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
               {ouvert
@@ -54,15 +66,20 @@ export default function GlobalNav({ page = 'accueil', seuil = 240 }) {
         </div>
       </div>
       {ouvert && (
-        <nav id="menu-mobile" className="xl:hidden pb-8 pt-2" aria-label="Navigation principale">
+        <nav id="menu-mobile" className="xl:hidden pb-8 pt-2 max-w-[var(--largeur)] mx-auto" aria-label="Navigation principale">
+          <form action="/catalogue" method="get" role="search" className="entete-recherche flex mb-4">
+            <Loupe />
+            <label htmlFor="recherche-menu" className="sr-only">Rechercher un agent, un métier</label>
+            <input id="recherche-menu" name="q" type="search" placeholder="Rechercher un agent, un métier…" autoComplete="off" />
+          </form>
           <ul className="flex flex-col">
             {ENTREES.map((e) => (
               <li key={e.libelle}>
-                <a href={e.href} className="block py-4 text-2xl font-[Sora] font-semibold tracking-tight border-b border-[var(--trait)]" onClick={() => { setOuvert(false); e.evenement && suivre(e.evenement); }}>{e.libelle}</a>
+                <a href={e.href} className="block py-4 text-xl font-[Orbitron] font-semibold tracking-wide border-b border-[var(--trait)]" onClick={() => { setOuvert(false); e.evenement && suivre(e.evenement); }}>{e.libelle}</a>
               </li>
             ))}
           </ul>
-          <a href={TELECHARGEMENT} className="bouton bouton-contour w-full mt-6">Télécharger l'application</a>
+          <a href={TELECHARGEMENT} className="bouton bouton-braise w-full mt-6">Télécharger l'app</a>
         </nav>
       )}
     </header>

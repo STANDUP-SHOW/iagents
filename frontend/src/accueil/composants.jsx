@@ -162,7 +162,7 @@ export function IntentInput({ exemples, cta = 'Commencer', id, evenement = 'idea
         placeholder={focus ? exemples[0] : montre}
         autoComplete="off"
       />
-      <button type="submit" className="bouton bouton-plein !min-h-[44px] !px-4 md:!px-5">
+      <button type="submit" className="bouton bouton-plein !min-h-[44px] !px-4 md:!px-5" aria-label={cta}>
         <span className="hidden sm:inline">{cta}</span>
         <span className="sm:hidden sr-only">{cta}</span>
         <Fleche />

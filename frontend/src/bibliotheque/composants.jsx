@@ -32,11 +32,10 @@ function Badge({ agent }) {
 
 /**
  * A collaborator's profile, not a product: portrait, reference, job, sector,
- * what it does, its first missions, the software it knows, its price.
+ * what it does, the software it knows, its price.
  */
 export function CarteAgent({ agent, choisi, onVoir, compact = false, prioritaire = false }) {
   const logiciels = logicielsDe(agent).slice(0, 3);
-  const missions = (agent.taches ?? []).filter((t) => t.active !== false).slice(0, 3).map((t) => t.nom);
   const ouvrir = () => onVoir(agent);
   return (
     <article className={`bi-carte ${compact ? 'bi-carte-compacte' : ''} ${choisi ? 'bi-carte-choisie' : ''}`}>
@@ -51,12 +50,11 @@ export function CarteAgent({ agent, choisi, onVoir, compact = false, prioritaire
         </h3>
         <p className="bi-secteur">{libelleSecteur(agent.secteur)} · {libelleFamille(agent.famille)}</p>
         {!compact && <p className="bi-accroche">{agent.accroche}</p>}
-        {!compact && missions.length > 0 && (
-          <ul className="bi-tags" aria-label="Premières missions">
-            {missions.map((m) => <li key={m}>{m}</li>)}
+        {logiciels.length > 0 && (
+          <ul className="bi-puces" aria-label="Logiciels qu'il connaît">
+            {logiciels.map((l) => <li key={l}>{l}</li>)}
           </ul>
         )}
-        {logiciels.length > 0 && <p className="bi-outils"><span className="sr-only">Logiciels : </span>{logiciels.join(' · ')}</p>}
         <div className="bi-pied">
           <div>
             <p className="bi-prix">{prix(PRIX_AGENT.mensuel)}<span> / mois</span></p>
@@ -80,10 +78,10 @@ const ONGLETS_APERCU = [
  * The preview beside the grid (a sheet from the bottom on a phone): enough to
  * decide whether to open the full fiche.
  */
-export function Apercu({ agent, installation, onFermer, onFicheComplete }) {
+export function Apercu({ agent, installation, onFermer, onFicheComplete, focaliser = true }) {
   const [onglet, setOnglet] = useState('competences');
   const fermer = useRef(null);
-  useEffect(() => { setOnglet('competences'); fermer.current?.focus({ preventScroll: true }); }, [agent?.id]);
+  useEffect(() => { setOnglet('competences'); if (focaliser) fermer.current?.focus({ preventScroll: true }); }, [agent?.id]);
   useEffect(() => {
     const echap = (e) => e.key === 'Escape' && onFermer();
     window.addEventListener('keydown', echap);

@@ -4,6 +4,7 @@ import PacksEntreprise from './components/PacksEntreprise.jsx';
 import CreezEntreprise from './components/CreezEntreprise.jsx';
 import IAgentBox from './components/IAgentBox.jsx';
 import GlobalNav from './accueil/scenes/GlobalNav.jsx';
+import Terre from './accueil/Terre.jsx';
 import { CarteAgent, Apercu, Recherche, GroupeFiltre } from './bibliotheque/composants.jsx';
 import { AGENTS_RESEAUX, PACKS_ENTREPRISE, INSTALLATIONS, ficheDe, installationDe, devisAgent } from './data/offres.js';
 import agents from './data/loader.js';
@@ -44,27 +45,40 @@ const ecrireInstallation = (id) => {
 const nombre = (x) => x.toLocaleString('fr-FR');
 const OU = { 'chez-vous': 'Chez vous', api: 'Par API' };
 
-/** The editorial entry: short, the catalogue stays the point of the page. */
-function Entree() {
-  const visages = [3, 70, 26, 427, 201].map((n) => portraitDe({ id: `AG-${String(n).padStart(4, '0')}` }));
+const ATOUTS = [
+  ['M4 20V10 M10 20V4 M16 20v-7 M22 20H2', 'Des agents pour chaque métier', 'du terrain au stratégique'],
+  ['M3 21h18 M5 21V8l7-4 7 4v13 M9 12h.01 M15 12h.01 M9 16h.01 M15 16h.01', 'Experts de votre secteur', 'banque, santé, industrie, services…'],
+  ['M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z', 'Déjà formés à vos outils', 'CRM, ERP, comptabilité, bureautique…'],
+  ['M4 20l1.3-3.9A8 8 0 1112 20a8 8 0 01-4.1-1.1z', 'Recrutés par conversation', 'un entretien, pas un paramétrage'],
+];
+
+/** The catalogue's entry, as max's mockup: the planet, the promise, the search. */
+function Entree({ requete, setRequete }) {
   return (
     <section className="bi-entree" aria-labelledby="titre-bibliotheque">
+      <Terre className="bi-entree-terre" cx={0.62} cy={1.5} r={0.95} />
       <div className="bi-entree-fond" aria-hidden="true" />
       <div className="bi-cadre bi-entree-grille">
         <div>
-          <p className="surtitre">Votre équipe augmentée</p>
-          <h1 id="titre-bibliotheque" className="titre-display bi-h1">Trouvez le collaborateur<br /><span className="lumiere">qui manque à votre équipe.</span></h1>
-          <p className="chapeau mt-4 max-w-xl">Des collaborateurs numériques spécialisés par métier, secteur et environnement professionnel.</p>
+          <p className="mq-surtitre">Votre équipe augmentée. Des milliers de talents IA.</p>
+          <h1 id="titre-bibliotheque" className="mq-display bi-h1">Le catalogue des <span className="mq-cyan">iAgents</span></h1>
+          <p className="bi-chapeau">Des assistants aux experts métiers, trouvez le collaborateur IA idéal pour vos projets. Chaque agent est spécialisé, formé et prêt à rejoindre votre équipe.</p>
           <dl className="bi-compteurs">
-            <div><dd>{nombre(COMPTEURS.agents)}</dd><dt>profils prêts</dt></div>
-            <div><dd>{COMPTEURS.secteurs}</dd><dt>secteurs</dt></div>
-            <div><dd>{nombre(COMPTEURS.logiciels)}</dd><dt>logiciels connus</dt></div>
-            <div><dd>{nombre(COMPTEURS.taches)}</dd><dt>missions décrites</dt></div>
+            <div><dt>iAgents disponibles</dt><dd>{nombre(COMPTEURS.agents)}</dd></div>
+            <div><dt>secteurs couverts</dt><dd>{COMPTEURS.secteurs}</dd></div>
+            <div><dt>logiciels connus</dt><dd>{nombre(COMPTEURS.logiciels)}</dd></div>
+            <div><dt>missions décrites</dt><dd>{nombre(COMPTEURS.taches)}</dd></div>
           </dl>
+          <div className="bi-entree-recherche"><Recherche valeur={requete} onChange={setRequete} /></div>
         </div>
-        <div className="bi-mosaique" aria-hidden="true">
-          {visages.map((src, i) => <img key={i} src={src} alt="" width="206" height="256" className={`bi-m${i}`} />)}
-        </div>
+        <ul className="bi-atouts" aria-label="Ce que vous trouvez ici">
+          {ATOUTS.map(([d, t, s]) => (
+            <li key={t}>
+              <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d={d} stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              <p><b>{t}</b><span>{s}</span></p>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
@@ -141,8 +155,34 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
   const montrerListe = vue !== 'packs' || packOuvert;
   const fermerApercu = useCallback(() => setApercu(null), []);
 
+  // On a wide screen the preview is always there, as on the mockup: the
+  // first profile of the list until the visitor picks another.
+  // On a wide screen the first profile opens beside the grid, as on the
+  // mockup; once, so closing it is respected.
+  const apercuOuvertSeul = useRef(false);
+  useEffect(() => {
+    if (apercuOuvertSeul.current || page !== 'catalogue' || !montrerListe || apercu || !resultats.length) return;
+    apercuOuvertSeul.current = resultats[0].id;
+    if (window.matchMedia?.('(min-width: 1280px)').matches) setApercu(resultats[0]);
+  }, [page, montrerListe, resultats, apercu]);
+
   const panneauFiltres = (
     <div className="bi-filtres-contenu">
+      {installation ? (
+        <div className="bi-installation">
+          <span>Votre installation</span>
+          <strong>{installationDe(installation).nom}</strong>
+          <button type="button" onClick={() => setPage('box')}>changer</button>
+        </div>
+      ) : (
+        <div className="bi-installation bi-installation-choix">
+          <h2>D'abord, votre installation</h2>
+          <p>Elle décide de ce que chaque agent vous coûte, chez vous ou par API.</p>
+          <div className="bi-installations">
+            {INSTALLATIONS.map((o) => <button key={o.id} type="button" onClick={() => choisirInstallation(o.id)}>{o.nom}</button>)}
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-2">
         <p className="bi-filtres-titre">Filtres</p>
         {choisis.length > 0 && <button type="button" className="bi-reinit" onClick={() => setFiltres(FILTRES_VIDES)}>Réinitialiser</button>}
@@ -160,33 +200,20 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
     <div className="bi-page">
       <GlobalNav page="catalogue" seuil={40} />
       <main id="contenu" className="pt-[72px]">
-        {page === 'catalogue' && <Entree />}
+        {page === 'catalogue' && <Entree requete={requete} setRequete={setRequete} />}
 
-        <nav className={`bi-cadre bi-pages ${page === 'catalogue' ? '' : 'pt-6'}`} aria-label="Sections de la bibliothèque">
-          {PAGES.map((p) => (
-            <button key={p.id} type="button" onClick={() => setPage(p.id)} aria-current={page === p.id ? 'page' : undefined}>{p.libelle}</button>
-          ))}
-        </nav>
-        {page === 'catalogue' && (
-          <div className="bi-barre">
-            <div className="bi-cadre"><Recherche valeur={requete} onChange={setRequete} /></div>
-          </div>
+        {page !== 'catalogue' && (
+          <nav className="bi-cadre bi-pages pt-6" aria-label="Sections de la bibliothèque">
+            {PAGES.map((p) => (
+              <button key={p.id} type="button" onClick={() => setPage(p.id)} aria-current={page === p.id ? 'page' : undefined}>{p.libelle}</button>
+            ))}
+          </nav>
         )}
 
-        {installation ? (
+        {page !== 'catalogue' && installation && (
           <div className="bi-cadre bi-installation">
             <span>Votre installation : <strong>{installationDe(installation).nom}</strong></span>
             <button type="button" onClick={() => setPage('box')}>changer</button>
-          </div>
-        ) : page === 'catalogue' && (
-          <div className="bi-cadre bi-installation bi-installation-choix">
-            <div>
-              <h2 className="text-white font-[Sora] font-semibold">D'abord, votre installation</h2>
-              <p>Elle décide de ce que chaque agent vous coûte, chez vous ou par API. Vous pourrez la changer à tout moment.</p>
-            </div>
-            <div className="bi-installations">
-              {INSTALLATIONS.map((o) => <button key={o.id} type="button" onClick={() => choisirInstallation(o.id)}>{o.nom}</button>)}
-            </div>
           </div>
         )}
 
@@ -199,7 +226,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
 
             <section className="bi-resultats" aria-label="Profils">
               <div className="bi-haut">
-                <p className="bi-total"><strong>{nombre(montrerListe ? resultats.length : PACKS_ENTREPRISE.length)}</strong> {montrerListe ? (resultats.length > 1 ? 'profils' : 'profil') : 'packs'}</p>
+                <p className="bi-total"><strong>{nombre(montrerListe ? resultats.length : PACKS_ENTREPRISE.length)}</strong> {montrerListe ? (resultats.length > 1 ? 'iAgents' : 'iAgent') : 'packs'}</p>
                 <div className="bi-vues" role="tablist" aria-label="Parcourir le catalogue">
                   {VUES.map((v) => (
                     <button key={v.id} type="button" role="tab" aria-selected={vue === v.id} onClick={() => { setVue(v.id); setPackOuvert(null); setFiltres(FILTRES_VIDES); setApercu(null); }}>{v.libelle}</button>
@@ -264,7 +291,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
               <>
                 <div className="bi-voile" onClick={fermerApercu} aria-hidden="true" />
                 <div className="bi-apercu-zone">
-                  <Apercu agent={apercu} installation={installation} onFermer={fermerApercu} onFicheComplete={setFicheOuverte} />
+                  <Apercu agent={apercu} installation={installation} onFermer={fermerApercu} onFicheComplete={setFicheOuverte} focaliser={apercu.id !== apercuOuvertSeul.current} />
                 </div>
               </>
             )}
