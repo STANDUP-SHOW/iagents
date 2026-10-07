@@ -2,16 +2,83 @@
 // signe comme une vraie Box, et rejoue chaque garde du module. Lancé par
 // plateforme/banc.ts (npm run controle) ou seul :
 //   node --experimental-strip-types plateforme/controle/banc.ts
-import { createHash, generateKeyPairSync, sign, type KeyObject } from 'node:crypto';
-import { readdirSync, readFileSync } from 'node:fs';
+import { createHash, createPublicKey, generateKeyPairSync, sign, type KeyObject } from 'node:crypto';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { AddressInfo } from 'node:net';
 import { creerPlateforme, messageASigner } from '../serveur.ts';
 import { Stockage } from '../stockage.ts';
 import { routes } from './routes.ts';
 import { detecterDonneeClient, refusDonneeClient } from './detecteur.ts';
-import { signerJetonLicence, verifierJetonLicence, type ContenuJeton } from './jeton.ts';
-import { comparerVersions } from './regles.ts';
+import { empreinteFiche, signerJetonLicence, verifierJetonLicence, type ContenuJeton } from './jeton.ts';
+import { cheminFiche, comparerVersions } from './regles.ts';
+import {
+  bruteX25519, chiffrerSkill, cleDeriveePourTemoin, clePriveeEd25519DepuisGraine, clePriveeX25519, dechiffrerSkillPourBanc, infoSkill,
+  messageSkill, signerSkill, verifierSignatureSkill,
+} from './scellement.ts';
 import { auditer } from './audit.ts';
+
+const FICHIER_TEMOINS = fileURLToPath(new URL('./temoins-signature.json', import.meta.url));
+const H = 3600_000;
+const graine = (t: string) => createHash('sha256').update(t).digest();
+const brut32 = (t: string) => graine(t).toString('base64url');
+
+/**
+ * Frozen vectors for the Box side (desktop replays them in Rust): fixed keys,
+ * fixed ephemeral key and nonce, expected outputs. Deterministic: Ed25519
+ * signatures are, and nothing here draws randomness.
+ */
+export function temoinsSignature() {
+  const plateforme = clePriveeEd25519DepuisGraine(graine('iagent-temoin-plateforme'));
+  const plateformePem = createPublicKey(plateforme).export({ type: 'spki', format: 'pem' }).toString();
+  const boxPrivee = brut32('iagent-temoin-box-x25519');
+  const boxPublique = bruteX25519(createPublicKey(clePriveeX25519(boxPrivee)));
+  const ephemerePrivee = brut32('iagent-temoin-ephemere');
+  const nonce = graine('iagent-temoin-nonce').subarray(0, 12);
+  const deviceId = 'BOX-TEMOIN';
+  const skillPackId = 'temoin-skill';
+  const version = '1.2.3';
+  const contenu = 'Rapprocher le relevé bancaire avec le grand livre ; lister les écarts — « accents » et €.';
+  const empreinte = createHash('sha256').update(contenu, 'utf8').digest('hex');
+  const ficheOctets = '{"id":"AG-TEMOIN","nom":"Témoin"}\n';
+  const charge: ContenuJeton = {
+    v: 2, device_id: deviceId, tenant_id: 'T-TEMOIN',
+    cle_box: createHash('sha256').update('cle-box-temoin').digest('hex'),
+    emis_le: '2026-10-07T10:00:00.000Z', expire_le: '2026-10-08T10:00:00.000Z', grace_jusqu_au: '2026-10-10T10:00:00.000Z',
+    droits: [{ id: 'ENT-1', agent_template_id: 'AG-0001', specialisation_id: null, licence: 'professional', fin: null,
+      empreinte_fiche: createHash('sha256').update(ficheOctets, 'utf8').digest('hex') }],
+  };
+  const jeton = signerJetonLicence(charge, plateforme);
+  const emis = Date.parse(charge.emis_le);
+  const verifications = [
+    { cas: 'joignable, 23 h après émission', maintenant: new Date(emis + 23 * H).toISOString(), injoignable: false },
+    { cas: 'injoignable, 30 h après émission : grâce', maintenant: new Date(emis + 30 * H).toISOString(), injoignable: true },
+    { cas: 'joignable, 30 h après émission : expiré', maintenant: new Date(emis + 30 * H).toISOString(), injoignable: false },
+    { cas: 'injoignable, 73 h après émission : grâce dépassée', maintenant: new Date(emis + 73 * H).toISOString(), injoignable: true },
+  ].map((v) => ({ ...v, valide: verifierJetonLicence(jeton, plateformePem, deviceId, new Date(v.maintenant), v.injoignable).valide }));
+  const info = infoSkill(deviceId, skillPackId, version);
+  const scelle = chiffrerSkill({ contenu, deviceId, skillPackId, version, cleBoxPublique: boxPublique, ephemerePrivee, nonce });
+  return {
+    pourquoi: 'Produit par plateforme/controle/banc.ts (--ecrire) depuis scellement.ts et jeton.ts ; rejoué par le Rust du desktop. Ne pas modifier à la main.',
+    plateforme: { graine_ed25519_hex: graine('iagent-temoin-plateforme').toString('hex'), cle_publique_pem: plateformePem },
+    fiche: { octets_utf8: ficheOctets, empreinte_sha256: charge.droits[0].empreinte_fiche },
+    jeton: { charge, jeton, verifications },
+    skill: {
+      skill_pack_id: skillPackId, version, contenu, empreinte,
+      message_signe: messageSkill(skillPackId, version, empreinte),
+      signature: signerSkill(skillPackId, version, empreinte, plateforme),
+    },
+    chiffrement: {
+      device_id: deviceId,
+      box_x25519_privee: boxPrivee, box_x25519_publique: boxPublique,
+      ephemere_x25519_privee: ephemerePrivee, ephemere_publique: scelle.ephemere_publique,
+      nonce: scelle.nonce, info, cle_derivee_hex: cleDeriveePourTemoin(ephemerePrivee, boxPublique, info),
+      chiffre: scelle.chiffre,
+    },
+  };
+}
 
 export async function lancer(): Promise<number> {
   let fautes = 0;
@@ -51,6 +118,44 @@ export async function lancer(): Promise<number> {
   verifier('versions comparées par nombres : 0.10.0 > 0.9.0', comparerVersions('0.10.0', '0.9.0') > 0);
   verifier('une pré-version précède sa version : 1.0.0-beta.2 < 1.0.0', comparerVersions('1.0.0-beta.2', '1.0.0') < 0);
   verifier('pré-versions par nombres : beta.10 > beta.9', comparerVersions('1.0.0-beta.10', '1.0.0-beta.9') > 0);
+
+  // --- frozen vectors shared with the Box --------------------------------------
+  const t = temoinsSignature();
+  const texteTemoins = JSON.stringify(t, null, 2) + '\n';
+  if (process.argv.includes('--ecrire')) { writeFileSync(FICHIER_TEMOINS, texteTemoins); console.log(`  ⟳ ${FICHIER_TEMOINS} écrit`); }
+  verifier('temoins-signature.json correspond à ce que signent et chiffrent jeton.ts et scellement.ts (sinon --ecrire, et prévenir desktop)',
+    existsSync(FICHIER_TEMOINS) && readFileSync(FICHIER_TEMOINS, 'utf8') === texteTemoins);
+  verifier('témoin de grâce : valide à 23 h, valide à 30 h injoignable, refusé à 30 h joignable, refusé à 73 h injoignable',
+    t.jeton.verifications.map((v) => v.valide).join() === 'true,true,false,false');
+  verifier('témoin : le chiffré se rouvre avec la clé de la Box et rend le contenu',
+    dechiffrerSkillPourBanc({ ...t.chiffrement, clePriveeBox: t.chiffrement.box_x25519_privee, deviceId: t.chiffrement.device_id, skillPackId: t.skill.skill_pack_id, version: t.skill.version }) === t.skill.contenu);
+  verifier('témoin : la signature du Skill Pack se vérifie', verifierSignatureSkill(t.skill.skill_pack_id, t.skill.version, t.skill.empreinte, t.skill.signature, t.plateforme.cle_publique_pem));
+
+  // v1 tokens are refused outright.
+  {
+    const p = clePriveeEd25519DepuisGraine(graine('iagent-temoin-plateforme'));
+    const ancien = signerJetonLicence({ ...t.jeton.charge, v: 1 } as unknown as ContenuJeton, p);
+    const r1 = verifierJetonLicence(ancien, t.plateforme.cle_publique_pem, 'BOX-TEMOIN', new Date('2026-10-07T12:00:00Z'));
+    verifier('un jeton v1, même bien signé, est refusé', !r1.valide && /périmée/.test(r1.motif));
+    const sansFiche = signerJetonLicence({ ...t.jeton.charge, droits: [{ ...t.jeton.charge.droits[0], empreinte_fiche: '' }] }, p);
+    verifier("un jeton dont un droit n'a pas d'empreinte de fiche est refusé", !verifierJetonLicence(sansFiche, t.plateforme.cle_publique_pem, 'BOX-TEMOIN', new Date('2026-10-07T12:00:00Z')).valide);
+  }
+
+  // One byte changed in a sheet changes its hash.
+  {
+    const dossier = mkdtempSync(join(tmpdir(), 'fiche-'));
+    try {
+      const origine = cheminFiche('AG-0001')!;
+      const octets = readFileSync(origine);
+      const copie = join(dossier, 'AG-0001.json');
+      writeFileSync(copie, octets);
+      const meme = empreinteFiche(copie) === empreinteFiche(origine);
+      const change = Buffer.from(octets);
+      change[Math.floor(change.length / 2)] ^= 0x01;
+      writeFileSync(copie, change);
+      verifier("une fiche modifiée d'un octet change son empreinte", meme && empreinteFiche(copie) !== empreinteFiche(origine));
+    } finally { rmSync(dossier, { recursive: true, force: true }); }
+  }
 
   let refusAudit = false;
   try { auditer(new Stockage(null), new Date(), { tenant_id: null, acteur: 'x', action: 'y', cible: 'z', detail: '-----BEGIN PRIVATE KEY-----' }); } catch { refusAudit = true; }
@@ -108,16 +213,21 @@ export async function lancer(): Promise<number> {
     const k1 = generateKeyPairSync('ed25519');
     const k2 = generateKeyPairSync('ed25519');
     const k3 = generateKeyPairSync('ed25519');
-    const boxDe = (serial: string, k: { publicKey: KeyObject }) => ({ serial, gamme: 'business', identite_publique: pemPublic(k.publicKey), os: 'ubuntu-core-24', version_desktop: '0.2.1' });
+    const x1 = generateKeyPairSync('x25519');
+    const x2 = generateKeyPairSync('x25519');
+    const brutePrivee = (k: KeyObject) => k.export({ type: 'pkcs8', format: 'der' }).subarray(16).toString('base64url');
+    const boxDe = (serial: string, k: { publicKey: KeyObject }, xk?: { publicKey: KeyObject }) => ({ serial, gamme: 'business', identite_publique: pemPublic(k.publicKey), os: 'ubuntu-core-24', version_desktop: '0.2.1', ...(xk ? { cle_chiffrement_publique: bruteX25519(xk.publicKey) } : {}) });
+    verifier('une clé de chiffrement qui ne fait pas 32 octets est refusée', (await admin('POST', '/controle/boxes', { ...boxDe('SN-XC', k1), cle_chiffrement_publique: Buffer.alloc(31, 7).toString('base64url') })).statut === 400);
     r = await admin('POST', '/controle/boxes', { ...boxDe('SN-PRIV', k1), identite_publique: k1.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString() });
     verifier('une clé PRIVÉE envoyée au provisioning est refusée', r.statut === 400 && /PRIVÉE/.test(r.corps?.erreur));
     const x = generateKeyPairSync('x25519');
     verifier("une clé qui n'est pas Ed25519 est refusée", (await admin('POST', '/controle/boxes', { ...boxDe('SN-X', k1), identite_publique: pemPublic(x.publicKey) })).statut === 400);
-    const b1 = (await admin('POST', '/controle/boxes', boxDe('SN-001', k1))).corps;
+    const b1 = (await admin('POST', '/controle/boxes', boxDe('SN-001', k1, x1))).corps;
     verifier('une Box provisionnée entre en stock, identifiée par sa clé', b1?.statut === 'stock' && /^BOX-[0-9a-f]{16}$/.test(b1?.device_id) && b1?.tenant_id === null);
     verifier('numéro de série unique', (await admin('POST', '/controle/boxes', boxDe('SN-001', k2))).statut === 409);
     verifier('une clé publique ne sert qu’à une Box', (await admin('POST', '/controle/boxes', boxDe('SN-009', k1))).statut === 409);
-    const b2 = (await admin('POST', '/controle/boxes', boxDe('SN-002', k2))).corps;
+    verifier('une clé de chiffrement ne sert qu’à une Box', (await admin('POST', '/controle/boxes', boxDe('SN-008', k2, x1))).statut === 409);
+    const b2 = (await admin('POST', '/controle/boxes', boxDe('SN-002', k2, x2))).corps;
     const b3 = (await admin('POST', '/controle/boxes', boxDe('SN-003', k3))).corps;
     verifier('inventaire filtré par statut', (await admin('GET', '/controle/boxes?statut=stock')).corps?.length === 3);
     verifier('une Box inconnue rend 404', (await admin('GET', '/controle/boxes/BOX-0000000000000000')).statut === 404);
@@ -163,11 +273,11 @@ export async function lancer(): Promise<number> {
     const jeton: string = r.corps?.jeton;
     verifier('une Box active reçoit ses droits et un jeton', r.statut === 200 && r.corps?.droits?.length === 3 && typeof jeton === 'string');
     verifier("une Box ne reçoit que les droits de SON client", !r.corps?.droits?.some((e: any) => e.id === eB.id));
-    const v = verifierJetonLicence(jeton, cle.cle_publique, b1.device_id, maintenant(), pemPublic(k1.publicKey));
+    const v = verifierJetonLicence(jeton, cle.cle_publique, b1.device_id, maintenant(), false, pemPublic(k1.publicKey));
     verifier('le jeton se vérifie pour cette Box et cette clé', v.valide && v.droits.length === 3 && v.contenu.tenant_id === tA.tenant_id);
     verifier('le jeton vaut 24 h', v.valide && Date.parse(v.contenu.expire_le) - horloge === 24 * 3600_000);
     verifier('jeton refusé pour une autre Box', !verifierJetonLicence(jeton, cle.cle_publique, b2.device_id, maintenant()).valide);
-    verifier('jeton refusé pour une autre clé de Box', !verifierJetonLicence(jeton, cle.cle_publique, b1.device_id, maintenant(), pemPublic(k2.publicKey)).valide);
+    verifier('jeton refusé pour une autre clé de Box', !verifierJetonLicence(jeton, cle.cle_publique, b1.device_id, maintenant(), false, pemPublic(k2.publicKey)).valide);
     const expire = verifierJetonLicence(jeton, cle.cle_publique, b1.device_id, new Date(horloge + 24 * 3600_000 + 1));
     verifier('jeton refusé une fois expiré', !expire.valide && /expiré/.test(expire.motif));
     verifier('jeton refusé si la clé publique annoncée est une autre', !verifierJetonLicence(jeton, pemPublic(autreCle.publicKey), b1.device_id, maintenant()).valide);
@@ -179,6 +289,13 @@ export async function lancer(): Promise<number> {
     verifier('jeton dont la charge est modifiée refusé', !verifierJetonLicence(gonfle, cle.cle_publique, b1.device_id, maintenant()).valide);
     const plusTard = verifierJetonLicence(jeton, cle.cle_publique, b1.device_id, new Date(horloge + 2 * 3600_000));
     verifier("un droit dont la fin est passée tombe du jeton avant l'expiration du jeton", plusTard.valide && plusTard.droits.length === 2 && !plusTard.droits.some((d) => d.id === eCourt.id));
+    verifier('jeton v2 : chaque droit porte l’empreinte des octets exacts de sa fiche',
+      v.valide && v.contenu.v === 2 && v.contenu.droits.every((d) => d.empreinte_fiche === empreinteFiche(cheminFiche(d.agent_template_id)!)));
+    verifier('grâce hors ligne : émission + 72 h, signée dans la charge', v.valide && Date.parse(v.contenu.grace_jusqu_au) - horloge === 72 * H && r.corps?.grace_jusqu_au === v.contenu.grace_jusqu_au);
+    verifier('grâce : valide à 30 h si la plateforme est injoignable', verifierJetonLicence(jeton, cle.cle_publique, b1.device_id, new Date(horloge + 30 * H), true).valide);
+    verifier('grâce : refusé à 30 h si la plateforme est joignable', !verifierJetonLicence(jeton, cle.cle_publique, b1.device_id, new Date(horloge + 30 * H), false).valide);
+    const audela = verifierJetonLicence(jeton, cle.cle_publique, b1.device_id, new Date(horloge + 73 * H), true);
+    verifier('grâce : refusé à 73 h même injoignable', !audela.valide && /72 heures/.test(audela.motif));
     verifier('signature sur les octets de la charge (format convenu avec desktop)',
       (await import('node:crypto')).verify(null, Buffer.from(charge, 'ascii'), (await import('node:crypto')).createPublicKey(cle.cle_publique), Buffer.from(jeton.split('.')[1], 'base64url')));
 
@@ -245,9 +362,43 @@ export async function lancer(): Promise<number> {
     verifier('candidat → valide refusé (il faut la revue)', (await revue(sk.id, 'valide')).statut === 409);
     verifier('une revue sans motif est refusée', (await admin('POST', `/controle/skills/${encodeURIComponent(sk.id)}/revue`, { decision: 'en-revue' })).statut === 400);
     verifier('candidat → en-revue', (await revue(sk.id, 'en-revue')).corps?.validation_status === 'en-revue');
-    verifier('en-revue → valide', (await revue(sk.id, 'valide')).corps?.validation_status === 'valide');
+    delete process.env.PLATEFORME_CLE_SIGNATURE;
+    r = await revue(sk.id, 'valide');
+    verifier('validation sans clé de signature refusée en le disant, le pack reste en revue',
+      r.statut === 503 && /PLATEFORME_CLE_SIGNATURE/.test(r.corps?.erreur) && (await admin('GET', '/controle/skills')).corps.find((k: any) => k.id === sk.id)?.validation_status === 'en-revue');
+    process.env.PLATEFORME_CLE_SIGNATURE = clePlateformePem;
+    r = await revue(sk.id, 'valide');
+    verifier('en-revue → valide, signé par la plateforme', r.corps?.validation_status === 'valide'
+      && verifierSignatureSkill(sk.skill_pack_id, sk.version, sk.empreinte, r.corps?.signature, cle.cle_publique));
+    verifier("une signature de Skill Pack d'une autre clé est refusée",
+      !verifierSignatureSkill(sk.skill_pack_id, sk.version, sk.empreinte, signerSkill(sk.skill_pack_id, sk.version, sk.empreinte, autreCle.privateKey), cle.cle_publique)
+      && !verifierSignatureSkill(sk.skill_pack_id, sk.version, 'f'.repeat(64), r.corps?.signature, cle.cle_publique));
+
+    // Encrypted delivery to one Box
+    const contenuDe = (cleBox: KeyObject, b: any, id: string) => parBox(cleBox, b.device_id, 'GET', `/controle/box/skills/${encodeURIComponent(id)}/contenu`);
+    const livre = await contenuDe(k1.privateKey, b1, sk.id);
+    const L = livre.corps;
+    verifier('la Box reçoit le contenu chiffré, signé, avec une clé éphémère et un nonce de 12 octets',
+      livre.statut === 200 && L.signature === r.corps.signature && L.empreinte === sk.empreinte && Buffer.from(L.nonce, 'base64url').length === 12
+      && Buffer.from(L.ephemere_publique, 'base64url').length === 32 && !JSON.stringify(L).includes('grand livre'));
+    const ouvrir = (cleB: string, deviceId: string, l: any) => {
+      try { return dechiffrerSkillPourBanc({ ...l, clePriveeBox: cleB, deviceId, skillPackId: l.skill_pack_id, version: l.version }); } catch { return null; }
+    };
+    const clair = ouvrir(brutePrivee(x1.privateKey), b1.device_id, L);
+    verifier('aller-retour : la Box rouvre le contenu, son SHA-256 est l’empreinte signée',
+      clair === contenuSkill && createHash('sha256').update(clair ?? '').digest('hex') === L.empreinte);
+    verifier('une autre Box ne déchiffre pas (autre clé privée)', ouvrir(brutePrivee(x2.privateKey), b1.device_id, L) === null);
+    verifier('un chiffré rejoué au nom d’une autre Box ne s’ouvre pas', ouvrir(brutePrivee(x1.privateKey), b2.device_id, L) === null);
+    const octetChange = Buffer.from(L.chiffre, 'base64url'); octetChange[3] ^= 0x01;
+    verifier("un octet changé dans le chiffré fait échouer GCM", ouvrir(brutePrivee(x1.privateKey), b1.device_id, { ...L, chiffre: octetChange.toString('base64url') }) === null);
+    const etiquette = Buffer.from(L.chiffre, 'base64url'); etiquette[etiquette.length - 1] ^= 0x80;
+    verifier("un octet changé dans l'étiquette fait échouer GCM", ouvrir(brutePrivee(x1.privateKey), b1.device_id, { ...L, chiffre: etiquette.toString('base64url') }) === null);
+    verifier('chaque livraison a sa propre clé éphémère', (await contenuDe(k1.privateKey, b1, sk.id)).corps?.ephemere_publique !== L.ephemere_publique);
+    verifier("contenu refusé à une Box dont aucun agent n'y a droit", (await contenuDe(k2.privateKey, b2, sk.id)).statut === 403);
+    verifier("contenu refusé pour un pack inconnu", (await contenuDe(k1.privateKey, b1, 'rapprochement-bancaire@0.0.1')).statut === 404);
     let liste = await skillsDeB1();
-    verifier('un Skill Pack validé atteint la Box dont un agent est compatible', liste.length === 1 && liste[0].skill_pack_id === 'rapprochement-bancaire' && !('propose_par' in liste[0]));
+    verifier('un Skill Pack validé atteint la Box dont un agent est compatible, signé, sans contenu en clair', liste.length === 1 && liste[0].skill_pack_id === 'rapprochement-bancaire'
+      && !('propose_par' in liste[0]) && !('contenu' in liste[0]) && typeof liste[0].signature === 'string');
     verifier("il n'atteint pas une Box sans agent compatible", ((await parBox(k2.privateKey, b2.device_id, 'GET', '/controle/box/skills')).corps ?? []).length === 0);
     const sk2 = (await admin('POST', '/controle/skills', pack({ version: '1.1.0', changelog: 'Écarts triés.' }))).corps;
     await revue(sk2.id, 'en-revue'); await revue(sk2.id, 'valide');
@@ -257,9 +408,11 @@ export async function lancer(): Promise<number> {
     liste = await skillsDeB1();
     verifier("un Skill Pack retiré n'atteint plus la Box", liste.length === 1 && liste[0].version === '1.0.0');
     verifier('retire est un état final', (await revue(sk2.id, 'valide')).statut === 409);
+    verifier('contenu refusé pour un pack retiré, même signé', (await contenuDe(k1.privateKey, b1, sk2.id)).statut === 409);
     const sk3 = (await admin('POST', '/controle/skills', pack({ version: '1.2.0', changelog: 'Essai.' }))).corps;
     await revue(sk3.id, 'en-revue');
     verifier('en-revue → rejete, puis final', (await revue(sk3.id, 'rejete')).corps?.validation_status === 'rejete' && (await revue(sk3.id, 'en-revue')).statut === 409);
+    verifier("contenu refusé pour un pack qui n'est pas validé", (await contenuDe(k1.privateKey, b1, sk3.id)).statut === 409);
 
     // Field proposals
     const proposition = { skill_pack_id: 'relance-douce', version: '0.1.0', compatible_agents: ['AG-0003'], compatible_tools: [], sector_scope: [], locale: 'fr-FR', changelog: 'Vu sur le terrain.', contenu: 'Relancer une facture échue à J+7 puis J+15 avec un ton courtois.' };
@@ -276,9 +429,12 @@ export async function lancer(): Promise<number> {
 
     // Returned Box: final, rights revoked
     const e3 = (await droit(tA, b3, 'AG-0005')).corps;
+    const e3bis = (await droit(tA, b3, 'AG-0002')).corps;
+    r = await contenuDe(k3.privateKey, b3, sk.id);
+    verifier("contenu refusé à une Box sans clé de chiffrement", r.statut === 409 && /clé de chiffrement/.test(r.corps?.erreur));
     await admin('POST', `/controle/boxes/${b3.device_id}/statut`, { statut: 'restituee', motif: 'fin de contrat' });
     const e3apres = (await admin('GET', `/controle/entitlements?device_id=${b3.device_id}`)).corps;
-    verifier('Box restituée : ses droits sont révoqués', e3apres?.length === 1 && e3apres[0].id === e3.id && e3apres[0].statut === 'revoquee');
+    verifier('Box restituée : ses droits sont révoqués', e3apres?.length === 2 && e3apres.every((e: any) => [e3.id, e3bis.id].includes(e.id) && e.statut === 'revoquee'));
     verifier('restituee est un état final', (await admin('POST', `/controle/boxes/${b3.device_id}/statut`, { statut: 'active', motif: 'x' })).statut === 409);
     verifier('aucun droit ne se crée sur une Box restituée', (await droit(tA, b3, 'AG-0006')).statut === 409);
 

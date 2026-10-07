@@ -11,9 +11,10 @@ import type { Box, Entitlement, SkillPack, Tenant } from '../modele.ts';
 import type { Stockage } from '../stockage.ts';
 import { ACTEUR_ADMIN, acteurBox, auditer } from './audit.ts';
 import { refusDonneeClient } from './detecteur.ts';
-import { cleDeSignature, DUREE_JETON_MS, empreinteCle, signerJetonLicence, type ContenuJeton } from './jeton.ts';
+import { cleDeSignature, DUREE_JETON_MS, empreinteCle, empreinteFiche, GRACE_JETON_MS, signerJetonLicence, type ContenuJeton } from './jeton.ts';
+import { chiffrerSkill, clePubliqueX25519, signerSkill } from './scellement.ts';
 import {
-  calculerCompteur, comparerVersions, estEmpreinte, estSemver, STATUTS_DEMANDABLES, templatesConnus,
+  calculerCompteur, cheminFiche, comparerVersions, estEmpreinte, estSemver, STATUTS_DEMANDABLES, templatesConnus,
   TRANSITIONS_BOX, TRANSITIONS_SKILL, urlRecevable,
 } from './regles.ts';
 
@@ -36,6 +37,8 @@ export type SkillPackDepose = SkillPack & {
   depose_le: string;
   /** Tenant that proposed it from the field; never returned to a Box. */
   propose_par: string | null;
+  /** Ed25519 signature by the platform, set at validation (scellement.ts). */
+  signature: string | null;
   revues: { quand: string; decision: SkillPack['validation_status']; motif: string }[];
 };
 
@@ -144,8 +147,9 @@ const sha256 = (t: string) => createHash('sha256').update(t, 'utf8').digest('hex
 
 /** What a Box may see of a Skill Pack: the model's fields and the content, never who proposed it. */
 function pourLaBox(k: SkillPackDepose) {
-  const { skill_pack_id, version, source_type, validation_status, compatible_agents, compatible_tools, sector_scope, locale, changelog, empreinte, contenu } = k;
-  return { skill_pack_id, version, source_type, validation_status, compatible_agents, compatible_tools, sector_scope, locale, changelog, empreinte, contenu };
+  const { id, skill_pack_id, version, source_type, validation_status, compatible_agents, compatible_tools, sector_scope, locale, changelog, empreinte, signature } = k;
+  // The content never travels in clear: a Box fetches it encrypted to its own key.
+  return { id, skill_pack_id, version, source_type, validation_status, compatible_agents, compatible_tools, sector_scope, locale, changelog, empreinte, signature };
 }
 
 // --- routes ------------------------------------------------------------------------
@@ -198,6 +202,13 @@ export const routes: Route[] = [
         if (e instanceof Refus) throw e;
         return refus(400, "« identite_publique » ne se lit pas comme une clé publique PEM.");
       }
+      let cle_chiffrement_publique: string | null = null;
+      if (c.cle_chiffrement_publique !== undefined && c.cle_chiffrement_publique !== null) {
+        if (!clePubliqueX25519(c.cle_chiffrement_publique as string)) {
+          non(400, '« cle_chiffrement_publique » doit être une clé publique X25519 brute de 32 octets, en base64url sans remplissage.');
+        }
+        cle_chiffrement_publique = c.cle_chiffrement_publique as string;
+      }
       const empreinte = empreinteCle(identite_publique);
       const device_id = `BOX-${empreinte.slice(0, 16)}`;
       const boxes = stockage.lister<Box>('boxes');
@@ -205,8 +216,11 @@ export const routes: Route[] = [
       if (boxes.some((b) => b.device_id === device_id || empreinteCle(b.identite_publique) === empreinte)) {
         return refus(409, 'Cette clé publique est déjà celle d’une autre Box : chaque Box a sa propre identité.');
       }
+      if (cle_chiffrement_publique && boxes.some((b) => b.cle_chiffrement_publique === cle_chiffrement_publique)) {
+        return refus(409, 'Cette clé de chiffrement est déjà celle d’une autre Box.');
+      }
       const box: Box = {
-        device_id, tenant_id: null, serial, identite_publique, gamme, os, version_desktop,
+        device_id, tenant_id: null, serial, identite_publique, cle_chiffrement_publique, gamme, os, version_desktop,
         statut: 'stock', plan_id: null, sante: null, garantie_jusqu_au: null,
       };
       stockage.poser('boxes', device_id, box);
@@ -322,12 +336,19 @@ export const routes: Route[] = [
       if ('erreur' in cle) return refus(503, cle.erreur);
       const now = maintenant();
       const droits = droitsActifs(stockage, b, now);
+      // The sheet is hashed now, from its exact bytes: the signed token signs the sheet.
+      const droitsJeton = droits.map((e) => {
+        const chemin = cheminFiche(e.agent_template_id);
+        if (!chemin) non(409, `La fiche de ${e.agent_template_id} est introuvable sur la plateforme : aucun jeton n'est émis tant qu'elle manque.`);
+        return { id: e.id, agent_template_id: e.agent_template_id, specialisation_id: e.specialisation_id, licence: e.licence, fin: e.fin, empreinte_fiche: empreinteFiche(chemin!) };
+      });
       const contenu: ContenuJeton = {
-        v: 1, device_id: b.device_id, tenant_id: b.tenant_id, cle_box: empreinteCle(b.identite_publique),
+        v: 2, device_id: b.device_id, tenant_id: b.tenant_id, cle_box: empreinteCle(b.identite_publique),
         emis_le: now.toISOString(), expire_le: new Date(now.getTime() + DUREE_JETON_MS).toISOString(),
-        droits: droits.map((e) => ({ id: e.id, agent_template_id: e.agent_template_id, specialisation_id: e.specialisation_id, licence: e.licence, fin: e.fin })),
+        grace_jusqu_au: new Date(now.getTime() + GRACE_JETON_MS).toISOString(),
+        droits: droitsJeton,
       };
-      return ok({ droits, jeton: signerJetonLicence(contenu, cle.cle), expire_le: contenu.expire_le });
+      return ok({ droits, jeton: signerJetonLicence(contenu, cle.cle), expire_le: contenu.expire_le, grace_jusqu_au: contenu.grace_jusqu_au });
     }),
   },
   {
@@ -411,7 +432,7 @@ export const routes: Route[] = [
       if (k.contenu !== null && sha256(k.contenu) !== empreinte) non(400, "« empreinte » ne correspond pas au contenu déposé.");
       const d: SkillPackDepose = {
         ...k, id: `${k.skill_pack_id}@${k.version}`, source_type, validation_status: 'candidat', empreinte: empreinte as string,
-        depose_le: maintenant().toISOString(), propose_par: null, revues: [],
+        depose_le: maintenant().toISOString(), propose_par: null, signature: null, revues: [],
       };
       stockage.poser('skills', d.id, d);
       auditer(stockage, maintenant(), { tenant_id: null, acteur: ACTEUR_ADMIN, action: 'skill.depose', cible: d.id, detail: `source ${source_type}` });
@@ -429,8 +450,16 @@ export const routes: Route[] = [
       if (!permis.includes(decision)) {
         return refus(409, `Passage de « ${k.validation_status} » à « ${decision} » refusé. ${permis.length ? `Depuis « ${k.validation_status} » : ${permis.join(', ')}.` : `« ${k.validation_status} » est un état final.`}`);
       }
+      let signature = k.signature ?? null;
+      if (decision === 'valide') {
+        // A validated pack is a signed pack, or it is not validated.
+        const cle = cleDeSignature();
+        if ('erreur' in cle) return refus(503, `Validation refusée : ${cle.erreur}`);
+        if (!estEmpreinte(k.empreinte)) return refus(409, "Validation refusée : ce Skill Pack n'a pas d'empreinte à signer.");
+        signature = signerSkill(k.skill_pack_id, k.version, k.empreinte, cle.cle);
+      }
       const quand = maintenant().toISOString();
-      const r: SkillPackDepose = { ...k, validation_status: decision, revues: [...k.revues, { quand, decision, motif }] };
+      const r: SkillPackDepose = { ...k, validation_status: decision, signature, revues: [...k.revues, { quand, decision, motif }] };
       stockage.poser('skills', k.id, r);
       auditer(stockage, maintenant(), { tenant_id: k.propose_par, acteur: ACTEUR_ADMIN, action: 'skill.revue', cible: k.id, detail: `${k.validation_status} -> ${decision} : ${motif}` });
       return ok(r);
@@ -453,6 +482,22 @@ export const routes: Route[] = [
     },
   },
   {
+    methode: 'GET', chemin: '/controle/box/skills/:id/contenu', acces: 'box',
+    traiter: traiter(({ stockage, box, params, maintenant }) => {
+      const b = box!;
+      const k = stockage.lire<SkillPackDepose>('skills', params.id) ?? non(404, "Ce Skill Pack n'existe pas.");
+      if (k.validation_status !== 'valide') return refus(409, `Ce Skill Pack est « ${k.validation_status} » : seul un Skill Pack validé se livre.`);
+      const agents = new Set(droitsActifs(stockage, b, maintenant()).map((e) => e.agent_template_id));
+      if (!k.compatible_agents.some((a) => agents.has(a))) return refus(403, "Aucun agent de cette Box n'a droit à ce Skill Pack.");
+      if (!b.cle_chiffrement_publique) return refus(409, "Cette Box n'a pas de clé de chiffrement enregistrée : elle ne peut recevoir aucun contenu de Skill Pack.");
+      if (!k.signature || !k.empreinte) return refus(409, "Ce Skill Pack n'est pas signé : il ne se livre pas.");
+      if (k.contenu === null) return refus(409, "Le contenu de ce Skill Pack n'est pas déposé sur la plateforme.");
+      const s = chiffrerSkill({ contenu: k.contenu, deviceId: b.device_id, skillPackId: k.skill_pack_id, version: k.version, cleBoxPublique: b.cle_chiffrement_publique });
+      auditer(stockage, maintenant(), { tenant_id: b.tenant_id, acteur: acteurBox(b.device_id), action: 'skill.livre', cible: k.id, detail: 'contenu chiffré pour cette Box' });
+      return ok({ skill_pack_id: k.skill_pack_id, version: k.version, empreinte: k.empreinte, signature: k.signature, ...s });
+    }),
+  },
+  {
     methode: 'POST', chemin: '/controle/box/skills/candidats', acces: 'box',
     traiter: traiter(({ stockage, box, corps, maintenant }) => {
       const b = box!;
@@ -465,7 +510,7 @@ export const routes: Route[] = [
       const k = lireSkill(stockage, c);
       const d: SkillPackDepose = {
         ...k, id: `${k.skill_pack_id}@${k.version}`, source_type: 'terrain-anonymise', validation_status: 'candidat',
-        empreinte: sha256(k.contenu!), depose_le: maintenant().toISOString(), propose_par: tenant.tenant_id, revues: [],
+        empreinte: sha256(k.contenu!), depose_le: maintenant().toISOString(), propose_par: tenant.tenant_id, signature: null, revues: [],
       };
       stockage.poser('skills', d.id, d);
       auditer(stockage, maintenant(), { tenant_id: tenant.tenant_id, acteur: acteurBox(b.device_id), action: 'skill.propose', cible: d.id, detail: 'proposition terrain, en attente de revue' });

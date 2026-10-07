@@ -3,6 +3,7 @@
 // le catalogue (templates d'agents, compteur public).
 
 import { readdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import type { Box, SkillPack } from '../modele.ts';
 
 type StatutBox = Box['statut'];
@@ -81,18 +82,28 @@ export function urlRecevable(v: unknown): string | null {
 
 const RACINE = new URL('../../', import.meta.url);
 
-let templates: Set<string> | null = null;
-/** AG-XXXX ids that have a sheet in agents/ or socle/ (the same two folders the app reads). */
-export function templatesConnus(): Set<string> {
-  if (templates) return templates;
-  templates = new Set();
+let fiches: Map<string, string> | null = null;
+/** AG-XXXX -> absolute path of its sheet in agents/ or socle/ (the same two folders the app reads). */
+function fichesConnues(): Map<string, string> {
+  if (fiches) return fiches;
+  fiches = new Map();
   for (const dossier of ['agents', 'socle']) {
     for (const f of readdirSync(new URL(`${dossier}/`, RACINE))) {
       const m = /^(AG-\d{4})-.*\.json$/.exec(f);
-      if (m) templates.add(m[1]);
+      if (m && !fiches.has(m[1])) fiches.set(m[1], fileURLToPath(new URL(`${dossier}/${f}`, RACINE)));
     }
   }
-  return templates;
+  return fiches;
+}
+
+/** AG-XXXX ids that have a sheet in agents/ or socle/. */
+export function templatesConnus(): Set<string> {
+  return new Set(fichesConnues().keys());
+}
+
+/** Path of the sheet of an agent template, or null when the catalogue has none. */
+export function cheminFiche(agentTemplateId: string): string | null {
+  return fichesConnues().get(agentTemplateId) ?? null;
 }
 
 export type Compteur = {

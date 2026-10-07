@@ -6,7 +6,11 @@
 //   charge    = base64url (no padding) of the UTF-8 JSON payload
 //   signature = base64url (no padding) of the Ed25519 signature over the ASCII
 //               bytes of <charge> itself (the text before the dot, not the JSON)
-// Payload: { v, device_id, tenant_id, cle_box, emis_le, expire_le, droits[] }.
+// Payload: { v: 2, device_id, tenant_id, cle_box, emis_le, expire_le, droits[] }.
+// Each right carries `empreinte_fiche`, the SHA-256 of the exact bytes of the
+// agent sheet (agents/ or socle/) when the token was issued: the token is
+// signed, so the sheet is signed through it (§6 « fiches signées »). The Box
+// refuses to run a sheet whose bytes do not hash to that value.
 // `cle_box` is the SHA-256 of the Box public key (DER SPKI): the token names the
 // key it was issued to, and `device_id` names the Box. A disk copied to another
 // machine carries a token for another device_id, which verification refuses, and
@@ -16,8 +20,17 @@
 // reuse it verbatim.
 
 import { createHash, createPrivateKey, createPublicKey, sign, verify, type KeyObject } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
+/** Renewal is expected 24 h after issue (`expire_le`). */
 export const DUREE_JETON_MS = 24 * 60 * 60 * 1000;
+/**
+ * Offline grace: when the platform does not answer at all, the token keeps
+ * running until `grace_jusqu_au` = issue + 72 h. A platform that answers
+ * "suspended", "returned" or "revoked" (403, or empty rights) is never a grace
+ * case: the application drops the token then.
+ */
+export const GRACE_JETON_MS = 72 * 60 * 60 * 1000;
 const DERIVE_HORLOGE_MS = 5 * 60 * 1000;
 
 export type DroitJeton = {
@@ -26,15 +39,19 @@ export type DroitJeton = {
   specialisation_id: string | null;
   licence: string;
   fin: string | null;
+  /** SHA-256 (hex) of the exact bytes of the agent sheet file. */
+  empreinte_fiche: string;
 };
 
 export type ContenuJeton = {
-  v: 1;
+  v: 2;
   device_id: string;
   tenant_id: string;
   cle_box: string;
   emis_le: string;
   expire_le: string;
+  /** Offline grace limit, signed with the rest. */
+  grace_jusqu_au: string;
   droits: DroitJeton[];
 };
 
@@ -48,6 +65,11 @@ const b64url = (b: Buffer): string => b.toString('base64url');
 export function empreinteCle(clePubliquePem: string): string {
   const der = createPublicKey(clePubliquePem).export({ type: 'spki', format: 'der' });
   return createHash('sha256').update(der).digest('hex');
+}
+
+/** SHA-256 (hex) of the exact bytes of an agent sheet: the only place this hash is computed. */
+export function empreinteFiche(chemin: string): string {
+  return createHash('sha256').update(readFileSync(chemin)).digest('hex');
 }
 
 /** Environment PEMs often arrive with literal "\n": accept both. */
@@ -92,6 +114,8 @@ const estIso = (v: unknown): v is string => typeof v === 'string' && Number.isFi
  * reason: malformed, signed by another key, issued for another Box, expired, or
  * issued in the future. On success returns only the rights still running at
  * `maintenant` (an entitlement whose `fin` has passed is dropped).
+ * `injoignable`: true only when the platform gave no answer at all; the token
+ * then runs until `grace_jusqu_au`, otherwise until `expire_le`.
  * `clePubliqueBox`, when given, must be the key the token was issued to.
  */
 export function verifierJetonLicence(
@@ -99,6 +123,7 @@ export function verifierJetonLicence(
   clePubliquePem: string,
   deviceId: string,
   maintenant: Date,
+  injoignable: boolean = false,
   clePubliqueBox?: string,
 ): Verdict {
   if (typeof jeton !== 'string') return { valide: false, motif: "Le jeton de licence est absent." };
@@ -122,7 +147,12 @@ export function verifierJetonLicence(
   } catch {
     return { valide: false, motif: "Le jeton de licence est mal formé." };
   }
-  if (!c || c.v !== 1 || typeof c.device_id !== 'string' || !estIso(c.expire_le) || !estIso(c.emis_le) || !Array.isArray(c.droits)) {
+  if (c && (c as { v?: unknown }).v !== 2) {
+    return { valide: false, motif: "Ce jeton de licence est d'une version périmée : la Box doit redemander ses droits à la plateforme." };
+  }
+  if (!c || typeof c.device_id !== 'string' || !estIso(c.expire_le) || !estIso(c.emis_le) || !estIso(c.grace_jusqu_au)
+    || Date.parse(c.grace_jusqu_au) < Date.parse(c.expire_le) || !Array.isArray(c.droits)
+    || c.droits.some((d) => !d || typeof d.empreinte_fiche !== 'string' || !/^[0-9a-f]{64}$/.test(d.empreinte_fiche))) {
     return { valide: false, motif: "Le jeton de licence est mal formé." };
   }
   if (c.device_id !== deviceId) {
@@ -136,7 +166,11 @@ export function verifierJetonLicence(
     }
   }
   const t = maintenant.getTime();
-  if (Date.parse(c.expire_le) <= t) {
+  if (injoignable) {
+    if (Date.parse(c.grace_jusqu_au) <= t) {
+      return { valide: false, motif: "Le jeton de licence a dépassé sa grâce hors ligne de 72 heures : la Box doit joindre la plateforme pour que ses agents reprennent." };
+    }
+  } else if (Date.parse(c.expire_le) <= t) {
     return { valide: false, motif: "Le jeton de licence a expiré : la Box doit redemander ses droits à la plateforme." };
   }
   if (Date.parse(c.emis_le) > t + DERIVE_HORLOGE_MS) {
