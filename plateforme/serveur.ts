@@ -38,7 +38,8 @@ export type Contexte = {
   maintenant: () => Date;
 };
 
-export type Reponse = { statut: number; corps: unknown };
+/** `type` : pour répondre autre chose que du JSON (TwiML d'un opérateur) ; `corps` est alors écrit tel quel. */
+export type Reponse = { statut: number; corps: unknown; type?: string };
 
 export type Route = {
   methode: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -124,6 +125,11 @@ export function creerPlateforme(
   const routes = options.routes ?? toutesLesRoutes;
 
   const repondre = (res: ServerResponse, r: Reponse) => {
+    if (r.type && typeof r.corps === 'string') {
+      res.writeHead(r.statut, { 'content-type': r.type });
+      res.end(r.corps);
+      return;
+    }
     res.writeHead(r.statut, { 'content-type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify(r.corps));
   };
