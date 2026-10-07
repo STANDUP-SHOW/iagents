@@ -100,8 +100,10 @@ ferme cette porte : non reliée, la box ne fait tourner **aucun** agent. L'adres
 clé de la plateforme y sont compilées (`IAGENT_PLATEFORME_URL`, `IAGENT_CLE_PLATEFORME`),
 donc un fichier effacé ou réécrit vers un autre serveur retrouve les valeurs d'usine ; cela
 ferme aussi le cas d'un client qui se signerait ses propres droits avec sa propre clé.
-**À condition** que la construction d'usine fournisse bien ces deux valeurs : sans elles,
-le fichier fait encore foi. L'édition libre ne change pas.
+La construction de l'édition Box **s'arrête** s'il manque l'une des deux valeurs, si
+l'adresse n'est pas en `https://` ou si la clé n'est pas une clé publique PEM
+(`desktop/src-tauri/build.rs`, commit `aa0d7d9`) : une box redirigeable ne peut pas sortir
+de l'usine en silence. L'édition libre ne change pas.
 
 **Ce qui reste au verrouillage de la machine :** remplacer l'exécutable lui-même. Les
 fiches sont signées par empreinte mais **pas chiffrées** : elles restent lisibles sur le
