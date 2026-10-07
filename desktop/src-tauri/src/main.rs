@@ -863,6 +863,7 @@ fn main() {
             plateforme::plateforme_telemetrie_envoyer,
             plateforme::plateforme_mises_a_jour,
             plateforme::plateforme_skills,
+            plateforme::plateforme_skill_ouvrir,
             plateforme::plateforme_appels,
             plateforme::plateforme_handoffs,
             plateforme::plateforme_handoff_decider,

@@ -15,6 +15,8 @@ export type Droit = {
   specialisation_id: string | null
   licence: string
   fin: string | null
+  /** Token v2: SHA-256 of the exact bytes of the agent's card. */
+  empreinte_fiche: string | null
 }
 
 export type EtatLicence = {
@@ -32,8 +34,18 @@ export type EtatPlateforme = {
   device_id: string | null
   cle_plateforme_posee: boolean
   cle_publique_box: string | null
+  /** X25519, raw 32 bytes in base64url: `cle_chiffrement_publique` at provisioning. */
+  cle_chiffrement_publique: string | null
   licence: EtatLicence
   manque: string[]
+}
+
+/** What the screen learns about a Skill Pack opened in memory: never its content. */
+export type SkillOuvert = {
+  skill_pack_id: string
+  version: string
+  empreinte: string
+  taille: number
 }
 
 export type Sante = {

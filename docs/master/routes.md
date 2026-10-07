@@ -10,7 +10,7 @@ sont du JSON ; une erreur est `{ "erreur": "<phrase en français>" }`.
 |---|---|---|---|
 | POST | /controle/tenants | admin | créer un client `{nom, segment, pays, opt_in_skills}` |
 | GET | /controle/tenants | admin | lister |
-| POST | /controle/boxes | admin | provisionner `{serial, gamme, identite_publique, os, version_desktop}` → statut `stock` |
+| POST | /controle/boxes | admin | provisionner `{serial, gamme, identite_publique, cle_chiffrement_publique?, os, version_desktop}` → statut `stock` ; `cle_chiffrement_publique` = clé X25519 brute de 32 octets en base64url, sans elle la Box ne reçoit aucun contenu de Skill |
 | GET | /controle/boxes | admin | inventaire |
 | GET | /controle/boxes/:id | admin | une Box |
 | POST | /controle/boxes/:id/attribuer | admin | `{tenant_id, plan_id}` → `provisionnee` |
@@ -18,20 +18,37 @@ sont du JSON ; une erreur est `{ "erreur": "<phrase en français>" }`.
 | POST | /controle/entitlements | admin | `{tenant_id, device_id, agent_template_id, specialisation_id, licence, debut, fin}` |
 | GET | /controle/entitlements | admin | `?tenant_id=` |
 | POST | /controle/entitlements/:id/revoquer | admin | `{motif}` |
-| GET | /controle/box/droits | box | droits actifs + `jeton` signé par la plateforme, valable 24 h |
+| GET | /controle/box/droits | box | droits actifs + `jeton` v2 signé par la plateforme : `expire_le` (24 h) et `grace_jusqu_au` (72 h, plateforme injoignable seulement) ; chaque droit porte `empreinte_fiche` (SHA-256 des octets exacts de la fiche) |
 | POST | /controle/box/telemetrie | box | `{cpu, memoire, disque, temperature, version_desktop}` |
 | GET | /controle/box/mises-a-jour | box | versions visées pour cette Box |
 | POST | /controle/mises-a-jour | admin | publier `{composant, version, canal, url, empreinte}` |
 | POST | /controle/skills | admin | déposer un Skill Pack (statut `candidat`) |
-| POST | /controle/skills/:id/revue | admin | `{decision: en-revue|valide|rejete|retire, motif}` |
+| POST | /controle/skills/:id/revue | admin | `{decision: en-revue|valide|rejete|retire, motif}` ; `valide` signe le pack (refusé sans `PLATEFORME_CLE_SIGNATURE`) |
 | GET | /controle/skills | admin | tous |
-| GET | /controle/box/skills | box | Skill Packs `valide` compatibles avec les agents de la Box |
+| GET | /controle/box/skills | box | Skill Packs `valide` compatibles avec les agents de la Box : métadonnées, empreinte et signature, jamais le contenu en clair |
+| GET | /controle/box/skills/:id/contenu | box | contenu chiffré pour CETTE Box : `{skill_pack_id, version, empreinte, signature, ephemere_publique, nonce, chiffre}` ; refusé si le pack n'est pas `valide`, si aucun droit actif de la Box n'y est compatible, ou si la Box n'a pas de clé de chiffrement |
 | POST | /controle/box/skills/candidats | box | proposition terrain : refusée sans `opt_in_skills`, refusée si une donnée client est détectée |
 | GET | /controle/compteur | public | `{metiers, profils, calcule_le}` calculé depuis le catalogue |
 | GET | /controle/audit | admin | `?tenant_id=` |
 
-Clé de signature des jetons : `PLATEFORME_CLE_SIGNATURE` (PEM Ed25519) ; la clé
-publique se lit en `GET /controle/cle-publique` (public).
+Clé de signature des jetons et des Skill Packs : `PLATEFORME_CLE_SIGNATURE` (PEM
+Ed25519) ; la clé publique se lit en `GET /controle/cle-publique` (public).
+
+Formats (`plateforme/controle/jeton.ts`, `scellement.ts`, vecteurs figés dans
+`plateforme/controle/temoins-signature.json`, rejoués par le Rust du desktop) :
+- jeton = `<charge>.<signature>` en base64url sans remplissage, signature Ed25519
+  sur les octets de la charge ; charge `{v: 2, device_id, tenant_id, cle_box,
+  emis_le, expire_le, grace_jusqu_au, droits:[{id, agent_template_id,
+  specialisation_id, licence, fin, empreinte_fiche}]}`. Un v1 est refusé.
+  `verifierJetonLicence(jeton, clePubliquePem, deviceId, maintenant, injoignable)` :
+  `injoignable` vrai seulement quand la plateforme n'a pas répondu du tout ; une
+  réponse « suspendue », « restituée » ou « révoqué » (403, droits vides) ne
+  relève jamais de la grâce.
+- signature d'un Skill Pack : Ed25519 sur `iagent-skill-v1\n<skill_pack_id>\n<version>\n<empreinte>`.
+- chiffrement : X25519 éphémère à chaque appel × clé de la Box, HKDF-SHA256 (sel
+  vide, info `iagent-skill-v1|<device_id>|<skill_pack_id>|<version>`, 32 octets),
+  AES-256-GCM, nonce 12 octets, étiquette de 16 octets à la fin du chiffré,
+  données associées = l'info.
 
 ## tarifs (§5, §12, §13)
 | GET | /tarifs/plans | public | plans visibles `?segment=&region=FR&date=` |

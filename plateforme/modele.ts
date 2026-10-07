@@ -17,6 +17,11 @@ export type Box = {
   serial: string;
   /** Clé publique Ed25519 de la Box, en PEM. La clé privée ne quitte jamais la Box (TPM visé). */
   identite_publique: string;
+  /**
+   * Clé publique X25519 brute (32 octets, base64url) pour chiffrer les Skill
+   * Packs à cette Box seule (§6). Absente = la Box ne reçoit aucun contenu de Skill.
+   */
+  cle_chiffrement_publique?: string | null;
   gamme: 'business' | 'home';
   os: string;
   version_desktop: string;
