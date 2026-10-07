@@ -139,11 +139,17 @@ export type SkillPack = {
 /** Plan tarifaire versionné (§5, schéma minimal). */
 export type Plan = {
   plan_id: Id;
+  nom: string;
+  description: string;
   segment: 'business' | 'home' | 'voice' | 'enterprise';
   currency: string;
   billing_period: 'mois' | 'annee';
   commitment_months: number;
   base_price: number | null; // null = sur devis
+  /** Haut de fourchette (« 599–749 € »), sinon null. */
+  base_price_max: number | null;
+  /** « à partir de » : base_price est un plancher. */
+  a_partir_de: boolean;
   included_agents: number;
   included_commander: boolean;
   included_box: boolean;
@@ -169,4 +175,15 @@ export type Audit = {
   action: string;
   cible: string;
   detail: string;
+};
+
+/** Un client de la plateforme (entreprise ou foyer). */
+export type Tenant = {
+  tenant_id: Id;
+  nom: string;
+  segment: 'business' | 'home' | 'enterprise';
+  pays: string;
+  /** Participation volontaire à l'amélioration commune des Skill Packs (§7). Faux par défaut. */
+  opt_in_skills: boolean;
+  cree_le: Iso;
 };
