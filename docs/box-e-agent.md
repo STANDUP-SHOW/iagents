@@ -72,25 +72,52 @@ ajoute :
 Essential (149 €) et la Box sur 36 mois (69 €), soit 218 €. Recopié tel quel en attendant
 max.
 
-## Verrouiller : ce qui existe, ce qui reste à construire
+## Verrouiller : ce que fait la PR #41, ce que le MASTER demande encore
 
-Aucun moyen ne suffit seul ; ensemble, ils rendent la copie plus chère que la location.
+Le centre de contrôle est construit par le fil « Plan global jusqu'au produit fini »
+(PR #41, branche `plan-global`, en brouillon au 07/10). Ce document reste la référence de
+l'offre louée ; ce qui suit sépare ce que le code fait aujourd'hui de ce que le MASTER §6
+exige et qui n'est pas fait. **Les exigences du §6 restent toutes dues.**
 
-| Verrou | État au 07/10 | Dépend d'une réponse de max ? |
-|---|---|---|
-| Contrat : propriété, dépôt, restitution, interdiction d'extraire | à rédiger | non |
-| Machine fermée en usine : compte sans droits d'administration, mode kiosque, BitLocker avec TPM, BIOS sous mot de passe, démarrage sécurisé, pas de démarrage USB | `usine/` (PR #24) installe, ne verrouille rien | non |
-| **Agents signés** : l'application refuse une fiche que iAgent n'a pas signée | **n'existe pas** : `tauri.conf.json` livre `agents/` et `socle/` en clair et `fiches::lire_fiche` lit ce qu'il trouve | non |
-| Agents chiffrés pour une box donnée (clé liée au TPM) | n'existe pas | non |
-| Licence courte par agent, renouvelée en ligne, avec quelques jours de grâce hors ligne | n'existe pas ; demande un service hébergé | non (durée et loyer donnés par le plan) |
-| Gestion à distance : inventaire, coupure d'une box impayée | mises à jour automatiques en place (`mise_a_jour.rs`), RustDesk en option dans `usine/` | non |
+### Ce que la PR #41 fait (relevé du 07/10, 22h49)
 
-**Ordre de construction proposé :** la signature des fiches d'abord, parce qu'elle seule
-empêche « ses propres agents » sur nos box et qu'elle ne dépend de rien. Le mécanisme
-existe déjà pour les mises à jour (`mise_a_jour.rs` vérifie une signature avant
-d'installer un octet) : la même clé publique, embarquée dans le binaire, vérifie chaque
-fiche. La clé privée reste chez max ou dans un secret de l'intégration continue, jamais
-dans le dépôt. Puis le chiffrement par box, puis la licence, qui demande un hébergement.
+| Verrou | Ce que fait #41 |
+|---|---|
+| Identité de la box | une clé Ed25519 par box, gardée au trousseau du système, qui signe chaque requête au centre de contrôle |
+| Droit d'exécution | **un seul jeton par box**, qui liste tous ses agents avec la date de fin de chacun |
+| Durée du jeton | **24 h**, sans grâce hors ligne au-delà |
+| Révocation | prend effet au prochain renouvellement, donc au plus 24 h après |
+| Box impayée | coupée par le statut « suspendue » |
+| Skill Packs | une empreinte SHA-256, sans signature |
+| Fiches d'agent | **ni signées ni chiffrées** : `fiches::lire_fiche` lit toujours ce qu'il trouve |
+
+### Ce que le MASTER §6 demande et qui reste à faire
+
+| Exigence | État |
+|---|---|
+| **Fiches signées** (l'application refuse une fiche qu'iAgent n'a pas signée) | à faire ; c'était le premier verrou proposé ici, parce qu'il est le seul à empêcher « ses propres agents » sur nos box, et il ne dépend de rien |
+| Paquets chiffrés pour une box donnée | à faire |
+| Skill Packs signés, et pas seulement hachés (une empreinte se recalcule, une signature non) | à faire |
+| mTLS vers le centre de contrôle | à faire ; la signature Ed25519 des requêtes en tient lieu pour l'instant |
+| TPM 2.0 (clé de la box liée à la puce, pas au trousseau, qui se recopie avec le disque) | à faire |
+| Secure Boot, disque chiffré, système verrouillé | à faire en usine (`usine/`, PR #24, installe et ne verrouille rien) |
+| Contrat : propriété, dépôt, restitution, interdiction d'extraire | à rédiger |
+
+Pour la signature des fiches, le mécanisme existe déjà pour les mises à jour
+(`mise_a_jour.rs` vérifie une signature avant d'installer un octet) : la même approche,
+une clé publique dans le binaire et la clé privée hors du dépôt.
+
+### Avis de ce fil sur les choix de #41
+
+- **Un jeton de 24 h sans grâce arrête toute la flotte si notre serveur tombe un jour.**
+  Le risque n'est pas la coupure Internet du client (ses agents passent surtout par
+  l'API, ils s'arrêtent de toute façon), c'est la panne du centre de contrôle : au bout
+  de 24 h, toutes les box louées s'arrêtent ensemble. Proposition : distinguer « le
+  serveur ne répond pas » (le dernier jeton reste valable quelques jours, par exemple
+  72 h) de « le serveur répond que la box est suspendue ou l'agent révoqué » (effet
+  immédiat). La révocation garde alors son délai de 24 h quand le serveur répond.
+- Un jeton par box listant les agents : bon choix, une seule requête par jour.
+- Box suspendue par statut : bon choix.
 
 ## Ce qu'on ne peut pas verrouiller
 
