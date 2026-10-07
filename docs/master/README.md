@@ -39,6 +39,14 @@ Fait par la plateforme (`plateforme/controle/`, banc dans `npm run controle`) :
   tout ; une révocation ou une suspension joue au renouvellement suivant, donc
   dans les 24 h pour une Box en ligne, et au plus tard à 72 h pour une Box
   coupée du réseau.
+- édition « Box » de l'application, fixée à la construction : avec
+  `IAGENT_EDITION=box`, une machine non reliée ne fait travailler aucun agent
+  (l'édition libre, elle, redevient un poste ordinaire si l'on efface
+  `config/plateforme.json`). `IAGENT_PLATEFORME_URL` et `IAGENT_CLE_PLATEFORME`
+  (PEM, `\n` accepté) y compilent l'adresse et la clé de la plateforme : un
+  fichier effacé ou réécrit vers un autre serveur les retrouve telles qu'en
+  usine. Ça ne protège pas d'un utilisateur qui remplace l'exécutable ; c'est
+  le rôle du verrouillage en usine ci-dessous.
 
 Reste au matériel et à l'hébergement (rien de ceci n'est fait ni simulé) :
 - TPM 2.0 : la clé privée Ed25519 et la clé X25519 de la Box doivent y naître et
