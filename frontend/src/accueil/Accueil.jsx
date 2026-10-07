@@ -468,7 +468,7 @@ function EvolutionEtPreuve() {
         <p className="mq-surtitre">iAgent inside iAgent</p>
         <h2 className="mq-titre">La première entreprise que nous faisons fonctionner avec iAgent est la nôtre</h2>
         <p className="mq-texte">Une direction humaine, un chef d'équipe et nos pôles tenus par des agents.</p>
-        <a href="/inside-iagent" className="bouton bouton-lien">Voir notre organisation <Fleche /></a>
+        <a href="/iagent-inside-iagent" className="bouton bouton-lien">Voir notre organisation <Fleche /></a>
       </div>
     </section>
   );

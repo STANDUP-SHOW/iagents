@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import { Logo, LIENS, TELECHARGEMENT } from '../composants.jsx';
 import { suivre } from '../analytique.js';
 
+// The Business navigation of max's global document (07/10, §3).
 const ENTREES = [
+  { libelle: 'Produit', href: '/workforce', page: 'workforce' },
   { libelle: 'Agents', href: LIENS.catalogue, page: 'catalogue', evenement: 'catalog_click' },
-  { libelle: 'Workforce', href: '/workforce', page: 'workforce' },
+  { libelle: 'Créer votre entreprise', href: '/create', page: 'create', evenement: 'create_company_click' },
+  { libelle: 'Voice', href: '/voice', page: 'voice' },
   { libelle: 'iAgent Box', href: '/box', page: 'box', evenement: 'box_click' },
-  { libelle: 'Tarifs', href: '/pricing', page: 'pricing' },
   { libelle: 'Entreprise', href: '/enterprise', page: 'enterprise', evenement: 'enterprise_click' },
+  { libelle: 'Ressources', href: '/how-it-works', page: 'how-it-works' },
 ];
 
 const Loupe = () => (
@@ -46,12 +49,12 @@ export default function GlobalNav({ page = 'accueil', seuil = 24 }) {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-3">
-          <form action="/catalogue" method="get" role="search" className="entete-recherche hidden lg:flex" onSubmit={() => suivre('catalog_click', { depuis: 'recherche' })}>
+          <form action="/catalogue" method="get" role="search" className="entete-recherche hidden lg:flex xl:hidden 2xl:flex" onSubmit={() => suivre('catalog_click', { depuis: 'recherche' })}>
             <Loupe />
             <label htmlFor="recherche-entete" className="sr-only">Rechercher un agent, un métier</label>
             <input id="recherche-entete" name="q" type="search" placeholder="Rechercher un agent, un métier…" autoComplete="off" />
           </form>
-          <a href="/catalogue" className="lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-xl text-[var(--texte-doux)] hover:text-white" aria-label="Rechercher un agent ou un métier"><Loupe /></a>
+          <a href="/catalogue" className="lg:hidden xl:inline-flex 2xl:hidden inline-flex items-center justify-center w-11 h-11 rounded-xl text-[var(--texte-doux)] hover:text-white" aria-label="Rechercher un agent ou un métier"><Loupe /></a>
           <a href={TELECHARGEMENT} className="bouton bouton-braise !min-h-[40px] !px-4 !text-sm hidden sm:inline-flex">
             <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v11H3z M8 20h8 M12 16v4" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinejoin="round" /></svg>
             Télécharger l'app

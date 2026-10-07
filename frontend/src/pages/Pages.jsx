@@ -2,6 +2,7 @@ import donnees from 'virtual:accueil';
 import { nombre, LIENS, TELECHARGEMENT } from '../accueil/composants.jsx';
 import tarifs, { euros, montant, STATUTS, BOX_PUBLIQUES, BOX_DES, prixAgentEnUneLigne } from '../data/tarifs.js';
 import { Tete, Bande, Cartes, Etapes, Coches, Voisines, Fin, Bouton, Demande } from './blocs.jsx';
+import { COMPOSANTS_BUSINESS } from './PagesBusiness.jsx';
 
 // The offer pages of max's site plan (07/10). Every claim here is one the
 // product keeps today, or is said as a plan; every price comes from tarifs.json.
@@ -94,7 +95,7 @@ function Box() {
       <Tete surtitre="iAgent Box" titre={<>Votre équipe IA,<br /><span className="mq-cyan">installée dans votre entreprise.</span></>}
         texte={`Un poste préparé pour vos agents, que vous branchez et qui travaille. Le matériel est mis à disposition sous abonnement, à partir de ${euros(BOX_DES.mensuel)} par mois.`}>
         <Bouton href="/pricing" evenement="box_click">Voir les tarifs</Bouton>
-        <Bouton href="/contact" variante="contour-cyan">Demander une démo</Bouton>
+        <Bouton href="/contact" variante="contour-cyan" evenement="box_quote">Demander un devis Box</Bouton>
       </Tete>
       <Bande surtitre="L'expérience" titre="Brancher, et travailler">
         <Etapes items={[
@@ -181,8 +182,9 @@ function Tarifs() {
       <Bande surtitre="La consommation" titre="Ce qui se paie à l'usage" texte={tarifs.consommation.phrase}>
         <Coches items={["Vous voyez l'estimation avant de vous engager : chaque fiche d'agent l'annonce.", 'L’application vous prévient avant de passer une tâche du local à l’API.']} />
       </Bande>
-      <Fin titre="Un besoin plus large ?">
-        <Bouton href="/enterprise" evenement="enterprise_click">iAgent Enterprise</Bouton>
+      <Fin titre="Choisir une formule">
+        <Bouton href="/contact" evenement="plan_select">Choisir ma formule</Bouton>
+        <Bouton href="/enterprise" variante="contour-cyan" evenement="enterprise_click">iAgent Enterprise</Bouton>
         <Bouton href={LIENS.catalogue} variante="contour-cyan" evenement="catalog_click">Explorer les agents</Bouton>
       </Fin>
       <Voisines ici="pricing" />
@@ -257,7 +259,7 @@ function IALocale() {
         ]} />
       </Bande>
       <Bande id="dimensionner" surtitre="Dimensionner" titre="Parlez à un architecte iAgent">
-        <Demande sujet="Dimensionner mon infrastructure" evenement="local_ai_quote_start" champs={[
+        <Demande sujet="Dimensionner mon infrastructure" evenement="local_ai_contact" champs={[
           ["Nombre d'agents", "Nombre d'agents", ['1 à 5', '6 à 20', '21 à 50', 'Plus de 50']],
           ['Types de tâches', 'Types de tâches', ['Texte et documents', 'Images ou vidéo', 'Voix et téléphone', 'Un peu de tout']],
           ['Logiciels', 'Vos logiciels principaux'],
@@ -337,7 +339,7 @@ function Evolution() {
   );
 }
 
-/* ------------------------------------------------------------ inside-iagent */
+/* ----------------------------------------------------- iagent-inside-iagent */
 
 const POLES = ['Tech', 'Growth', 'Sales', 'Customer Success', 'Finance', 'Communication', 'Research'];
 
@@ -359,7 +361,7 @@ function InsideIAgent() {
         <Bouton href={LIENS.entreprise} evenement="create_company_click">Construire mon équipe</Bouton>
         <Bouton href="/workforce" variante="contour-cyan">iAgent Workforce</Bouton>
       </Fin>
-      <Voisines ici="inside-iagent" />
+      <Voisines ici="iagent-inside-iagent" />
     </>
   );
 }
@@ -382,7 +384,7 @@ function Enterprise() {
         ]} />
       </Bande>
       <Bande id="demande" surtitre="Votre projet" titre="Décrivez-nous votre déploiement">
-        <Demande sujet="iAgent Enterprise" evenement="enterprise_quote_start" champs={[
+        <Demande sujet="iAgent Enterprise" evenement="enterprise_contact" champs={[
           ['Taille', "Taille de l'entreprise", ['Moins de 10 personnes', '10 à 50', '50 à 250', 'Plus de 250']],
           ["Nombre d'agents", "Nombre d'agents envisagé", ['Moins de 10', '10 à 50', 'Plus de 50']],
           ['Sites', 'Sites', ['Un seul site', 'Plusieurs sites']],
@@ -454,8 +456,9 @@ export const COMPOSANTS = {
   'local-ai': IALocale,
   security: Securite,
   skills: Evolution,
-  'inside-iagent': InsideIAgent,
+  'iagent-inside-iagent': InsideIAgent,
   enterprise: Enterprise,
   faq: Faq,
   contact: Contact,
+  ...COMPOSANTS_BUSINESS,
 };

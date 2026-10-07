@@ -192,7 +192,7 @@ for (const page of PAGES) {
     if (!html.includes('<h1')) echoue(`page ${nom} : pas de titre principal`);
   }
   ok(`les ${PAGES_OFFRE.length} pages de l'offre se rendent`);
-  const sources = ['src/pages/Pages.jsx', 'src/pages/blocs.jsx', 'src/accueil/Accueil.jsx'];
+  const sources = ['src/pages/Pages.jsx', 'src/pages/PagesBusiness.jsx', 'src/pages/blocs.jsx', 'src/accueil/Accueil.jsx'];
   const enDur = sources.flatMap((f) => [...readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8').matchAll(/\d[\d\s,.]*\s?€/g)].map((m) => `${f} : ${m[0]}`));
   if (enDur.length) echoue(`montants écrits en dur : ${enDur.join(' ; ')}`);
   else ok('aucun montant écrit en dur dans les pages');
@@ -200,6 +200,12 @@ for (const page of PAGES) {
   const absents = [...BOX_PUBLIQUES.map((b) => b.mensuel), ...tarifs.agents.paliers.map((p) => p.mensuel)].filter((x) => tarifs.agents.affichage === 'paliers' || x < 100).filter((x) => !tarifsHtml.includes(String(x)));
   if (absents.length) echoue(`la page Tarifs ne montre pas ${absents.join(', ')}`);
   else ok('la page Tarifs montre la grille de tarifs.json');
+  // Le téléphone n'est pas construit : aucune offre Voice ne se vend comme disponible.
+  const voixHtml = renderToString(<Page nom="voice" />);
+  const vendues = tarifs.voice.offres.filter((o) => !['bientot', 'sur-devis'].includes(o.statut));
+  const manquants = tarifs.voice.offres.filter((o) => o.mensuel ?? o.aPartirDe).filter((o) => !voixHtml.includes(String(o.mensuel ?? o.aPartirDe)));
+  if (vendues.length || manquants.length || !voixHtml.includes('Bientôt')) echoue(`page Voice : ${vendues.map((o) => o.id).join(', ')} vendues, ${manquants.map((o) => o.id).join(', ')} absentes`);
+  else ok('la page Voice montre ses prix, tous marqués « bientôt »');
 }
 
 console.log(`\n${n} attentes tenues — boutique ok`);

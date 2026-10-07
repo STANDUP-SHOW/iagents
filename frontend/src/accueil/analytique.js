@@ -14,10 +14,22 @@ export const EVENEMENTS = [
   'final_cta_click',
   // max's site plan (07/10), §19.
   'pricing_view',
-  'box_plan_select',
   'local_ai_quote_start',
   'enterprise_quote_start',
   'inside_iagent_view',
+  // max's global document (07/10), §17.
+  'plan_select',
+  'box_quote',
+  'recruit_agent',
+  'personalize_agent',
+  'create_idea_submit',
+  'opportunity_view',
+  'opportunity_build_company',
+  'voice_demo',
+  'phone_number_request',
+  'call_center_quote',
+  'local_ai_contact',
+  'enterprise_contact',
 ];
 
 export function suivre(evenement, donnees = {}) {
