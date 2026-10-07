@@ -45,7 +45,9 @@ Fait par la plateforme (`plateforme/controle/`, banc dans `npm run controle`) :
   `config/plateforme.json`). `IAGENT_PLATEFORME_URL` et `IAGENT_CLE_PLATEFORME`
   (PEM, `\n` accepté) y compilent l'adresse et la clé de la plateforme : un
   fichier effacé ou réécrit vers un autre serveur les retrouve telles qu'en
-  usine. Ça ne protège pas d'un utilisateur qui remplace l'exécutable ; c'est
+  usine. La construction Box s'arrête (`build.rs`) si l'une des deux manque,
+  si l'adresse n'est pas en `https://` ou si la clé n'est pas un PEM : aucune
+  Box redirigeable ne sort en silence. Ça ne protège pas d'un utilisateur qui remplace l'exécutable ; c'est
   le rôle du verrouillage en usine ci-dessous.
 
 Reste au matériel et à l'hébergement (rien de ceci n'est fait ni simulé) :
