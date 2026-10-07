@@ -39,7 +39,7 @@ export default function GlobalNav({ page = 'accueil', seuil = 24 }) {
   return (
     <header className={`entete ${opaque || ouvert ? 'entete-opaque' : ''}`}>
       <div className="entete-ligne">
-        <a href="/" aria-label="iAgent, accueil" className="flex-none"><Logo className="h-[22px] md:h-[26px] w-auto" /></a>
+        <a href="/" aria-label="iAgent, accueil" className="flex-none"><Logo className="h-[28px] md:h-[32px] w-auto" /></a>
         <nav className="entete-nav hidden xl:flex items-center gap-7 ml-8" aria-label="Navigation principale">
           {ENTREES.map((e) => (
             <a key={e.libelle} href={e.href} aria-current={page === 'catalogue' && e.href === LIENS.catalogue ? 'page' : undefined} onClick={() => e.evenement && suivre(e.evenement)}>{e.libelle}</a>

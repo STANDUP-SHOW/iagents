@@ -305,7 +305,7 @@ function DesktopCommander() {
   return (
     <section className="mq-bande dc" id="desktop-commander" aria-labelledby="dc-titre">
       <div className="dc-texte">
-        <p className="mq-surtitre">iAgent Desktop Commander</p>
+        <p className="mq-surtitre dc-surtitre"><img src="/accueil/icone-desktop-commander.svg" alt="" width="40" height="40" className="dc-icone" />iAgent Desktop Commander</p>
         <h2 id="dc-titre" className="mq-titre">Orchestrez votre<br />équipe d'agents</h2>
         <p className="mq-texte">Une interface pour piloter vos agents, suivre leurs activités, collaborer et obtenir des résultats. Votre centre de commande, sur votre poste.</p>
         <a href={TELECHARGEMENT} className="bouton bouton-contour-cyan" onClick={() => suivre('desktop_commander_click')}>Découvrir Desktop Commander <Fleche /></a>

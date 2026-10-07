@@ -23,26 +23,15 @@ export const euros = (x) =>
 export const nombre = (x) => x.toLocaleString('fr-FR').replace(/ /g, ' ');
 
 /**
- * The iAgent logo. Main version: cyan chip, brain half white, half
- * coral-to-orange, as max drew it. Monochrome: the same drawing in cold white,
- * for institutional uses and busy backgrounds.
+ * The iAgent logo, cut from max's charte e-agent (07/10): the brain in the
+ * charte gradient and the wordmark in white, for the site's dark ground. The
+ * monochrome version is the same mark all in white.
  */
 export function Logo({ variante = 'principal', className = 'h-7 w-auto' }) {
-  const src = variante === 'blanc' ? '/accueil/logo-iagent-blanc.png' : '/accueil/logo-iagent.png';
-  return <img src={src} alt="iAgent" width="720" height="186" className={className} decoding="async" />;
-}
-
-/**
- * The animated logo: the chip lights up first, then the brain. Two layers of
- * the same drawing; the coloured one is revealed from the centre.
- */
-export function LogoAnime({ className = 'w-40' }) {
-  return (
-    <span className={`relative inline-block ${className}`} aria-label="iAgent" role="img">
-      <img src="/accueil/logo-iagent-blanc.png" alt="" className="block w-full opacity-30" />
-      <img src="/accueil/logo-iagent.png" alt="" className="logo-allume absolute inset-0 w-full" />
-    </span>
-  );
+  const [src, largeur, hauteur] = variante === 'blanc'
+    ? ['/accueil/logo-iagent-blanc.svg', 3256, 928]
+    : ['/accueil/logo-iagent.svg', 4177, 1153];
+  return <img src={src} alt="iAgent" width={largeur} height={hauteur} className={className} decoding="async" />;
 }
 
 export function Surtitre({ children, className = '' }) {
