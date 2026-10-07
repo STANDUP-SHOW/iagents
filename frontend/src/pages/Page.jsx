@@ -5,7 +5,7 @@ import { suivre } from '../accueil/analytique.js';
 import { COMPOSANTS } from './Pages.jsx';
 
 // The events a page view counts as (plan, §19).
-const VUES = { pricing: 'pricing_view', 'inside-iagent': 'inside_iagent_view' };
+const VUES = { pricing: 'pricing_view', 'iagent-inside-iagent': 'inside_iagent_view', opportunities: 'opportunity_view' };
 
 /** One offer page in the site's frame: header, the page, footer. */
 export default function Page({ nom }) {
