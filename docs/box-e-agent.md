@@ -18,7 +18,7 @@ deviennent la Box Max et les Power.
 - **La box est louée, jamais vendue ni donnée.** Elle reste propriété d'iAgent, pour la
   maintenance et pour que personne n'y installe ses propres agents.
 - **Prix toujours séparés** (règle du 25/09, inchangée) : loyer de la box, abonnement de
-  chaque agent (prix en débat, voir plus bas), consommation d'IA.
+  chaque agent (149, 249 ou 399 €/mois), consommation d'IA.
 
 ## Prix : le plan du site de max fait foi
 
@@ -35,9 +35,10 @@ configuration tarifaire administrable :
 | Agent Essential / Professional / Expert | 149 / 249 / 399 €/mois |
 | Task Commander | 249-349 €/mois, ou inclus à partir de 5 agents |
 
-**Écart à trancher par max** : le prix d'un agent. Sa décision du 22/09 est 9,90 €/mois
-(49,90 € à l'achat) ; le plan dit 149 à 399 €/mois. Les deux ne peuvent pas être affichés.
-Le Task Commander n'existait nulle part avant ce plan.
+**Prix d'un agent tranché le 07/10 à 20h22** : max a choisi les prix du plan (carte du fil
+« Site iagent.agency ») — 149, 249 ou 399 €/mois selon le niveau. Ils remplacent les
+9,90 €/mois et 49,90 € à l'achat du 22/09. Le Task Commander n'existait nulle part avant ce
+plan.
 
 Consommation « au réel ou par crédits » veut dire que la clé d'IA est fournie et
 refacturée par iAgent, ce qui est aussi le verrou le plus fort.

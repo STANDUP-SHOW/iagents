@@ -322,9 +322,10 @@ par WhatsApp et email.
   de la box, abonnement des agents, consommation d'IA. Le plan du site de max
   (07/10, 19h13) fixe la base : box 69 €/mois sur 36 mois ou 89 € sur 24,
   consommation refacturée à part, Box Max et Power retirées du public (sur
-  devis). **Le prix d'un agent est en conflit** (9,90 € le 22/09, 149-399 €
-  dans le plan) : rien n'en est écrit dans `dimensionnement/` avant que max
-  tranche. **Le verrou qui manque d'abord est la
+  devis). **Un agent coûte 149, 249 ou 399 €/mois** (Essential, Professional,
+  Expert ; max, 07/10 20h22), ce qui remplace les 9,90 € du 22/09 ; le calcul
+  de `dimensionnement/` n'en dépend pas, le prix est le même sur toutes les
+  installations. **Le verrou qui manque d'abord est la
   signature des fiches** : l'installeur les livre en clair et `lire_fiche` lit
   ce qu'il trouve. Voir `docs/box-e-agent.md`.
 - **Les fiches sont écrites par Claude Code sur l'abonnement de Max, pas par
