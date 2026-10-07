@@ -92,19 +92,27 @@ Lu dans `desktop/src-tauri/src/plateforme.rs` de la branche `plan-global`.
 | Box impayée | coupée par le statut « suspendue », effective au renouvellement suivant |
 | **Skill Packs signés et chiffrés pour une box** | clé X25519 de la box au trousseau, HKDF-SHA256, AES-256-GCM, signature Ed25519 de la plateforme ; ouverts en mémoire seulement |
 
-**Deux limites que le code dit lui-même :** le verrou ne joue que sur une box *reliée* au
-centre de contrôle (un poste non relié fonctionne comme avant, fiches comprises) ; et le
-fichier de réglages qui relie la box vit dans le dossier de l'utilisateur, donc qui peut
-l'effacer refait de la box un poste non relié. Le vrai verrou reste la machine fermée
-ci-dessous. Les fiches elles-mêmes sont signées par empreinte mais **pas chiffrées** :
-elles restent lisibles sur le disque.
+**Édition Box (PR #42, brouillon sur `plan-global`, relevée le 07/10 à 23h35).** Sur
+l'édition libre, le verrou ne joue que sur une box *reliée*, et le fichier qui la relie
+(`config/plateforme.json`) vit dans le dossier de l'utilisateur : l'effacer refaisait de la
+box un poste non relié où tout tourne. L'exécutable construit avec `IAGENT_EDITION=box`
+ferme cette porte : non reliée, la box ne fait tourner **aucun** agent. L'adresse et la
+clé de la plateforme y sont compilées (`IAGENT_PLATEFORME_URL`, `IAGENT_CLE_PLATEFORME`),
+donc un fichier effacé ou réécrit vers un autre serveur retrouve les valeurs d'usine ; cela
+ferme aussi le cas d'un client qui se signerait ses propres droits avec sa propre clé.
+**À condition** que la construction d'usine fournisse bien ces deux valeurs : sans elles,
+le fichier fait encore foi. L'édition libre ne change pas.
+
+**Ce qui reste au verrouillage de la machine :** remplacer l'exécutable lui-même. Les
+fiches sont signées par empreinte mais **pas chiffrées** : elles restent lisibles sur le
+disque.
 
 ### Ce que le MASTER §6 demande et qui reste à faire
 
 | Exigence | État |
 |---|---|
 | TPM 2.0 (clés de la box liées à la puce, pas au trousseau, qui se recopie avec le disque) | à faire |
-| Secure Boot, disque chiffré, système verrouillé (sans quoi le fichier de réglages s'efface) | à faire en usine (`usine/`, PR #24, installe et ne verrouille rien) |
+| Secure Boot, disque chiffré, système verrouillé (sans quoi l'exécutable se remplace) | à faire en usine (`usine/`, PR #24, installe et ne verrouille rien) |
 | mTLS vers le centre de contrôle | à faire ; la signature Ed25519 des requêtes en tient lieu pour l'instant |
 | Fiches chiffrées pour une box (comme les Skill Packs) | à faire |
 | Contrat : propriété, dépôt, restitution, interdiction d'extraire | à rédiger |
