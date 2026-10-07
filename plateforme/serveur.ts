@@ -27,6 +27,12 @@ export type Contexte = {
   params: Record<string, string>;
   query: URLSearchParams;
   corps: unknown;
+  /** Corps brut, octets exacts : un webhook d'opérateur signe ce qu'il a envoyé, pas ce qu'on relit. */
+  brut: string;
+  /** En-têtes de la requête, noms en minuscules. */
+  entetes: Record<string, string>;
+  /** Chemin et paramètres tels que reçus. */
+  url: string;
   /** La Box authentifiée, quand l'accès est `box`. */
   box: Box | null;
   maintenant: () => Date;
@@ -146,7 +152,8 @@ export function creerPlateforme(
     }
     const brut = Buffer.concat(morceaux).toString('utf8');
     let corps: unknown = null;
-    if (brut) {
+    const formulaire = String(req.headers['content-type'] ?? '').startsWith('application/x-www-form-urlencoded');
+    if (brut && !formulaire) {
       try { corps = JSON.parse(brut); } catch { return repondre(res, refus(400, "Le corps n'est pas du JSON lisible.")); }
     }
 
@@ -168,7 +175,11 @@ export function creerPlateforme(
       }
     }
     try {
-      repondre(res, await route.traiter({ stockage, params, query: url.searchParams, corps, box, maintenant }));
+      const entetes: Record<string, string> = {};
+      for (const [k, v] of Object.entries(req.headers)) if (v !== undefined) entetes[k.toLowerCase()] = Array.isArray(v) ? v.join(', ') : v;
+      repondre(res, await route.traiter({
+        stockage, params, query: url.searchParams, corps, brut, entetes, url: req.url ?? '/', box, maintenant,
+      }));
     } catch (e) {
       repondre(res, refus(400, e instanceof Error ? e.message : 'Requête refusée.'));
     }
