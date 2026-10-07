@@ -68,9 +68,9 @@ ajoute :
   fil : le moteur tarifaire versionné est construit par le fil « Plan global jusqu'au
   produit fini ».
 
-**Écart relevé** : le Starter est annoncé « à partir de 219 € HT/mois » pour un agent
-Essential (149 €) et la Box sur 36 mois (69 €), soit 218 €. Recopié tel quel en attendant
-max.
+**Starter : 218 € HT/mois** (décision de max du 07/10 à 22h56). Le MASTER annonçait « à
+partir de 219 € » ; le prix d'une formule se calcule désormais à partir de ses composants,
+ici un agent Essential (149 €) et la Box sur 36 mois (69 €).
 
 ## Verrouiller : ce que fait la PR #41, ce que le MASTER demande encore
 
