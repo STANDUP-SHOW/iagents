@@ -1,31 +1,36 @@
-import type { ReactNode } from 'react'
+import { Suspense, lazy } from 'react'
 
 /**
- * Administration iAgent — MOUNTING POINT, deliberately empty.
+ * Administration iAgent — the back-office screens, mounted as they are.
  *
- * The back-office is a separate desktop application (`back-office/`, another
- * workstream). Max wants it to couple to the Desktop Commander: its screens
- * will be plugged in HERE when the two are assembled. Nothing of the
- * back-office is copied into this repository folder.
+ * The back-office is its own desktop application (`back-office/`, another
+ * workstream). Its `Administration.jsx` depends only on the `client` it is
+ * handed; here that client is `creerClientTauri(invoke)`, whose six commands
+ * (`plateforme_appeler`, `jeton_*`, `adresse_*`) are thin wrappers in
+ * `src-tauri/src/administration.rs` over the shared `iagent-back-office-admin`
+ * crate. Nothing of the back-office is copied into desktop/.
  *
- * How it is reached: the navigation shows this space only when `admin_present`
- * (plateforme.rs) answers true, i.e. when an administration key is stored in
- * the system keyring (`iagent-admin` / `back-office`). The key itself never
- * crosses to JavaScript: only the boolean does.
- *
- * To mount: pass the back-office root component as `ecrans`. Nothing else in
- * the Commander depends on what is mounted here.
+ * Reached only when `admin_present` answers true (an admin token is in the
+ * keyring); the token itself never reaches JavaScript. Loaded lazily: a
+ * workstation without that token never even downloads the back-office code.
  */
-export default function Administration({ ecrans }: { ecrans?: ReactNode }) {
+const BackOffice = lazy(async () => {
+  const [{ default: Ecrans }, { creerClientTauri }, { invoke }] = await Promise.all([
+    import('../../../../back-office/src/Administration.jsx'),
+    import('../../../../back-office/src/api.js'),
+    import('@tauri-apps/api/core'),
+    import('../../../../back-office/src/charte.css'),
+  ])
+  const client = creerClientTauri(invoke)
+  return { default: () => <Ecrans client={client} /> }
+})
+
+export default function Administration() {
   return (
-    <div className="page commander">
-      <h2 className="titre-neon">Administration iAgent</h2>
-      {ecrans ?? (
-        <p className="sans-source">
-          Une clé d'administration est présente sur ce poste, mais aucun écran du back-office n'est encore branché ici.
-          Ils le seront à l'assemblage avec l'application back-office.
-        </p>
-      )}
+    <div className="administration">
+      <Suspense fallback={<p className="vide">Chargement de l'administration…</p>}>
+        <BackOffice />
+      </Suspense>
     </div>
   )
 }

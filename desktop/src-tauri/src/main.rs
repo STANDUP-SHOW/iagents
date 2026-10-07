@@ -31,6 +31,7 @@ mod telegram;
 mod whatsapp;
 mod mise_a_jour;
 mod plateforme;
+mod administration;
 
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
@@ -868,7 +869,13 @@ fn main() {
             plateforme::plateforme_consommation,
             plateforme::plateforme_projets,
             plateforme::plateforme_projet_creer,
-            plateforme::admin_present,
+            administration::admin_present,
+            administration::plateforme_appeler,
+            administration::jeton_poser,
+            administration::jeton_present,
+            administration::jeton_oublier,
+            administration::adresse_lire,
+            administration::adresse_poser,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

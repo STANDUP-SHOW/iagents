@@ -35,12 +35,29 @@ use std::time::Duration;
 
 const SERVICE_TROUSSEAU: &str = "iagent-box";
 const ENTREE_IDENTITE: &str = "identite-ed25519";
-/// The back-office key, when this Box is also an iAgent admin console.
-const SERVICE_ADMIN: &str = "iagent-admin";
-const ENTREE_ADMIN: &str = "back-office";
 
-const FICHIER_REGLAGES: &str = "config/plateforme.json";
-const FICHIER_LICENCE: &str = "config/licence.json";
+/// What the customer writes lives under the writable root (`chemins.rs`); a
+/// file is read there first, then next to the executable. Each path is spelled
+/// once, in its own function, right where `chemins::` decides its root.
+#[derive(Clone, Copy)]
+enum Sens {
+    Lire,
+    Ecrire,
+}
+
+fn fichier_reglages(sens: Sens) -> std::path::PathBuf {
+    match sens {
+        Sens::Lire => crate::chemins::pour_lire("config/plateforme.json"),
+        Sens::Ecrire => crate::chemins::pour_ecrire("config/plateforme.json"),
+    }
+}
+
+fn fichier_licence(sens: Sens) -> std::path::PathBuf {
+    match sens {
+        Sens::Lire => crate::chemins::pour_lire("config/licence.json"),
+        Sens::Ecrire => crate::chemins::pour_ecrire("config/licence.json"),
+    }
+}
 
 /// Same tolerance as the server (`DERIVE_HORLOGE_MS`): a token issued more
 /// than five minutes in the future means a clock that cannot be trusted.
@@ -94,7 +111,7 @@ impl Reglages {
 }
 
 pub fn lire_reglages() -> Reglages {
-    let mut r: Reglages = std::fs::read_to_string(crate::chemins::pour_lire(FICHIER_REGLAGES))
+    let mut r: Reglages = std::fs::read_to_string(fichier_reglages(Sens::Lire))
         .ok()
         .and_then(|t| serde_json::from_str(&t).ok())
         .unwrap_or_default();
@@ -106,14 +123,13 @@ pub fn lire_reglages() -> Reglages {
     r
 }
 
-fn ecrire_json<T: Serialize>(relatif: &str, valeur: &T) -> Result<(), String> {
-    let chemin = crate::chemins::pour_ecrire(relatif);
+fn ecrire_json<T: Serialize>(chemin: std::path::PathBuf, valeur: &T) -> Result<(), String> {
     crate::chemins::preparer(&chemin)?;
     let partiel = chemin.with_extension("json.partiel");
     let texte = serde_json::to_string_pretty(valeur).map_err(|e| e.to_string())?;
     std::fs::write(&partiel, texte)
         .and_then(|_| std::fs::rename(&partiel, &chemin))
-        .map_err(|e| format!("impossible d'écrire {} : {}", relatif, e))
+        .map_err(|e| format!("impossible d'écrire {} : {}", chemin.display(), e))
 }
 
 /// The new settings, from the old ones and what the screen asks.
@@ -431,7 +447,7 @@ struct LicenceRangee {
 }
 
 fn lire_licence() -> Option<LicenceRangee> {
-    std::fs::read_to_string(crate::chemins::pour_lire(FICHIER_LICENCE))
+    std::fs::read_to_string(fichier_licence(Sens::Lire))
         .ok()
         .and_then(|t| serde_json::from_str(&t).ok())
 }
@@ -588,7 +604,7 @@ async fn rafraichir(reglages: &Reglages) -> Result<LicenceRangee, String> {
     lire_jeton(jeton, non_vide(&reglages.cle_plateforme).unwrap_or_default(), device_id, non_vide(&reglages.cle_box), maintenant())
         .map_err(|m| format!("Le jeton reçu est refusé : {}.", m))?;
     let rangee = LicenceRangee { jeton: jeton.to_string(), recu_le: horodatage(maintenant()) };
-    ecrire_json(FICHIER_LICENCE, &rangee)?;
+    ecrire_json(fichier_licence(Sens::Ecrire), &rangee)?;
     Ok(rangee)
 }
 
@@ -723,12 +739,12 @@ pub fn plateforme_identite() -> Result<String, String> {
     let mut r = lire_reglages();
     if r.cle_box.as_deref() != Some(pem.as_str()) {
         // PLATEFORME_URL must not end up written in the file.
-        let mut fichier: Reglages = std::fs::read_to_string(crate::chemins::pour_lire(FICHIER_REGLAGES))
+        let mut fichier: Reglages = std::fs::read_to_string(fichier_reglages(Sens::Lire))
             .ok()
             .and_then(|t| serde_json::from_str(&t).ok())
             .unwrap_or_default();
         fichier.cle_box = Some(pem.clone());
-        ecrire_json(FICHIER_REGLAGES, &fichier)?;
+        ecrire_json(fichier_reglages(Sens::Ecrire), &fichier)?;
         r.cle_box = Some(pem.clone());
     }
     Ok(pem)
@@ -743,7 +759,7 @@ pub async fn plateforme_regler(
     device_id: Option<String>,
     cle_plateforme: Option<String>,
 ) -> Result<EtatPlateforme, String> {
-    let fichier: Reglages = std::fs::read_to_string(crate::chemins::pour_lire(FICHIER_REGLAGES))
+    let fichier: Reglages = std::fs::read_to_string(fichier_reglages(Sens::Lire))
         .ok()
         .and_then(|t| serde_json::from_str(&t).ok())
         .unwrap_or_default();
@@ -770,7 +786,7 @@ pub async fn plateforme_regler(
             neuf = reglages_modifies(&neuf, None, None, Some(pem.to_string()))?;
         }
     }
-    ecrire_json(FICHIER_REGLAGES, &neuf)?;
+    ecrire_json(fichier_reglages(Sens::Ecrire), &neuf)?;
     Ok(plateforme_etat())
 }
 
@@ -794,10 +810,30 @@ pub fn plateforme_sante() -> Sante {
     mesurer_sante()
 }
 
+/// The body of `POST /controle/box/telemetrie`. The Control Plane takes cpu,
+/// memory and disk in PERCENT (0-100) while `Sante` keeps shares (0-1) for the
+/// screen: sent as is, 42 % would have been stored as 0.42 % without a word.
+/// Absent measures are left out rather than sent as zero.
+pub fn corps_telemetrie(s: &Sante) -> serde_json::Value {
+    let pourcent = |v: Option<f64>| v.map(|x| (x * 100.0).clamp(0.0, 100.0));
+    let mut c = serde_json::Map::new();
+    for (cle, v) in [
+        ("cpu", pourcent(s.cpu)),
+        ("memoire", pourcent(s.memoire)),
+        ("disque", pourcent(s.disque)),
+        ("temperature", s.temperature),
+    ] {
+        if let Some(x) = v {
+            c.insert(cle.into(), serde_json::json!(x));
+        }
+    }
+    c.insert("version_desktop".into(), serde_json::json!(s.version_desktop));
+    serde_json::Value::Object(c)
+}
+
 #[tauri::command]
 pub async fn plateforme_telemetrie_envoyer() -> Result<serde_json::Value, String> {
-    let s = mesurer_sante();
-    let corps = serde_json::to_value(&s).map_err(|e| e.to_string())?;
+    let corps = corps_telemetrie(&mesurer_sante());
     appel_box("POST", "/controle/box/telemetrie", Some(&corps)).await
 }
 
@@ -854,17 +890,6 @@ pub async fn plateforme_projets() -> Result<serde_json::Value, String> {
 pub async fn plateforme_projet_creer(etude_id: String) -> Result<serde_json::Value, String> {
     identifiant_recevable(&etude_id).map_err(|_| format!("« {} » n'est pas un identifiant d'étude valable.", etude_id))?;
     appel_box("POST", "/create/box/projets", Some(&serde_json::json!({ "etude_id": etude_id }))).await
-}
-
-/// Is an iAgent administration key present in the keyring? Only a boolean
-/// crosses to the screen; the key itself is never returned. The admin space
-/// of the navigation is hidden unless this says true.
-#[tauri::command]
-pub fn admin_present() -> bool {
-    trousseau(SERVICE_ADMIN, ENTREE_ADMIN)
-        .and_then(|e| e.get_password().map_err(|e| e.to_string()))
-        .map(|v| !v.trim().is_empty())
-        .unwrap_or(false)
 }
 
 #[cfg(test)]
@@ -1046,6 +1071,17 @@ mod tests {
     }
 
     #[test]
+    fn la_telemetrie_part_en_pourcentage_et_sans_mesure_inventee() {
+        let s = Sante { cpu: Some(1.7), memoire: Some(0.5), disque: None, temperature: Some(51.0), version_desktop: "0.2.0".into() };
+        let c = corps_telemetrie(&s);
+        assert_eq!(c["memoire"], serde_json::json!(50.0));
+        assert_eq!(c["cpu"], serde_json::json!(100.0));
+        assert_eq!(c["temperature"], serde_json::json!(51.0));
+        assert!(c.get("disque").is_none());
+        assert_eq!(c["version_desktop"], "0.2.0");
+    }
+
+    #[test]
     fn la_memoire_utilisee_se_lit_dans_meminfo() {
         let m = memoire_utilisee("MemTotal:       16000000 kB\nMemFree: 1 kB\nMemAvailable:    4000000 kB\n").unwrap();
         assert!((m - 0.75).abs() < 1e-9);
@@ -1059,7 +1095,7 @@ mod tests {
     /// build ever falls back to it again, on any of the three systems.
     #[test]
     fn le_coffre_du_systeme_n_est_pas_le_coffre_factice() {
-        use keyring::credential::{CredentialBuilderApi, CredentialPersistence};
+        use keyring::credential::CredentialPersistence;
         let p = keyring::default::default_credential_builder().persistence();
         let nom = match p {
             CredentialPersistence::EntryOnly => "le coffre factice (rien ne survit à l'objet qui écrit)",

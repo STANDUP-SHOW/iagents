@@ -30,7 +30,7 @@ const sources = (dossier: string): string[] =>
     const chemin = join(dossier, n);
     if (n === 'node_modules' || n.startsWith('.')) return [];
     if (statSync(chemin).isDirectory()) return sources(chemin);
-    return /\.tsx?$/.test(n) ? [chemin] : [];
+    return /\.(tsx?|jsx?)$/.test(n) ? [chemin] : [];
   });
 
 /** Le texte d'un fichier, commentaires retirés, pour ne pas lire un nom cité en prose. */
@@ -49,9 +49,18 @@ const appelees = new Map<string, string>();
 // commande n'était plus branchée. Les commentaires sont retirés d'abord : un nom
 // cité en prose n'est pas un appel.
 const nommees = new Set<string>();
-for (const f of sources(join(racine, 'desktop/src'))) {
+// The « Administration iAgent » space mounts the back-office screens as they are
+// (src/components/commander/Administration.tsx). Their only door to Rust is
+// `creerClientTauri(invoke)` in back-office/src/api.js, which wraps invoke in a
+// local `appel('x', …)`: that file is read too, and `appel(` counts as a call
+// there and only there, so a generic word elsewhere cannot pass for one.
+const CLIENT_BACK_OFFICE = join(racine, 'back-office/src/api.js');
+for (const f of [...sources(join(racine, 'desktop/src')), CLIENT_BACK_OFFICE]) {
   const texte = readFileSync(f, 'utf8');
-  for (const m of texte.matchAll(/invoke[a-z]*(?:<[^>]*>)?\(\s*'([a-z_0-9]+)'/g)) {
+  const appel = f === CLIENT_BACK_OFFICE
+    ? /(?:invoke[a-z]*|appel)\(\s*'([a-z_0-9]+)'/g
+    : /invoke[a-z]*(?:<[^>]*>)?\(\s*'([a-z_0-9]+)'/g;
+  for (const m of texte.matchAll(appel)) {
     if (!appelees.has(m[1])) appelees.set(m[1], f.slice(racine.length + 1));
   }
   for (const m of sansCommentaires(texte).matchAll(/['"`]([a-z][a-z_0-9]{3,})['"`]/g)) {
