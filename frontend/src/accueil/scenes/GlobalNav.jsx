@@ -3,11 +3,11 @@ import { Logo, LIENS, TELECHARGEMENT } from '../composants.jsx';
 import { suivre } from '../analytique.js';
 
 const ENTREES = [
-  { libelle: 'Produit', href: '/#desktop-commander' },
-  { libelle: 'Agents', href: LIENS.catalogue, evenement: 'catalog_click' },
-  { libelle: 'Créer votre entreprise', href: LIENS.entreprise, evenement: 'create_company_click' },
-  { libelle: 'iAgent Box', href: '/#box', evenement: 'box_click' },
-  { libelle: 'Entreprise', href: '/#confiance', evenement: 'enterprise_click' },
+  { libelle: 'Agents', href: LIENS.catalogue, page: 'catalogue', evenement: 'catalog_click' },
+  { libelle: 'Workforce', href: '/workforce', page: 'workforce' },
+  { libelle: 'iAgent Box', href: '/box', page: 'box', evenement: 'box_click' },
+  { libelle: 'Tarifs', href: '/pricing', page: 'pricing' },
+  { libelle: 'Entreprise', href: '/enterprise', page: 'enterprise', evenement: 'enterprise_click' },
 ];
 
 const Loupe = () => (
@@ -42,7 +42,7 @@ export default function GlobalNav({ page = 'accueil', seuil = 24 }) {
         <a href="/" aria-label="iAgent, accueil" className="flex-none"><Logo className="h-[28px] md:h-[32px] w-auto" /></a>
         <nav className="entete-nav hidden xl:flex items-center gap-7 ml-8" aria-label="Navigation principale">
           {ENTREES.map((e) => (
-            <a key={e.libelle} href={e.href} aria-current={page === 'catalogue' && e.href === LIENS.catalogue ? 'page' : undefined} onClick={() => e.evenement && suivre(e.evenement)}>{e.libelle}</a>
+            <a key={e.libelle} href={e.href} aria-current={e.page && page === e.page ? 'page' : undefined} onClick={() => e.evenement && suivre(e.evenement)}>{e.libelle}</a>
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-3">

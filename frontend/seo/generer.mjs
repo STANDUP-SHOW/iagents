@@ -25,6 +25,7 @@ const activites = lire('catalogue/activites.json').activites;
 const logiciels = lire('catalogue/logiciels.json').logiciels;
 const secteurs = new Map(lire('catalogue/catalogue.json').secteurs.map((s) => [s.id, s.nom]));
 
+import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
 import { slugifier } from './slug.mjs';
 export { slugifier };
 
@@ -236,7 +237,8 @@ for (const [url, html] of pages) {
   writeFileSync(fichier, html);
 }
 
-const urls = ['/', '/catalogue', ...pages.keys()];
+// The offer pages of max's site plan (07/10) are built by Vite, listed here.
+const urls = ['/', '/catalogue', ...PAGES_OFFRE.map((p) => `/${p.nom}`), ...pages.keys()];
 const lots = [];
 for (let i = 0; i < urls.length; i += MAX_URLS_PAR_SITEMAP) lots.push(urls.slice(i, i + MAX_URLS_PAR_SITEMAP));
 lots.forEach((lot, i) => writeFileSync(join(SORTIE, `sitemap-${i + 1}.xml`),

@@ -7,9 +7,11 @@ export default function Footer() {
   const { activitesPopulaires, vitrine, compteurs } = donnees;
   const colonnes = [
     { titre: 'Produit', liens: [
-      { nom: 'Desktop Commander', href: '#desktop-commander' },
-      { nom: 'iAgent Box', href: '#box' },
-      { nom: 'Sécurité et confiance', href: '#confiance' },
+      { nom: 'iAgent Workforce', href: '/workforce' },
+      { nom: 'iAgent Box', href: '/box' },
+      { nom: 'Desktop Commander', href: '/#desktop-commander' },
+      { nom: 'Comment ça marche', href: '/how-it-works' },
+      { nom: 'Tarifs', href: '/pricing' },
       { nom: 'Télécharger pour Windows', href: TELECHARGEMENT },
     ] },
     { titre: 'Agents', liens: [
@@ -19,7 +21,13 @@ export default function Footer() {
     { titre: 'Par activité', liens: activitesPopulaires.map((a) => ({ nom: a.nom, href: a.url })) },
     { titre: 'Entreprise', liens: [
       { nom: 'Créer votre entreprise', href: LIENS.entreprise },
-      { nom: 'Équiper votre entreprise', href: LIENS.box },
+      { nom: 'iAgent Enterprise', href: '/enterprise' },
+      { nom: 'IA locale et hybride', href: '/local-ai' },
+      { nom: 'Sécurité et contrôle', href: '/security' },
+      { nom: 'Évolution des agents', href: '/skills' },
+      { nom: 'iAgent inside iAgent', href: '/inside-iagent' },
+      { nom: 'Questions fréquentes', href: '/faq' },
+      { nom: 'Contact', href: '/contact' },
     ] },
   ];
 

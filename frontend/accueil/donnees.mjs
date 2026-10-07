@@ -8,7 +8,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { slugifier } from '../seo/slug.mjs';
-import { PRIX_AGENT } from '../src/data/prix.js';
+import { PRIX_AGENT_MOIS } from '../src/data/prix.js';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const lire = (chemin) => JSON.parse(readFileSync(join(RACINE, chemin), 'utf8'));
@@ -106,7 +106,7 @@ export function donneesAccueil() {
       categoriesLogiciels: new Set(logiciels.map((l) => l.categorie)).size,
       taches: fiches.reduce((n, f) => n + f.taches.length, 0),
     },
-    prixAgent: PRIX_AGENT,
+    prixAgent: PRIX_AGENT_MOIS,
     financement: { mois: offre.financement.mois },
     personnes: PERSONNES.map((p) => ({ ...p, ...resume(fiche(p.fiche)) })),
     vitrine: VITRINE.map((id) => resume(fiche(id), 3)),

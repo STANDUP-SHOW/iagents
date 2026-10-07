@@ -2,7 +2,7 @@
 // and the filters. They only present what the fiches already say.
 import { useEffect, useId, useRef, useState } from 'react';
 import { libelleSecteur, libelleFamille, logicielsDe, nomDuLogiciel, portraitDe, suggestions } from '../data/recherche.js';
-import { PRIX_AGENT, prix } from '../data/prix.js';
+import { PRIX_AGENT_MOIS, NOTE_ACHAT } from '../data/prix.js';
 import { passes3xTest, ratio3x } from '../data/loader.js';
 import { devisAgent, euros, installationDe } from '../data/offres.js';
 import { TELECHARGEMENT } from '../accueil/composants.jsx';
@@ -57,8 +57,8 @@ export function CarteAgent({ agent, choisi, onVoir, compact = false, prioritaire
         )}
         <div className="bi-pied">
           <div>
-            <p className="bi-prix">{prix(PRIX_AGENT.mensuel)}<span> / mois</span></p>
-            <p className="bi-prix-note">ou {prix(PRIX_AGENT.achat)} à l'achat · {agent.taches?.length ?? 0} missions</p>
+            <p className="bi-prix">{PRIX_AGENT_MOIS ?? 'Sur devis'}{PRIX_AGENT_MOIS && <span> / mois</span>}</p>
+            <p className="bi-prix-note">{NOTE_ACHAT ? `${NOTE_ACHAT} · ` : ''}{agent.taches?.length ?? 0} missions</p>
           </div>
           <button type="button" className="bi-voir" onClick={ouvrir}>Voir le profil <Fleche /></button>
         </div>
@@ -114,8 +114,8 @@ export function Apercu({ agent, installation, onFermer, onFicheComplete, focalis
 
         <div className="bi-apercu-prix">
           <div>
-            <p className="bi-prix text-2xl">{prix(PRIX_AGENT.mensuel)}<span> / mois</span></p>
-            <p className="bi-prix-note">ou {prix(PRIX_AGENT.achat)} à l'achat, la machine à part</p>
+            <p className="bi-prix text-2xl">{PRIX_AGENT_MOIS ?? 'Sur devis'}{PRIX_AGENT_MOIS && <span> / mois</span>}</p>
+            <p className="bi-prix-note">{NOTE_ACHAT ? `${NOTE_ACHAT}, ` : ''}la Box et la consommation à part</p>
           </div>
           <div className="text-right">
             <p className="text-white font-semibold">{agent.taches?.length ?? 0}</p>

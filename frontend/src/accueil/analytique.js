@@ -12,6 +12,12 @@ export const EVENEMENTS = [
   'create_company_click',
   'enterprise_click',
   'final_cta_click',
+  // max's site plan (07/10), §19.
+  'pricing_view',
+  'box_plan_select',
+  'local_ai_quote_start',
+  'enterprise_quote_start',
+  'inside_iagent_view',
 ];
 
 export function suivre(evenement, donnees = {}) {
