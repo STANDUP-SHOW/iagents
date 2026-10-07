@@ -87,8 +87,8 @@ export async function lancer(): Promise<number> {
   }).map(([id]) => id);
   verifier('prix, fourchettes, « à partir de » et HT/TTC égaux au MASTER', ecartsMaster.length === 0, ecartsMaster);
   const starter = seed('pack-starter')!;
-  verifier('Starter : 219 € HT forcé avec sa source, composition 1 Essential + Box 36 mois',
-    starter.prix_force?.montant === 219 && !!starter.prix_force.source && starter.base_price === null && starter.a_partir_de
+  verifier('Starter : aucun prix forcé (décision de max du 07/10), composition 1 Essential + Box 36 mois',
+    starter.prix_force == null && !!starter.source && starter.base_price === null && !starter.a_partir_de
       && JSON.stringify(starter.composition) === JSON.stringify([{ plan_id: 'agent-essential', quantite: 1 }, { plan_id: 'box-commander-36', quantite: 1 }]));
   verifier('Task Commander inclus à partir de 5 agents, lu dans plans.json', seed('task-commander')!.inclus_a_partir_de_agents === 5);
 
@@ -157,8 +157,8 @@ export async function lancer(): Promise<number> {
     verifier('une seconde version à la même date est refusée (pas d\'écrasement)', (await post('/tarifs/plans', { ...v2, base_price: 169 }, admin)).statut === 400);
     verifier('une version antérieure à la dernière est refusée', (await post('/tarifs/plans', { ...v2, effective_from: '2026-12-01' }, admin)).statut === 400);
     const starter2027 = planALaDate(routesVersions(), 'pack-starter', '2027-02-01');
-    verifier("l'écart du Starter suit ses composants : 159 + 69 = 228 calculé contre 219 forcé",
-      starter2027?.prix_calcule === 228 && starter2027.base_price === 219 && starter2027.ecart_prix_force === -9, starter2027 && [starter2027.prix_calcule, starter2027.ecart_prix_force]);
+    verifier('le Starter suit ses composants : 159 + 69 = 228 € HT au 01/02/2027',
+      starter2027?.prix_calcule === 228 && starter2027.base_price === 228 && starter2027.ecart_prix_force === null, starter2027 && [starter2027.prix_calcule, starter2027.base_price]);
 
     // --- quotes, to the cent
     const d1 = await post('/tarifs/devis', { lignes: [{ plan_id: 'agent-essential', quantite: 1 }, { plan_id: 'box-commander-36', quantite: 1 }], region: 'FR', date: '2026-10-07' });
@@ -166,9 +166,8 @@ export async function lancer(): Promise<number> {
       d1.statut === 200 && d1.corps.total_ht === 218 && d1.corps.total_tva === 43.6 && d1.corps.total_ttc === 261.6, d1.corps);
     const d2 = await post('/tarifs/devis', { lignes: [{ plan_id: 'pack-starter', quantite: 1 }], date: '2026-10-07' });
     const e = d2.corps.ecarts?.[0];
-    verifier('devis Starter : 219,00 HT (262,80 TTC) et écart signalé : calculé 218, forcé 219, écart 1',
-      d2.statut === 200 && d2.corps.total_ht === 219 && d2.corps.total_ttc === 262.8 && e?.prix_calcule === 218 && e?.prix_force === 219 && e?.ecart === 1, d2.corps);
-    if (e) console.log(`       Starter : prix calculé ${e.prix_calcule} € HT, prix forcé ${e.prix_force} € HT (« ${e.source} »), écart ${e.ecart} €`);
+    verifier('devis Starter : 218,00 HT (261,60 TTC), sans écart',
+      d2.statut === 200 && d2.corps.total_ht === 218 && d2.corps.total_ttc === 261.6 && e === undefined, d2.corps);
     const d3 = await post('/tarifs/devis', { lignes: [{ plan_id: 'agent-essential', quantite: 5 }], date: '2026-10-07' });
     const tc = d3.corps.lignes?.find((l: { plan_id: string }) => l.plan_id === 'task-commander');
     verifier('5 agents : Task Commander ajouté et offert, 745,00 HT', d3.corps.total_ht === 745 && tc?.offert === true && tc.montant_ht === 0 && d3.corps.total_ttc === 894, d3.corps);
