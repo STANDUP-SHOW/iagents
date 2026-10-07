@@ -86,7 +86,7 @@ export function AgentCard({ personne, compact = false, actif = false, className 
         <img src={`/accueil/${personne.portrait}.webp`} alt={`Portrait de ${personne.prenom}, ${personne.titre ?? personne.metier}`} width="256" height="256" loading="lazy" decoding="async" />
       </div>
       <div>
-        <h3 className="font-[Sora] font-semibold text-[1.02rem] leading-tight text-white">{personne.prenom}</h3>
+        <h3 className="font-[Montserrat] font-semibold text-[1.02rem] leading-tight text-white">{personne.prenom}</h3>
         <p className="text-[0.82rem] text-[var(--cyan)] leading-snug">{personne.titre ?? personne.metier}</p>
         {!compact && <p className="text-[0.75rem] text-[var(--texte-pale)] mt-0.5">Fiche {personne.id} · {personne.metier}</p>}
       </div>

@@ -75,7 +75,7 @@ export default function GlobalNav({ page = 'accueil', seuil = 24 }) {
           <ul className="flex flex-col">
             {ENTREES.map((e) => (
               <li key={e.libelle}>
-                <a href={e.href} className="block py-4 text-xl font-[Orbitron] font-semibold tracking-wide border-b border-[var(--trait)]" onClick={() => { setOuvert(false); e.evenement && suivre(e.evenement); }}>{e.libelle}</a>
+                <a href={e.href} className="block py-4 text-xl font-[Montserrat] font-semibold tracking-wide border-b border-[var(--trait)]" onClick={() => { setOuvert(false); e.evenement && suivre(e.evenement); }}>{e.libelle}</a>
               </li>
             ))}
           </ul>

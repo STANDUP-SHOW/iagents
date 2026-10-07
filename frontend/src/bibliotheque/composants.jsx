@@ -102,7 +102,7 @@ export function Apercu({ agent, installation, onFermer, onFicheComplete, focalis
         </button>
         <div className="bi-apercu-titre">
           <p className="bi-ref">{agent.id}</p>
-          <h2 className="font-[Sora] text-2xl font-semibold leading-tight text-white">{agent.nom}</h2>
+          <h2 className="font-[Montserrat] text-2xl font-semibold leading-tight text-white">{agent.nom}</h2>
           <p className="bi-secteur">{libelleSecteur(agent.secteur)} · {libelleFamille(agent.famille)}</p>
           <p className="bi-dispo"><span aria-hidden="true" /> Disponible</p>
         </div>

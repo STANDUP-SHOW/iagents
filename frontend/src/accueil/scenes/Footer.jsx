@@ -32,7 +32,7 @@ export default function Footer() {
         </div>
         {colonnes.map((c) => (
           <nav key={c.titre} aria-label={c.titre}>
-            <p className="font-[Orbitron] text-[0.7rem] tracking-[0.2em] uppercase text-[var(--texte-pale)]">{c.titre}</p>
+            <p className="font-[Montserrat] text-[0.7rem] tracking-[0.2em] uppercase text-[var(--texte-pale)]">{c.titre}</p>
             <ul className="mt-4 flex flex-col gap-2.5">
               {c.liens.filter((l) => l.href).map((l) => (
                 <li key={l.href}>
