@@ -200,6 +200,11 @@ for (const page of PAGES) {
   const absents = [...BOX_PUBLIQUES.map((b) => b.mensuel), ...tarifs.agents.paliers.map((p) => p.mensuel)].filter((x) => tarifs.agents.affichage === 'paliers' || x < 100).filter((x) => !tarifsHtml.includes(String(x)));
   if (absents.length) echoue(`la page Tarifs ne montre pas ${absents.join(', ')}`);
   else ok('la page Tarifs montre la grille de tarifs.json');
+  // Starter = Box 36 mois + 1 Essential (max, 07/10) : le prix est la somme, jamais recopié.
+  const starter = tarifs.packs.find((p) => p.id === 'starter');
+  const attendu = tarifs.box.find((b) => b.id === 'box-commander-36').mensuel + tarifs.agents.paliers.find((p) => p.id === 'essential').mensuel;
+  if (starter.mensuel !== attendu || !tarifsHtml.includes(String(attendu))) echoue(`Starter à ${starter.mensuel} au lieu de ${attendu}`);
+  else ok(`le Starter vaut la Box et un Essential : ${attendu} €`);
 }
 
 console.log(`\n${n} attentes tenues — boutique ok`);

@@ -3,6 +3,16 @@
 // « tarif pilote » while its status says so.
 import tarifs from './tarifs.json';
 
+// A pack priced as the sum of its parts (« somme ») gets its monthly price from
+// the box and agent prices above, so the two can never disagree (max, 07/10:
+// Starter = Box 36 mois + 1 Essential).
+for (const p of tarifs.packs) {
+  if (!p.somme) continue;
+  const box = tarifs.box.find((b) => b.id === p.somme.box);
+  const agents = Object.entries(p.somme.agents ?? {}).map(([id, n]) => n * tarifs.agents.paliers.find((a) => a.id === id).mensuel);
+  p.mensuel = box.mensuel + agents.reduce((x, y) => x + y, 0);
+}
+
 export default tarifs;
 
 const fmt = (x) => x.toLocaleString('fr-FR', { minimumFractionDigits: Number.isInteger(x) ? 0 : 2, maximumFractionDigits: 2 }).replace(/ /g, ' ');
