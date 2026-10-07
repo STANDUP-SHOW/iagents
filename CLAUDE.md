@@ -319,9 +319,12 @@ par WhatsApp et email.
   Une box de commande tactile, préparée en usine, 20 agents au plus, agents
   surtout par API ; elle reste propriété d'iAgent pour la maintenance et pour
   que personne n'y installe ses propres agents. Prix toujours séparés : loyer
-  de la box, 9,90 € par agent, consommation d'IA. Loyer, clé d'IA, sort de la
-  Box Max et des Power et durée d'engagement attendent max : rien n'en est
-  écrit dans `dimensionnement/`. **Le verrou qui manque d'abord est la
+  de la box, abonnement des agents, consommation d'IA. Le plan du site de max
+  (07/10, 19h13) fixe la base : box 69 €/mois sur 36 mois ou 89 € sur 24,
+  consommation refacturée à part, Box Max et Power retirées du public (sur
+  devis). **Le prix d'un agent est en conflit** (9,90 € le 22/09, 149-399 €
+  dans le plan) : rien n'en est écrit dans `dimensionnement/` avant que max
+  tranche. **Le verrou qui manque d'abord est la
   signature des fiches** : l'installeur les livre en clair et `lire_fiche` lit
   ce qu'il trouve. Voir `docs/box-e-agent.md`.
 - **Les fiches sont écrites par Claude Code sur l'abonnement de Max, pas par

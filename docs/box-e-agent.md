@@ -18,19 +18,29 @@ deviennent la Box Max et les Power.
 - **La box est louée, jamais vendue ni donnée.** Elle reste propriété d'iAgent, pour la
   maintenance et pour que personne n'y installe ses propres agents.
 - **Prix toujours séparés** (règle du 25/09, inchangée) : loyer de la box, abonnement de
-  chaque agent (9,90 €/mois), consommation d'IA.
+  chaque agent (prix en débat, voir plus bas), consommation d'IA.
 
-## Ce qui attend max
+## Prix : le plan du site de max fait foi
 
-| Question | Proposition du fil | Pourquoi |
-|---|---|---|
-| Loyer mensuel de la box | 49 €/mois, l'abonnement actuel de la Box Commandeur | Le coût du MS-01 (857,50 € HT) se couvre en ~18 mois à ce loyer, hors écran et maintenance |
-| Clé d'IA | Incluse et refacturée par iAgent | C'est le verrou le plus fort : sans location, plus de clé, l'agent s'arrête |
-| Box Max et Power | Gardées en option pour qui veut du local | Rien à retirer du calcul, il est fait et vérifié |
-| Durée d'engagement | 24 mois | La durée de financement déjà retenue |
+Le plan du site envoyé par max le 07/10 à 19h13 (`iAgent_Plan_Site_Developpeur.docx`)
+répond aux questions que ce fil lui avait posées, et ses chiffres remplacent ceux que le
+fil proposait (49 €/mois, 24 mois). Il les donne comme « base de travail », dans une
+configuration tarifaire administrable :
 
-Aucune de ces valeurs n'est écrite dans `dimensionnement/` tant que max ne l'a pas
-confirmée : un prix ne se devine pas.
+| Ligne | Plan du 07/10 |
+|---|---|
+| Box Commander (louée, « 0 € d'achat matériel ») | 69 €/mois sur 36 mois, ou 89 €/mois sur 24 mois |
+| Consommation (API, voix, téléphonie, services tiers) | au réel ou par crédits, à part de la location des agents |
+| Box Max, Power, multibox | retirées de l'affichage public, gardées archivées ; forte puissance locale « sur devis » |
+| Agent Essential / Professional / Expert | 149 / 249 / 399 €/mois |
+| Task Commander | 249-349 €/mois, ou inclus à partir de 5 agents |
+
+**Écart à trancher par max** : le prix d'un agent. Sa décision du 22/09 est 9,90 €/mois
+(49,90 € à l'achat) ; le plan dit 149 à 399 €/mois. Les deux ne peuvent pas être affichés.
+Le Task Commander n'existait nulle part avant ce plan.
+
+Consommation « au réel ou par crédits » veut dire que la clé d'IA est fournie et
+refacturée par iAgent, ce qui est aussi le verrou le plus fort.
 
 **Clé incluse = une règle durable change.** Aujourd'hui la clé d'API est celle du client
 et ne quitte jamais sa machine (`llm::cle_api()`, trousseau). Une clé iAgent demande un
@@ -47,7 +57,7 @@ Aucun moyen ne suffit seul ; ensemble, ils rendent la copie plus chère que la l
 | Machine fermée en usine : compte sans droits d'administration, mode kiosque, BitLocker avec TPM, BIOS sous mot de passe, démarrage sécurisé, pas de démarrage USB | `usine/` (PR #24) installe, ne verrouille rien | non |
 | **Agents signés** : l'application refuse une fiche que iAgent n'a pas signée | **n'existe pas** : `tauri.conf.json` livre `agents/` et `socle/` en clair et `fiches::lire_fiche` lit ce qu'il trouve | non |
 | Agents chiffrés pour une box donnée (clé liée au TPM) | n'existe pas | non |
-| Licence courte par agent, renouvelée en ligne, avec quelques jours de grâce hors ligne | n'existe pas ; demande un service hébergé | oui (durée, loyer) |
+| Licence courte par agent, renouvelée en ligne, avec quelques jours de grâce hors ligne | n'existe pas ; demande un service hébergé | non (durée et loyer donnés par le plan) |
 | Gestion à distance : inventaire, coupure d'une box impayée | mises à jour automatiques en place (`mise_a_jour.rs`), RustDesk en option dans `usine/` | non |
 
 **Ordre de construction proposé :** la signature des fiches d'abord, parce qu'elle seule
@@ -68,7 +78,7 @@ dans le dépôt. Puis le chiffrement par box, puis la licence, qui demande un h�
 ## Matériel à revoir
 
 - **Le MS-01 de la Box Commandeur n'a ni écran tactile, ni micro, ni enceintes.** Il faut
-  un autre modèle, ou ces pièces chiffrées en plus, avant de fixer le loyer.
+  un autre modèle, ou ces pièces chiffrées en plus, pour tenir le loyer de 69 €.
 - **Le téléphone n'existe pas dans l'application** : aucun code n'appelle ni ne décroche
   (besoin `telephone` de 210 fiches, non servi). L'équipement n'y suffit pas.
 
