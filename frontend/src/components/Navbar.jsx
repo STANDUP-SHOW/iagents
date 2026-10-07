@@ -16,7 +16,7 @@ export default function Navbar({ search, onSearchChange }) {
             </a>
             <div>
               <h1 className="sr-only">iAgent</h1>
-              <p className="text-xs text-nuit-400">1249 fiches d'agents métier</p>
+              <p className="text-xs text-nuit-400">1 249 métiers</p>
             </div>
           </div>
 

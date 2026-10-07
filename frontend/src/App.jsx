@@ -60,12 +60,12 @@ function Entree({ requete, setRequete }) {
       <div className="bi-entree-fond" aria-hidden="true" />
       <div className="bi-cadre bi-entree-grille">
         <div>
-          <p className="mq-surtitre">Votre équipe augmentée. Des milliers de talents IA.</p>
-          <h1 id="titre-bibliotheque" className="mq-display bi-h1">Le catalogue des <span className="mq-cyan">iAgents</span></h1>
-          <p className="bi-chapeau">Des assistants aux experts métiers, trouvez le collaborateur IA idéal pour vos projets. Chaque agent est spécialisé, formé et prêt à rejoindre votre équipe.</p>
+          <p className="mq-surtitre">Un métier, votre secteur, votre activité : votre expert.</p>
+          <h1 id="titre-bibliotheque" className="mq-display bi-h1">Le catalogue des <span className="mq-cyan">métiers</span></h1>
+          <p className="bi-chapeau">Choisissez un métier, puis votre secteur et votre activité : iAgent en fait un expert taillé pour votre entreprise. Une assistante commerciale peut servir le commerce maritime, une imprimerie en Espagne ou une compagnie aérienne à Paris.</p>
           <dl className="bi-compteurs">
-            <div><dt>iAgents disponibles</dt><dd>{nombre(COMPTEURS.agents)}</dd></div>
-            <div><dt>secteurs couverts</dt><dd>{COMPTEURS.secteurs}</dd></div>
+            <div><dt>métiers</dt><dd>{nombre(COMPTEURS.agents)}</dd></div>
+            <div><dt>familles de métiers</dt><dd>{COMPTEURS.secteurs}</dd></div>
             <div><dt>logiciels connus</dt><dd>{nombre(COMPTEURS.logiciels)}</dd></div>
             <div><dt>missions décrites</dt><dd>{nombre(COMPTEURS.taches)}</dd></div>
           </dl>
@@ -226,7 +226,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
 
             <section className="bi-resultats" aria-label="Profils">
               <div className="bi-haut">
-                <p className="bi-total"><strong>{nombre(montrerListe ? resultats.length : PACKS_ENTREPRISE.length)}</strong> {montrerListe ? (resultats.length > 1 ? 'iAgents' : 'iAgent') : 'packs'}</p>
+                <p className="bi-total"><strong>{nombre(montrerListe ? resultats.length : PACKS_ENTREPRISE.length)}</strong> {montrerListe ? (resultats.length > 1 ? 'métiers' : 'métier') : 'packs'}</p>
                 <div className="bi-vues" role="tablist" aria-label="Parcourir le catalogue">
                   {VUES.map((v) => (
                     <button key={v.id} type="button" role="tab" aria-selected={vue === v.id} onClick={() => { setVue(v.id); setPackOuvert(null); setFiltres(FILTRES_VIDES); setApercu(null); }}>{v.libelle}</button>

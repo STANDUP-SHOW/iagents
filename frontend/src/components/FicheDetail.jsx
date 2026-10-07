@@ -287,7 +287,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
               <span className="fd-puce">{taches.length} missions</span>
             </div>
             <p className="fd-tete-accroche">{agent.accroche}</p>
-            <p className="fd-note">Son prénom, vous le choisissez à l'entretien d'embauche. Portrait provisoire.</p>
+            <p className="fd-note">Ce métier se règle sur votre secteur et votre activité ; son prénom, vous le choisissez à l'entretien d'embauche. Portrait provisoire.</p>
           </div>
           <div className="fd-tete-mobile">
             <p className="fd-prix">{prix(PRIX_AGENT.mensuel)}<span> / mois</span></p>

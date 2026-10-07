@@ -106,11 +106,13 @@ function Hero() {
               Voir comment ça marche
             </a>
           </div>
+          {/* « 180 000+ » rounds down the 182 490 métier × activité postes that
+              `npm run postes` counts (06/10/2026, PR #35); recount there, not here. */}
           <dl className="hx-chiffres" data-entree>
-            <div><dt className="sr-only">Agents métier</dt><dd><b>{nombre(compteurs.fiches)}</b><span>agents métier</span></dd></div>
-            <div><dt className="sr-only">Secteurs</dt><dd><b>{compteurs.secteurs}</b><span>secteurs couverts</span></dd></div>
-            <div><dt className="sr-only">Logiciels</dt><dd><b>{nombre(compteurs.logiciels)}</b><span>logiciels connus</span></dd></div>
-            <div><dt className="sr-only">Missions</dt><dd><b>{nombre(compteurs.taches)}</b><span>missions décrites</span></dd></div>
+            <div><dt className="sr-only">Métiers</dt><dd><b>{nombre(compteurs.fiches)}</b><span>métiers</span></dd></div>
+            <div><dt className="sr-only">Familles de métiers</dt><dd><b>{compteurs.secteurs}</b><span>familles de métiers</span></dd></div>
+            <div><dt className="sr-only">Activités</dt><dd><b>{nombre(compteurs.activites)}</b><span>activités</span></dd></div>
+            <div><dt className="sr-only">Postes possibles</dt><dd><b>180 000+</b><span>postes possibles</span></dd></div>
           </dl>
         </div>
 
@@ -186,9 +188,9 @@ function JulieEtCatalogue() {
 
       <div className="ct">
         <div className="ct-texte">
-          <p className="mq-surtitre">{nombre(compteurs.fiches)} agents métier</p>
-          <h2 className="mq-titre">Un agent pour<br />chaque besoin</h2>
-          <p className="mq-texte">Des assistants aux experts, trouvez l'agent parfait pour votre activité. Des centaines de métiers, prêts à rejoindre votre équipe.</p>
+          <p className="mq-surtitre">{nombre(compteurs.fiches)} métiers, plus de 180 000 postes</p>
+          <h2 className="mq-titre">Un métier,<br />votre expert</h2>
+          <p className="mq-texte">Chaque métier se règle sur votre secteur et votre activité. Une assistante commerciale peut travailler dans le commerce international maritime, pour une imprimerie en Espagne ou pour une compagnie aérienne à Paris : vous ne prenez pas un agent tout fait, vous composez votre expert.</p>
           <Bouton href={LIENS.catalogue} variante="contour-cyan" evenement="catalog_click">Explorer le catalogue</Bouton>
         </div>
         <div className="ct-rail-cadre">
