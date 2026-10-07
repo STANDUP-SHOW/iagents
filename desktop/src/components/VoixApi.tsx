@@ -20,6 +20,13 @@ interface Etat {
 
 const MOTEURS: { compte: 'mistral' | 'elevenlabs' | 'google-ai-studio'; cle: keyof Etat; nom: string; quoi: string; ou: string }[] = [
   {
+    compte: 'google-ai-studio',
+    cle: 'gemini',
+    nom: 'Google Gemini (conseillée)',
+    quoi: 'Notre choix : parmi les meilleures à l’écoute, cinq fois moins chère qu’ElevenLabs, et on lui donne le ton en une phrase.',
+    ou: 'aistudio.google.com, rubrique Get API key',
+  },
+  {
     compte: 'mistral',
     cle: 'mistral',
     nom: 'Mistral Voxtral',
@@ -32,13 +39,6 @@ const MOTEURS: { compte: 'mistral' | 'elevenlabs' | 'google-ai-studio'; cle: key
     nom: 'ElevenLabs',
     quoi: 'La plus expressive du marché : elle rit, chuchote, change de ton. La plus chère.',
     ou: 'elevenlabs.io, rubrique API Keys',
-  },
-  {
-    compte: 'google-ai-studio',
-    cle: 'gemini',
-    nom: 'Google Gemini',
-    quoi: 'Très bonne et bon marché, on lui donne le ton en une phrase.',
-    ou: 'aistudio.google.com, rubrique Get API key',
   },
 ]
 
