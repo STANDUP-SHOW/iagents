@@ -22,7 +22,15 @@ rusqlite = { version = "0.30", features = ["bundled"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 imap = "2"
 lettre = "0.11.23"
-keyring = "3.6.3"
+# Sans fonctionnalite choisie, keyring 3 ne prend AUCUN coffre du systeme : il
+# tombe sur son coffre factice en memoire, ou une valeur n'est relisible que par
+# l'objet qui l'a posee (persistance « EntryOnly », lue dans src/mock.rs de la
+# 3.6.3 le 07/10/2026). La cle d'API, les jetons WhatsApp et Telegram et le mot
+# de passe du courrier ne survivaient donc pas d'une commande a la suivante.
+# Chaque systeme prend maintenant son vrai coffre : Gestionnaire
+# d'identification sous Windows, Trousseau sous macOS, Secret Service (D-Bus,
+# d'ou libdbus-1-dev dans dependances-systeme.txt) sous Linux.
+keyring = { version = "3.6.3", features = ["windows-native", "apple-native", "sync-secret-service"] }
 mailparse = "0.17.0"
 native-tls = "0.2.18"
 rust_xlsxwriter = { version = "0.96.0", default-features = false }
@@ -31,6 +39,13 @@ rust_xlsxwriter = { version = "0.96.0", default-features = false }
 # pas une bibliotheque.
 zip = { version = "7", default-features = false, features = ["deflate"] }
 sha2 = "0.10"
+# L'identite de la Box (plateforme.rs) : Ed25519 par ring, que rustls compile
+# deja dans le binaire a la meme version. Aucune bibliotheque de signature
+# nouvelle (ed25519-dalek n'est pas necessaire).
+ring = "0.17"
+base64 = "0.22"
+# Les dates ISO des jetons de licence ; deja dans l'arbre par tauri.
+chrono = "0.4"
 tauri-plugin-updater = "2"
 
 # La jauge de la machine lit la memoire totale. Cote Windows c'est

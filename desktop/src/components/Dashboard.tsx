@@ -24,6 +24,16 @@ export type Onglet =
   | 'travail'
   | 'machine'
   | 'equipe'
+  // Desktop Commander modules (MASTER §14)
+  | 'workforce'
+  | 'standard'
+  | 'create'
+  | 'box'
+  | 'validations'
+  | 'consommation'
+  | 'securite'
+  // Hidden unless an admin key is in the keyring (admin_present).
+  | 'admin'
 
 interface Props {
   etat: Etat
@@ -35,6 +45,8 @@ interface Props {
   eveillee: boolean
   onBasculerVoix: () => void
   onOuvrir: (onglet: Onglet) => void
+  /** Show the hidden admin space (an admin key is in the keyring). */
+  admin?: boolean
 }
 
 const NIVEAUX: Record<string, string> = {
@@ -101,6 +113,51 @@ export const ICONES: Record<Exclude<Onglet, 'dashboard'>, ReactNode> = {
       <path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3M9.5 9.5h5v5h-5z" />
     </>
   ),
+  workforce: (
+    <>
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18" />
+    </>
+  ),
+  standard: (
+    <>
+      <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />
+    </>
+  ),
+  create: (
+    <>
+      <path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z" />
+    </>
+  ),
+  box: (
+    <>
+      <path d="M3 7.5L12 3l9 4.5v9L12 21l-9-4.5z" />
+      <path d="M3 7.5l9 4.5 9-4.5M12 12v9" />
+    </>
+  ),
+  validations: (
+    <>
+      <path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z" />
+      <path d="M8.5 12l2.5 2.5 4.5-5" />
+    </>
+  ),
+  consommation: (
+    <>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </>
+  ),
+  securite: (
+    <>
+      <rect x="5" y="10" width="14" height="10" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2.5" />
+    </>
+  ),
+  admin: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" />
+    </>
+  ),
 }
 
 export const TITRES: Record<Exclude<Onglet, 'dashboard'>, string> = {
@@ -113,7 +170,26 @@ export const TITRES: Record<Exclude<Onglet, 'dashboard'>, string> = {
   voice: 'Votre voix',
   machine: 'Votre machine',
   equipe: 'Votre équipe',
+  workforce: 'Workforce',
+  standard: 'Voice',
+  create: 'Create',
+  box: 'Box',
+  validations: 'Validations',
+  consommation: 'Consommation',
+  securite: 'Sécurité',
+  admin: 'Administration iAgent',
 }
+
+/** The Desktop Commander modules (§14), listed beside the centre. */
+export const MODULES_COMMANDER: Exclude<Onglet, 'dashboard'>[] = [
+  'workforce',
+  'standard',
+  'create',
+  'box',
+  'validations',
+  'consommation',
+  'securite',
+]
 
 /** Ce qui tient dans un rond : un mot, deux au plus. */
 const TITRES_COURTS: Record<Exclude<Onglet, 'dashboard'>, string> = {
@@ -126,6 +202,14 @@ const TITRES_COURTS: Record<Exclude<Onglet, 'dashboard'>, string> = {
   voice: 'Voix',
   machine: 'Machine',
   equipe: 'Équipe',
+  workforce: 'Workforce',
+  standard: 'Voice',
+  create: 'Create',
+  box: 'Box',
+  validations: 'Validations',
+  consommation: 'Consommation',
+  securite: 'Sécurité',
+  admin: 'Admin',
 }
 
 export function Icone({ onglet }: { onglet: Exclude<Onglet, 'dashboard'> }) {
@@ -144,6 +228,7 @@ export default function Dashboard({
   eveillee,
   onBasculerVoix,
   onOuvrir,
+  admin = false,
 }: Props) {
   const { lu, travail, jauge } = donnees
   const [maintenant, setMaintenant] = useState(() => new Date())
@@ -253,6 +338,16 @@ export default function Dashboard({
           <span className="bouton-reglage-detail">voix, empreinte vocale</span>
         </button>
       </div>
+
+      <nav className="commande-modules" aria-label="Modules du Desktop Commander">
+        <span className="hud-etiquette">Commander</span>
+        {[...MODULES_COMMANDER, ...(admin ? (['admin'] as const) : [])].map((m) => (
+          <button key={m} className="bouton-module" onClick={() => onOuvrir(m)}>
+            <Icone onglet={m} />
+            {TITRES_COURTS[m]}
+          </button>
+        ))}
+      </nav>
 
       <div className={`systeme etat-${etat}`}>
         <div className="orbite">
