@@ -79,45 +79,35 @@ Le centre de contrôle est construit par le fil « Plan global jusqu'au produit 
 l'offre louée ; ce qui suit sépare ce que le code fait aujourd'hui de ce que le MASTER §6
 exige et qui n'est pas fait. **Les exigences du §6 restent toutes dues.**
 
-### Ce que la PR #41 fait (relevé du 07/10, 22h49)
+### Ce que la PR #41 fait (relevé du 07/10, 23h30, sur `023f172`, CI verte)
+
+Lu dans `desktop/src-tauri/src/plateforme.rs` de la branche `plan-global`.
 
 | Verrou | Ce que fait #41 |
 |---|---|
 | Identité de la box | une clé Ed25519 par box, gardée au trousseau du système, qui signe chaque requête au centre de contrôle |
-| Droit d'exécution | **un seul jeton par box**, qui liste tous ses agents avec la date de fin de chacun |
-| Durée du jeton | **24 h**, sans grâce hors ligne au-delà |
-| Révocation | prend effet au prochain renouvellement, donc au plus 24 h après |
-| Box impayée | coupée par le statut « suspendue » |
-| Skill Packs | une empreinte SHA-256, sans signature |
-| Fiches d'agent | **ni signées ni chiffrées** : `fiches::lire_fiche` lit toujours ce qu'il trouve |
+| Droit d'exécution | **un seul jeton par box** (v2 seulement), qui liste tous ses agents avec la date de fin de chacun ; vérifié avant chaque tâche et chaque tour de conversation |
+| **Fiches signées** | chaque droit du jeton porte l'empreinte SHA-256 de la fiche ; la fiche lue sur le disque doit avoir cette empreinte, sinon l'agent ne tourne pas. Le jeton étant signé par la plateforme, une fiche modifiée ou ajoutée par le client est refusée |
+| Durée et grâce | jeton renouvelé avant son expiration ; **72 h de grâce seulement quand le centre de contrôle est injoignable** (réseau, délai, erreur 5xx) ; un refus (401/403) jette le jeton aussitôt ; passé la grâce, plus rien ne tourne |
+| Box impayée | coupée par le statut « suspendue », effective au renouvellement suivant |
+| **Skill Packs signés et chiffrés pour une box** | clé X25519 de la box au trousseau, HKDF-SHA256, AES-256-GCM, signature Ed25519 de la plateforme ; ouverts en mémoire seulement |
+
+**Deux limites que le code dit lui-même :** le verrou ne joue que sur une box *reliée* au
+centre de contrôle (un poste non relié fonctionne comme avant, fiches comprises) ; et le
+fichier de réglages qui relie la box vit dans le dossier de l'utilisateur, donc qui peut
+l'effacer refait de la box un poste non relié. Le vrai verrou reste la machine fermée
+ci-dessous. Les fiches elles-mêmes sont signées par empreinte mais **pas chiffrées** :
+elles restent lisibles sur le disque.
 
 ### Ce que le MASTER §6 demande et qui reste à faire
 
 | Exigence | État |
 |---|---|
-| **Fiches signées** (l'application refuse une fiche qu'iAgent n'a pas signée) | à faire ; c'était le premier verrou proposé ici, parce qu'il est le seul à empêcher « ses propres agents » sur nos box, et il ne dépend de rien |
-| Paquets chiffrés pour une box donnée | à faire |
-| Skill Packs signés, et pas seulement hachés (une empreinte se recalcule, une signature non) | à faire |
+| TPM 2.0 (clés de la box liées à la puce, pas au trousseau, qui se recopie avec le disque) | à faire |
+| Secure Boot, disque chiffré, système verrouillé (sans quoi le fichier de réglages s'efface) | à faire en usine (`usine/`, PR #24, installe et ne verrouille rien) |
 | mTLS vers le centre de contrôle | à faire ; la signature Ed25519 des requêtes en tient lieu pour l'instant |
-| TPM 2.0 (clé de la box liée à la puce, pas au trousseau, qui se recopie avec le disque) | à faire |
-| Secure Boot, disque chiffré, système verrouillé | à faire en usine (`usine/`, PR #24, installe et ne verrouille rien) |
+| Fiches chiffrées pour une box (comme les Skill Packs) | à faire |
 | Contrat : propriété, dépôt, restitution, interdiction d'extraire | à rédiger |
-
-Pour la signature des fiches, le mécanisme existe déjà pour les mises à jour
-(`mise_a_jour.rs` vérifie une signature avant d'installer un octet) : la même approche,
-une clé publique dans le binaire et la clé privée hors du dépôt.
-
-### Avis de ce fil sur les choix de #41
-
-- **Un jeton de 24 h sans grâce arrête toute la flotte si notre serveur tombe un jour.**
-  Le risque n'est pas la coupure Internet du client (ses agents passent surtout par
-  l'API, ils s'arrêtent de toute façon), c'est la panne du centre de contrôle : au bout
-  de 24 h, toutes les box louées s'arrêtent ensemble. Proposition : distinguer « le
-  serveur ne répond pas » (le dernier jeton reste valable quelques jours, par exemple
-  72 h) de « le serveur répond que la box est suspendue ou l'agent révoqué » (effet
-  immédiat). La révocation garde alors son délai de 24 h quand le serveur répond.
-- Un jeton par box listant les agents : bon choix, une seule requête par jour.
-- Box suspendue par statut : bon choix.
 
 ## Ce qu'on ne peut pas verrouiller
 
@@ -127,12 +117,12 @@ une clé publique dans le binaire et la clé privée hors du dépôt.
   les branchements aux logiciels du client, la maintenance, les mises à jour et le
   catalogue qui grandit — pas le secret du texte.
 
-## Matériel à revoir
+## Matériel et téléphone
 
 - **Le MS-01 de la Box Commandeur n'a ni écran tactile, ni micro, ni enceintes.** Il faut
   un autre modèle, ou ces pièces chiffrées en plus, pour tenir le loyer de 69 €.
-- **Le téléphone n'existe pas dans l'application** : aucun code n'appelle ni ne décroche
-  (besoin `telephone` de 210 fiches, non servi). L'équipement n'y suffit pas.
+- **Le téléphone n'est pas relié à la voix** : le pont audio entre la téléphonie et la
+  voix de l'agent reste à faire (fil « Plan global »). L'équipement n'y suffit pas.
 
 ## Robots d'IA et site
 
