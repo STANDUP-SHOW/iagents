@@ -117,7 +117,7 @@ export default function Securite({ installes, onOuvrir }: { installes: readonly 
           <dl className="donnees">
             <div className="donnees-ligne">
               <dt>Liaison</dt>
-              <dd>{e.relie ? `reliée à ${e.adresse}` : 'poste non relié'}</dd>
+              <dd>{e.relie ? `reliée à ${e.adresse}` : e.edition_box ? 'Box non reliée : aucun agent ne travaille' : 'poste non relié'}</dd>
             </div>
             <div className="donnees-ligne">
               <dt>Identifiant de Box</dt>
