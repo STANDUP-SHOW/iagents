@@ -38,7 +38,21 @@ fn identifiant_valide(id: &str) -> bool {
 
 #[tauri::command]
 pub fn lire_fiche(id: String) -> Result<String, String> {
-    if !identifiant_valide(&id) {
+    let chemin = chemin_fiche(&id)?;
+    let nom = chemin.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let contenu = std::fs::read_to_string(&chemin).map_err(|e| format!("lecture de {} : {}", nom, e))?;
+    if let Some(raison) = version_insuffisante_pour(&contenu, version_app()) {
+        return Err(raison);
+    }
+    Ok(contenu)
+}
+
+/// Where the card of `id` lives: the one lookup shared by `lire_fiche` (what
+/// the agent is built from) and the licence gate (`plateforme::autoriser`,
+/// which hashes these exact bytes). Two lookups could hash one file and run
+/// another.
+pub fn chemin_fiche(id: &str) -> Result<PathBuf, String> {
+    if !identifiant_valide(id) {
         return Err(format!("identifiant de fiche invalide : {}", id));
     }
 
@@ -59,12 +73,7 @@ pub fn lire_fiche(id: String) -> Result<String, String> {
         let nom = entree.file_name();
         let nom = nom.to_string_lossy();
         if nom.starts_with(&prefixe) && nom.ends_with(".json") {
-            let contenu = std::fs::read_to_string(entree.path())
-                .map_err(|e| format!("lecture de {} : {}", nom, e))?;
-            if let Some(raison) = version_insuffisante_pour(&contenu, version_app()) {
-                return Err(raison);
-            }
-            return Ok(contenu);
+            return Ok(entree.path());
         }
     }
 

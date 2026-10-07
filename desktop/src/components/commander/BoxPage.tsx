@@ -180,11 +180,18 @@ export default function BoxPage() {
             <strong>Identité de la Box</strong> — clé publique Ed25519, à recopier au provisioning. La clé privée reste
             au trousseau du système et ne s'affiche jamais.
           </p>
-          {courant?.cle_publique_box ? (
-            <pre className="cle-publique">{courant.cle_publique_box}</pre>
+          {courant?.cle_publique_box && courant.cle_chiffrement_publique ? (
+            <>
+              <pre className="cle-publique">{courant.cle_publique_box}</pre>
+              <p>
+                <strong>Clé de chiffrement</strong> (X25519, champ « cle_chiffrement_publique ») — la plateforme s'en sert
+                pour chiffrer les Skill Packs pour cette Box seule.
+              </p>
+              <pre className="cle-publique">{courant.cle_chiffrement_publique}</pre>
+            </>
           ) : (
             <button className="commander-action principal" onClick={creerIdentite} disabled={occupe}>
-              Créer l'identité de la Box
+              {courant?.cle_publique_box ? 'Créer la clé de chiffrement de la Box' : "Créer l'identité de la Box"}
             </button>
           )}
         </div>

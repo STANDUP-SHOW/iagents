@@ -1,6 +1,8 @@
 import type { AgentInstalle } from '../../agents/fiche'
 import { estTeamHolder } from '../../agents/team-holder'
-import { dateFr, droitDe, enListe, useCommande, useEtatPlateforme } from '../../agents/plateforme'
+import { useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
+import { dateFr, droitDe, enListe, useCommande, useEtatPlateforme, type SkillOuvert } from '../../agents/plateforme'
 import { Donnees, Lu, NonRelie, Rubrique, type Ouvrir } from './Commun'
 
 /**
@@ -100,13 +102,63 @@ export default function Workforce({ installes, onOuvrir }: { installes: readonly
               const liste = enListe(d, ['skills', 'skill_packs'])
               return liste && liste.length === 0 ? (
                 <p className="vide">Aucun Skill Pack validé pour les agents de cette Box.</p>
+              ) : liste ? (
+                <ul className="lignes-commander">
+                  {liste.map((k, i) => (
+                    <SkillLigne key={i} skill={k} />
+                  ))}
+                </ul>
               ) : (
-                <Donnees valeur={liste ?? d} />
+                <Donnees valeur={d} />
               )
             }}
           </Lu>
         )}
       </Rubrique>
     </div>
+  )
+}
+
+/**
+ * One Skill Pack: « Vérifier et charger » fetches it encrypted for this Box,
+ * checks the platform signature and the fingerprint, and keeps the content in
+ * memory only (plateforme_skill_ouvrir). The screen never sees the content.
+ */
+function SkillLigne({ skill }: { skill: unknown }) {
+  const k = (skill ?? {}) as Record<string, unknown>
+  const id = typeof k.id === 'string' ? k.id : null
+  const [ouvert, setOuvert] = useState<SkillOuvert | null>(null)
+  const [refus, setRefus] = useState<string | null>(null)
+  const [occupe, setOccupe] = useState(false)
+  const charger = async () => {
+    if (!id) return
+    setOccupe(true)
+    setRefus(null)
+    try {
+      setOuvert(await invoke<SkillOuvert>('plateforme_skill_ouvrir', { id }))
+    } catch (e) {
+      setRefus(String(e))
+    } finally {
+      setOccupe(false)
+    }
+  }
+  return (
+    <li className="ligne-commander">
+      <Donnees valeur={skill} />
+      {id ? (
+        <button className="commander-action" onClick={charger} disabled={occupe}>
+          Vérifier et charger
+        </button>
+      ) : (
+        <p className="lecture-refus">Ce Skill Pack n'a pas d'identifiant : il ne peut pas être chargé.</p>
+      )}
+      {ouvert && (
+        <p className="vide">
+          Signé par la plateforme, déchiffré pour cette Box, empreinte conforme : {ouvert.taille} octets gardés en mémoire
+          seulement (version {ouvert.version}).
+        </p>
+      )}
+      {refus && <p className="lecture-refus">{refus}</p>}
+    </li>
   )
 }

@@ -186,6 +186,7 @@ const STRUCTURES: { rust: string; ecran: string; nom: string }[] = [
   { rust: 'desktop/src-tauri/src/plateforme.rs', ecran: 'desktop/src/agents/plateforme.ts', nom: 'EtatLicence' },
   { rust: 'desktop/src-tauri/src/plateforme.rs', ecran: 'desktop/src/agents/plateforme.ts', nom: 'EtatPlateforme' },
   { rust: 'desktop/src-tauri/src/plateforme.rs', ecran: 'desktop/src/agents/plateforme.ts', nom: 'Sante' },
+  { rust: 'desktop/src-tauri/src/plateforme.rs', ecran: 'desktop/src/agents/plateforme.ts', nom: 'SkillOuvert' },
 ];
 
 /** Le corps d'un bloc nommé, de son `{` à l'accolade qui lui répond. */
