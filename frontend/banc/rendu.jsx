@@ -206,6 +206,11 @@ for (const page of PAGES) {
   const manquants = tarifs.voice.offres.filter((o) => o.mensuel ?? o.aPartirDe).filter((o) => !voixHtml.includes(String(o.mensuel ?? o.aPartirDe)));
   if (vendues.length || manquants.length || !voixHtml.includes('Bientôt')) echoue(`page Voice : ${vendues.map((o) => o.id).join(', ')} vendues, ${manquants.map((o) => o.id).join(', ')} absentes`);
   else ok('la page Voice montre ses prix, tous marqués « bientôt »');
+  // Starter = Box 36 mois + 1 Essential (max, 07/10) : le prix est la somme, jamais recopié.
+  const starter = tarifs.packs.find((p) => p.id === 'starter');
+  const attendu = tarifs.box.find((b) => b.id === 'box-commander-36').mensuel + tarifs.agents.paliers.find((p) => p.id === 'essential').mensuel;
+  if (starter.mensuel !== attendu || !tarifsHtml.includes(String(attendu))) echoue(`Starter à ${starter.mensuel} au lieu de ${attendu}`);
+  else ok(`le Starter vaut la Box et un Essential : ${attendu} €`);
 }
 
 console.log(`\n${n} attentes tenues — boutique ok`);
