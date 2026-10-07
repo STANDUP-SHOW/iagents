@@ -48,6 +48,30 @@ et ne quitte jamais sa machine (`llm::cle_api()`, trousseau). Une clé iAgent de
 relais qui compte la consommation par box et la refacture ; elle ne se pose pas dans le
 paquet, sinon elle se recopie avec lui.
 
+## Le document global de max (07/10, 21h53) confirme et précise
+
+`iAgent_MASTER_Developpeur_Global` (copie texte dans
+`/mnt/project-files/master/`) reprend les mêmes prix de test et la même location, et
+ajoute :
+
+- §4 : la Box reste propriété d'iAgent, avec **restitution, renouvellement ou rachat
+  éventuel** en fin de contrat ; elle porte aussi un pavé ou une tablette de signature ;
+  Box Business graphite, Box Home claire.
+- §6 : système verrouillé (Linux/Ubuntu Core si possible, sinon Windows IoT/Enterprise
+  restreint), TPM 2.0, Secure Boot, disque chiffré, identité cryptographique par Box et
+  mTLS vers un « Control Plane », un droit d'exécution par client, Box et agent, paquets
+  signés et chiffrés, révocation à distance. C'est le plan de verrouillage ci-dessous,
+  écrit par max lui-même.
+- §12 : la petite Box ne porte pas un gros centre d'appels ; un « Voice Hub » hébergé le
+  fera.
+- Une gamme Home (49 à 169 € TTC/mois) et une gamme Voice (49 € à sur devis), hors de ce
+  fil : le moteur tarifaire versionné est construit par le fil « Plan global jusqu'au
+  produit fini ».
+
+**Écart relevé** : le Starter est annoncé « à partir de 219 € HT/mois » pour un agent
+Essential (149 €) et la Box sur 36 mois (69 €), soit 218 €. Recopié tel quel en attendant
+max.
+
 ## Verrouiller : ce qui existe, ce qui reste à construire
 
 Aucun moyen ne suffit seul ; ensemble, ils rendent la copie plus chère que la location.
