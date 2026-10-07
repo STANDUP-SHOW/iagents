@@ -470,7 +470,7 @@ function App() {
       case 'embauche':
         return [
           { valeur: tiret(lu.metiers), libelle: 'métiers au catalogue' },
-          { valeur: tiret(lu.secteurs), libelle: 'secteurs' },
+          { valeur: tiret(lu.secteurs), libelle: 'familles de métiers' },
           { valeur: tiret(lu.activites), libelle: 'activités' },
           { valeur: tiret(etat.embauches), libelle: 'déjà embauchés' },
         ]

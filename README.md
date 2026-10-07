@@ -6,13 +6,13 @@ choix du client) dans l'application desktop iAgent, vendus sur iagent.agency et
 livrés préinstallés sur les machines LocalAgent.
 
 Ce dossier est le **premier jalon** : le contrat qui décrit un agent, le
-catalogue normalisé des 1075 postes, cinq agents témoins complets, le moteur de
+catalogue normalisé des métiers (1 075 au départ, 1 249 aujourd'hui), cinq agents témoins complets, le moteur de
 dimensionnement (pack d'agents ↔ machines) et le générateur de fiches en lot.
 L'application desktop et la boutique viennent ensuite et lisent tout ça.
 
 ```
 contrat/          paquet-agent.md (le pourquoi) + paquet-agent.schema.json (le quoi)
-catalogue/        catalogue.json : 1075 agents, 43 secteurs, 12 profils commerciaux (issu du classeur V2)
+catalogue/        catalogue.json : 1075 métiers, 43 familles, 12 profils commerciaux (issu du classeur V2)
 agents/           un JSON par agent, nommé <ID>-<slug>.json — 5 témoins écrits à la main
 dimensionnement/  paliers-modeles.json (modèles locaux → matériel), machines.json (catalogue LocalAgent, EXEMPLES à remplacer),
                   calculer.ts (matériel d'un agent, pack → machines, machine → agents, appels/jour, jauge), son banc
