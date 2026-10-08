@@ -44,7 +44,18 @@ const ETAPES: { cle: Etape; titre: string }[] = [
   { cle: 'recapitulatif', titre: 'Ce qu’il a compris' },
 ]
 
-export default function Embauche() {
+export default function Embauche({
+  ficheInitiale,
+  apresEmbauche,
+  compact = false,
+}: {
+  /** A card chosen in the catalogue: the interview starts on it. */
+  ficheInitiale?: string
+  /** Told once installation.json is written, so the rest of the app re-reads it. */
+  apresEmbauche?: (prenom: string) => void
+  /** Inside the hiring page: no page title, the catalogue does the choosing. */
+  compact?: boolean
+} = {}) {
   const [etape, setEtape] = useState<Etape>('identite')
   const [erreur, setErreur] = useState('')
   const [enregistre, setEnregistre] = useState('')
@@ -76,6 +87,14 @@ export default function Embauche() {
       .then((brut) => setRefActivites(JSON.parse(brut)))
       .catch((e) => setErreur(String(e)))
   }, [])
+
+  useEffect(() => {
+    if (ficheInitiale && ficheInitiale !== ficheId) {
+      setEtape('identite')
+      setEnregistre('')
+      void chargerFiche(ficheInitiale)
+    }
+  }, [ficheInitiale])
 
   const chargerFiche = async (id: string) => {
     setErreur('')
@@ -172,6 +191,7 @@ export default function Embauche() {
       )
       const chemin = await invoke<string>('installation_ecrire', { contenu })
       setEnregistre(`${prenom.trim()} est embauché. Configuration écrite dans ${chemin}.`)
+      apresEmbauche?.(prenom.trim())
     } catch (e) {
       setErreur(String(e))
     }
@@ -180,8 +200,8 @@ export default function Embauche() {
   const identitePrete = ficheId.length > 0 && fiche !== null && prenom.trim().length > 0
 
   return (
-    <div className="embauche">
-      <h2>Embaucher un agent</h2>
+    <div className={compact ? 'embauche embauche-compacte' : 'embauche'}>
+      {!compact && <h2>Embaucher un agent</h2>}
 
       <ol className="etapes">
         {ETAPES.map((e) => (
@@ -201,6 +221,8 @@ export default function Embauche() {
             Choisissez le poste, donnez-lui un prénom. C'est tout ce que vous remplissez :
             le reste, c'est lui qui vous le demandera.
           </p>
+          {!(compact && fiche) && (
+            <>
           <input
             type="text"
             placeholder="cherchez un poste : facturation, paie, atelier…"
@@ -221,6 +243,8 @@ export default function Embauche() {
               ? ' Affinez votre recherche pour voir les suivants.'
               : ''}
           </p>
+            </>
+          )}
           {fiche && <p className="precision">Poste reconnu : {fiche.nom}.</p>}
           <div className="ligne">
             <input
