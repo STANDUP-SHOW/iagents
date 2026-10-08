@@ -21,7 +21,7 @@ import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesP
 import { FINANCEMENT, OFFRES } from '../../dimensionnement/offre-box.ts';
 import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE } from '../src/data/recherche.js';
+import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE, logicielsDeLActivite } from '../src/data/recherche.js';
 import { IDS_DU_COEUR, coeurDeLActivite, personnelDeLActivite } from '../src/data/activites-recherche.js';
 import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, euros as eurosTarif } from '../src/data/tarifs.js';
 import Page from '../src/pages/Page.jsx';
@@ -193,6 +193,15 @@ for (const page of PAGES) {
     .filter((a) => !['sante-social', 'finance-immobilier', 'public-associatif'].includes(a.famille))
     .filter((a) => !personnelDeLActivite(a, agents)?.sansDevis)
     .filter((a) => !coeurDeLActivite(a, agents).some((c) => /devis|deviseur|cotation|chiffrage|chiffreur/i.test(c.role)));
+  // Every trade shows its own software, not only office tools; and the print
+  // shop, which its owner checks first, shows the ones printers actually run.
+  const BUREAU = new Set(['bureautique']);
+  const sansLogiciels = ACTIVITES_RECHERCHE.filter((a) => logicielsDeLActivite(a).filter((l) => !BUREAU.has(l.categorie)).length < 2);
+  if (sansLogiciels.length) echoue(`activités sans leurs logiciels métier : ${sansLogiciels.map((a) => a.nom).join(', ')}`);
+  const imprimerie = renderToString(<CreezEntreprise ideeInitiale="créer une imprimerie en ligne" />);
+  const manquants = ['Les logiciels de votre métier', 'Cadratin', 'Masterprint', 'VitaSoft', 'Reprolys', 'Caldera', 'PrintFlux'].filter((m) => !imprimerie.includes(m));
+  if (manquants.length) echoue(`« créer une imprimerie en ligne » n'affiche pas : ${manquants.join(', ')}`);
+  else ok("chaque activité affiche au moins deux logiciels de son métier, et l'imprimerie ceux des imprimeurs");
   const sansCoeur = ACTIVITES_RECHERCHE.filter((a) => !coeurDeLActivite(a, agents).length);
   if (sansCoeur.length) echoue(`activités sans cœur de métier : ${sansCoeur.map((a) => a.nom).join(', ')}`);
   if (sansDevis.length) echoue(`activités sans deviseur : ${sansDevis.map((a) => a.nom).join(', ')}`);

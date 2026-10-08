@@ -112,7 +112,7 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
         <div className="card border-2 border-rose-500/50">
           <p className="text-xs font-mono text-rose-300">Les logiciels de votre métier</p>
           <h3 className="font-display text-lg text-white mb-1">Vos agents travaillent dans les outils de votre branche</h3>
-          <p className="text-xs text-nuit-400 mb-3">À l'entretien d'embauche, chaque agent vous demande lesquels tourne votre entreprise, et s'y règle.</p>
+          <p className="text-xs text-nuit-400 mb-3">À l'entretien d'embauche, chaque agent vous demande lesquels tournent dans votre entreprise, et s'y règle.</p>
           <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
             {logiciels.map((l) => (
               <li key={l.id} className="text-sm">
