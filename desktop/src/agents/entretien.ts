@@ -484,8 +484,8 @@ export function resumeParle(config: Configuration): string[] {
   const manquants = config.sansReponse.filter((s) => s.principale);
   if (manquants.length) {
     lignes.push(
-      `Il me manque l'essentiel : ${manquants
-        .map((m) => m.categorie.replace(/-/g, ' '))
+      `Il me manque l'essentiel, vous ne m'avez pas répondu sur ${manquants
+        .map((m) => (INTITULES[m.categorie] ? `« ${INTITULES[m.categorie]} »` : m.categorie.replace(/-/g, ' ')))
         .join(', ')}. Sans cela je peux commencer, mais pas faire mon travail en entier.`
     );
   }

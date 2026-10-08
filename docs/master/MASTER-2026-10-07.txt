@@ -1,0 +1,807 @@
++-----------------------------------------------------------------------+
+| iAGENT                                                                |
+|                                                                       |
+| MASTER DÉVELOPPEUR GLOBAL                                             |
+|                                                                       |
+| Architecture produit, site, Box, Voice, Call Center, Create, Home,    |
+| sécurité, pricing et back-office                                      |
+|                                                                       |
+| Ce document remplace et consolide le précédent « Plan Site &          |
+| Développeur ». Référence unique pour les prochaines implémentations.  |
++=======================================================================+
++-----------------------------------------------------------------------+
+
+Version master — 7 octobre 2026
+
+Sommaire opérationnel
+
+01. Principes non négociables
+
+02. Architecture globale de l’offre
+
+03. Architecture web et domaines
+
+04. iAgent Workforce / Box
+
+05. Pricing et moteur tarifaire
+
+06. Protection, licences et Control Plane
+
+07. Skill Packs, apprentissage et confidentialité
+
+08. Catalogue et 180 000 profils spécialisés
+
+09. iAgent Create : idée, opportunités et entreprise composée
+
+10. iAgent Voice : couche vocale multi-provider
+
+11. Téléphonie, standard et human handoff
+
+12. Call Center entrant/sortant et Voice Hub
+
+13. iAgent Home : produit séparé
+
+14. Desktop Commander : modules à ajouter
+
+15. Back-office global
+
+16. SEO et acquisition
+
+17. Data model / API / événements
+
+18. Sécurité / conformité / observabilité
+
+19. Plan de réalisation
+
+20. Critères d’acceptation
+
+1. Principes non négociables
+
+-   Ne pas réécrire la base existante : conserver métiers, agents,
+    fonctions, secteurs, logiciels, relations, filtres, routes et
+    logique métier.
+
+-   Séparer DATA LAYER, BUSINESS LOGIC, UI LAYER et CONTROL PLANE.
+
+-   Aucun tarif public ne doit être codé en dur dans le front : plans,
+    options, consommation et remises doivent être administrables et
+    versionnés.
+
+-   Les anciennes simulations tarifaires serveurs/multibox haut de gamme
+    sont conservées en interne mais masquées du public pour l’instant.
+
+-   Les architectures locales avancées, clusters, multi-Box et fortes
+    puissances restent « Sur devis / Contacter iAgent ».
+
+-   iAgent Business et iAgent Home partagent la technologie mais pas le
+    funnel, les messages ni la direction artistique.
+
+-   Le client voit le travail, les résultats et les validations ; le
+    savoir-faire propriétaire (prompts système, orchestration, Skills,
+    secrets, connecteurs internes) reste protégé.
+
+  -----------------------------------------------------------------------
+  Principe : le client contrôle le travail ; iAgent protège le
+  savoir-faire.
+  -----------------------------------------------------------------------
+
+  -----------------------------------------------------------------------
+
+2. Architecture globale de l’offre
+
+  -----------------------------------------------------------------------
+  Bloc                    Promesse                Composants
+  ----------------------- ----------------------- -----------------------
+  iAgent Business /       Collaborateurs          Employees, Box,
+  Workforce               numériques managés pour Commander, Skills,
+                          entreprises             maintenance, évolution
+
+  iAgent Create           Partir d’une idée — ou  Étude, business plan,
+                          d’une opportunité — et  équipe par phase,
+                          composer une entreprise jalons, budget
+
+  iAgent Voice            Donner une voix et un   Voice engine, SIP,
+                          numéro réel aux agents  standard, appels,
+                                                  transferts, handoff
+
+  iAgent Call Center      Support, SAV ou         Queues, campagnes,
+                          commercial à plusieurs  Voice Hub, CRM,
+                          appels simultanés       analytics
+
+  iAgent Home             Déléguer la vie         Home Agent, Home Box,
+                          administrative du foyer agenda, démarches,
+                                                  factures, appels
+
+  iAgent Enterprise       Infrastructure          Local/hybride,
+                          agentique avancée       multi-Box, SSO, SLA,
+                                                  sécurité, sur devis
+  -----------------------------------------------------------------------
+
+3. Architecture web et domaines
+
+  -----------------------------------------------------------------------
+  Surface                 URL recommandée         Rôle
+  ----------------------- ----------------------- -----------------------
+  Business / marque       iagent.agency           Homepage, agents,
+                                                  Workforce, Box, Voice,
+                                                  Create, Enterprise
+
+  Home                    home.iagent.agency      Site B2C séparé, design
+                                                  clair, offres Home
+
+  Desktop Commander       Application privée      Cockpit opérationnel
+
+  Back-office             Surface privée          Tarifs, licences,
+                                                  boxes, agents, Voice,
+                                                  opportunités, Skills
+  -----------------------------------------------------------------------
+
+Navigation Business : Produit · Agents · Créer votre entreprise · Voice
+· iAgent Box · Entreprise · Ressources.
+
+Navigation Home : Home · Ce qu’il fait · Box Home · Tarifs · Sécurité ·
+Aide. Lien discret vers iAgent Business.
+
+Pages Business à créer / refondre
+
+-   /workforce
+
+-   /pricing
+
+-   /box
+
+-   /why-rent
+
+-   /local-ai ou /sovereignty
+
+-   /security
+
+-   /skills
+
+-   /voice
+
+-   /standard-telephonique
+
+-   /support-center
+
+-   /sales-center
+
+-   /create
+
+-   /opportunities
+
+-   /iagent-inside-iagent
+
+-   /enterprise
+
+4. iAgent Workforce / Box
+
+La Box doit être vendue comme une appliance iAgent louée, jamais comme
+un mini-PC vendu.
+
+-   Matériel cible : mini-PC boosté, écran tactile, clavier/souris de
+    secours, pavé/tablette de signature, enceinte de qualité, micro
+    conférence/studio longue portée.
+
+-   Desktop Commander préinstallé, agents et connexions configurés,
+    profils vocaux et permissions chargés selon contrat.
+
+-   Maintenance, mises à jour, remplacement et support selon offre.
+
+-   La Box reste propriété de iAgent : restitution, renouvellement ou
+    rachat éventuel.
+
+-   Box Business sombre/graphite ; Box Home blanche/clair, tout en
+    maximisant la réutilisation des composants.
+
+  -----------------------------------------------------------------------
+  Expérience cible : courant + réseau → connexion → l’équipe est là.
+  -----------------------------------------------------------------------
+
+  -----------------------------------------------------------------------
+
+5. Pricing et moteur tarifaire
+
+  -----------------------------------------------------------------------
+  Produit                 Tarif indicatif de test Note
+  ----------------------- ----------------------- -----------------------
+  Box Commander           69 € HT/mois / 36 mois  Matériel + Desktop +
+                          ou 89 € HT/mois / 24    maintenance +
+                          mois                    remplacement + updates
+
+  Agent Essential         149 € HT/mois           Tâches structurées,
+                                                  administration,
+                                                  contenu, support simple
+
+  Agent Professional      249 € HT/mois           Proactif, multi-outils,
+                                                  communication,
+                                                  automatisations
+
+  Agent Expert            399 € HT/mois           Finance, juridique,
+                                                  métier complexe, forte
+                                                  autonomie
+
+  Task Commander          249–349 € HT/mois       Ou inclus à partir de 5
+                                                  agents
+
+  Consommation IA         Au réel / crédits /     LLM, voix, vidéo,
+                          enveloppe               téléphonie, services
+                                                  tiers
+
+  Starter                 à partir de 219 €       1 Essential + Box 36
+                          HT/mois + conso         mois
+
+  Team                    599–749 € HT/mois +     3 agents + Box + Task
+                          conso                   Commander
+
+  Department              à partir de 999 €       5 à 10 agents +
+                          HT/mois + conso         Commander + support
+                                                  prioritaire
+
+  Enterprise              Sur devis               Multi-Box,
+                                                  local/hybride, SSO,
+                                                  SLA, intégration
+  -----------------------------------------------------------------------
+
+Tarifs à considérer comme hypothèses de lancement. Le moteur de pricing
+doit être versionné par pays, devise, fiscalité, engagement, période,
+remise, quota et date d’effet.
+
+Schéma pricing minimal
+
+-   plan_id, segment, currency, billing_period, commitment_months
+
+-   base_price, included_agents, included_commander, included_box,
+    included_voice_minutes
+
+-   usage_rate_llm, usage_rate_voice, usage_rate_telephony,
+    overage_rules
+
+-   effective_from/to, public_visibility, region, tax_mode, legacy_flag
+
+6. Protection, licences et Control Plane
+
+-   Ne pas livrer un Windows classique avec admin ouvert. Viser une
+    appliance verrouillée : Linux/Ubuntu Core si compatible ; sinon
+    Windows IoT/Enterprise restreint.
+
+-   TPM 2.0, Secure Boot, disque chiffré, OS signé, mises à jour
+    contrôlées.
+
+-   Identité cryptographique unique par Box et mTLS vers le Control
+    Plane.
+
+-   Chaque agent activé = entitlement Client + Box + Agent Template +
+    Spécialisation + Licence.
+
+-   Skill packages signés/chiffrés ; activation/révocation à distance ;
+    clés non exportables.
+
+-   Si abonnement stoppé, agent non exécutable ; copie disque inutile
+    sur une autre machine sans identité matérielle.
+
+-   Actions auditées côté client ; logique propriétaire non exposée.
+
+Control Plane – fonctions minimales
+
+-   Provisioning Box et inventaire
+
+-   Licences / entitlements
+
+-   Déploiement / révocation agents
+
+-   Updates OS / Desktop / Skills
+
+-   Télémétrie machine
+
+-   Remote support
+
+-   Voice registry et provider routing
+
+-   Facturation consommation
+
+-   Audit sécurité
+
+-   Gestion versions Skills
+
+7. Skill Packs, apprentissage et confidentialité
+
+L’apprentissage terrain est un actif majeur, mais la gouvernance doit
+séparer connaissance généralisable et données client.
+
+  -----------------------------------------------------------------------
+  Type                                Règle
+  ----------------------------------- -----------------------------------
+  Données client                      Emails, fichiers, contrats, prix,
+                                      clients, documents et secrets
+                                      restent au client.
+
+  Mémoire instance                    Isolée par tenant, avec
+                                      export/suppression selon politique.
+
+  Connaissance généralisable          Workflow abstrait / connaissance
+                                      logiciel / procédure non spécifique
+                                      : candidat Skill Pack après
+                                      validation.
+
+  Skill Pack                          Versionné, signé, testé, scoped par
+                                      métier, secteur, outil, locale.
+  -----------------------------------------------------------------------
+
+-   Créer skill_pack_id, version, source_type, validation_status,
+    compatible_agents/tools, sector_scope, locale, changelog.
+
+-   Workflow de revue avant diffusion à d’autres clients.
+
+-   Aucun contenu confidentiel ne devient Skill Pack par défaut.
+
+-   Prévoir opt-in et anonymisation quand une entreprise participe
+    volontairement à l’amélioration commune.
+
+8. Catalogue et 180 000 profils spécialisés
+
+Le moteur combine métiers, fonctions, secteurs, spécialités, logiciels
+et missions. Formulation publique recommandée : « plus de 180 000
+profils spécialisés/configurables » si le compteur est réellement
+calculé par la base.
+
+-   Ne pas présenter 180 000 agents comme 180 000 individus déjà
+    expérimentés.
+
+-   Compteur dynamique.
+
+-   Réputation, entreprises actives, logiciels certifiés, Skills et
+    volumes uniquement si réels.
+
+-   Séparer persona visuelle, agent template, spécialisation secteur,
+    instance client.
+
+-   Après recrutement : nom, voix, personnalité, logiciels, objectifs et
+    permissions personnalisables.
+
+9. iAgent Create : idée, opportunités et entreprise composée
+
+  -----------------------------------------------------------------------
+  Entrée                  Promesse                Flux
+  ----------------------- ----------------------- -----------------------
+  J’ai une idée           Transformons-la en      Idée → étude → plan →
+                          entreprise.             équipes par phase →
+                                                  budget → jalons →
+                                                  recrutement
+
+  Je veux changer sans    Découvrez les           Opportunités → étude
+  idée précise            opportunités détectées  gratuite → business
+                          aujourd’hui.            plan → Construire cette
+                                                  entreprise
+  -----------------------------------------------------------------------
+
+Opportunités du jour
+
+-   10 à 20 idées/jour à terme selon qualité vérifiée.
+
+-   Carte : pourquoi maintenant, marché, demande, concurrence,
+    contraintes, capital estimé, complexité, délai, récurrence, risques,
+    équipe recommandée.
+
+-   Étude gratuite : scénarios prudent/central/ambitieux, coûts, canaux,
+    réglementation, plan d’exécution, agents par phase.
+
+-   CTA « Construire cette entreprise » → projet iAgent.
+
+-   Aucune promesse de rentabilité certaine : scénarios et hypothèses
+    uniquement.
+
+Entreprise composée
+
+-   01 Étudier : marché, concurrence, faisabilité, business plan.
+
+-   02 Financer : aides, banques, investisseurs, levée de fonds.
+
+-   03 Construire : juridique, achats, infrastructure, produit, marque.
+
+-   04 Lancer : marketing, commercial, communication.
+
+-   05 Exploiter : finance, CRM, administratif, support.
+
+-   L’équipe change par phase. Afficher budget iAgent, consommation
+    estimée, Box recommandée, jalons et responsabilités humaines.
+
+10. iAgent Voice : couche vocale multi-provider
+
+Voice existe déjà dans Desktop Commander mais ne doit plus être couplé à
+une clé Gemini unique.
+
+-   Créer une abstraction Voice Provider : Gemini Live, ElevenLabs, puis
+    fournisseurs futurs/local.
+
+-   L’utilisateur choisit l’identité vocale ; iAgent choisit le moteur
+    selon qualité/coût/langue/disponibilité.
+
+-   Modes possibles : quality_first, cost_first, balanced, local_first.
+
+-   Voice Registry stable par persona pour conserver la même voix sur
+    Desktop, téléphone et support.
+
+-   La logique métier ne dépend jamais d’un provider unique.
+
+  -----------------------------------------------------------------------
+  Méthode conceptuelle                But
+  ----------------------------------- -----------------------------------
+  startSession()                      Initialiser
+
+  sendAudio()/receiveAudio()          Streaming bidirectionnel
+
+  interrupt()                         Interruption naturelle
+
+  setVoice()                          Profil vocal
+
+  sendContext()                       Contexte tenant/agent
+
+  executeTool()                       Tool calling
+
+  closeSession()                      Fin + métriques
+  -----------------------------------------------------------------------
+
+11. Téléphonie, standard et human handoff
+
+Architecture principale : numéro virtuel + SIP + iAgent Voice Gateway.
+Pas de carte SIM comme fondation.
+
+-   Un ou plusieurs numéros E.164 par entreprise.
+
+-   Standard conversationnel libre ; pas besoin de DTMF comme interface
+    principale.
+
+-   Chaque agent peut avoir extension interne et département.
+
+-   Transfert agent→agent, hold, musique, callback, voicemail.
+
+-   Handoff humain : identité appelant, motif, résumé, Prendre / Refuser
+    / Rappeler / Laisser l’agent continuer.
+
+-   Transfert vers Desktop/WebRTC/mobile/fixe selon règles.
+
+-   PhoneProvider adapter : Telnyx, Twilio, SIP générique.
+
+  -----------------------------------------------------------------------
+  Module Desktop Voice                Contenu
+  ----------------------------------- -----------------------------------
+  Standard                            Accueil, horaires, scénarios, agent
+                                      réception
+
+  Numéros                             Provisioning, provider, statut
+
+  Extensions                          Agent ↔ extension ↔ département
+
+  Appels                              Historique, résumé, coûts
+
+  Files                               Queues, priorités, overflow,
+                                      callback
+
+  Campagnes                           Outbound, fenêtres, consentement,
+                                      CRM
+
+  Enregistrements                     Selon consentement/politique
+
+  Consommation                        Téléphonie + voice + LLM
+
+  Paramètres                          Providers, voix, fallback, sécurité
+  -----------------------------------------------------------------------
+
+12. Call Center entrant/sortant et Voice Hub
+
+  -----------------------------------------------------------------------
+  Offre                               Fonction
+  ----------------------------------- -----------------------------------
+  iAgent Reception                    Standard IA + numéro
+
+  Reception Pro                       Routage avancé + plusieurs agents
+
+  Support Center                      SAV, files, appels simultanés,
+                                      tickets, escalade
+
+  Sales Center                        Campagnes sortantes, CRM, relances,
+                                      consentement
+
+  Voice Enterprise                    SIP, gros volumes, multi-sites,
+                                      SLA, sur devis
+  -----------------------------------------------------------------------
+
+-   La petite Box Commander ne doit pas être l’unique plateforme de
+    calcul d’un gros call center.
+
+-   Créer iAgent Voice Hub pour sessions simultanées, SIP, queues,
+    média, enregistrements, transcriptions, coût, supervision.
+
+-   Support Center : facturation, commandes, assistance, réclamations,
+    escalade humaine.
+
+-   Sales Center : campagnes selon règles juridiques applicables,
+    consentement, do-not-call, fenêtres horaires, preuve.
+
+Pricing Voice – hypothèses
+
+  -----------------------------------------------------------------------
+  Offre                   Abonnement indicatif    Note
+  ----------------------- ----------------------- -----------------------
+  Reception               49 € HT/mois            Numéro + standard
+
+  Reception Pro           99 € HT/mois            Routage avancé
+
+  Support Center          à partir de 299 €       Files + SAV
+                          HT/mois                 
+
+  Sales Center            à partir de 399 €       Campagnes + CRM
+                          HT/mois                 
+
+  Enterprise Voice        Sur devis               SIP, multi-sites, SLA
+  -----------------------------------------------------------------------
+
+Le coût par appel doit être calculé : téléphonie + voice + LLM + tools +
+marge.
+
+13. iAgent Home : produit grand public séparé
+
+Créer home.iagent.agency : même marque mère, produit B2C distinct.
+
+  -----------------------------------------------------------------------
+  Business                            Home
+  ----------------------------------- -----------------------------------
+  Bleu nuit/cyan, deep-tech           Blanc/perle, espace, simplicité
+
+  ROI, capacité, Workforce, Voice,    Temps rendu, tranquillité,
+  Create                              administratif
+
+  Box sombre/graphite                 Box blanche/aluminium clair
+
+  Cockpit dense                       Interface domestique simple
+  -----------------------------------------------------------------------
+
+Fonctions Home
+
+-   Courriers et emails
+
+-   Agenda familial
+
+-   Rendez-vous
+
+-   Factures et abonnements
+
+-   Énergie/eau/télécoms
+
+-   École/cantine/inscriptions
+
+-   Assurances
+
+-   Classement
+
+-   Rappels et échéances
+
+-   Réservations simples
+
+-   Préparation de réponses et démarches
+
+  -----------------------------------------------------------------------
+  Promesse Home : vous gérez votre vie ; votre Home Agent gère ce qui
+  l’encombre.
+  -----------------------------------------------------------------------
+
+  -----------------------------------------------------------------------
+
+  -----------------------------------------------------------------------
+  Action                              Politique
+  ----------------------------------- -----------------------------------
+  Lire/classer une facture            Autonome
+
+  Préparer une réponse                Autonome
+
+  Envoyer un courrier important       Confirmation
+
+  Prendre un rendez-vous              Selon règle
+
+  Payer une facture                   Confirmation forte
+
+  Modifier/résilier un contrat        Confirmation forte
+  -----------------------------------------------------------------------
+
+Pricing Home – hypothèses
+
+  ---------------------------------------------------------------------------
+  Offre                   TTC/mois                Contenu
+  ----------------------- ----------------------- ---------------------------
+  Home Digital            49 €                    Administratif sans Box
+
+  Home Agent              79 €                    Voix + automatisations +
+                                                  connexions
+
+  Home Box                129 €                   Agent + Box + voix +
+                                                  maintenance
+
+  Home Family             149–169 €               Foyer
+                                                  multi-profils/calendriers
+  ---------------------------------------------------------------------------
+
+14. Desktop Commander : modules à ajouter
+
+-   Workforce : agents, équipes, Task Commander, réputation, Skills
+
+-   Voice : standard, numéros, extensions, files, campagnes, historique,
+    coûts
+
+-   Create : projets, phases, jalons, équipes recommandées, business
+    plan
+
+-   Box : santé hardware, licences, updates, support
+
+-   Approvals : signatures, dépenses, contrats, actions sensibles
+
+-   Consumption : LLM, voix, téléphonie, vidéo, services tiers
+
+-   Security : permissions, secrets, sessions, appareil, audit
+
+-   Home : feature set séparé si codebase partagée
+
+15. Back-office global
+
+-   Plans, prix, remises, engagements, pays
+
+-   Boxes : série, client, statut, version, garantie, remplacement
+
+-   Licences/entitlements agents
+
+-   Voice/phone providers et coûts
+
+-   Catalogue et compteur 180k
+
+-   Personas, voix, réputation, entreprises actives, avis
+
+-   Skill Packs, validation, version, compatibilités
+
+-   Opportunités du jour, scoring, publication
+
+-   Études, business plans, équipes recommandées
+
+-   Home/Business/Enterprise quote requests
+
+-   Logs sécurité, incidents, support, télémétrie
+
+16. SEO et acquisition
+
+-   Créer pages longues Workforce, Box, Voice, Standard, Call Center,
+    Create, Local AI, Security, Skills, Home.
+
+-   Ajouter cas artisan/restaurateur : l’agent prend les commandes au
+    téléphone pendant que l’artisan produit.
+
+-   Créer page Why Rent pour expliquer le coût réel de reconstruction.
+
+-   Créer iAgent inside iAgent : iAgent utilise ses propres agents pour
+    dev, marketing, support, finance, communication et opérations.
+
+-   N’afficher que des métriques réelles ou clairement signalées comme
+    scénarios.
+
+17. Data model / API / événements
+
+  -----------------------------------------------------------------------
+  Entité                              Champs clés indicatifs
+  ----------------------------------- -----------------------------------
+  Device/Box                          device_id, tenant_id, serial, TPM
+                                      identity, OS, version, health, plan
+
+  Entitlement                         tenant, box, agent_template,
+                                      specialization, status, dates
+
+  Persona                             visual, voice_profile, personality,
+                                      locale
+
+  Agent Template                      job, skills, missions, autonomy
+                                      defaults
+
+  Specialization                      sector, software, processes, locale
+
+  Client Instance                     company, tools, objectives,
+                                      permissions, memory
+
+  Voice Profile                       provider, voice id, locale,
+                                      fallback, tier
+
+  Phone Number                        E.164, provider, tenant, routing
+                                      policy
+
+  Call                                direction, caller, agent, duration,
+                                      summary, consent, cost
+
+  Opportunity                         market, date, score, study,
+                                      scenarios, team plan
+
+  Skill Pack                          version, source, status,
+                                      compatibility, changelog
+  -----------------------------------------------------------------------
+
+Events analytics
+
+-   pricing_view, plan_select, box_quote, recruit_agent,
+    personalize_agent
+
+-   create_idea_submit, opportunity_view, opportunity_build_company
+
+-   voice_demo, phone_number_request, call_center_quote
+
+-   home_plan_view, home_box_order_intent
+
+-   local_ai_contact, enterprise_contact
+
+18. Sécurité / conformité / observabilité
+
+-   Isolation par tenant.
+
+-   Secrets chiffrés ; jamais dans l’UI ou les logs.
+
+-   Consentement/enregistrement téléphonique configurables par pays.
+
+-   Règles appels sortants : consentement, do_not_call, horaires, source
+    de preuve.
+
+-   Audit horodaté pour actions sensibles.
+
+-   Rétention configurable.
+
+-   Monitoring Box / Voice Hub / Control Plane.
+
+-   Escalade humaine et kill switch.
+
+-   Défense en profondeur, sans promesse de sécurité absolue.
+
+19. Plan de réalisation
+
+1.  Consolider pricing et archiver anciennes offres publiques sans
+    supprimer les données.
+
+2.  Créer Workforce / Pricing / Box / Local AI / Security / Skills.
+
+3.  Créer Control Plane minimal : device identity, entitlements,
+    licence, update, telemetry.
+
+4.  Découpler Voice de Gemini avec VoiceProvider adapter.
+
+5.  Ajouter PhoneProvider + standard + human handoff.
+
+6.  Ajouter modules Voice dans Desktop Commander.
+
+7.  Créer Call Center / Voice Hub puis Reception / Support / Sales.
+
+8.  Créer /create + /opportunities + entreprise composée.
+
+9.  Créer /iagent-inside-iagent.
+
+10. Créer home.iagent.agency avec design/pricing propres.
+
+11. Ajouter réputation/Skills/métriques réelles.
+
+12. Hardening sécurité, consentements, tests charge, pilotes.
+
+20. Critères d’acceptation
+
+-   Aucun tarif critique codé en dur.
+
+-   Anciennes offres serveurs/multibox masquées mais conservées.
+
+-   Agent activable/révocable par entitlement, non portable par simple
+    copie de disque.
+
+-   Voice fonctionne avec au moins deux providers sans modifier la
+    logique métier.
+
+-   Numéro entrant routable vers agent, autre agent ou humain.
+
+-   Desktop affiche appels, coûts, queues et handoff.
+
+-   Create produit projet, phases, agents et hypothèses.
+
+-   Home est séparé visuellement/commercialement du Business.
+
+-   Données client isolées des Skills généralisables.
+
+-   Métriques publiques réelles ou clairement signalées comme
+    estimations/scénarios.

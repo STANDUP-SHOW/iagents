@@ -1,0 +1,83 @@
+name: Build Windows Back-office
+
+# Calqué sur build-windows-msi.yml (application client), pour l'application
+# interne « iAgent Back-office » (back-office/). Elle n'est jamais publiée en
+# Release : l'installeur reste un artefact du flux, téléchargeable par qui a
+# accès au dépôt, et ne sert à rien sans le jeton du back-office.
+on:
+  pull_request:
+    paths:
+      - 'back-office/**'
+      - '.github/workflows/build-back-office.yml'
+  push:
+    paths:
+      - 'back-office/**'
+      - '.github/workflows/build-back-office.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: back-office-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            back-office/src-tauri
+            back-office/admin
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+        working-directory: back-office
+
+      # Les écrans se rendent vraiment (SSR) et les gardes tiennent, avant
+      # d'empaqueter : une construction verte ne prouve pas qu'un écran s'affiche.
+      - name: Banc des écrans
+        run: npm run banc
+        working-directory: back-office
+
+      # Le trousseau Windows (Credential Manager) est celui qu'emploie le
+      # produit : les tests de la crate tournent ici sur la cible réelle.
+      - name: Banc Rust (routes, adresses, réponses, appel réel)
+        run: cargo test --manifest-path admin/Cargo.toml
+        working-directory: back-office
+
+      # tauri build enchaîne le build Vite via beforeBuildCommand.
+      - name: Build Tauri app
+        run: npm run app:build
+        working-directory: back-office
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iagent-back-office-msi
+          path: back-office/src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload setup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iagent-back-office-setup
+          path: back-office/src-tauri/target/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error
+          retention-days: 30

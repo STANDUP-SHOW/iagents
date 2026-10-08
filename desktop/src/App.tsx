@@ -2,27 +2,31 @@ import { useState, useEffect, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import './App.css'
 import './centre.css'
+import './commander.css'
+import './shell/shell.css'
 import { installerAgents, type AgentInstalle, type Fiche, type Installation } from './agents/fiche'
 import type { Jauge } from './agents/jauge'
 import { ConversationEngine } from './engines/ConversationEngine'
 import reglages from './config/conversation-settings.json'
-import Dashboard, { Icone, TITRES, type Onglet } from './components/Dashboard'
+import { TITRES, type Onglet } from './components/Dashboard'
 import Machine from './components/Machine'
 import { BandeauChiffres, ETAT_DEMO, tiret, useLectures, useTravail, type Chiffre, type Etat } from './components/Chiffres'
-import logo from './assets/marque/logo-iagent.png'
-import VoiceTraining from './components/VoiceTraining'
-import AgentManager from './components/AgentManager'
 import ConnectorSetup from './components/ConnectorSetup'
 import Navigateur from './components/Navigateur'
 import Courriel from './components/Courriel'
-import Embauche from './components/Embauche'
-import Travail from './components/Travail'
 import CleApi from './components/CleApi'
 import WhatsApp from './components/WhatsApp'
 import Telegram from './components/Telegram'
 import InstallerVoix from './components/InstallerVoix'
-import MiseAJour from './components/MiseAJour'
 import Equipe from './components/Equipe'
+import Workforce from './components/commander/Workforce'
+import Standard from './components/commander/Standard'
+import Create from './components/commander/Create'
+import BoxPage from './components/commander/BoxPage'
+import Validations from './components/commander/Validations'
+import Consommation from './components/commander/Consommation'
+import Securite from './components/commander/Securite'
+import Administration from './components/commander/Administration'
 import {
   comprendreDemande,
   contexteDuTeamHolder,
@@ -30,6 +34,27 @@ import {
   rassemblerContexte,
   type Proposition,
 } from './agents/team-holder'
+import { useEtatPlateforme } from './agents/plateforme'
+import {
+  BarreHaute,
+  DockVocal,
+  EntetePage,
+  Navigation,
+  PanneauDroit,
+  PiedSysteme,
+  SousOnglets,
+  type Alerte,
+  type EtatVoix,
+} from './shell/Shell'
+import Palette from './shell/Palette'
+import { moduleDe, MODULES } from './shell/modules'
+import { publier, useExecutions } from './shell/evenements'
+import type { Cible } from './shell/intentions'
+import Centre, { type EtatCentre } from './pages/Centre'
+import VosAgents from './pages/VosAgents'
+import TravailDuJour from './pages/TravailDuJour'
+import Embaucher from './pages/Embaucher'
+import VotreVoix from './pages/VotreVoix'
 
 /** `voix_ecoute_etat` et `voix_ecoute_basculer`, noms de champs figés par un banc Rust. */
 interface EcouteEtat {
@@ -46,8 +71,49 @@ interface AgentAffiche {
   status: string
 }
 
+function lirePreference(cle: string): boolean {
+  try {
+    return localStorage.getItem(cle) === '1'
+  } catch {
+    return false
+  }
+}
+
+function poserPreference(cle: string, v: boolean) {
+  try {
+    localStorage.setItem(cle, v ? '1' : '0')
+  } catch {
+    /* without storage the choice holds for this session */
+  }
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState<Onglet>('dashboard')
+  // What the page should select when it opens (an agent, a search, a card).
+  const [cible, setCible] = useState<Cible | undefined>(undefined)
+  const [palette, setPalette] = useState(false)
+  const [dockReplie, setDockReplie] = useState(() => lirePreference('iagent-dock-replie'))
+  const [panneauReplie, setPanneauReplie] = useState(() => lirePreference('iagent-panneau-replie'))
+  const plateforme = useEtatPlateforme()
+  const executions = useExecutions()
+  const ouvrir = (o: Onglet) => {
+    setActiveTab(o)
+    setCible(undefined)
+  }
+  const aller = (c: Cible) => {
+    setActiveTab(c.onglet)
+    setCible({ ...c })
+  }
+  useEffect(() => {
+    const touche = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPalette((p) => !p)
+      }
+    }
+    window.addEventListener('keydown', touche)
+    return () => window.removeEventListener('keydown', touche)
+  }, [])
   /**
    * Ce que la bibliothèque affiche. Le type est écrit, et pas `any[]` : c'est
    * `any[]` qui a laissé passer un `find` sur un champ que cette liste n'a pas,
@@ -84,6 +150,14 @@ function App() {
     setPropositionEtat(p)
   }
   const [versionEquipe, setVersionEquipe] = useState(0)
+  // The admin space exists only when an admin key is in the keyring. Rust
+  // answers a boolean; the key never reaches the screen.
+  const [admin, setAdmin] = useState(false)
+  useEffect(() => {
+    invoke<boolean>('admin_present')
+      .then(setAdmin)
+      .catch(() => setAdmin(false))
+  }, [])
   const luReel = useLectures(activeTab)
   const travailReel = useTravail(installes)
   // Le mode démo montre un cabinet d'exemple, pour une démonstration client ou
@@ -114,7 +188,7 @@ function App() {
         lu: luReel,
         jauge,
       }
-  const { lu, travail } = etat
+  const { lu } = etat
 
   useEffect(() => {
     initializeApp()
@@ -376,6 +450,7 @@ function App() {
       )
 
       setLastResponse(reponse.texte)
+      publier({ type: 'voix', agent: agent.prenom, texte: `${agent.prenom} vous a répondu`, gravite: 'info' })
       setVoie(reponse.motif)
       setVoieBascule(reponse.bascule)
 
@@ -418,6 +493,7 @@ function App() {
         valeur: p.valeur,
       })
       setProposition(null)
+      publier({ type: 'equipe', agent: chef.prenom, texte: `${chef.prenom} a appliqué un réglage de ${p.agent}`, gravite: 'succes' })
       setVersionEquipe((v) => v + 1)
       // Le planning en mémoire est celui d'avant : on relit l'installation.
       await chargerAgentsInstalles()
@@ -433,9 +509,6 @@ function App() {
     setLastResponse("D'accord, je ne change rien.")
   }
 
-  const onglets = Object.keys(TITRES) as Exclude<Onglet, 'dashboard'>[]
-
-
   // Le bouton VOICE. Rust allume et coupe le micro lui-même
   // (voix_ecoute_basculer) ; le vert et le rouge viennent de voix_ecoute_etat,
   // seul état de l'écoute, jamais d'un état tenu ici.
@@ -448,32 +521,18 @@ function App() {
     }
   }
 
+  // « Parler à » : the agent is switched on, and the microphone too when it
+  // can be. The user then says « Voice » and the first name.
+  const parlerA = async (a: { fiche: { id: string } }) => {
+    if (agents.find((x) => x.id === a.fiche.id)?.status !== 'active') {
+      await toggleAgentStatus(a.fiche.id, 'inactive')
+    }
+    if (!ecoute.active && !motifEcoute) await basculerVoix()
+  }
+
   // Les chiffres en tête de chaque page : lus, jamais supposés (tiret si la lecture échoue).
   const bandeau = (onglet: Onglet): Chiffre[] => {
-    const actifs = etat.actifs
     switch (onglet) {
-      case 'agents':
-        return [
-          { valeur: tiret(etat.embauches), libelle: installes.length > 1 ? 'agents embauchés' : 'agent embauché' },
-          { valeur: tiret(actifs), libelle: actifs > 1 ? 'actifs' : 'actif' },
-        ]
-      case 'travail':
-        return [
-          { valeur: `${tiret(travail.pretes)} / ${tiret(travail.total)}`, libelle: 'tâches prêtes' },
-          {
-            valeur: tiret(travail.total - travail.pretes),
-            libelle: 'à compléter avant de lancer',
-            ton: travail.total > travail.pretes ? 'alerte' : undefined,
-          },
-          { valeur: tiret(travail.sansMatiere), libelle: 'sans dossier désigné' },
-        ]
-      case 'embauche':
-        return [
-          { valeur: tiret(lu.metiers), libelle: 'métiers au catalogue' },
-          { valeur: tiret(lu.secteurs), libelle: 'secteurs' },
-          { valeur: tiret(lu.activites), libelle: 'activités' },
-          { valeur: tiret(etat.embauches), libelle: 'déjà embauchés' },
-        ]
       case 'connectors':
         return [
           {
@@ -490,7 +549,7 @@ function App() {
         return [{ valeur: tiret(lu.sites), libelle: lu.sites === 1 ? 'compte connecté' : 'comptes connectés' }]
       case 'equipe':
         return [
-          { valeur: etat.teamHolder ?? '—', libelle: 'Team Holder' },
+          { valeur: etat.teamHolder ?? '—', libelle: 'Task Commander' },
           { valeur: tiret(etat.embauches), libelle: 'agents qu’il tient' },
           {
             valeur: proposition && !demo ? '1' : '0',
@@ -500,166 +559,213 @@ function App() {
         ]
       case 'courriel':
         return [{ valeur: tiret(lu.envois), libelle: lu.envois === 1 ? 'envoi consigné' : 'envois consignés' }]
-      case 'voice':
-        return [
-          {
-            valeur: motifEcoute ? 'Indisponible' : ecoute.active ? 'Active' : 'Coupée',
-            libelle: 'écoute',
-            ton: motifEcoute ? 'danger' : undefined,
-          },
-        ]
       default:
         return []
     }
   }
 
+  const statuts: Record<string, boolean> = Object.fromEntries(agents.map((a) => [a.id, a.status === 'active']))
+  const relie = plateforme.donnee?.relie ?? null
+  const editionBox = plateforme.donnee?.edition_box ?? false
+  const chef = installes.find((a) => estTeamHolder(a)) ?? null
+  const actif = installes.find((a) => a.fiche.id === activeAgent) ?? null
+
+  // What needs a look, gathered in the bell instead of stacked banners.
+  const alertes: Alerte[] = []
+  if (editionBox && relie === false) alertes.push({ texte: 'Box non reliée : aucun agent ne travaille.', gravite: 'danger', onglet: 'box' })
+  if (jauge && jauge.niveau !== 'confortable')
+    alertes.push({
+      texte: `${jauge.machine.nom} : ${jauge.message}`,
+      gravite: jauge.niveau === 'impossible' || jauge.niveau === 'saturee' ? 'danger' : 'alerte',
+      onglet: 'machine',
+    })
+  if (proposition) alertes.push({ texte: `Réglage proposé : ${proposition.phrase}`, gravite: 'alerte', onglet: 'equipe' })
+  if (motifEcoute) alertes.push({ texte: `Écoute indisponible : ${motifEcoute}`, gravite: 'alerte', onglet: 'connectors' })
+  if (voie && voieBascule) alertes.push({ texte: voie, gravite: 'alerte', onglet: 'connectors' })
+  if (error) alertes.push({ texte: error, gravite: 'danger' })
+  if (lu.cle === false) alertes.push({ texte: "Aucune clé d'API posée : seuls les agents qui tournent en local peuvent travailler.", gravite: 'info', onglet: 'connectors' })
+
+  const blocage =
+    editionBox && relie === false
+      ? { texte: 'Box non reliée à la plateforme : aucun agent ne travaille.', onglet: 'box' as Onglet }
+      : jauge?.niveau === 'impossible'
+        ? { texte: `${jauge.machine.nom} : ${jauge.message}`, onglet: 'machine' as Onglet }
+        : null
+  const etatCentre: EtatCentre = demo
+    ? 'repos'
+    : blocage
+      ? 'blocage'
+      : proposition
+        ? 'validation'
+        : isProcessing
+          ? 'reflexion'
+          : executions > 0
+            ? 'execution'
+            : ecoute.active
+              ? 'ecoute'
+              : 'repos'
+
+  const voix: EtatVoix = {
+    active: ecoute.active,
+    eveillee: ecoute.ou_en_est === 'eveillee' || reveillee,
+    reflexion: isProcessing,
+    motif: motifEcoute,
+    partiel: partialResult,
+    reponse: lastResponse,
+    onBasculer: basculerVoix,
+  }
+
+  const module = moduleDe(activeTab)
+  const infos = MODULES.find((m) => m.id === module)
+  const etatTexte = isProcessing ? 'Réflexion…' : ecoute.ou_en_est === 'eveillee' ? 'Quel agent ?' : ecoute.active ? 'À l’écoute' : 'Prêt'
+
+  // Pages that keep their existing screen get the new header and sub-pages around it.
+  const cadre = (contenu: JSX.Element, onglet: Onglet = activeTab) => (
+    <div className="page-dc">
+      <EntetePage
+        onglet={moduleDe(onglet)}
+        titre={onglet === 'admin' ? TITRES.admin : infos?.titre ?? ''}
+        sousTitre={onglet === 'admin' ? 'Espace réservé à iAgent, visible avec une clé d’administration.' : infos?.sousTitre}
+      />
+      <SousOnglets onglet={activeTab} ouvrir={ouvrir} />
+      <BandeauChiffres chiffres={bandeau(activeTab)} />
+      <div className="carte-verre cadre-ancien app-main">{contenu}</div>
+    </div>
+  )
+
   return (
-    <div className="app">
-      <header className="app-header">
-        <button className="marque" onClick={() => setActiveTab('dashboard')} title="Revenir au centre">
-          <img src={logo} alt="iAgent" />
-        </button>
-        <button
-          className={`bouton-demo${demo ? ' demo-actif' : ''}`}
-          onClick={basculerDemo}
-          aria-pressed={demo}
-          title="Chiffres d'exemple, pour une démonstration ou un contrôle"
-        >
-          Démo {demo ? 'activée' : 'coupée'}
-        </button>
-        <div className="status-bar">
-          {isProcessing ? (
-            <span className="listening">Réflexion…</span>
-          ) : ecoute.ou_en_est === 'eveillee' ? (
-            <span className="listening">Quel agent ?</span>
-          ) : ecoute.active ? (
-            <span className="listening">À l'écoute</span>
-          ) : (
-            <span className="idle">Prêt</span>
-          )}
-          <MiseAJour />
-        </div>
-      </header>
+    <div className={`dc${dockReplie ? ' dock-ferme' : ''}${panneauReplie ? ' panneau-ferme' : ''}${activeTab === 'dashboard' ? ' sur-centre' : ''}${activeTab === 'embauche' ? ' sur-embauche' : ''}`}>
+      <div className="decor" aria-hidden="true">
+        <div className="decor-etoiles" />
+        <div className="decor-grille" />
+        <div className="decor-terre" />
+      </div>
+
+      <BarreHaute
+        onOuvrirPalette={() => setPalette(true)}
+        alertes={alertes}
+        ouvrir={ouvrir}
+        demo={demo}
+        onDemo={basculerDemo}
+        relie={relie}
+        editionBox={editionBox}
+        admin={admin}
+        etatTexte={etatTexte}
+      />
+      <Navigation onglet={activeTab} ouvrir={ouvrir} />
 
       {demo && (
         <div className="ruban-demo" role="status">
-          Mode démo : les chiffres affichés sont un exemple, pas ceux de ce poste.
+          Mode démo : les chiffres du Centre sont un exemple, pas ceux de ce poste.
         </div>
       )}
 
-      {ecoute.active && (partialResult || isProcessing || lastResponse || reveillee || ecoute.ou_en_est === 'eveillee') && (
-        <div className="voice-display">
-          {partialResult && (
-            <div className="transcription-display">
-              <span className="transcription-label">J'entends :</span>
-              <span className="transcription-text">{partialResult}</span>
-            </div>
-          )}
-          {/* Le mot de réveil a été entendu : sans ce signe, le client ne sait
-              pas si l'application l'a pris et redit « Voice » par-dessus. */}
-          {(reveillee || ecoute.ou_en_est === 'eveillee') && !isProcessing && (
-            <div className="processing-display reveil-display">
-              <span className="reveil-point" aria-hidden="true" />
-              <span className="processing-label">J'écoute. Quel agent ?</span>
-            </div>
-          )}
-          {isProcessing && (
-            <div className="processing-display">
-              <span className="processing-spinner" aria-hidden="true" />
-              <span className="processing-label">Réflexion…</span>
-            </div>
-          )}
-          {lastResponse && !isProcessing && (
-            <div className="response-display">
-              <span className="response-label">Réponse :</span>
-              <span className="response-text">{lastResponse}</span>
-            </div>
-          )}
-        </div>
-      )}
+      <DockVocal
+        voix={voix}
+        interlocuteur={actif ?? chef}
+        prenoms={installes.map((a) => a.prenom)}
+        ouvrir={ouvrir}
+        replie={dockReplie}
+        onDire={(phrase) => void processVoiceCommand(phrase)}
+        onReplier={() =>
+          setDockReplie((r) => {
+            poserPreference('iagent-dock-replie', !r)
+            return !r
+          })
+        }
+      />
 
-      {activeTab !== 'dashboard' && (
-        <nav className="app-nav">
-          <button className="retour-centre" onClick={() => setActiveTab('dashboard')}>
-            <svg className="icone" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="3" />
-              <circle cx="12" cy="12" r="8.5" />
-            </svg>
-            Centre
-          </button>
-          {onglets.map((o) => (
-            <button key={o} className={activeTab === o ? 'active' : ''} onClick={() => setActiveTab(o)}>
-              <Icone onglet={o} />
-              {TITRES[o]}
-            </button>
-          ))}
-        </nav>
-      )}
-
-      <main className={activeTab === 'dashboard' ? 'app-main app-main-centre' : 'app-main'}>
-        {!demo && (
-          <>
-            {error && <div className="error-banner">{error}</div>}
-            {motifEcoute && (
-              <div className="error-banner">Écoute indisponible — {motifEcoute}</div>
-            )}
-            {voie && (
-              <div className={voieBascule ? 'error-banner' : 'succes-banner'}>{voie}</div>
-            )}
-            {jauge && jauge.niveau !== 'confortable' && (
-              <div className={jauge.niveau === 'impossible' ? 'error-banner' : 'avertissement-banner'}>
-                {jauge.machine.nom} — {jauge.message}
+      <main className="zone-centrale">
+        {!demo && (error || (voie && voieBascule)) && (
+          <div className="bandeaux">
+            {error && (
+              <div className="error-banner">
+                {error}
+                <button className="lien-dc" onClick={() => setError(null)}>
+                  Fermer
+                </button>
               </div>
             )}
-          </>
-        )}
-        {activeTab === 'dashboard' && (
-          <Dashboard
-            etat={etat}
-            isProcessing={isProcessing}
-            motifEcoute={motifEcoute}
-            voixActive={ecoute.active}
-            eveillee={ecoute.ou_en_est === 'eveillee' || reveillee}
-            onBasculerVoix={basculerVoix}
-            onOuvrir={setActiveTab}
-          />
-        )}
-        {activeTab !== 'dashboard' && (
-          <div className="page-cadre">
-            <BandeauChiffres chiffres={bandeau(activeTab)} />
-            {activeTab === 'machine' && <Machine jauge={etat.jauge} />}
-            {activeTab === 'agents' && (
-              <AgentManager
-                agents={agents}
-                onToggleAgent={toggleAgentStatus}
-              />
-            )}
-            {activeTab === 'voice' && <VoiceTraining />}
-            {activeTab === 'connectors' && (
-              <>
-                <CleApi />
-                <WhatsApp />
-                <Telegram />
-                <InstallerVoix apresInstallation={demarrerEcoute} />
-                <ConnectorSetup />
-              </>
-            )}
-            {activeTab === 'navigateur' && <Navigateur />}
-            {activeTab === 'courriel' && <Courriel />}
-            {activeTab === 'travail' && <Travail />}
-            {activeTab === 'embauche' && <Embauche />}
-            {activeTab === 'equipe' && (
-              <Equipe
-                installes={demo ? [] : installes}
-                proposition={demo ? null : proposition}
-                onAccepter={accepterProposition}
-                onRefuser={refuserProposition}
-                version={versionEquipe}
-              />
-            )}
+            {voie && voieBascule && <div className="avertissement-banner">{voie}</div>}
           </div>
         )}
+        {activeTab === 'dashboard' && (
+          <Centre etat={etat} installes={installes} statuts={statuts} etatCentre={etatCentre} blocage={blocage} aller={aller} />
+        )}
+        {activeTab === 'agents' && (
+          <VosAgents
+            installes={installes}
+            statuts={statuts}
+            onBasculer={(id) => toggleAgentStatus(id, statuts[id] ? 'active' : 'inactive')}
+            onParler={parlerA}
+            aller={aller}
+            selection={cible?.agent}
+          />
+        )}
+        {activeTab === 'travail' && <TravailDuJour installes={installes} aller={aller} cible={cible} />}
+        {activeTab === 'embauche' && <Embaucher cible={cible} aller={aller} apresEmbauche={() => chargerAgentsInstalles()} />}
+        {activeTab === 'voice' && <VotreVoix voix={voix} installes={installes} statuts={statuts} aller={aller} />}
+        {activeTab === 'machine' && cadre(<Machine jauge={etat.jauge} />)}
+        {activeTab === 'connectors' &&
+          cadre(
+            <>
+              <CleApi />
+              <WhatsApp />
+              <Telegram />
+              <InstallerVoix apresInstallation={demarrerEcoute} />
+              <ConnectorSetup />
+            </>
+          )}
+        {activeTab === 'navigateur' && cadre(<Navigateur />)}
+        {activeTab === 'courriel' && cadre(<Courriel />)}
+        {activeTab === 'equipe' &&
+          cadre(
+            <Equipe
+              installes={installes}
+              proposition={proposition}
+              onAccepter={accepterProposition}
+              onRefuser={refuserProposition}
+              version={versionEquipe}
+            />
+          )}
+        {/* Desktop Commander modules (MASTER §14), now sub-pages of their module.
+            They read the platform and this workstation only. */}
+        {activeTab === 'workforce' && cadre(<Workforce installes={installes} onOuvrir={ouvrir} />)}
+        {activeTab === 'standard' && cadre(<Standard onOuvrir={ouvrir} />)}
+        {activeTab === 'create' && cadre(<Create onOuvrir={ouvrir} />)}
+        {activeTab === 'box' && cadre(<BoxPage />)}
+        {activeTab === 'validations' && cadre(<Validations installes={installes} onOuvrir={ouvrir} />)}
+        {activeTab === 'consommation' && cadre(<Consommation onOuvrir={ouvrir} />)}
+        {activeTab === 'securite' && cadre(<Securite installes={installes} onOuvrir={ouvrir} />)}
+        {activeTab === 'admin' && admin && cadre(<Administration />)}
       </main>
+
+      <PanneauDroit
+        ouvrir={ouvrir}
+        replie={panneauReplie}
+        onReplier={() =>
+          setPanneauReplie((r) => {
+            poserPreference('iagent-panneau-replie', !r)
+            return !r
+          })
+        }
+      />
+
+      <PiedSysteme
+        pied={{
+          agentsActifs: etat.actifs,
+          agentsTotal: installes.length,
+          connexions: lu.serveurs,
+          cle: lu.cle,
+          jauge: jauge ? { niveau: jauge.niveau, libelle: { confortable: 'confortable', chargee: 'chargée', saturee: 'saturée', impossible: 'trop juste', 'memoire-seule': 'charge non jugée' }[jauge.niveau] ?? jauge.niveau } : null,
+          relie,
+          editionBox,
+        }}
+        voix={voix}
+        ouvrir={ouvrir}
+      />
+
+      <Palette ouvert={palette} onFermer={() => setPalette(false)} installes={installes} aller={aller} admin={admin} />
     </div>
   )
 }

@@ -1,0 +1,49 @@
+{
+  "note": "Seul endroit où un taux d'appel s'écrit à la main pour le module voix. Chaque taux porte la page lue et la date. null = non relevé : le coût d'un appel qui en dépend reste inconnu (null) et le dit, il n'est jamais deviné. Le LLM se lit dans dimensionnement/tarifs-api.json (modeles.reference). Devise : USD, prix hors taxes. À FUSIONNER avec plateforme/tarifs (route /tarifs/cout-appel) qui fait un calcul voisin.",
+  "devise": "USD",
+  "telephonie": {
+    "twilio": {
+      "entrant_minute": { "valeur": 0.01, "source": "https://www.twilio.com/en-us/voice/pricing/fr", "lu_le": "2026-10-07", "note": "numéro local France" },
+      "sortant_fixe_minute": { "valeur": 0.0187, "source": "https://www.twilio.com/en-us/voice/pricing/fr", "lu_le": "2026-10-07" },
+      "sortant_mobile_minute": { "valeur": 0.0404, "source": "https://www.twilio.com/en-us/voice/pricing/fr", "lu_le": "2026-10-07", "note": "appel émis depuis l'EEE ; 0,1603 $ sinon" },
+      "numero_mois": { "valeur": 1.35, "source": "https://www.twilio.com/en-us/voice/pricing/fr", "lu_le": "2026-10-07" },
+      "arrondi": "non relevé : compté à la seconde"
+    },
+    "telnyx": {
+      "entrant_minute": null,
+      "sortant_fixe_minute": null,
+      "sortant_mobile_minute": null,
+      "numero_mois": null,
+      "note": "telnyx.com/pricing/call-control/fr et /elastic-sip/fr lues le 2026-10-07 : 0,002 $/min de Voice API + frais SIP Trunking par destination, non affichés pour la France. À relever par GET /v2/public/pricing une fois le compte ouvert."
+    },
+    "sip": {
+      "entrant_minute": null,
+      "sortant_fixe_minute": null,
+      "sortant_mobile_minute": null,
+      "numero_mois": null,
+      "note": "dépend de l'opérateur du trunk SIP du client"
+    }
+  },
+  "voix": {
+    "gemini": {
+      "audio_entree_minute": { "valeur": 0.005, "source": "https://ai.google.dev/gemini-api/docs/pricing", "lu_le": "2026-10-07", "note": "gemini-3.8-live, palier payant" },
+      "audio_sortie_minute": { "valeur": 0.018, "source": "https://ai.google.dev/gemini-api/docs/pricing", "lu_le": "2026-10-07" }
+    },
+    "elevenlabs": {
+      "tts_1000_caracteres": { "valeur": 0.08, "source": "https://elevenlabs.io/pricing/api", "lu_le": "2026-10-07", "note": "eleven_v4 prix de liste ; promotion à 0,022 $ jusqu'au 12/10/2026, non retenue" },
+      "stt_heure": { "valeur": 0.22, "source": "https://elevenlabs.io/pricing/api", "lu_le": "2026-10-07", "note": "Scribe v2" }
+    },
+    "mistral": {
+      "tts_1000_caracteres": null,
+      "stt_minute": null,
+      "note": "mistral.ai/pricing lu le 2026-10-07 : « speech models are per minute », sans chiffre pour Voxtral."
+    },
+    "local": {
+      "gratuit": { "valeur": 0, "source": "moteur sur la machine du client", "lu_le": "2026-10-07" }
+    }
+  },
+  "estimation_registre": {
+    "note": "Pour ORDONNER les moteurs en mode cost_first seulement, jamais pour facturer. Hypothèse : l'agent parle la moitié de la minute à ~900 caractères par minute de parole.",
+    "caracteres_par_minute_agent": 450
+  }
+}
