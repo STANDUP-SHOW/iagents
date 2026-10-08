@@ -25,9 +25,8 @@ const activites = lire('catalogue/activites.json').activites;
 const logiciels = lire('catalogue/logiciels.json').logiciels;
 const secteurs = new Map(lire('catalogue/catalogue.json').secteurs.map((s) => [s.id, s.nom]));
 
-export const slugifier = (texte) =>
-  texte.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/&/g, ' et ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+import { slugifier } from './slug.mjs';
+export { slugifier };
 
 const echapper = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -92,7 +91,7 @@ function page({ url, titre, description, fil = [], corps }) {
 <link rel="stylesheet" href="/seo.css"></head>
 <body><header><a href="/">iAgent</a></header>
 <main>${filHtml}${corps}
-<a class="cta" href="/">Voir le catalogue des agents</a></main>
+<a class="cta" href="/catalogue">Voir le catalogue des agents</a></main>
 <footer>iAgent : des agents IA métier qui travaillent chez vous, en local, ou par API.</footer>
 </body></html>
 `;
@@ -225,7 +224,7 @@ ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r
 const cibles = new Set(pages.keys());
 for (const [url, html] of pages) {
   for (const [, href] of html.matchAll(/href="(\/[^"]*)"/g)) {
-    if (href === '/' || href === '/puce-cerveau.png' || href === '/seo.css') continue;
+    if (href === '/' || href === '/catalogue' || href === '/puce-cerveau.png' || href === '/seo.css') continue;
     if (!cibles.has(href)) throw new Error(`${url} renvoie vers ${href}, page non générée`);
   }
 }
@@ -237,7 +236,7 @@ for (const [url, html] of pages) {
   writeFileSync(fichier, html);
 }
 
-const urls = ['/', ...pages.keys()];
+const urls = ['/', '/catalogue', ...pages.keys()];
 const lots = [];
 for (let i = 0; i < urls.length; i += MAX_URLS_PAR_SITEMAP) lots.push(urls.slice(i, i + MAX_URLS_PAR_SITEMAP));
 lots.forEach((lot, i) => writeFileSync(join(SORTIE, `sitemap-${i + 1}.xml`),
