@@ -21,7 +21,7 @@ import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesP
 import { FINANCEMENT, OFFRES } from '../../dimensionnement/offre-box.ts';
 import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { PORTRAITS, portraitDe } from '../src/data/recherche.js';
+import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE } from '../src/data/recherche.js';
 import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, euros as eurosTarif } from '../src/data/tarifs.js';
 import Page from '../src/pages/Page.jsx';
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
@@ -220,6 +220,19 @@ for (const page of PAGES) {
   const vus = new Set(agents.map(portraitDe));
   if (perdus.length || vus.size < PORTRAITS.length * 0.9) echoue(`portraits : ${perdus.length} absents, ${vus.size} visages employés sur ${PORTRAITS.length}`);
   else ok(`${vus.size} portraits différents dans la bibliothèque, tous présents`);
+  // Un imprimeur tape « imprimerie » (max, 08/10) : aucune fiche ne porte ce mot,
+  // l'activité ACT-0021 si. Chaque nom et chaque alias des activités doit rendre
+  // des métiers, jamais une liste vide.
+  {
+    const imprimerie = activitesDeLaRecherche('imprimerie');
+    const trouves = filtrer(agents, { requete: 'imprimerie' });
+    if (imprimerie[0]?.id !== 'ACT-0021' || !trouves.length) echoue(`« imprimerie » : activité ${imprimerie[0]?.id ?? 'aucune'}, ${trouves.length} métiers`);
+    else ok(`« imprimerie » reconnaît ${imprimerie[0].nom} et propose ${trouves.length} métiers, d'abord ${trouves[0].nom}`);
+    const muets = ACTIVITES_RECHERCHE.flatMap((a) => [a.nom, ...(a.alias ?? [])].map((mot) => [a, mot]))
+      .filter(([a, mot]) => !activitesDeLaRecherche(mot).includes(a) || !filtrer(agents, { requete: mot }).length);
+    if (muets.length) echoue(`${muets.length} mots d'activité sans réponse, dont ${muets.slice(0, 5).map(([a, m]) => `« ${m} » (${a.id})`).join(', ')}`);
+    else ok(`les ${ACTIVITES_RECHERCHE.length} activités se trouvent par leur nom et chacun de leurs alias`);
+  }
   // Le site n'offre jamais l'installeur : Desktop Commander est livré sur la Box
   // (max, 08/10). Un bouton « Télécharger » ramènerait le visiteur hors de l'offre.
   const telechargeurs = execSync("grep -rlE 'releases/(latest/)?download|\\.msi|T[eé]l[eé]charger' src seo || true", { encoding: 'utf8' }).trim();

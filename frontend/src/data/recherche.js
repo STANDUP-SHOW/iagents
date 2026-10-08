@@ -5,6 +5,9 @@
 import agents from './loader.js';
 import catalogue from '../../../catalogue/catalogue.json';
 import logicielsJson from '../../../catalogue/logiciels.json';
+import activitesJson from '../../../catalogue/activites.json';
+import { activitesReconnues, cerclesDeLActivite } from './activites-recherche.js';
+import { slugifier } from '../../seo/slug.mjs';
 
 const LOGICIELS = logicielsJson.logiciels;
 const nomLogiciel = new Map(LOGICIELS.map((l) => [l.id, l.nom]));
@@ -68,6 +71,30 @@ export function pertinence(agent, requete) {
   return score;
 }
 
+export const ACTIVITES = activitesJson.activites;
+
+/** The activity pages the search-engine pages publish, one per activity. */
+export const urlActivite = (activite) => `/activites/${slugifier(activite.nom)}`;
+
+/** The trades the query names (« imprimerie » → Imprimerie offset et numérique). */
+export const activitesDeLaRecherche = (requete) => activitesReconnues(requete, ACTIVITES);
+
+// When the query names a trade, the jobs that serve it join the results even
+// if no word of the query is in their fiche: a printer who types « imprimerie »
+// must find someone to recruit. Closest jobs come before any word match, the
+// software-qualified ones after, the jobs every business has last.
+function rangsParActivite(requete) {
+  const rangs = new Map();
+  for (const activite of activitesDeLaRecherche(requete)) {
+    const { proches, outilles, transversaux } = cerclesDeLActivite(activite, agents);
+    const poser = (fiches, base) => fiches.forEach((f, i) => { if (!rangs.has(f.id)) rangs.set(f.id, base - i / 10000); });
+    poser(proches, 2000);
+    poser(outilles, 300);
+    poser(transversaux, 100);
+  }
+  return rangs;
+}
+
 /** The filters the library offers, each one a set of chosen values. */
 export const FILTRES_VIDES = { secteurs: [], familles: [], logiciels: [], ou: [] };
 
@@ -76,8 +103,9 @@ export const FILTRES_VIDES = { secteurs: [], familles: [], logiciels: [], ou: []
  * or « api ». It needs the installation's quote, passed as a function.
  */
 export function filtrer(liste, { requete = '', secteurs = [], familles = [], logiciels = [], ou = [] } = {}, ouTravaille) {
+  const parActivite = rangsParActivite(requete);
   return liste
-    .map((a) => ({ a, score: pertinence(a, requete) }))
+    .map((a) => ({ a, score: (pertinence(a, requete) && 500 + pertinence(a, requete)) + (parActivite.get(a.id) ?? 0) }))
     .filter(({ a, score }) =>
       score > 0 &&
       (!secteurs.length || secteurs.includes(a.secteur)) &&
@@ -107,6 +135,7 @@ export function suggestions(requete, limite = 6) {
     vus.add(cle);
     sortie.push({ texte, type, debut: cle.startsWith(q) });
   };
+  for (const a of ACTIVITES) if ([a.nom, ...(a.alias ?? [])].some((n) => normaliser(n).includes(q))) { vus.add(normaliser(a.nom)); sortie.push({ texte: a.nom, type: 'Activité', debut: true }); }
   for (const s of catalogue.secteurs) ajouter(s.nom, 'Secteur');
   for (const a of agents) ajouter(a.nom, 'Métier');
   for (const l of new Set(agents.flatMap(logicielsDe))) ajouter(l, 'Logiciel');

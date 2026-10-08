@@ -10,7 +10,13 @@ import { AGENTS_RESEAUX, PACKS_ENTREPRISE, INSTALLATIONS, ficheDe, installationD
 import agents from './data/loader.js';
 import {
   filtrer, decompte, FILTRES_VIDES, libelleSecteur, libelleFamille, logicielsDe, portraitDe, COMPTEURS,
+  activitesDeLaRecherche, urlActivite,
 } from './data/recherche.js';
+import { estTransversal } from './data/activites-recherche.js';
+import { LIENS } from './accueil/composants.jsx';
+
+// What the library offers when nothing matches: the jobs every business has.
+const POUR_TOUS = agents.filter(estTransversal).slice(0, 12);
 
 // The shop's three pages, and the ways to browse the catalogue.
 export const PAGES = [
@@ -125,6 +131,15 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
     return par ? [...liste].sort(par) : liste;
   }, [base, requete, filtres, tri, ouParAgent, ouTravaille]);
 
+  // Someone who searched from the header came for the answer, not the hero:
+  // take them to the results.
+  useEffect(() => {
+    if (rechercheInitiale) document.getElementById('resultats')?.scrollIntoView({ block: 'start' });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The trade the visitor typed (« imprimerie »), told above the results.
+  const activitesVues = useMemo(() => activitesDeLaRecherche(requete), [requete]);
+
   const options = useMemo(() => ({
     secteurs: decompte(base, (a) => [a.secteur]),
     familles: decompte(base, (a) => [a.famille]),
@@ -224,9 +239,11 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
           <div className={`bi-cadre bi-catalogue ${apercu ? 'avec-apercu' : ''}`}>
             <aside className="bi-filtres" aria-label="Filtres">{panneauFiltres}</aside>
 
-            <section className="bi-resultats" aria-label="Profils">
+            <section id="resultats" className="bi-resultats" aria-label="Profils">
               <div className="bi-haut">
-                <p className="bi-total"><strong>{nombre(montrerListe ? resultats.length : PACKS_ENTREPRISE.length)}</strong> {montrerListe ? (resultats.length > 1 ? 'métiers' : 'métier') : 'packs'}</p>
+                <p className="bi-total">{montrerListe && !resultats.length
+                  ? <><strong>{nombre(POUR_TOUS.length)}</strong> métiers proposés</>
+                  : <><strong>{nombre(montrerListe ? resultats.length : PACKS_ENTREPRISE.length)}</strong> {montrerListe ? (resultats.length > 1 ? 'métiers' : 'métier') : 'packs'}</>}</p>
                 <div className="bi-vues" role="tablist" aria-label="Parcourir le catalogue">
                   {VUES.map((v) => (
                     <button key={v.id} type="button" role="tab" aria-selected={vue === v.id} onClick={() => { setVue(v.id); setPackOuvert(null); setFiltres(FILTRES_VIDES); setApercu(null); }}>{v.libelle}</button>
@@ -261,6 +278,21 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
                 </div>
               )}
 
+              {montrerListe && activitesVues.length > 0 && (
+                <div className="bi-activite">
+                  <p className="surtitre">Votre activité</p>
+                  <p className="titre-display titre-petit">{activitesVues[0].nom}</p>
+                  <p className="mt-2 text-[var(--texte-doux)]">
+                    {activitesVues[0].trait} Chaque métier ci-dessous reçoit le savoir de votre activité en plus du sien
+                    {activitesVues[0].pack?.vocabulaire?.length ? <> : {activitesVues[0].pack.vocabulaire.slice(0, 4).map((v) => (v.terme === v.terme.toUpperCase() ? v.terme : v.terme.toLowerCase())).join(', ')}, ses documents et ses logiciels.</> : '.'}
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <a href={urlActivite(activitesVues[0])} className="bouton bouton-contour">Tout sur votre activité</a>
+                    {activitesVues.slice(1).map((a) => <a key={a.id} href={urlActivite(a)} className="bouton bouton-contour">{a.nom}</a>)}
+                  </div>
+                </div>
+              )}
+
               {vue === 'packs' && <div className="mb-6"><PacksEntreprise packOuvert={packOuvert} onOuvrir={setPackOuvert} /></div>}
 
               {montrerListe && (resultats.length > 0 ? (
@@ -279,11 +311,21 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
                   )}
                 </>
               ) : (
-                <div className="bi-vide">
-                  <p className="titre-display titre-petit">Aucun profil ne correspond.</p>
-                  <p className="mt-2 text-[var(--texte-doux)]">Essayez un autre mot, ou retirez un filtre.</p>
-                  <button type="button" className="bouton bouton-contour mt-6" onClick={reinitialiser}>Tout effacer</button>
-                </div>
+                <>
+                  <div className="bi-vide">
+                    <p className="titre-display titre-petit">Pas encore de métier à ce nom : nous pouvons vous le composer.</p>
+                    <p className="mt-2 text-[var(--texte-doux)]">Dites ce que vous voulez confier, et iAgent compose l'agent ou l'équipe sur mesure. Vous pouvez aussi chercher par activité, ou partir des métiers que toute entreprise emploie, juste en dessous.</p>
+                    <div className="mt-6 flex flex-wrap justify-center gap-3">
+                      <a href={LIENS.idee(requete || 'Un agent pour mon entreprise')} className="bouton bouton-plein">Composer un agent sur mesure</a>
+                      <a href="/activites" className="bouton bouton-contour">Chercher par activité</a>
+                      {choisis.length > 0 && <button type="button" className="bouton bouton-contour" onClick={() => setFiltres(FILTRES_VIDES)}>Retirer les filtres</button>}
+                    </div>
+                  </div>
+                  <p className="surtitre mt-10 mb-4">Les métiers que toute entreprise emploie</p>
+                  <div className={compact ? 'bi-liste-compacte' : 'bi-grille'}>
+                    {POUR_TOUS.map((a) => <CarteAgent key={a.id} agent={a} compact={compact} choisi={apercu?.id === a.id} onVoir={setApercu} />)}
+                  </div>
+                </>
               ))}
             </section>
 

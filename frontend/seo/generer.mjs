@@ -28,6 +28,7 @@ const secteurs = new Map(lire('catalogue/catalogue.json').secteurs.map((s) => [s
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
 import { slugifier } from './slug.mjs';
 import { portraitDe } from '../src/data/portraits.js';
+import { estTransversal, cerclesDeLActivite } from '../src/data/activites-recherche.js';
 export { slugifier };
 
 const echapper = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -63,9 +64,9 @@ const urlPosteLogiciel = (f, id) => `${urlFiche.get(f.id)}/${urlLogiciel.get(id)
 // Level 3: jobs every business has (office, accounting, HR, sales, purchasing,
 // marketing), each in each activity. Jobs written for one trade ("assistant
 // médical administratif") are left out: in a sawmill they would be nonsense.
-const SECTEURS_TRANSVERSAUX = new Set(['administration', 'comptabilite', 'ressources-humaines', 'commercial', 'achats', 'marketing']);
-const METIER_PROPRE = /immobilier|médical|juridique|cabinet de recrutement/i;
-const transversaux = fiches.filter((f) => SECTEURS_TRANSVERSAUX.has(f.secteur) && !METIER_PROPRE.test(f.nom));
+// The rule lives in src/data/activites-recherche.js, which the library's
+// search reads too: a printer must be offered the same jobs on both.
+const transversaux = fiches.filter(estTransversal);
 const urlPosteActivite = (f, a) => `${urlActivite.get(a.id)}/${f.slug}`;
 
 // --- layout ---------------------------------------------------------------
@@ -79,7 +80,7 @@ const MENU = [
 ];
 const PIED = [
   ['Produit', [['iAgent Workforce', '/workforce'], ['iAgent Box', '/box'], ['Tarifs', '/pricing'], ['Pourquoi louer', '/why-rent'], ['Recruter un agent', RECRUTER]]],
-  ['Agents', [['Le catalogue des métiers', '/catalogue'], ['Skill Packs', '/skills'], ['Créer votre entreprise', '/create'], ['Opportunités', '/opportunities']]],
+  ['Agents', [['Le catalogue des métiers', '/catalogue'], ['Par activité', '/activites'], ['Skill Packs', '/skills'], ['Créer votre entreprise', '/create'], ['Opportunités', '/opportunities']]],
   ['Voice', [['iAgent Voice', '/voice'], ['Standard téléphonique', '/standard-telephonique'], ['Support Center', '/support-center'], ['Sales Center', '/sales-center']]],
   ['Entreprise', [['iAgent Enterprise', '/enterprise'], ['IA locale et hybride', '/local-ai'], ['Sécurité', '/security'], ['Questions fréquentes', '/faq'], ['Contact', '/contact']]],
 ];
@@ -262,22 +263,48 @@ ${acts.length ? `<h2>Les activités qui l'emploient</h2>${liste(acts.map((a) => 
   }));
 }
 
+// Every activity, by family: the way in for a visitor who knows their trade
+// (« imprimerie ») and not the name of the job they need.
+const FAMILLES_ACTIVITE = {
+  industrie: 'Industrie', batiment: 'Bâtiment', artisanat: 'Artisanat', 'commerce-detail': 'Commerce de détail',
+  'negoce-gros': 'Négoce et commerce de gros', 'transport-logistique': 'Transport et logistique', agriculture: 'Agriculture',
+  'environnement-energie': 'Environnement et énergie', 'sante-social': 'Santé et social', 'hotellerie-tourisme': 'Hôtellerie et tourisme',
+  'services-entreprises': 'Services aux entreprises', 'numerique-audiovisuel': 'Numérique et audiovisuel',
+  'automobile-mobilite': 'Automobile et mobilité', 'finance-immobilier': 'Finance et immobilier', 'public-associatif': 'Public et associatif',
+};
+pages.set('/activites', page({
+  url: '/activites',
+  titre: `Agents IA par activité : ${activites.length} activités`,
+  description: `Imprimerie, boulangerie, cabinet comptable, transport… Trouvez les agents IA de votre activité parmi ${activites.length} activités.`,
+  fil: [['Activités', null]],
+  corps: `<h1>Votre activité, vos agents</h1>
+<p class="accroche">Choisissez votre activité : chaque agent que vous recrutez reçoit son vocabulaire, ses documents, ses règles et ses logiciels.</p>
+${Object.entries(FAMILLES_ACTIVITE).map(([id, nom]) => {
+    const siennes = activites.filter((a) => a.famille === id);
+    return siennes.length ? `<h2>${echapper(nom)}</h2>${puces(siennes.map((a) => lien(a.nom, urlActivite.get(a.id))))}` : '';
+  }).join('\n')}`,
+}));
+const sansFamille = activites.filter((a) => !FAMILLES_ACTIVITE[a.famille]);
+if (sansFamille.length) throw new Error(`activités sans famille connue : ${sansFamille.map((a) => a.id).join(', ')}`);
+
 for (const a of activites) {
   const url = urlActivite.get(a.id);
   const p = a.pack ?? {};
+  const { proches, outilles } = cerclesDeLActivite(a, fiches);
   pages.set(url, page({
     url,
     titre: `Agents IA pour ${a.nom.toLowerCase()}`,
     description: `${a.trait} Des agents IA qui parlent le métier de votre activité.`,
-    fil: [['Activités', null], [a.nom, null]],
+    fil: [['Activités', '/activites'], [a.nom, null]],
     corps: `<h1>Des agents IA pour votre activité : ${echapper(a.nom.toLowerCase())}</h1>
 <p class="accroche">${echapper(a.trait)}</p>
 <p>Chaque agent iAgent reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p>
+${proches.length + outilles.length ? `<h2>Les métiers les plus proches de votre activité</h2>${puces([...proches, ...outilles].map((f) => lien(f.nom, urlFiche.get(f.id))))}` : ''}
 ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
 ${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
 ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}
 ${p.logiciels?.length ? `<h2>Les logiciels de l'activité</h2>${liste(p.logiciels.map((id) => `<li>${lien(logParId.get(id).nom, urlLogiciel.get(id))}</li>`))}` : ''}
-<h2>Les postes pour votre activité</h2>${puces(transversaux.map((f) => lien(f.nom, urlPosteActivite(f, a))))}`,
+<h2>Les postes que toute entreprise emploie, réglés sur votre activité</h2>${puces(transversaux.map((f) => lien(f.nom, urlPosteActivite(f, a))))}`,
   }));
 }
 
