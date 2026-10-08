@@ -30,8 +30,8 @@ l'abonnement de la box **en plus de l'agent**, **58 Go** utilisables sur la Box 
 
 `coutInstallation(offre).lignes` rend une ligne par box, chacune avec son prix, sa
 mensualité et son abonnement : la boutique affiche les lignes, jamais un total fondu.
-Les totaux servent seulement à la comparaison avec l'API. Le prix des agents (9,90 €/mois
-chacun) s'ajoute par-dessus et ne change pas la comparaison : il est le même sur toutes
+Les totaux servent seulement à la comparaison avec l'API. Le prix des agents (149, 249 ou
+399 €/mois selon le niveau, décision de max du 07/10 qui remplace les 9,90 €) s'ajoute par-dessus et ne change pas la comparaison : il est le même sur toutes
 les installations.
 
 Financement : **24 mois à 7 %**, confirmés par max le 30/09/2026. Le

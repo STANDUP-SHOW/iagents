@@ -348,7 +348,8 @@ produisent la démonstration reproductible qu'elle exige.
 
 1. **Le nom** : iAgent (domaine acheté) ou e-Agent (documents récents) ? §3.1
 2. **Le prix** : la grille à cinq niveaux du business plan V2, ou le 49,90 €/9,90 €
-   de V6 ? §3.2
+   de V6 ? §3.2 — **tranché le 07/10/2026** : 149, 249 ou 399 €/mois par agent
+   (plan du site de max), voir `docs/box-e-agent.md`.
 3. **Les 174 fiches hors catalogue** : au catalogue V7, ou retirées ? §3.5
 4. **Le cahier des charges investisseur** : le réaligner sur le business plan V2
    (prix, MRR, « risque R&D 0 »), ou le retirer du dossier ? §2 et §3.2

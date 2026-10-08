@@ -315,6 +315,19 @@ par WhatsApp et email.
   GB10 de la N2 (128 Go mais lent) ne tient pas ; seule la N3 tient tout.
   `check-offre-box.ts` refuse un prix confirmé sans source ni date. Voir
   `docs/offre-box.md`.
+- **La box e-Agent se loue, elle ne se vend ni ne se donne** (max, 07/10/2026).
+  Une box de commande tactile, préparée en usine, 20 agents au plus, agents
+  surtout par API ; elle reste propriété d'iAgent pour la maintenance et pour
+  que personne n'y installe ses propres agents. Prix toujours séparés : loyer
+  de la box, abonnement des agents, consommation d'IA. Le plan du site de max
+  (07/10, 19h13) fixe la base : box 69 €/mois sur 36 mois ou 89 € sur 24,
+  consommation refacturée à part, Box Max et Power retirées du public (sur
+  devis). **Un agent coûte 149, 249 ou 399 €/mois** (Essential, Professional,
+  Expert ; max, 07/10 20h22), ce qui remplace les 9,90 € du 22/09 ; le calcul
+  de `dimensionnement/` n'en dépend pas, le prix est le même sur toutes les
+  installations. **Le verrou qui manque d'abord est la
+  signature des fiches** : l'installeur les livre en clair et `lire_fiche` lit
+  ce qu'il trouve. Voir `docs/box-e-agent.md`.
 - **Les fiches sont écrites par Claude Code sur l'abonnement de Max, pas par
   l'API** (19/09/2026). Le workflow Batch reste dans le dépôt (il a servi au
   lot Administration, 24 fiches pour 0,60 $) mais ne se relance plus : les
