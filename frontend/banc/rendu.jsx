@@ -174,6 +174,8 @@ for (const page of PAGES) {
   const sansDevis = ACTIVITES_RECHERCHE
     .filter((a) => !['sante-social', 'finance-immobilier', 'public-associatif'].includes(a.famille))
     .filter((a) => !coeurDeLActivite(a, agents).some((c) => /devis|deviseur|cotation/i.test(c.role)));
+  const sansCoeur = ACTIVITES_RECHERCHE.filter((a) => !coeurDeLActivite(a, agents).length);
+  if (sansCoeur.length) echoue(`activités sans cœur de métier : ${sansCoeur.map((a) => a.nom).join(', ')}`);
   if (sansDevis.length) echoue(`activités sans deviseur : ${sansDevis.map((a) => a.nom).join(', ')}`);
   else ok('chaque activité qui vend un travail a son deviseur, et chaque demande de client voit le cœur de son métier');
 
@@ -275,4 +277,4 @@ for (const page of PAGES) {
   else ok('aucun bouton du site ne fait télécharger l’application');
 }
 
-console.log(`\n${n} attentes tenues — boutique ok`);
+console.log(process.exitCode ? `\n${n} attentes tenues, au moins une faute ci-dessus — boutique REFUSÉE` : `\n${n} attentes tenues — boutique ok`);

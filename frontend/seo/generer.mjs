@@ -319,12 +319,12 @@ for (const a of activites) {
     corps: `<h1>Des agents IA pour votre activité : ${echapper(a.nom.toLowerCase())}</h1>
 <p class="accroche">${echapper(a.trait)}</p>
 <p>Chaque agent iAgent reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p>
-${coeur.length ? `<h2>Le cœur de votre métier : devis, atelier, fabrication</h2>${liste(coeur.map(({ role, fiche }) => `<li><strong>${echapper(role)}</strong> : ${lien(fiche.nom, urlFiche.get(fiche.id))}</li>`))}` : ''}
+${coeur.length ? `<h2>Le cœur de votre métier : les postes qui font tourner votre activité</h2>${liste(coeur.map(({ role, fiche }) => `<li><strong>${echapper(role)}</strong> : ${lien(fiche.nom, urlFiche.get(fiche.id))}</li>`))}` : ''}
+${p.logiciels?.length ? `<h2>Les logiciels de votre métier</h2><p>Vos agents y travaillent : à l'entretien d'embauche, chacun vous demande lesquels tourne votre entreprise.</p>${liste(p.logiciels.map((id) => logParId.get(id)).map((l) => `<li>${lien(l.nom, urlLogiciel.get(l.id))}${l.editeur ? `, de ${echapper(l.editeur)}` : ''}</li>`))}` : ''}
 ${proches.length + outilles.length ? `<h2>Les métiers les plus proches de votre activité</h2>${puces([...proches, ...outilles].map((f) => lien(f.nom, urlFiche.get(f.id))))}` : ''}
 ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
 ${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
 ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}
-${p.logiciels?.length ? `<h2>Les logiciels de l'activité</h2>${liste(p.logiciels.map((id) => `<li>${lien(logParId.get(id).nom, urlLogiciel.get(id))}</li>`))}` : ''}
 <h2>Les postes que toute entreprise emploie, réglés sur votre activité</h2>${puces(transversaux.map((f) => lien(f.nom, urlPosteActivite(f, a))))}`,
   }));
 }
@@ -353,6 +353,7 @@ for (const a of activites) {
 <h2>Ce qu'il fait chaque jour</h2>
 ${liste(f.taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}</li>`))}
 ${outils.length ? `<h2>Les logiciels de votre activité qu'il tient</h2>${liste(outils.map((l) => `<li>${lien(l.nom, urlLogiciel.get(l.id))}${l.editeur ? `, de ${echapper(l.editeur)}` : ''}</li>`))}` : ''}
+${(p.logiciels ?? []).length > outils.length ? `<h2>Les autres logiciels de votre activité</h2><p>Il vous demande à l'entretien lesquels vous employez.</p>${puces((p.logiciels ?? []).map((id) => logParId.get(id)).filter((l) => !outils.includes(l)).map((l) => lien(l.nom, urlLogiciel.get(l.id))))}` : ''}
 ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
 ${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
 ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}`,

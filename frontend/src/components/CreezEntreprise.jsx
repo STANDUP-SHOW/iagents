@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import agents from '../data/loader.js';
 import { CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee } from '../data/offres.js';
-import { agentsPourDemande, coeurPourDemande } from '../data/recherche.js';
+import { agentsPourDemande, coeurPourDemande, logicielsPourDemande } from '../data/recherche.js';
 import ConseilMachine from './ConseilMachine.jsx';
 
 function LigneAgent({ id, coche, onBasculer, role }) {
@@ -45,6 +45,7 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
 
   const activites = useMemo(() => activitesPourIdee(idee), [idee]);
   const coeur = useMemo(() => coeurPourDemande(idee), [idee]);
+  const logiciels = useMemo(() => logicielsPourDemande(idee), [idee]);
   const pourLaDemande = useMemo(() => {
     const deja = new Set(coeur.map((c) => c.fiche.id));
     return agentsPourDemande(idee).filter((id) => !deja.has(id));
@@ -88,11 +89,27 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
       {coeur.length > 0 && (
         <div className="card border-2 border-rose-500/50">
           <p className="text-xs font-mono text-rose-300">Le cœur de votre métier</p>
-          <h3 className="font-display text-lg text-white mb-1">Devis, atelier, fabrication : ceux qui font tourner l'activité</h3>
+          <h3 className="font-display text-lg text-white mb-1">Les postes qui font tourner votre activité : devis, production, suivi</h3>
           <p className="text-xs text-nuit-400 mb-3">Le deviseur qui chiffre chaque demande de client, ceux qui planifient l'atelier et suivent la production. Décochez ceux que vous avez déjà.</p>
           <div className="grid md:grid-cols-2 gap-x-6">
             {coeur.map(({ role, fiche }) => <LigneAgent key={fiche.id} id={fiche.id} role={role} coche={!retires.has(fiche.id)} onBasculer={basculer} />)}
           </div>
+        </div>
+      )}
+
+      {logiciels.length > 0 && (
+        <div className="card border-2 border-rose-500/50">
+          <p className="text-xs font-mono text-rose-300">Les logiciels de votre métier</p>
+          <h3 className="font-display text-lg text-white mb-1">Vos agents travaillent dans les outils de votre branche</h3>
+          <p className="text-xs text-nuit-400 mb-3">À l'entretien d'embauche, chaque agent vous demande lesquels tourne votre entreprise, et s'y règle.</p>
+          <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+            {logiciels.map((l) => (
+              <li key={l.id} className="text-sm">
+                <span className="text-white font-semibold">{l.nom}</span>
+                {l.editeur && <span className="text-nuit-400"> · {l.editeur}</span>}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

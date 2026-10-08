@@ -79,6 +79,15 @@ export const urlActivite = (activite) => `/activites/${slugifier(activite.nom)}`
 /** The trades the query names (« imprimerie » → Imprimerie offset et numérique). */
 export const activitesDeLaRecherche = (requete) => activitesReconnues(requete, ACTIVITES);
 
+const LOGICIEL_PAR_ID = new Map(LOGICIELS.map((l) => [l.id, l]));
+/** The trade's own software, in the pack's order: management and quotes first, then the shop floor. */
+export const logicielsDeLActivite = (activite) => (activite?.pack?.logiciels ?? []).map((id) => LOGICIEL_PAR_ID.get(id)).filter(Boolean);
+/** The software of every activity the request names, each once. */
+export function logicielsPourDemande(idee, limite = 12) {
+  const vus = new Set();
+  return activitesDeLaRecherche(idee).flatMap(logicielsDeLActivite).filter((l) => !vus.has(l.id) && vus.add(l.id)).slice(0, limite);
+}
+
 // When the query names a trade, the jobs that serve it join the results even
 // if no word of the query is in their fiche: a printer who types « imprimerie »
 // must find someone to recruit. Closest jobs come before any word match, the

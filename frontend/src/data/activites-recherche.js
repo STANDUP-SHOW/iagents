@@ -105,6 +105,8 @@ const COEUR_PAR_FAMILLE = {
   'hotellerie-tourisme': [['Devis groupes et séminaires', 'AG-0911'], ['Planning des équipes', 'AG-0609'], ['Achats', 'AG-0610'], ['Stocks', 'AG-0611']],
   'services-entreprises': [DEVIS, ['Propositions commerciales', 'AG-0187']],
   'sante-social': [['Planning des rendez-vous et des soins', 'AG-0695'], ['Devis et prises en charge', 'AG-0684']],
+  'finance-immobilier': [['Conseiller de clientèle', 'AG-0101'], ['Montage des dossiers de crédit', 'AG-0109'], ['Analyse crédit', 'AG-0107'], ['Connaissance client (KYC)', 'AG-0103'], ['Conformité', 'AG-0110']],
+  'public-associatif': [['Gestion du courrier', 'AG-0009'], ['Subventions', 'AG-0937'], ["Appels d'offres et marchés", 'AG-0705'], ['Gestion documentaire', 'AG-0006']],
   'numerique-audiovisuel': [DEVIS, ['Planning de production', 'AG-1003'], ['Assistant de production', 'AG-1001']],
 };
 // Within a family, some trades have their own heart: a restaurant is a
@@ -113,6 +115,15 @@ const COEUR_PAR_FAMILLE = {
 // pattern is limited to]: « peinture » is a painter in building, a body shop
 // in automotive.
 const COEUR_PAR_ACTIVITE = [
+  [/patrimoine/i, [['Gestion de portefeuille', 'AG-0054'], ["Conseil en investissement", 'AG-0053'], ['Connaissance client (KYC)', 'AG-0103'], ['Conformité', 'AG-0110']], 'finance-immobilier'],
+  [/financement|cr[ée]dit/i, [['Analyse crédit', 'AG-0052'], ['Montage des dossiers de financement', 'AG-0109'], ['Analyse de financement', 'AG-0070'], ['Recouvrement', 'AG-0112']], 'finance-immobilier'],
+  [/association/i, [['Adhésions', 'AG-0927'], ['Dons', 'AG-0928'], ['Subventions', 'AG-0937'], ['Bénévoles', 'AG-0929'], ['Événements', 'AG-0930']], 'public-associatif'],
+  [/fondation|m[ée]c[ée]nat/i, [['Dons et mécénat', 'AG-0928'], ['Recherche de financements', 'AG-0938'], ['Partenaires', 'AG-0948'], ["Rapport d'activité", 'AG-0939']], 'public-associatif'],
+  [/syndica|organisation professionnelle/i, [['Adhésions et cotisations', 'AG-0927'], ['Relation adhérents', 'AG-0932'], ['Événements', 'AG-0930'], ['Support des membres', 'AG-0933']], 'public-associatif'],
+  [/bailleur/i, [['Relation locataires', 'AG-0467'], ['Gestion locative', 'AG-0459'], ['Réclamations locataires', 'AG-0847'], ['Attribution — qualification des dossiers', 'AG-0832']], 'public-associatif'],
+  [/enseignement sup/i, [['Inscriptions', 'AG-0644'], ['Vie étudiante', 'AG-0643'], ['Examens et certifications', 'AG-0642'], ['Conception des cours', 'AG-0627']], 'public-associatif'],
+  [/enseignement|scolaire/i, [['Assistant pédagogique', 'AG-0626'], ['Préparation des cours', 'AG-0632'], ['Inscriptions', 'AG-0644'], ['Évaluations', 'AG-0641']], 'public-associatif'],
+  [/sant[ée]/i, [['Admissions — dossier patient', 'AG-0681'], ['Planning des rendez-vous et des soins', 'AG-0695'], ['Facturation des soins', 'AG-0683'], ['Codage', 'AG-0685']], 'public-associatif'],
   [/plomb|chauff|[ée]lectric|peintur|carrel|couvert|couvreur|serrur|vitr|pl[aâ]tr|plaqu|climati|isolation|menuiserie de pose|fa[çc]ade|ramonage|cl[ôo]ture|piscine/i, [['Deviseur', 'AG-0741'], ['Métreur', 'AG-0704'], ['Planning des chantiers', 'AG-0742'], ['Suivi des interventions', 'AG-0747'], ['Achats chantier', 'AG-0707'], ['Service après-vente', 'AG-0743']], 'batiment'],
   [/boulang|p[âa]tiss|boucher|charcut|chocolat|confiser|fromag|glaci|biscuit/i, [['Devis commandes (événements, entreprises)', 'AG-0741'], ['Planning de production du laboratoire', 'AG-1003'], ['Assistant de production', 'AG-1001'], ['Approvisionnement matières', 'AG-1012'], ['Traçabilité et hygiène', 'AG-1008'], ['Stocks', 'AG-0545']]],
   [/diagnostic/i, [['Deviseur', 'AG-0741'], ['Planning des rendez-vous de diagnostic', 'AG-0742'], ['Suivi des interventions', 'AG-0747']], 'batiment'],
