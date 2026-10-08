@@ -8,12 +8,12 @@
 // module is merged, from PRIX_PROVISOIRES below, and the project says so
 // (`prix_provisoires: true`).
 
-import { existsSync } from 'node:fs';
 import type { Estimation, MembreEquipe } from '../modele.ts';
 import type { Stockage } from '../stockage.ts';
 import { coutApiMensuel, type PaquetEco } from '../../dimensionnement/economie.ts';
 import { REPARTITIONS, REPARTITION_DEFAUT, INTENSITES, INTENSITE_DEFAUT } from '../../dimensionnement/intensite.ts';
 import { ficheDe } from './equipes.ts';
+import { prixDuPlan } from '../tarifs/donnees.ts';
 
 /** §4/§20: a Box carries at most this many agents; beyond, several Boxes. */
 export const AGENTS_PAR_BOX_MAX = 20;
@@ -43,27 +43,8 @@ export const PRIX_PROVISOIRES: Readonly<Record<string, number>> = {
 
 export type SourcePrix = { prix: (planId: string) => number; provisoire: boolean };
 
-const MOTEUR_TARIFS = new URL('../tarifs/donnees.ts', import.meta.url);
-
-/** Prices at a date: the tarifs engine when present, the provisional constant otherwise. */
+/** Prices at a date, from the tarifs engine (merged on 08/10/2026: the provisional constant is no longer read). */
 export async function sourcePrix(stockage: Stockage, date: string): Promise<SourcePrix> {
-  if (!existsSync(MOTEUR_TARIFS)) {
-    return {
-      provisoire: true,
-      prix: (id) => {
-        const p = PRIX_PROVISOIRES[id];
-        if (p === undefined) throw new Error(`Aucun prix provisoire pour le plan ${id}.`);
-        return p;
-      },
-    };
-  }
-  const mod = (await import(MOTEUR_TARIFS.href)) as {
-    prixDuPlan?: (s: Stockage, planId: string, date: string, region?: string) => { base_price: number | null } | null;
-  };
-  if (typeof mod.prixDuPlan !== 'function') {
-    throw new Error("Le moteur de tarifs est présent mais n'expose pas prixDuPlan : le budget ne peut pas être calculé.");
-  }
-  const prixDuPlan = mod.prixDuPlan;
   return {
     provisoire: false,
     prix: (id) => {
@@ -83,13 +64,13 @@ export function boxPour(nombreAgents: number): number {
 const arrondi = (x: number) => Math.round(x);
 
 /** Monthly AI consumption of a team, from each package (all-API high end, hybrid low end). */
-export function consommationMensuelle(equipe: MembreEquipe[]): { min: number; max: number } {
+export async function consommationMensuelle(equipe: MembreEquipe[]): Promise<{ min: number; max: number }> {
   let toutApi = 0;
-  for (const m of equipe) toutApi += coutApiMensuel(ficheDe(m.agent_id) as unknown as PaquetEco).total;
+  for (const m of equipe) toutApi += coutApiMensuel((await ficheDe(m.agent_id)) as unknown as PaquetEco).total;
   return { min: toutApi * REPARTITIONS[REPARTITION_DEFAUT].partApi, max: toutApi };
 }
 
-export function budgetPhase(equipe: MembreEquipe[], duree: Estimation, prix: SourcePrix) {
+export async function budgetPhase(equipe: MembreEquipe[], duree: Estimation, prix: SourcePrix) {
   const nbBox = boxPour(equipe.length);
   const detail: string[] = [];
   let mensuel = 0;
@@ -115,7 +96,7 @@ export function budgetPhase(equipe: MembreEquipe[], duree: Estimation, prix: Sou
   const sourceHyp = prix.provisoire
     ? 'prix indicatifs de test du MASTER du 07/10/2026, provisoires tant que le moteur de tarifs n\'est pas branché'
     : 'prix en vigueur du moteur de tarifs, région FR';
-  const conso = consommationMensuelle(equipe);
+  const conso = await consommationMensuelle(equipe);
   const total_ht: Estimation = {
     nature: 'estimation',
     min: arrondi(mensuel * duree.min),

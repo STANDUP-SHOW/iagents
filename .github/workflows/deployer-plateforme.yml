@@ -1,0 +1,122 @@
+name: Mise en ligne de la plateforme
+
+# La plateforme (licences des Box, catalogue commun, standard téléphonique)
+# tourne chez Cloudflare depuis le choix de max du 08/10/2026 : son hébergement
+# OVH est mutualisé, et il a un compte Cloudflare. Ce flux la met en ligne à
+# chaque fusion dans main qui la touche, ou à la demande.
+#
+# Ce que max pose lui-même, une fois, dans les secrets du dépôt GitHub
+# (Settings > Secrets and variables > Actions) :
+#   CLOUDFLARE_API_TOKEN     jeton créé chez Cloudflare avec le modèle
+#                            « Edit Cloudflare Workers » ;
+#   PLATEFORME_ADMIN_SECRET  le mot de passe du back-office (24 caractères au
+#                            moins), le même qu'il tapera dans le back-office.
+# Tant que le jeton manque, le flux le dit et ne fait rien échouer.
+# CLOUDFLARE_ACCOUNT_ID n'est utile que si le jeton ouvre plusieurs comptes.
+#
+# La clé qui signe les licences n'est tapée par personne : la première mise en
+# ligne la tire ici, la pose directement en secret chez Cloudflare et ne
+# l'imprime jamais. Elle n'est plus jamais retirée ensuite — en changer
+# invaliderait toutes les licences déjà émises. La clé publique se lit à
+# GET /controle/cle-publique.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'plateforme/**'
+      - 'agents/**'
+      - 'socle/**'
+      - 'catalogue/**'
+      - 'dimensionnement/**'
+      - '.github/workflows/deployer-plateforme.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deployer-plateforme
+  cancel-in-progress: false
+
+jobs:
+  deployer:
+    name: Plateforme chez Cloudflare
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    defaults:
+      run:
+        working-directory: plateforme/cloudflare
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Le jeton Cloudflare est-il posé ?
+        id: jeton
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::notice title=Plateforme non mise en ligne::Le secret CLOUDFLARE_API_TOKEN n'est pas posé dans le dépôt : rien n'a été envoyé chez Cloudflare."
+            echo "pret=non" >> "$GITHUB_OUTPUT"
+          else
+            echo "pret=oui" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Installer
+        if: steps.jeton.outputs.pret == 'oui'
+        run: npm ci --no-audit --no-fund
+
+      # Rien ne part sans que le banc ait vu la plateforme tourner dans workerd.
+      - name: Banc dans le moteur de Cloudflare
+        if: steps.jeton.outputs.pret == 'oui'
+        run: npm run banc
+
+      - name: Mettre en ligne
+        id: deploiement
+        if: steps.jeton.outputs.pret == 'oui'
+        run: |
+          npm run deployer 2>&1 | tee sortie.txt
+          adresse=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' sortie.txt | head -n1)
+          if [ -z "$adresse" ]; then
+            echo "::error::Cloudflare n'a pas rendu d'adresse workers.dev. Si le compte n'a jamais servi aux Workers, il faut d'abord choisir un sous-domaine dans le tableau de bord (Workers & Pages)."
+            exit 1
+          fi
+          echo "adresse=$adresse" >> "$GITHUB_OUTPUT"
+
+      - name: Poser les secrets de la plateforme
+        if: steps.jeton.outputs.pret == 'oui'
+        env:
+          PLATEFORME_ADMIN_SECRET: ${{ secrets.PLATEFORME_ADMIN_SECRET }}
+          ADRESSE: ${{ steps.deploiement.outputs.adresse }}
+        run: |
+          poses=$(npx wrangler secret list --format json 2>/dev/null || echo '[]')
+          a() { echo "$poses" | grep -q "\"$1\""; }
+          if ! a PLATEFORME_CLE_SIGNATURE; then
+            node -e "const {generateKeyPairSync}=require('node:crypto');process.stdout.write(generateKeyPairSync('ed25519').privateKey.export({type:'pkcs8',format:'pem'}).toString())" \
+              | npx wrangler secret put PLATEFORME_CLE_SIGNATURE > /dev/null
+            echo "::notice::Clé de signature des licences tirée et posée chez Cloudflare (jamais imprimée)."
+          fi
+          if [ -n "$PLATEFORME_ADMIN_SECRET" ]; then
+            printf '%s' "$PLATEFORME_ADMIN_SECRET" | npx wrangler secret put PLATEFORME_ADMIN_SECRET > /dev/null
+          elif ! a PLATEFORME_ADMIN_SECRET; then
+            echo "::warning title=Back-office fermé::PLATEFORME_ADMIN_SECRET n'est pas posé : la plateforme répond 503 à tout tant qu'il manque."
+          fi
+          # Twilio signs its webhooks over this address; the bridge sends the operator here.
+          if ! a VOIX_URL_PUBLIQUE; then
+            printf '%s' "$ADRESSE" | npx wrangler secret put VOIX_URL_PUBLIQUE > /dev/null
+          fi
+
+      - name: La plateforme répond-elle ?
+        if: steps.jeton.outputs.pret == 'oui'
+        env:
+          ADRESSE: ${{ steps.deploiement.outputs.adresse }}
+        run: |
+          for i in 1 2 3 4 5 6; do
+            code=$(curl -s -o reponse.txt -w '%{http_code}' "$ADRESSE/")
+            if [ "$code" = 200 ] && grep -q 'plateforme iagent' reponse.txt; then echo "En ligne : $ADRESSE"; exit 0; fi
+            sleep 5
+          done
+          echo "::error::$ADRESSE répond $code : $(head -c 300 reponse.txt)"
+          exit 1

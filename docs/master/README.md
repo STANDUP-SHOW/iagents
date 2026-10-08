@@ -11,12 +11,12 @@ et ce qui ne peut se faire qu'avec max (un compte, un secret, un achat).
 | 2-3 | Offre et site Business | 11 pages du plan site (PR #38) | pages manquantes confiées au fil du site | fusion de #38 |
 | 4 | Box | offre louée 69/89 € (PR #36, #38) | identité, santé, licences de la Box (`plateforme/controle`) | matériel, achat |
 | 5 | Moteur de tarifs | `tarifs.json` (une version, un pays) | plans versionnés par pays, devise, fiscalité, dates (`plateforme/tarifs`) | prix définitifs |
-| 6 | Protection, Control Plane | rien | Control Plane : provisioning, entitlements, révocation, mises à jour, télémétrie, audit ; fiches signées par le jeton de licence v2 (empreinte de chaque fiche) ; Skill Packs signés à la validation et chiffrés pour une seule Box (X25519, HKDF, AES-256-GCM) ; jeton à renouveler toutes les 24 h, grâce hors ligne de 72 h (plateforme injoignable seulement), révocation effective au renouvellement suivant (voir « §6 : fait et reste ») | hébergement, `PLATEFORME_CLE_SIGNATURE`, choix de l'OS de la Box, matériel (TPM, Secure Boot, disque chiffré, mTLS) |
+| 6 | Protection, Control Plane | rien | Control Plane : provisioning, entitlements, révocation, mises à jour, télémétrie, audit ; fiches signées par le jeton de licence v2 (empreinte de chaque fiche) ; Skill Packs signés à la validation et chiffrés pour une seule Box (X25519, HKDF, AES-256-GCM) ; jeton à renouveler toutes les 24 h, grâce hors ligne de 72 h (plateforme injoignable seulement), révocation effective au renouvellement suivant (voir « §6 : fait et reste ») | jeton Cloudflare et mot de passe du back-office (voir « Hébergement »), choix de l'OS de la Box, matériel (TPM, Secure Boot, disque chiffré, mTLS) |
 | 7 | Skill Packs | rien | registre versionné, signé, circuit de revue, opt-in d'anonymisation | — |
 | 8 | 180 000 profils | 182 490 postes comptés (PR #35) | compteur servi par la plateforme | — |
 | 9 | iAgent Create | équipe levée de fonds (PR #32) | opportunités du jour, étude à trois scénarios, entreprise composée en 5 phases (`plateforme/create`) | — |
 | 10 | Voice multi-moteur | voix locale Piper/whisper | abstraction VoiceProvider + registre de voix (Gemini Live, ElevenLabs, local) | clés des moteurs |
-| 11-12 | Téléphonie, standard, centre d'appels | rien | PhoneProvider (Telnyx, Twilio, SIP), standard, extensions, transferts, prise en main humaine, files, campagnes avec consentement (`plateforme/voix`) | compte opérateur, numéros |
+| 11-12 | Téléphonie, standard, centre d'appels | rien | PhoneProvider (Telnyx, Twilio, SIP), standard, extensions, transferts, prise en main humaine, files, campagnes avec consentement (`plateforme/voix`) ; pont média : l'agent tient l'appel au téléphone (voir « §11 : le pont média ») | compte opérateur, numéros, `VOIX_URL_PUBLIQUE` |
 | 13 | iAgent Home | rien | site `home/` séparé, charte claire | domaine home.iagent.agency |
 | 14 | Modules du Desktop | tableau de bord, embauche, équipe, machine | Workforce, Voice, Create, Box, Validations, Consommation, Sécurité | — |
 | 15 | Back-office | rien | `back-office/` sur les routes `admin` de la plateforme | — |
@@ -60,6 +60,29 @@ Reste au matériel et à l'hébergement (rien de ceci n'est fait ni simulé) :
 - la clé `PLATEFORME_CLE_SIGNATURE`, à générer et garder hors du dépôt (un HSM
   ou le coffre de l'hébergeur la rendrait non exportable côté plateforme aussi).
 
+## §11 : le pont média
+
+Un agent décroche vraiment (`plateforme/voix/pont.ts`, `audio.ts`, `plateforme/ws.ts`).
+Quand le standard passe l'appel à un agent, la plateforme émet une adresse de
+flux à usage unique (jeton de 24 octets, seule son empreinte est gardée, perdue
+au bout de deux minutes) et demande à l'opérateur de l'ouvrir : `<Connect><Stream>`
+dans la réponse au webhook Twilio, `streaming_start` chez Telnyx. Le son de la
+ligne (μ-law 8 kHz) part au moteur de voix en PCM 16 kHz, la voix revient en
+μ-law. Le pont découpe les tours de l'appelant, coupe l'agent quand on lui parle
+par-dessus, fait dire par l'agent les phrases du standard, passe la ligne d'un
+agent à l'autre, se tait pendant qu'un humain est prévenu, et compte chaque
+session de voix dans le coût de l'appel.
+
+Le pont n'est proposé que s'il peut marcher : `VOIX_URL_PUBLIQUE` posée, un
+opérateur qui envoie le son (Twilio, Telnyx ; pas encore la passerelle SIP) et un
+moteur de voix du téléphone avec sa clé. Sinon le standard passe l'appel à un
+humain, à la messagerie ou au rappel, comme avant. Format des messages relu chez
+Twilio et Telnyx le 08/10/2026 ; aucun appel réel n'a encore été passé.
+
+Reste : remettre dans l'ordre les trames que Telnyx dit pouvoir livrer en
+désordre ; la messagerie vocale pendant un appel tenu par un agent ; le flux de
+la passerelle SIP.
+
 ## Règles du socle
 
 - Une entité se définit dans `plateforme/modele.ts` et nulle part ailleurs.
@@ -69,3 +92,31 @@ Reste au matériel et à l'hébergement (rien de ceci n'est fait ni simulé) :
 - Trois accès : `public`, `admin` (back-office), `box` (requête signée Ed25519
   par la Box). Un fournisseur extérieur (téléphonie, voix) qui n'a pas de clé
   posée refuse en disant ce qui manque, il ne fait jamais semblant d'avoir agi.
+
+## Hébergement : Cloudflare (choix de max, 08/10/2026)
+
+L'hébergement OVH de max est mutualisé et ne fait tourner aucun programme en
+continu ; il a un compte Cloudflare. La plateforme y tourne dans un Worker
+(`plateforme/cloudflare/`), avec un Durable Object unique qui tient l'état,
+comme le processus Node unique. Deux portes, un seul cœur : `http.ts`
+authentifie et choisit la route pour `serveur.ts` (Node) comme pour
+`cloudflare/worker.ts`. Ce qui diffère est le stockage (une clé par document),
+la lecture des fiches (fichiers statiques non servis au public) et le flux
+téléphonique (`WebSocketPair`).
+
+Constaté dans workerd par `npm run controle-cloudflare` (aussi en intégration
+continue) : licences de bout en bout avec l'empreinte des octets exacts de la
+fiche, tarifs identiques à Node, appel Twilio signé dont le flux s'ouvre puis
+passe à un humain quand le moteur refuse, état intact après redémarrage.
+Paquet de 300 Ko compressés (limite gratuite : 3 Mo).
+
+Mise en ligne : `.github/workflows/deployer-plateforme.yml`, à chaque fusion
+dans `main` qui touche la plateforme. Il attend de max deux secrets du dépôt,
+`CLOUDFLARE_API_TOKEN` et `PLATEFORME_ADMIN_SECRET` ; la clé qui signe les
+licences est tirée par le flux et posée chez Cloudflare sans être imprimée.
+
+Pas constaté : rien n'est encore en ligne chez Cloudflare ; aucune session
+Gemini n'a été ouverte depuis workerd (la session n'atteint pas Google) ; le
+pont téléphonique sur l'offre gratuite (10 ms de calcul par événement) n'a pas
+été mesuré, l'offre à 5 $ par mois lève cette limite si elle gêne.
+

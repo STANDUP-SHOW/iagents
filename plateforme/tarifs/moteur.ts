@@ -400,6 +400,20 @@ export function exportSite(versions: PlanTarif[], fichier: Pick<FichierPlans, 's
   const commander = lire('task-commander');
   const pack = (p: PlanLu) => {
     const tete = { id: p.plan_id.replace(/^pack-/, ''), nom: p.nom, contenu: p.description };
+    // A pack worth the sum of its parts (no forced price) is published as its parts:
+    // the site adds them itself, so the two can never show different totals.
+    if (p.composition && p.prix_force?.montant == null) {
+      const agents: Record<string, number> = {};
+      const boxes: string[] = [];
+      for (const l of p.composition) {
+        const c = lire(l.plan_id);
+        if (c.famille === 'box' && l.quantite === 1) boxes.push(c.plan_id);
+        else if (c.famille === 'agent') agents[c.plan_id.replace(/^agent-/, '')] = (agents[c.plan_id.replace(/^agent-/, '')] ?? 0) + l.quantite;
+        else throw new Error(`Le site ne sait pas additionner ${l.quantite} × ${l.plan_id} dans le pack ${p.plan_id}.`);
+      }
+      if (boxes.length !== 1) throw new Error(`Le pack ${p.plan_id} doit compter exactement une Box pour que le site l'additionne.`);
+      return { ...tete, somme: { box: boxes[0], agents }, statut: statut(p) };
+    }
     switch (p.forme_site) {
       case 'environ': return { ...tete, mensuel: p.base_price, environ: true, statut: statut(p) };
       case 'fourchette': return { ...tete, mensuelMin: p.base_price, mensuelMax: p.base_price_max, environ: true, statut: statut(p) };

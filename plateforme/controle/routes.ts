@@ -6,11 +6,12 @@
 // in audit.ts. This file validates input, applies them, and answers.
 
 import { createHash, createPublicKey, randomBytes, randomUUID } from 'node:crypto';
-import { ok, refus, type Contexte, type Reponse, type Route } from '../serveur.ts';
+import { ok, refus, type Contexte, type Reponse, type Route } from '../http.ts';
 import type { Box, Entitlement, SkillPack, Tenant } from '../modele.ts';
 import type { Stockage } from '../stockage.ts';
 import { ACTEUR_ADMIN, acteurBox, auditer } from './audit.ts';
 import { refusDonneeClient } from './detecteur.ts';
+import { depot } from '../depot.ts';
 import { cleDeSignature, DUREE_JETON_MS, empreinteCle, empreinteFiche, GRACE_JETON_MS, signerJetonLicence, type ContenuJeton } from './jeton.ts';
 import { chiffrerSkill, clePubliqueX25519, signerSkill } from './scellement.ts';
 import {
@@ -92,6 +93,9 @@ function date(c: Record<string, unknown>, champ: string): string {
 /** Wraps a handler so a `Refus` becomes its status; anything else is the server's 400. */
 const traiter = (f: (ctx: Contexte) => Reponse) => (ctx: Contexte): Reponse => {
   try { return f(ctx); } catch (e) { if (e instanceof Refus) return refus(e.statut, e.message); throw e; }
+};
+const traiterAsync = (f: (ctx: Contexte) => Promise<Reponse>) => async (ctx: Contexte): Promise<Reponse> => {
+  try { return await f(ctx); } catch (e) { if (e instanceof Refus) return refus(e.statut, e.message); throw e; }
 };
 
 const boxOuRien = (s: Stockage, id: string): Box => s.lire<Box>('boxes', id) ?? non(404, "Cette Box n'existe pas.");
@@ -329,7 +333,7 @@ export const routes: Route[] = [
   // What a Box asks for itself
   {
     methode: 'GET', chemin: '/controle/box/droits', acces: 'box',
-    traiter: traiter(({ stockage, box, maintenant }) => {
+    traiter: traiterAsync(async ({ stockage, box, maintenant }) => {
       const b = box!;
       if (b.statut !== 'active' || !b.tenant_id) return refus(403, `Cette Box est « ${b.statut} » : elle n'a aucun droit tant qu'elle n'est pas activée.`);
       const cle = cleDeSignature();
@@ -337,11 +341,11 @@ export const routes: Route[] = [
       const now = maintenant();
       const droits = droitsActifs(stockage, b, now);
       // The sheet is hashed now, from its exact bytes: the signed token signs the sheet.
-      const droitsJeton = droits.map((e) => {
+      const droitsJeton = await Promise.all(droits.map(async (e) => {
         const chemin = cheminFiche(e.agent_template_id);
         if (!chemin) non(409, `La fiche de ${e.agent_template_id} est introuvable sur la plateforme : aucun jeton n'est émis tant qu'elle manque.`);
-        return { id: e.id, agent_template_id: e.agent_template_id, specialisation_id: e.specialisation_id, licence: e.licence, fin: e.fin, empreinte_fiche: empreinteFiche(chemin!) };
-      });
+        return { id: e.id, agent_template_id: e.agent_template_id, specialisation_id: e.specialisation_id, licence: e.licence, fin: e.fin, empreinte_fiche: empreinteFiche(await depot().lire(chemin!)) };
+      }));
       const contenu: ContenuJeton = {
         v: 2, device_id: b.device_id, tenant_id: b.tenant_id, cle_box: empreinteCle(b.identite_publique),
         emis_le: now.toISOString(), expire_le: new Date(now.getTime() + DUREE_JETON_MS).toISOString(),

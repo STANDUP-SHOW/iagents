@@ -1,0 +1,24 @@
+// La plateforme iAgent chez Cloudflare (voir worker.ts). Les secrets
+// (PLATEFORME_ADMIN_SECRET, PLATEFORME_CLE_SIGNATURE, clés des moteurs de voix,
+// opérateurs téléphoniques) ne s'écrivent JAMAIS ici : max les pose lui-même
+// dans le tableau de bord Cloudflare (Worker > Paramètres > Variables et secrets).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "iagent-plateforme",
+  "main": "worker.ts",
+  "compatibility_date": "2026-09-01",
+  // Buffer, node:crypto, process.env (rempli par les variables et secrets du Worker).
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".fichiers",
+    "binding": "ASSETS",
+    // Le Worker répond à tout : les fiches ne sont lues que par la plateforme, jamais servies telles quelles.
+    "run_worker_first": true
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "PLATEFORME", "class_name": "Plateforme" }]
+  },
+  // Stockage SQLite : le seul que l'offre gratuite de Cloudflare propose aux Durable Objects.
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Plateforme"] }],
+  "observability": { "enabled": true }
+}

@@ -1,5 +1,5 @@
 import { COMMANDEUR, FINANCEMENT } from '../../../dimensionnement/offre-box.ts';
-import { INSTALLATIONS, euros } from '../data/offres.js';
+import { INSTALLATIONS, LOCATION_BOX, euros } from '../data/offres.js';
 
 const fondChoisi = 'border-neon-400 shadow-neon';
 
@@ -17,7 +17,12 @@ export function CarteInstallation({ o, choisie, onChoisir, compact = false }) {
           <p className="text-sm text-nuit-200">Aucun achat : vous payez vos agents à l'usage.</p>
         ) : (
           <div className="space-y-2">
-            {cout.lignes.map((l) => (
+            {cout.lignes.map((l) => l.id === LOCATION_BOX.id ? (
+              <div key={l.id} className="rounded-lg bg-nuit-900 border border-nuit-700 p-2">
+                <p className="text-lg font-bold text-neon-300">Location</p>
+                <p className="text-xs text-nuit-200">{LOCATION_BOX.phrase}</p>
+              </div>
+            ) : (
               <div key={l.id} className="rounded-lg bg-nuit-900 border border-nuit-700 p-2">
                 {cout.lignes.length > 1 && <p className="text-xs text-rose-300 font-semibold">{l.nom}</p>}
                 <p className="text-lg font-bold text-neon-300">
@@ -53,18 +58,18 @@ export default function IAgentBox({ installation = null, onChoisir }) {
       <div className="card border-2 border-neon-400/60">
         <h2 className="font-display text-2xl text-white mb-1">iAgent Box</h2>
         <p className="text-nuit-300">
-          Choisissez d'abord votre installation : c'est elle qui dit, pour chaque agent, ce qu'il coûte chez vous contre ce qu'il coûte par API.
-          Toutes les machines s'achètent ou se financent sur {FINANCEMENT.mois} mois.
+          Choisissez d'abord votre installation : sans machine, ou avec la Box, louée et maintenue par iAgent.
+          Pour une forte puissance locale, l'infrastructure se conçoit sur devis.
         </p>
         <div className="grid md:grid-cols-2 gap-4 mt-4">
           <div className="rounded-lg bg-nuit-900 border border-nuit-600 p-4">
             <p className="text-rose-300 font-semibold">La Box Commandeur</p>
             <p className="text-sm text-nuit-300">Un poste de commande dédié à vos agents, une rallonge de votre bureau. Elle ne fait pas tourner d'agent à elle seule.</p>
           </div>
-          <div className="rounded-lg bg-nuit-900 border border-nuit-600 p-4">
-            <p className="text-rose-300 font-semibold">La puissance</p>
-            <p className="text-sm text-nuit-300">La Box Max porte la première puissance dans un seul boîtier ; au-delà, trois machines de calcul, chacune commandée par sa Box Commandeur.</p>
-          </div>
+          <a href="/local-ai" className="rounded-lg bg-nuit-900 border border-nuit-600 p-4 block hover:border-neon-400">
+            <p className="text-rose-300 font-semibold">La puissance locale</p>
+            <p className="text-sm text-nuit-300">Des agents nombreux, des images, des données sensibles : l'infrastructure se dimensionne avec vous, sur devis.</p>
+          </a>
         </div>
       </div>
 

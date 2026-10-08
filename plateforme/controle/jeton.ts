@@ -20,7 +20,6 @@
 // reuse it verbatim.
 
 import { createHash, createPrivateKey, createPublicKey, sign, verify, type KeyObject } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 
 /** Renewal is expected 24 h after issue (`expire_le`). */
 export const DUREE_JETON_MS = 24 * 60 * 60 * 1000;
@@ -67,9 +66,9 @@ export function empreinteCle(clePubliquePem: string): string {
   return createHash('sha256').update(der).digest('hex');
 }
 
-/** SHA-256 (hex) of the exact bytes of an agent sheet: the only place this hash is computed. */
-export function empreinteFiche(chemin: string): string {
-  return createHash('sha256').update(readFileSync(chemin)).digest('hex');
+/** SHA-256 (hex) of the exact bytes of an agent sheet: the only place this hash is computed. Bytes, never a re-serialised JSON. */
+export function empreinteFiche(octets: Uint8Array): string {
+  return createHash('sha256').update(octets).digest('hex');
 }
 
 /** Environment PEMs often arrive with literal "\n": accept both. */

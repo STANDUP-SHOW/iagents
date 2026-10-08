@@ -1,5 +1,5 @@
 import donnees from 'virtual:accueil';
-import { Logo, TELECHARGEMENT, LIENS } from '../composants.jsx';
+import { Logo, RECRUTER, LIENS } from '../composants.jsx';
 import { suivre } from '../analytique.js';
 
 /** Plain links a crawler can follow into the catalogue's static pages. */
@@ -7,19 +7,33 @@ export default function Footer() {
   const { activitesPopulaires, vitrine, compteurs } = donnees;
   const colonnes = [
     { titre: 'Produit', liens: [
-      { nom: 'Desktop Commander', href: '#desktop-commander' },
-      { nom: 'iAgent Box', href: '#box' },
-      { nom: 'Sécurité et confiance', href: '#confiance' },
-      { nom: 'Télécharger pour Windows', href: TELECHARGEMENT },
+      { nom: 'iAgent Workforce', href: '/workforce' },
+      { nom: 'iAgent Box', href: '/box' },
+      { nom: 'Desktop Commander', href: '/#desktop-commander' },
+      { nom: 'Comment ça marche', href: '/how-it-works' },
+      { nom: 'Tarifs', href: '/pricing' },
+      { nom: 'Pourquoi louer', href: '/why-rent' },
+      { nom: 'iAgent Voice', href: '/voice' },
+      { nom: 'Standard téléphonique', href: '/standard-telephonique' },
+      { nom: 'Support Center', href: '/support-center' },
+      { nom: 'Sales Center', href: '/sales-center' },
+      { nom: 'Recruter un agent', href: RECRUTER },
     ] },
     { titre: 'Agents', liens: [
       { nom: `Les ${compteurs.fiches.toLocaleString('fr-FR')} métiers`, href: LIENS.catalogue },
       ...vitrine.slice(0, 5).map((f) => ({ nom: f.metier, href: f.url })),
     ] },
-    { titre: 'Par activité', liens: activitesPopulaires.map((a) => ({ nom: a.nom, href: a.url })) },
+    { titre: 'Par activité', liens: [...activitesPopulaires.map((a) => ({ nom: a.nom, href: a.url })), { nom: 'Toutes les activités', href: '/activites' }, { nom: 'Tous les secteurs', href: '/secteurs' }] },
     { titre: 'Entreprise', liens: [
-      { nom: 'Créer votre entreprise', href: LIENS.entreprise },
-      { nom: 'Équiper votre entreprise', href: LIENS.box },
+      { nom: 'Créer votre entreprise', href: '/create' },
+      { nom: 'Opportunités', href: '/opportunities' },
+      { nom: 'iAgent Enterprise', href: '/enterprise' },
+      { nom: 'IA locale et hybride', href: '/local-ai' },
+      { nom: 'Sécurité et contrôle', href: '/security' },
+      { nom: 'Évolution des agents', href: '/skills' },
+      { nom: 'iAgent inside iAgent', href: '/iagent-inside-iagent' },
+      { nom: 'Questions fréquentes', href: '/faq' },
+      { nom: 'Contact', href: '/contact' },
     ] },
   ];
 
@@ -32,7 +46,7 @@ export default function Footer() {
         </div>
         {colonnes.map((c) => (
           <nav key={c.titre} aria-label={c.titre}>
-            <p className="font-[Orbitron] text-[0.7rem] tracking-[0.2em] uppercase text-[var(--texte-pale)]">{c.titre}</p>
+            <p className="font-[Montserrat] text-[0.7rem] tracking-[0.2em] uppercase text-[var(--texte-pale)]">{c.titre}</p>
             <ul className="mt-4 flex flex-col gap-2.5">
               {c.liens.filter((l) => l.href).map((l) => (
                 <li key={l.href}>

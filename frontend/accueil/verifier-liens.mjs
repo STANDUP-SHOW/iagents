@@ -5,21 +5,26 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { PAGES } from '../src/pages/site.js';
+
 const DIST = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
-const html = readFileSync(join(DIST, 'index.html'), 'utf8');
-const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
+// The home page and the offer pages of the site plan, which all link to each other.
 const morts = [];
+for (const page of ['index', ...PAGES.map((p) => p.nom)]) {
+const html = readFileSync(join(DIST, `${page}.html`), 'utf8');
+const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
 for (const [, brut] of html.matchAll(/href="([^"]+)"/g)) {
   const href = brut.replace(/&amp;/g, '&');
   if (/^(https?:|mailto:|tel:)/.test(href)) continue;
-  if (href.startsWith('#')) { if (href.length > 1 && !ids.has(href.slice(1))) morts.push(href); continue; }
+  if (href.startsWith('#')) { if (href.length > 1 && !ids.has(href.slice(1))) morts.push(`${page} → ${href}`); continue; }
   const chemin = decodeURIComponent(href.split(/[?#]/)[0]);
   if (chemin === '/') continue;
   const candidats = [join(DIST, chemin), join(DIST, chemin + '.html'), join(DIST, chemin, 'index.html')];
-  if (!candidats.some((c) => existsSync(c) && !c.endsWith('/'))) morts.push(href);
+  if (!candidats.some((c) => existsSync(c) && !c.endsWith('/'))) morts.push(`${page} → ${href}`);
+}
 }
 if (morts.length) {
   console.error(`accueil : ${morts.length} lien(s) sans page :\n  ${[...new Set(morts)].join('\n  ')}`);
   process.exit(1);
 }
-console.log('accueil : tous les liens internes mènent à une page construite');
+console.log(`accueil et ${PAGES.length} pages de l'offre : tous les liens internes mènent à une page construite`);

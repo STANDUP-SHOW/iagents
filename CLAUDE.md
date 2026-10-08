@@ -835,6 +835,16 @@ par WhatsApp et email.
   `ggml-small-q5_1.bin` (190 Mo) et non `medium` (1,5 Go) : c'est le premier
   contact du client avec le produit. Aucune variante `-fr` n'existe chez
   whisper.cpp, vérifié à son API le 24/09.
+- **La plateforme a deux portes et un seul cœur** (08/10/2026). max a choisi
+  Cloudflare : son OVH est mutualisé. `plateforme/http.ts` authentifie et choisit
+  la route pour `serveur.ts` (Node) comme pour `plateforme/cloudflare/worker.ts` ;
+  un refus écrit dans une seule porte serait une porte ouverte dans l'autre.
+  Chez Cloudflare il n'y a pas de disque : les fiches se lisent par `depot.ts`
+  (fichiers statiques, jamais servis au public), les petits catalogues sont
+  importés en JSON, et rien ne doit lire un fichier au chargement d'un module
+  (`fautesDesPhases` le faisait : le Worker ne démarrait pas). Le WebSocket de
+  Cloudflare n'a pas de `onopen`/`onmessage` : `addEventListener` partout.
+  `npm run controle-cloudflare` lance la plateforme dans workerd.
 - **Pas de connexion automatique aux comptes du client, pas de clic « Publier »
   sans validation, pas de contournement anti-robot.** Mêmes règles que
   DropShipPro : l'agent navigue avec les sessions ouvertes du client, remplit,
