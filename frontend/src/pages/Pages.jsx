@@ -200,6 +200,7 @@ function CommentCaMarche() {
       <Tete surtitre="Comment ça marche" titre={<>Du recrutement<br /><span className="mq-cyan">au travail.</span></>}
         texte="Vous n'avez rien à paramétrer : vous dites ce que vous voulez accomplir, vous recrutez, et l'agent apprend votre entreprise en conversation.">
         <Bouton href={LIENS.catalogue} evenement="catalog_click">Explorer les agents</Bouton>
+        <Bouton href="/contact" variante="contour-cyan">Parler à un conseiller</Bouton>
       </Tete>
       <Bande surtitre="Le parcours" titre="Sept étapes, dont une seule technique : brancher">
         <Etapes items={[

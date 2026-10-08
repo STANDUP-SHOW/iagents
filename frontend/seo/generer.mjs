@@ -137,7 +137,7 @@ main p{color:var(--doux)}main p a{text-decoration:none;border-bottom:1px solid r
 .suite{margin-top:12px}.suite summary{cursor:pointer;color:var(--cyan);font-weight:600;margin-bottom:12px}
 @media (max-width:1180px){.menu{display:none}.tete .bouton-degrade{display:none}.mobile{display:block}}
 @media (max-width:820px){.heros.avec-portrait{grid-template-columns:1fr}.heros.avec-portrait .portrait{max-width:220px;order:-1}.pied-grille{grid-template-columns:1fr 1fr}.retour{margin-left:0}}
-@media (max-width:480px){main ul{grid-template-columns:1fr}.pied-grille{grid-template-columns:1fr}.appel{padding:28px 22px}}`;
+@media (max-width:480px){.heros.avec-portrait .portrait{max-width:140px}main ul{grid-template-columns:1fr}.pied-grille{grid-template-columns:1fr}.appel{padding:28px 22px}}`;
 
 const liens = (items) => items.map(([t, u]) => `<a href="${u}">${echapper(t)}</a>`).join('');
 

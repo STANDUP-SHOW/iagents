@@ -140,8 +140,15 @@ for (const page of PAGES) {
   if (!reconnues.length) echoue('« boulangerie » ne reconnaît aucune activité');
   else ok(`« boulangerie » → ${reconnues[0].nom}`);
   const html = renderToString(<CreezEntreprise ideeInitiale="ouvrir une boulangerie bio" />);
-  if (!html.includes('Activité reconnue')) echoue("la page ne montre pas l'activité reconnue");
+  if (!html.includes('Votre activité') || !html.includes(reconnues[0].nom)) echoue("la page ne montre pas l'activité reconnue");
   else ok("la page montre l'activité reconnue");
+  // « J'ai une imprimerie et je veux trouver plus de clients » (max, 08/10) : la
+  // page propose d'abord des agents de l'imprimerie et de la prospection, pas
+  // un business plan à une entreprise qui existe.
+  const demande = renderToString(<CreezEntreprise ideeInitiale="J'ai une imprimerie et je veux trouver plus de clients" />);
+  if (!demande.includes('Pour votre demande') || !demande.includes('Graphiste de production') || !/prospection|Commercial/.test(demande)) echoue("une demande d'imprimeur n'appelle ni l'imprimerie ni la prospection");
+  else ok("une demande d'imprimeur propose ses métiers et la prospection");
+
   const avis = conseilPour([...CYCLE_1.flatMap((e) => e.agents), ...CYCLE_2]);
   if (!avis) echoue('le pack de création ne reçoit aucun conseil de machine');
   else ok(`le pack de création : ${avis.conseil.nom} conseillée`);

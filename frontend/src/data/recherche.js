@@ -6,7 +6,7 @@ import agents from './loader.js';
 import catalogue from '../../../catalogue/catalogue.json';
 import logicielsJson from '../../../catalogue/logiciels.json';
 import activitesJson from '../../../catalogue/activites.json';
-import { activitesReconnues, cerclesDeLActivite } from './activites-recherche.js';
+import { activitesReconnues, cerclesDeLActivite, estTransversal } from './activites-recherche.js';
 import { slugifier } from '../../seo/slug.mjs';
 
 const LOGICIELS = logicielsJson.logiciels;
@@ -93,6 +93,81 @@ function rangsParActivite(requete) {
     poser(transversaux, 100);
   }
   return rangs;
+}
+
+// What a visitor asks for in plain words (« trouver plus de clients ») and
+// the roots of the job titles that do it. Only the intentions a business
+// owner states first; everything else is matched on the words themselves.
+const INTENTIONS = [
+  [/client|vendre|vente|chiffre|prospect|commande|marche/, ['prospe', 'commer', 'acquis', 'vente', 'ventes']],
+  [/factur|impaye|relanc|paiement|tresor/, ['factur', 'recouv', 'tresor']],
+  [/compta|bilan|tva|depense/, ['compta']],
+  [/recrut|embauch|candidat|personnel|salari/, ['recrut', 'ressou', 'paie']],
+  [/reseau|instagram|facebook|linkedin|tiktok|visibil|notoriet|publicit/, ['commun', 'market', 'social', 'conten']],
+  [/devis/, ['devis']],
+  [/rendez|agenda|planning|reservation/, ['rendez', 'planni', 'reserv']],
+  [/mail|courrier|telephone|appel|accueil|secretar/, ['secret', 'assist', 'accuei']],
+  [/stock|fournisseur|achat|approvision/, ['achats', 'stock', 'fourni', 'approv']],
+  [/livraison|transport|tournee|logistique/, ['logist', 'transp', 'livrai']],
+  [/site|internet|web|referencement/, ['web', 'refere']],
+  [/\bavis\b|reputation|google/, ['commun', 'reputa', 'relati']],
+  [/developp|croissance|grandir|export/, ['prospe', 'commer', 'strate', 'busine', 'export']],
+  [/financ|subvention|levee|investiss|banque|pret/, ['financ', 'subven', 'invest']],
+];
+const MOTS_CREUX = new Set(['trouver', 'veux', 'voudrais', 'aimerais', 'faire', 'avoir', 'plus', 'entreprise', 'societe', 'besoin', 'aider', 'gerer', 'mieux', 'notre', 'votre',
+  'developper', 'internet', 'ouvrir', 'lancer', 'creer', 'temps', 'perds', 'croule', 'trois', 'quatre', 'plusieurs', 'beaucoup']);
+const racinesDe = (texte) => normaliser(texte).split(/[^a-z0-9]+/).filter((m) => m.length >= 5 && !MOTS_CREUX.has(m)).map((m) => m.slice(0, 6));
+const racinesDesNoms = new Map(agents.map((a) => [a.id, new Set(racinesDe(a.nom))]));
+const sansPluriel = (m) => m.replace(/s$/, '');
+const motsDesNoms = new Map(agents.map((a) => [a.id, new Set(normaliser(a.nom).split(/[^a-z0-9]+/).map(sansPluriel))]));
+// Every trade's own words: a « jardinage » or « restaurant » job is no answer
+// for a print shop, however well « clients » matches its title.
+const racinesDesMetiers = new Set(ACTIVITES.flatMap((a) => racinesDe([a.nom, ...(a.alias ?? [])].join(' '))));
+
+/**
+ * The agents a request in plain words calls for (« J'ai une imprimerie et je
+ * veux trouver plus de clients »): the jobs its intentions name, the jobs of
+ * the trade it names, and both first. What the home page's « Commencer »
+ * proposes, before any ready-made cycle.
+ */
+export function agentsPourDemande(idee, limite = 8) {
+  const texte = normaliser(idee);
+  const voulu = new Set(INTENTIONS.filter(([motif]) => motif.test(texte)).flatMap(([, r]) => r));
+  for (const r of racinesDe(idee)) voulu.add(r);
+  const dits = new Set(normaliser(idee).split(/[^a-z0-9]+/).filter((m) => m.length >= 5).map(sansPluriel));
+  const activites = activitesDeLaRecherche(idee);
+  const sesRacines = new Set(activites.flatMap((a) => racinesDe([a.nom, ...(a.alias ?? [])].join(' '))));
+  const proches = [];
+  const metier = new Map();
+  for (const activite of activites) {
+    const c = cerclesDeLActivite(activite, agents);
+    proches.push(...c.proches);
+    [...c.proches, ...c.outilles].forEach((f, i) => { if (!metier.has(f.id)) metier.set(f.id, 2 - i / 1000); });
+  }
+  const classes = agents
+    .map((a) => {
+      const noms = racinesDesNoms.get(a.id);
+      const intention = [...voulu].filter((r) => [...noms].some((n) => n.startsWith(r))).length;
+      const exact = [...motsDesNoms.get(a.id)].filter((m) => dits.has(m)).length;
+      const ailleurs = [...noms].some((n) => racinesDesMetiers.has(n) && !sesRacines.has(n) && ![...voulu].some((r) => n.startsWith(r)));
+      // A job written for another trade answers a request only when no trade
+      // was named: « facturation artisan » is not for an accounting firm.
+      const autreMetier = activites.length > 0 && !metier.has(a.id) && !estTransversal(a);
+      return { a, score: intention * 3 + exact * 2 + (metier.get(a.id) ?? 0) + (intention && metier.has(a.id) ? 4 : 0) - (ailleurs ? 6 : 0) - (autreMetier ? 4 : 0) };
+    })
+    .filter((x) => x.score >= 2)
+    .sort((x, y) => y.score - x.score);
+  // The trade's own closest jobs always make the team, then the best answers
+  // to the request, never more than three of one sector.
+  const choisis = [...new Set(proches.slice(0, 3).map((f) => f.id))];
+  const parSecteur = new Map();
+  for (const { a } of classes) {
+    if (choisis.length >= limite) break;
+    if (choisis.includes(a.id) || (parSecteur.get(a.secteur) ?? 0) >= 3) continue;
+    parSecteur.set(a.secteur, (parSecteur.get(a.secteur) ?? 0) + 1);
+    choisis.push(a.id);
+  }
+  return choisis;
 }
 
 /** The filters the library offers, each one a set of chosen values. */
