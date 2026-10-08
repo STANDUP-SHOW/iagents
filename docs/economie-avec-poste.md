@@ -30,7 +30,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0022 Assistant immobilier administratif | 274 | 28 € | 71 € | 55 € | 6 € | 49 € | 0.5× ✗ | 0.5× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0023 Assistant médical administratif | 694 | 66 € | 165 € | 48 € | 13 € | 34 € | 1.4× ✗ | 1.2× ✗ | 31 € | S (1/bundle) | 2 800 € |
 | AG-0024 Agent de réservation | 6300 | 588 € | 1 471 € | 146 € | 118 € | 28 € | **4.0×** | **3.6×** | 22 € | S (2/bundle) | 2 800 € |
-| AG-0025 Office manager | 49 | 5 € | 13 € | 44 € | 1 € | 43 € | 0.1× ✗ | 0.0× ✗ | 43 € | XL (15/bundle) | 2 800 € |
+| AG-0025 Responsable des services généraux | 49 | 5 € | 13 € | 44 € | 1 € | 43 € | 0.1× ✗ | 0.0× ✗ | 43 € | XL (15/bundle) | 2 800 € |
 | AG-0026 Assistant comptable | 74 | 10 € | 25 € | 50 € | 2 € | 48 € | 0.2× ✗ | 0.0× ✗ | 48 € | XL (12/bundle) | 2 800 € |
 | AG-0027 Opérateur de saisie comptable | 150 | 18 € | 45 € | 65 € | 4 € | 62 € | 0.3× ✗ | 0.1× ✗ | 45 € | M (2/bundle) | 2 800 € |
 | AG-0028 Agent de facturation | 274 | 37 € | 92 € | 56 € | 7 € | 49 € | 0.7× ✗ | 0.6× ✗ | 38 € | S (1/bundle) | 2 800 € |
@@ -44,7 +44,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0036 Assistant trésorerie | 124 | 16 € | 40 € | 47 € | 3 € | 44 € | 0.3× ✗ | 0.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0037 Assistant paie | 34 | 5 € | 12 € | 45 € | 1 € | 44 € | 0.1× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0038 Assistant fiscal | 783 | 81 € | 204 € | 72 € | 16 € | 56 € | 1.1× ✗ | 0.2× ✗ | 56 € | XL (10/bundle) | 2 800 € |
-| AG-0039 Analyste comptable junior | 5 | 1 € | 2 € | 47 € | 0 € | 46 € | 0.0× ✗ | 0.0× ✗ | 46 € | XL (13/bundle) | 2 800 € |
+| AG-0039 Analyste comptable | 5 | 1 € | 2 € | 47 € | 0 € | 46 € | 0.0× ✗ | 0.0× ✗ | 46 € | XL (13/bundle) | 2 800 € |
 | AG-0040 Contrôleur comptable | 9 | 1 € | 3 € | 56 € | 0 € | 56 € | 0.0× ✗ | 0.0× ✗ | 56 € | XL (10/bundle) | 2 800 € |
 | AG-0041 Reporting financier | 35 | 5 € | 12 € | 47 € | 1 € | 46 € | 0.1× ✗ | 0.0× ✗ | 46 € | XL (13/bundle) | 2 800 € |
 | AG-0042 Gestionnaire des immobilisations | 307 | 43 € | 107 € | 59 € | 9 € | 51 € | 0.7× ✗ | 0.7× ✗ | 40 € | S (1/bundle) | 2 800 € |
@@ -56,7 +56,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0048 Gestionnaire de comptes clients | 216 | 30 € | 76 € | 55 € | 6 € | 49 € | 0.6× ✗ | 0.5× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0049 Gestionnaire de comptes fournisseurs | 41 | 6 € | 14 € | 50 € | 1 € | 49 € | 0.1× ✗ | 0.1× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0050 Assistant directeur financier | 339 | 40 € | 100 € | 64 € | 8 € | 56 € | 0.6× ✗ | 0.1× ✗ | 56 € | XL (10/bundle) | 2 800 € |
-| AG-0051 Analyste financier junior | 157 | 15 € | 37 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0051 Analyste financier | 157 | 15 € | 37 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0052 Analyste crédit | 1650 | 182 € | 454 € | 113 € | 36 € | 77 € | 1.6× ✗ | 0.4× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0053 Analyste investissement | 870 | 91 € | 227 € | 45 € | 18 € | 27 € | 2.0× ✗ | 1.3× ✗ | 37 € | S (3/bundle) | 2 800 € |
 | AG-0054 Assistant gestion de portefeuille | 331 | 36 € | 91 € | 57 € | 7 € | 49 € | 0.6× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -66,11 +66,11 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0058 Analyste FP&A | 1140 | 157 € | 391 € | 62 € | 31 € | 30 € | 2.5× ✗ | 1.9× ✗ | 37 € | S (2/bundle) | 2 800 € |
 | AG-0059 Analyste rentabilité | 8 | 1 € | 3 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0060 Analyste coûts | 8 | 1 € | 3 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0061 Analyste pricing | 462 | 58 € | 144 € | 61 € | 12 € | 49 € | 0.9× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0061 Analyste tarification | 462 | 58 € | 144 € | 61 € | 12 € | 49 € | 0.9× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0062 Assistant banque d'affaires | 1530 | 165 € | 412 € | 110 € | 33 € | 77 € | 1.5× ✗ | 0.4× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0063 Assistant corporate finance | 1054 | 147 € | 368 € | 79 € | 29 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0064 Assistant due diligence | 960 | 119 € | 297 € | 101 € | 24 € | 77 € | 1.2× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0065 Analyste M&A junior | 1200 | 161 € | 402 € | 109 € | 32 € | 77 € | 1.5× ✗ | 0.4× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0063 Assistant en financement d'entreprise | 1054 | 147 € | 368 € | 79 € | 29 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0064 Assistant d'audit d'acquisition | 960 | 119 € | 297 € | 101 € | 24 € | 77 € | 1.2× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0065 Analyste fusions-acquisitions | 1200 | 161 € | 402 € | 109 € | 32 € | 77 € | 1.5× ✗ | 0.4× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0066 Analyste ESG | 1440 | 198 € | 496 € | 77 € | 40 € | 37 € | 2.6× ✗ | 2.2× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0067 Analyste cash-flow | 8 | 1 € | 3 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0068 Analyste performance | 420 | 56 € | 140 € | 42 € | 11 € | 30 € | 1.3× ✗ | 0.9× ✗ | 37 € | S (2/bundle) | 2 800 € |
@@ -80,12 +80,12 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0072 Analyste assurance-crédit | 540 | 74 € | 185 € | 42 € | 15 € | 27 € | 1.8× ✗ | 1.1× ✗ | 37 € | S (3/bundle) | 2 800 € |
 | AG-0073 Assistant contrôle financier | 11 | 2 € | 4 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0074 Reporting financier | 1260 | 131 € | 328 € | 57 € | 26 € | 30 € | 2.3× ✗ | 1.7× ✗ | 37 € | S (2/bundle) | 2 800 € |
-| AG-0075 Assistant CFO | 487 | 47 € | 118 € | 59 € | 9 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0075 Assistant de la direction financière | 487 | 47 € | 118 € | 59 € | 9 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0076 Gestionnaire de sinistres | 2160 | 243 € | 608 € | 93 € | 49 € | 44 € | 2.6× ✗ | 2.5× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0077 Agent de déclaration de sinistre | 2460 | 287 € | 716 € | 96 € | 57 € | 39 € | 3.0× ✗ | 2.6× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0078 Gestionnaire contrats | 2580 | 275 € | 688 € | 85 € | 55 € | 30 € | **3.2×** | 2.8× ✗ | 24 € | S (2/bundle) | 2 800 € |
 | AG-0079 Gestionnaire polices | 1320 | 154 € | 384 € | 63 € | 31 € | 32 € | 2.5× ✗ | 1.9× ✗ | 37 € | S (2/bundle) | 2 800 € |
-| AG-0080 Souscripteur junior | 2460 | 287 € | 716 € | 88 € | 57 € | 30 € | **3.3×** | 2.6× ✗ | 37 € | S (2/bundle) | 2 800 € |
+| AG-0080 Souscripteur | 2460 | 287 € | 716 € | 88 € | 57 € | 30 € | **3.3×** | 2.6× ✗ | 37 € | S (2/bundle) | 2 800 € |
 | AG-0081 Assistant souscription | 1954 | 266 € | 665 € | 90 € | 53 € | 37 € | 2.9× ✗ | 2.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0082 Analyste risques assurance | 1560 | 180 € | 451 € | 80 € | 36 € | 44 € | 2.3× ✗ | 2.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0083 Agent de renouvellement | 870 | 84 € | 210 € | 47 € | 17 € | 30 € | 1.8× ✗ | 1.4× ✗ | 24 € | S (2/bundle) | 2 800 € |
@@ -106,7 +106,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0098 Assistant production | 934 | 131 € | 326 € | 63 € | 26 € | 37 € | 2.1× ✗ | 1.9× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0099 Assistant indemnisation | 934 | 124 € | 309 € | 62 € | 25 € | 37 € | 2.0× ✗ | 1.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0100 Assistant direction assurance | 607 | 78 € | 195 € | 65 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0101 Conseiller bancaire digital | 1860 | 175 € | 437 € | 72 € | 35 € | 37 € | 2.4× ✗ | 2.2× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0101 Conseiller bancaire à distance | 1860 | 175 € | 437 € | 72 € | 35 € | 37 € | 2.4× ✗ | 2.2× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0102 Agent de support bancaire | 3420 | 347 € | 867 € | 109 € | 69 € | 39 € | **3.2×** | **3.1×** | 28 € | S (1/bundle) | 2 800 € |
 | AG-0103 Agent KYC | 1290 | 150 € | 374 € | 74 € | 30 € | 44 € | 2.0× ✗ | 1.9× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0104 Agent de contrôle documentaire bancaire | 1530 | 144 € | 360 € | 73 € | 29 € | 44 € | 2.0× ✗ | 1.8× ✗ | 37 € | S (1/bundle) | 2 800 € |
@@ -126,7 +126,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0118 Agent de clôture de compte | 931 | 116 € | 290 € | 60 € | 23 € | 37 € | 1.9× ✗ | 1.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0119 Agent de renouvellement | 1440 | 200 € | 500 € | 67 € | 40 € | 27 € | 3.0× ✗ | 2.2× ✗ | 37 € | S (3/bundle) | 2 800 € |
 | AG-0120 Assistant back-office bancaire | 131 | 18 € | 45 € | 41 € | 4 € | 37 € | 0.4× ✗ | 0.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0121 Analyste risque junior | 990 | 137 € | 342 € | 58 € | 27 € | 30 € | 2.4× ✗ | 1.8× ✗ | 37 € | S (2/bundle) | 2 800 € |
+| AG-0121 Analyste risques bancaires | 990 | 137 € | 342 € | 58 € | 27 € | 30 € | 2.4× ✗ | 1.8× ✗ | 37 € | S (2/bundle) | 2 800 € |
 | AG-0122 Assistant conformité | 244 | 26 € | 64 € | 55 € | 5 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0123 Assistant relation client | 1711 | 176 € | 441 € | 72 € | 35 € | 37 € | 2.4× ✗ | 2.2× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0124 Assistant reporting bancaire | 306 | 29 € | 72 € | 55 € | 6 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -146,20 +146,20 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0138 Gestionnaire dossiers salariés | 640 | 88 € | 219 € | 53 € | 18 € | 35 € | 1.7× ✗ | 1.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0139 Assistant mobilité | 604 | 70 € | 176 € | 44 € | 14 € | 30 € | 1.6× ✗ | 1.2× ✗ | 24 € | S (2/bundle) | 2 800 € |
 | AG-0140 Assistant recrutement | 484 | 61 € | 152 € | 51 € | 12 € | 39 € | 1.2× ✗ | 1.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0141 Analyste RH junior | 154 | 14 € | 36 € | 38 € | 3 € | 35 € | 0.4× ✗ | 0.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0142 Assistant talent management | 455 | 50 € | 124 € | 40 € | 10 € | 30 € | 1.2× ✗ | 0.8× ✗ | 37 € | S (2/bundle) | 2 800 € |
-| AG-0143 Assistant performance | 339 | 40 € | 100 € | 38 € | 8 € | 30 € | 1.1× ✗ | 0.8× ✗ | 24 € | S (2/bundle) | 2 800 € |
+| AG-0141 Analyste RH | 154 | 14 € | 36 € | 38 € | 3 € | 35 € | 0.4× ✗ | 0.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0142 Assistant gestion des talents | 455 | 50 € | 124 € | 40 € | 10 € | 30 € | 1.2× ✗ | 0.8× ✗ | 37 € | S (2/bundle) | 2 800 € |
+| AG-0143 Assistant évaluation des performances | 339 | 40 € | 100 € | 38 € | 8 € | 30 € | 1.1× ✗ | 0.8× ✗ | 24 € | S (2/bundle) | 2 800 € |
 | AG-0144 Agent de communication RH | 601 | 56 € | 140 € | 45 € | 11 € | 34 € | 1.2× ✗ | 0.9× ✗ | 37 € | S (2/bundle) | 2 800 € |
 | AG-0145 Assistant administration du personnel | 244 | 34 € | 85 € | 39 € | 7 € | 33 € | 0.9× ✗ | 0.7× ✗ | 25 € | S (1/bundle) | 2 800 € |
 | AG-0146 Gestionnaire avantages | 8 | 1 € | 3 € | 31 € | 0 € | 30 € | 0.0× ✗ | 0.0× ✗ | 24 € | S (2/bundle) | 2 800 € |
 | AG-0147 Assistant relations sociales | 190 | 27 € | 66 € | 34 € | 5 € | 29 € | 0.8× ✗ | 0.5× ✗ | 37 € | S (2/bundle) | 2 800 € |
 | AG-0148 Assistant SIRH | 41 | 6 € | 14 € | 37 € | 1 € | 35 € | 0.1× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0149 Reporting RH | 303 | 42 € | 106 € | 41 € | 8 € | 32 € | 1.0× ✗ | 0.7× ✗ | 37 € | S (2/bundle) | 2 800 € |
-| AG-0150 HR operations assistant | 219 | 22 € | 54 € | 42 € | 4 € | 37 € | 0.5× ✗ | 0.4× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0150 Gestionnaire administration du personnel | 219 | 22 € | 54 € | 42 € | 4 € | 37 € | 0.5× ✗ | 0.4× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0151 Sourcer | 219 | 22 € | 55 € | 50 € | 4 € | 46 € | 0.4× ✗ | 0.4× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0152 Recruiter junior | 394 | 52 € | 130 € | 53 € | 10 € | 42 € | 1.0× ✗ | 0.8× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0152 Chargé de recrutement | 394 | 52 € | 130 € | 53 € | 10 € | 42 € | 1.0× ✗ | 0.8× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0153 Recruiter sédentaire | 124 | 14 € | 36 € | 44 € | 3 € | 41 € | 0.3× ✗ | 0.3× ✗ | 29 € | S (1/bundle) | 2 800 € |
-| AG-0154 Talent acquisition assistant | 162 | 15 € | 38 € | 42 € | 3 € | 39 € | 0.4× ✗ | 0.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0154 Chargé de sourcing candidats | 162 | 15 € | 38 € | 42 € | 3 € | 39 € | 0.4× ✗ | 0.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0155 Agent de préqualification | 361 | 34 € | 84 € | 46 € | 7 € | 39 € | 0.7× ✗ | 0.6× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0156 Agent de chasse | 244 | 33 € | 81 € | 50 € | 7 € | 44 € | 0.7× ✗ | 0.6× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0157 Coordinateur candidats | 244 | 24 € | 60 € | 42 € | 5 € | 37 € | 0.6× ✗ | 0.5× ✗ | 27 € | S (1/bundle) | 2 800 € |
@@ -180,86 +180,86 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0172 Assistant cabinet de recrutement | 215 | 23 € | 58 € | 35 € | 5 € | 30 € | 0.7× ✗ | 0.5× ✗ | 24 € | S (2/bundle) | 2 800 € |
 | AG-0173 Gestionnaire ATS | 41 | 5 € | 14 € | 34 € | 1 € | 33 € | 0.2× ✗ | 0.1× ✗ | 25 € | S (1/bundle) | 2 800 € |
 | AG-0174 Reporting recrutement | 5 | 1 € | 2 € | 34 € | 0 € | 34 € | 0.0× ✗ | 0.0× ✗ | 37 € | S (2/bundle) | 2 800 € |
-| AG-0175 Recruitment operations specialist | 103 | 11 € | 27 € | 39 € | 2 € | 37 € | 0.3× ✗ | 0.2× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0175 Responsable des opérations de recrutement | 103 | 11 € | 27 € | 39 € | 2 € | 37 € | 0.3× ✗ | 0.2× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0176 SDR | 733 | 68 € | 171 € | 56 € | 14 € | 43 € | 1.2× ✗ | 1.2× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0177 BDR | 520 | 48 € | 121 € | 52 € | 10 € | 43 € | 0.9× ✗ | 0.9× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0178 Téléprospecteur | 904 | 84 € | 211 € | 53 € | 17 € | 36 € | 1.6× ✗ | 1.4× ✗ | 33 € | S (1/bundle) | 2 800 € |
 | AG-0179 Assistant commercial | 1354 | 156 € | 389 € | 74 € | 31 € | 43 € | 2.1× ✗ | 2.1× ✗ | 38 € | S (1/bundle) | 2 800 € |
-| AG-0180 Sales operations assistant | 53 | 7 € | 17 € | 51 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0181 Lead generation specialist | 1051 | 98 € | 245 € | 62 € | 20 € | 43 € | 1.6× ✗ | 1.5× ✗ | 38 € | S (1/bundle) | 2 800 € |
-| AG-0182 Lead qualifier | 784 | 73 € | 183 € | 57 € | 15 € | 43 € | 1.3× ✗ | 1.3× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-0180 Assistant administration des ventes | 53 | 7 € | 17 € | 51 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0181 Chargé de génération de prospects | 1051 | 98 € | 245 € | 62 € | 20 € | 43 € | 1.6× ✗ | 1.5× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-0182 Chargé de qualification de prospects | 784 | 73 € | 183 € | 57 € | 15 € | 43 € | 1.3× ✗ | 1.3× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0183 Appointment setter | 1354 | 126 € | 316 € | 61 € | 25 € | 36 € | 2.1× ✗ | 1.8× ✗ | 33 € | S (1/bundle) | 2 800 € |
-| AG-0184 Account development representative | 313 | 29 € | 74 € | 55 € | 6 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0185 Inside sales assistant | 574 | 55 € | 137 € | 54 € | 11 € | 43 € | 1.0× ✗ | 1.0× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-0184 Chargé de développement de comptes | 313 | 29 € | 74 € | 55 € | 6 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0185 Commercial sédentaire | 574 | 55 € | 137 € | 54 € | 11 € | 43 € | 1.0× ✗ | 1.0× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0186 Agent de relance commerciale | 189 | 19 € | 47 € | 46 € | 4 € | 43 € | 0.4× ✗ | 0.4× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0187 Agent de devis | 1024 | 98 € | 246 € | 62 € | 20 € | 43 € | 1.6× ✗ | 1.6× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0188 Agent de propositions commerciales | 1200 | 119 € | 297 € | 73 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0189 Agent CRM | 646 | 62 € | 155 € | 62 € | 12 € | 49 € | 1.0× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0190 Sales analyst junior | 167 | 16 € | 39 € | 53 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0191 Assistant account manager | 999 | 121 € | 303 € | 67 € | 24 € | 43 € | 1.8× ✗ | 1.8× ✗ | 38 € | S (1/bundle) | 2 800 € |
-| AG-0192 Customer success assistant | 228 | 22 € | 54 € | 47 € | 4 € | 43 € | 0.5× ✗ | 0.5× ✗ | 38 € | S (1/bundle) | 2 800 € |
-| AG-0193 Renewal specialist | 604 | 63 € | 158 € | 55 € | 13 € | 43 € | 1.1× ✗ | 1.1× ✗ | 38 € | S (1/bundle) | 2 800 € |
-| AG-0194 Upsell assistant | 465 | 51 € | 126 € | 60 € | 10 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0195 Cross-sell assistant | 1210 | 113 € | 282 € | 72 € | 23 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0196 Sales support | 371 | 42 € | 104 € | 51 € | 8 € | 43 € | 0.8× ✗ | 0.8× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-0189 Gestionnaire CRM | 646 | 62 € | 155 € | 62 € | 12 € | 49 € | 1.0× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0190 Analyste des ventes | 167 | 16 € | 39 € | 53 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0191 Assistant chargé de clientèle | 999 | 121 € | 303 € | 67 € | 24 € | 43 € | 1.8× ✗ | 1.8× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-0192 Chargé de réussite client | 228 | 22 € | 54 € | 47 € | 4 € | 43 € | 0.5× ✗ | 0.5× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-0193 Chargé des renouvellements de contrats | 604 | 63 € | 158 € | 55 € | 13 € | 43 € | 1.1× ✗ | 1.1× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-0194 Chargé de montée en gamme client | 465 | 51 € | 126 € | 60 € | 10 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0195 Chargé de ventes complémentaires | 1210 | 113 € | 282 € | 72 € | 23 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0196 Assistant support commercial | 371 | 42 € | 104 € | 51 € | 8 € | 43 € | 0.8× ✗ | 0.8× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0197 Agent de qualification B2B | 909 | 99 € | 247 € | 69 € | 20 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0198 Agent de prospection B2C | 1290 | 120 € | 301 € | 60 € | 24 € | 36 € | 2.0× ✗ | 1.8× ✗ | 33 € | S (1/bundle) | 2 800 € |
 | AG-0199 Assistant grands comptes | 756 | 78 € | 194 € | 65 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0200 Sales operations manager | 306 | 36 € | 89 € | 57 € | 7 € | 49 € | 0.6× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0200 Responsable administration des ventes | 306 | 36 € | 89 € | 57 € | 7 € | 49 € | 0.6× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0201 Rédacteur marketing | 1054 | 112 € | 281 € | 60 € | 22 € | 37 € | 1.9× ✗ | 1.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0202 Content manager | 487 | 61 € | 153 € | 49 € | 12 € | 37 € | 1.2× ✗ | 1.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0203 Content writer | 1054 | 112 € | 281 € | 72 € | 22 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0204 SEO specialist junior | 309 | 43 € | 108 € | 58 € | 9 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0205 SEO assistant | 756 | 106 € | 264 € | 58 € | 21 € | 37 € | 1.8× ✗ | 1.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0206 Email marketer | 633 | 68 € | 169 € | 51 € | 14 € | 37 € | 1.3× ✗ | 1.2× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0207 CRM marketer | 1054 | 112 € | 281 € | 60 € | 22 € | 37 € | 1.9× ✗ | 1.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0208 Community manager | 665 | 77 € | 194 € | 53 € | 15 € | 37 € | 1.5× ✗ | 1.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0209 Social media manager junior | 338 | 33 € | 83 € | 44 € | 7 € | 37 € | 0.8× ✗ | 0.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0210 Growth assistant | 931 | 102 € | 255 € | 70 € | 20 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0211 Marketing analyst junior | 458 | 57 € | 142 € | 61 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0212 Market research analyst | 1200 | 147 € | 367 € | 79 € | 29 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0213 Competitive intelligence analyst | 309 | 29 € | 73 € | 55 € | 6 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0214 Campaign assistant | 931 | 116 € | 290 € | 60 € | 23 € | 37 € | 1.9× ✗ | 1.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0215 Marketing operations assistant | 905 | 126 € | 316 € | 62 € | 25 € | 37 € | 2.0× ✗ | 1.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0216 Marketing automation specialist | 756 | 92 € | 229 € | 56 € | 18 € | 37 € | 1.6× ✗ | 1.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0217 Lead nurturing specialist | 1210 | 162 € | 405 € | 70 € | 32 € | 37 € | 2.3× ✗ | 2.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0218 Landing page specialist | 1054 | 105 € | 263 € | 58 € | 21 € | 37 € | 1.8× ✗ | 1.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0219 Conversion optimization assistant | 633 | 68 € | 169 € | 63 € | 14 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0220 Product marketing assistant | 753 | 91 € | 228 € | 68 € | 18 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0221 Affiliate marketing assistant | 614 | 86 € | 214 € | 67 € | 17 € | 49 € | 1.3× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0222 Influencer marketing assistant | 785 | 96 € | 239 € | 69 € | 19 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0223 Event marketing assistant | 1381 | 186 € | 465 € | 74 € | 37 € | 37 € | 2.5× ✗ | 2.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0224 Marketing reporting analyst | 215 | 23 € | 58 € | 54 € | 5 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0225 Marketing coordinator | 108 | 14 € | 34 € | 40 € | 3 € | 37 € | 0.3× ✗ | 0.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0226 Media buyer junior | 513 | 63 € | 158 € | 62 € | 13 € | 49 € | 1.0× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0227 Paid search specialist | 199 | 21 € | 52 € | 54 € | 4 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0228 Paid social specialist | 691 | 81 € | 203 € | 66 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0229 Campaign manager junior | 960 | 126 € | 314 € | 62 € | 25 € | 37 € | 2.0× ✗ | 1.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0230 Ad copywriter | 1051 | 126 € | 315 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0231 Creative strategist assistant | 902 | 119 € | 298 € | 73 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0232 Advertising analyst | 458 | 64 € | 160 € | 90 € | 13 € | 77 € | 0.7× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0233 PPC analyst | 18 | 2 € | 6 € | 50 € | 0 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0234 SEM assistant | 225 | 30 € | 75 € | 43 € | 6 € | 37 € | 0.7× ✗ | 0.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0235 Display advertising specialist | 228 | 32 € | 79 € | 56 € | 6 € | 49 € | 0.6× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0236 Programmatic assistant | 50 | 5 € | 14 € | 51 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0237 Campaign trafficking specialist | 1054 | 126 € | 316 € | 62 € | 25 € | 37 € | 2.0× ✗ | 1.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0238 Ad operations assistant | 163 | 21 € | 53 € | 41 € | 4 € | 37 € | 0.5× ✗ | 0.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0239 Audience analyst | 455 | 64 € | 159 € | 62 € | 13 € | 49 € | 1.0× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0240 Conversion analyst | 66 | 9 € | 23 € | 51 € | 2 € | 49 € | 0.2× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0241 ROAS analyst | 8 | 1 € | 3 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0242 Ad reporting specialist | 8 | 1 € | 3 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0243 Retargeting specialist | 44 | 6 € | 15 € | 51 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0244 Affiliate advertising assistant | 21 | 3 € | 7 € | 50 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0245 Local advertising specialist | 50 | 7 € | 18 € | 39 € | 1 € | 37 € | 0.2× ✗ | 0.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0246 Marketplace advertising specialist | 102 | 14 € | 35 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0247 Creative testing assistant | 785 | 103 € | 257 € | 70 € | 21 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0248 Ad account manager junior | 934 | 96 € | 239 € | 56 € | 19 € | 37 € | 1.7× ✗ | 1.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0249 Media planning assistant | 1051 | 133 € | 332 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0250 Advertising operations manager | 306 | 43 € | 107 € | 58 € | 9 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0202 Responsable de contenus | 487 | 61 € | 153 € | 49 € | 12 € | 37 € | 1.2× ✗ | 1.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0203 Rédacteur de contenus | 1054 | 112 € | 281 € | 72 € | 22 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0204 Spécialiste référencement naturel | 309 | 43 € | 108 € | 58 € | 9 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0205 Assistant référencement naturel | 756 | 106 € | 264 € | 58 € | 21 € | 37 € | 1.8× ✗ | 1.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0206 Chargé de marketing par e-mail | 633 | 68 € | 169 € | 51 € | 14 € | 37 € | 1.3× ✗ | 1.2× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0207 Chargé de marketing relationnel | 1054 | 112 € | 281 € | 60 € | 22 € | 37 € | 1.9× ✗ | 1.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0208 Gestionnaire de communauté en marketing | 665 | 77 € | 194 € | 53 € | 15 € | 37 € | 1.5× ✗ | 1.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0209 Responsable réseaux sociaux | 338 | 33 € | 83 € | 44 € | 7 € | 37 € | 0.8× ✗ | 0.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0210 Assistant marketing de croissance | 931 | 102 € | 255 € | 70 € | 20 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0211 Analyste marketing | 458 | 57 € | 142 € | 61 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0212 Chargé d'études de marché | 1200 | 147 € | 367 € | 79 € | 29 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0213 Chargé de veille concurrentielle | 309 | 29 € | 73 € | 55 € | 6 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0214 Assistant campagnes marketing | 931 | 116 € | 290 € | 60 € | 23 € | 37 € | 1.9× ✗ | 1.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0215 Assistant opérations marketing | 905 | 126 € | 316 € | 62 € | 25 € | 37 € | 2.0× ✗ | 1.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0216 Spécialiste automatisation marketing | 756 | 92 € | 229 € | 56 € | 18 € | 37 € | 1.6× ✗ | 1.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0217 Chargé de maturation des prospects | 1210 | 162 € | 405 € | 70 € | 32 € | 37 € | 2.3× ✗ | 2.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0218 Concepteur de pages d'atterrissage | 1054 | 105 € | 263 € | 58 € | 21 € | 37 € | 1.8× ✗ | 1.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0219 Chargé d'optimisation des conversions | 633 | 68 € | 169 € | 63 € | 14 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0220 Assistant chef de produit marketing | 753 | 91 € | 228 € | 68 € | 18 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0221 Chargé d'affiliation | 614 | 86 € | 214 € | 67 € | 17 € | 49 € | 1.3× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0222 Chargé de marketing d'influence | 785 | 96 € | 239 € | 69 € | 19 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0223 Chargé de marketing événementiel | 1381 | 186 € | 465 € | 74 € | 37 € | 37 € | 2.5× ✗ | 2.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0224 Chargé de tableaux de bord marketing | 215 | 23 € | 58 € | 54 € | 5 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0225 Coordinateur marketing | 108 | 14 € | 34 € | 40 € | 3 € | 37 € | 0.3× ✗ | 0.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0226 Acheteur d'espaces publicitaires | 513 | 63 € | 158 € | 62 € | 13 € | 49 € | 1.0× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0227 Spécialiste liens sponsorisés | 199 | 21 € | 52 € | 54 € | 4 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0228 Spécialiste publicité sur les réseaux sociaux | 691 | 81 € | 203 € | 66 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0229 Chef de campagne publicitaire | 960 | 126 € | 314 € | 62 € | 25 € | 37 € | 2.0× ✗ | 1.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0230 Concepteur-rédacteur publicitaire | 1051 | 126 € | 315 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0231 Assistant stratégie créative | 902 | 119 € | 298 € | 73 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0232 Analyste publicitaire | 458 | 64 € | 160 € | 90 € | 13 € | 77 € | 0.7× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0233 Analyste coût par clic | 18 | 2 € | 6 € | 50 € | 0 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0234 Assistant référencement payant | 225 | 30 € | 75 € | 43 € | 6 € | 37 € | 0.7× ✗ | 0.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0235 Spécialiste bannières publicitaires | 228 | 32 € | 79 € | 56 € | 6 € | 49 € | 0.6× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0236 Assistant achat programmatique | 50 | 5 € | 14 € | 51 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0237 Chargé de diffusion des campagnes | 1054 | 126 € | 316 € | 62 € | 25 € | 37 € | 2.0× ✗ | 1.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0238 Assistant opérations publicitaires | 163 | 21 € | 53 € | 41 € | 4 € | 37 € | 0.5× ✗ | 0.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0239 Analyste d'audience | 455 | 64 € | 159 € | 62 € | 13 € | 49 € | 1.0× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0240 Analyste des conversions | 66 | 9 € | 23 € | 51 € | 2 € | 49 € | 0.2× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0241 Analyste rentabilité publicitaire | 8 | 1 € | 3 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0242 Chargé de reporting publicitaire | 8 | 1 € | 3 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0243 Spécialiste reciblage publicitaire | 44 | 6 € | 15 € | 51 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0244 Assistant publicité d'affiliation | 21 | 3 € | 7 € | 50 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0245 Spécialiste publicité locale | 50 | 7 € | 18 € | 39 € | 1 € | 37 € | 0.2× ✗ | 0.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0246 Spécialiste publicité sur places de marché | 102 | 14 € | 35 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0247 Chargé de tests créatifs | 785 | 103 € | 257 € | 70 € | 21 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0248 Chargé de comptes publicitaires | 934 | 96 € | 239 € | 56 € | 19 € | 37 € | 1.7× ✗ | 1.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0249 Assistant média-planneur | 1051 | 133 € | 332 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0250 Responsable des opérations publicitaires | 306 | 43 € | 107 € | 58 € | 9 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0251 Assistant communication | 1261 | 154 € | 385 € | 68 € | 31 € | 37 € | 2.3× ✗ | 2.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0252 Chargé de communication junior | 1200 | 161 € | 402 € | 82 € | 32 € | 49 € | 2.0× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0253 Community manager | 156 | 18 € | 44 € | 41 € | 4 € | 37 € | 0.4× ✗ | 0.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0254 Social media assistant | 960 | 120 € | 301 € | 61 € | 24 € | 37 € | 2.0× ✗ | 1.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0253 Gestionnaire de communauté | 156 | 18 € | 44 € | 41 € | 4 € | 37 € | 0.4× ✗ | 0.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0254 Assistant réseaux sociaux | 960 | 120 € | 301 € | 61 € | 24 € | 37 € | 2.0× ✗ | 1.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0255 Rédacteur corporate | 1200 | 147 € | 367 € | 106 € | 29 € | 77 € | 1.4× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0256 Rédacteur communiqué | 1200 | 147 € | 367 € | 79 € | 29 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0257 Attaché de presse assistant | 902 | 119 € | 298 € | 73 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -272,27 +272,27 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0264 Rédacteur newsletter | 902 | 105 € | 263 € | 70 € | 21 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0265 Gestionnaire intranet | 167 | 23 € | 58 € | 42 € | 5 € | 37 € | 0.6× ✗ | 0.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0266 Assistant marque employeur | 607 | 85 € | 212 € | 66 € | 17 € | 49 € | 1.3× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0267 Content coordinator | 247 | 26 € | 65 € | 42 € | 5 € | 37 € | 0.6× ✗ | 0.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0267 Coordinateur de contenus | 247 | 26 € | 65 € | 42 € | 5 € | 37 € | 0.6× ✗ | 0.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0268 Communication digitale | 189 | 26 € | 66 € | 55 € | 5 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0269 Communication locale | 1682 | 200 € | 500 € | 77 € | 40 € | 37 € | 2.6× ✗ | 2.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0270 Assistant influence | 753 | 91 € | 228 € | 95 € | 18 € | 77 € | 1.0× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0271 Assistant partenariats | 902 | 112 € | 280 € | 72 € | 22 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0272 Communication reporting | 8 | 1 € | 3 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0273 Assistant crise documentaire | 840 | 110 € | 276 € | 99 € | 22 € | 77 € | 1.1× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0274 Media monitoring specialist | 157 | 22 € | 55 € | 54 € | 4 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0275 Communication operations | 47 | 6 € | 15 € | 38 € | 1 € | 37 € | 0.2× ✗ | 0.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0274 Chargé de veille médias | 157 | 22 € | 55 € | 54 € | 4 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0275 Responsable des opérations de communication | 47 | 6 € | 15 € | 38 € | 1 € | 37 € | 0.2× ✗ | 0.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0276 Graphiste de production | 3600 | 512 € | 1 015 € | 205 € | 102 € | 102 € | 2.5× ✗ | 1.0× ✗ | 102 € | XL (4/bundle) | 2 800 € |
 | AG-0277 Graphiste web | 900 | 150 € | 276 € | 132 € | 30 € | 102 € | 1.1× ✗ | 0.3× ✗ | 102 € | XL (4/bundle) | 2 800 € |
-| AG-0278 Designer social media | 930 | 208 € | 349 € | 161 € | 42 € | 119 € | 1.3× ✗ | 0.5× ✗ | 119 € | XL (3/bundle) | 2 800 € |
+| AG-0278 Graphiste réseaux sociaux | 930 | 208 € | 349 € | 161 € | 42 € | 119 € | 1.3× ✗ | 0.5× ✗ | 119 € | XL (3/bundle) | 2 800 € |
 | AG-0279 Designer publicitaire | 3600 | 568 € | 1 155 € | 216 € | 114 € | 102 € | 2.6× ✗ | 1.1× ✗ | 102 € | XL (4/bundle) | 2 800 € |
 | AG-0280 Designer présentation | 3600 | 391 € | 978 € | 156 € | 78 € | 78 € | 2.5× ✗ | 0.8× ✗ | 78 € | XL (6/bundle) | 2 800 € |
-| AG-0281 Designer email | 3600 | 335 € | 839 € | 169 € | 67 € | 102 € | 2.0× ✗ | 0.7× ✗ | 102 € | XL (4/bundle) | 2 800 € |
-| AG-0282 Designer landing page | 900 | 128 € | 254 € | 128 € | 26 € | 102 € | 1.0× ✗ | 0.3× ✗ | 102 € | XL (4/bundle) | 2 800 € |
-| AG-0283 UI designer junior | 900 | 128 € | 254 € | 128 € | 26 € | 102 € | 1.0× ✗ | 0.3× ✗ | 102 € | XL (4/bundle) | 2 800 € |
-| AG-0284 UX designer junior | 900 | 91 € | 227 € | 66 € | 18 € | 48 € | 1.4× ✗ | 0.2× ✗ | 48 € | XL (12/bundle) | 2 800 € |
-| AG-0285 Product designer junior | 900 | 84 € | 210 € | 119 € | 17 € | 102 € | 0.7× ✗ | 0.2× ✗ | 102 € | XL (4/bundle) | 2 800 € |
-| AG-0286 Brand designer junior | 602 | 100 € | 184 € | 122 € | 20 € | 102 € | 0.8× ✗ | 0.2× ✗ | 102 € | XL (4/bundle) | 2 800 € |
-| AG-0287 Logo designer | 900 | 128 € | 254 € | 128 € | 26 € | 102 € | 1.0× ✗ | 0.3× ✗ | 102 € | XL (4/bundle) | 2 800 € |
+| AG-0281 Graphiste e-mailing | 3600 | 335 € | 839 € | 169 € | 67 € | 102 € | 2.0× ✗ | 0.7× ✗ | 102 € | XL (4/bundle) | 2 800 € |
+| AG-0282 Graphiste pages d'atterrissage | 900 | 128 € | 254 € | 128 € | 26 € | 102 € | 1.0× ✗ | 0.3× ✗ | 102 € | XL (4/bundle) | 2 800 € |
+| AG-0283 Designer d'interfaces | 900 | 128 € | 254 € | 128 € | 26 € | 102 € | 1.0× ✗ | 0.3× ✗ | 102 € | XL (4/bundle) | 2 800 € |
+| AG-0284 Designer expérience utilisateur | 900 | 91 € | 227 € | 66 € | 18 € | 48 € | 1.4× ✗ | 0.2× ✗ | 48 € | XL (12/bundle) | 2 800 € |
+| AG-0285 Designer produit numérique | 900 | 84 € | 210 € | 119 € | 17 € | 102 € | 0.7× ✗ | 0.2× ✗ | 102 € | XL (4/bundle) | 2 800 € |
+| AG-0286 Designer d'identité de marque | 602 | 100 € | 184 € | 122 € | 20 € | 102 € | 0.8× ✗ | 0.2× ✗ | 102 € | XL (4/bundle) | 2 800 € |
+| AG-0287 Créateur de logos | 900 | 128 € | 254 € | 128 € | 26 € | 102 € | 1.0× ✗ | 0.3× ✗ | 102 € | XL (4/bundle) | 2 800 € |
 | AG-0288 Illustrateur commercial | 900 | 135 € | 271 € | 129 € | 27 € | 102 € | 1.1× ✗ | 0.3× ✗ | 102 € | XL (4/bundle) | 2 800 € |
 | AG-0289 Infographiste | 900 | 113 € | 249 € | 125 € | 23 € | 102 € | 0.9× ✗ | 0.3× ✗ | 102 € | XL (4/bundle) | 2 800 € |
 | AG-0290 Maquettiste | 900 | 105 € | 262 € | 123 € | 21 € | 102 € | 0.8× ✗ | 0.2× ✗ | 102 € | XL (4/bundle) | 2 800 € |
@@ -304,33 +304,33 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0296 Designer print | 1650 | 189 € | 472 € | 140 € | 38 € | 102 € | 1.4× ✗ | 0.4× ✗ | 102 € | XL (4/bundle) | 2 800 € |
 | AG-0297 Designer événementiel | 1650 | 211 € | 494 € | 144 € | 42 € | 102 € | 1.5× ✗ | 0.5× ✗ | 102 € | XL (4/bundle) | 2 800 € |
 | AG-0298 Designer infographie | 2100 | 260 € | 616 € | 154 € | 52 € | 102 € | 1.7× ✗ | 0.6× ✗ | 102 € | XL (4/bundle) | 2 800 € |
-| AG-0299 Creative production specialist | 1650 | 232 € | 546 € | 148 € | 46 € | 102 € | 1.6× ✗ | 0.5× ✗ | 102 € | XL (4/bundle) | 2 800 € |
-| AG-0300 Design operations assistant | 2440 | 257 € | 642 € | 113 € | 51 € | 62 € | 2.3× ✗ | 1.5× ✗ | 45 € | M (2/bundle) | 2 800 € |
+| AG-0299 Chargé de production créative | 1650 | 232 € | 546 € | 148 € | 46 € | 102 € | 1.6× ✗ | 0.5× ✗ | 102 € | XL (4/bundle) | 2 800 € |
+| AG-0300 Assistant coordination design | 2440 | 257 € | 642 € | 113 € | 51 € | 62 € | 2.3× ✗ | 1.5× ✗ | 45 € | M (2/bundle) | 2 800 € |
 | AG-0301 Monteur vidéo junior | 1200 | 347 € | 556 € | 195 € | 69 € | 126 € | 1.8× ✗ | 0.7× ✗ | 126 € | XL (3/bundle) | 2 800 € |
 | AG-0302 Monteur shorts | 1200 | 264 € | 452 € | 179 € | 53 € | 126 € | 1.5× ✗ | 0.6× ✗ | 126 € | XL (3/bundle) | 2 800 € |
 | AG-0303 Monteur podcast | 1200 | 126 € | 314 € | 68 € | 25 € | 43 € | 1.9× ✗ | 1.8× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0304 Sous-titreur | 1200 | 112 € | 280 € | 65 € | 22 € | 43 € | 1.7× ✗ | 1.7× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0305 Transcripteur audio | 1650 | 161 € | 402 € | 75 € | 32 € | 43 € | 2.1× ✗ | 2.1× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0306 Nettoyeur audio | 1650 | 196 € | 489 € | 82 € | 39 € | 43 € | 2.4× ✗ | 2.4× ✗ | 38 € | S (1/bundle) | 2 800 € |
-| AG-0307 Assistant sound design | 1200 | 133 € | 332 € | 103 € | 27 € | 76 € | 1.3× ✗ | 0.3× ✗ | 76 € | XL (6/bundle) | 2 800 € |
+| AG-0307 Assistant conception sonore | 1200 | 133 € | 332 € | 103 € | 27 € | 76 € | 1.3× ✗ | 0.3× ✗ | 76 € | XL (6/bundle) | 2 800 € |
 | AG-0308 Voice-over producer | 1200 | 140 € | 349 € | 71 € | 28 € | 43 € | 2.0× ✗ | 1.9× ✗ | 38 € | S (1/bundle) | 2 800 € |
-| AG-0309 Doublage assistant | 1051 | 140 € | 350 € | 71 € | 28 € | 43 € | 2.0× ✗ | 1.9× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-0309 Assistant doublage | 1051 | 140 € | 350 € | 71 € | 28 € | 43 € | 2.0× ✗ | 1.9× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0310 Assistant postproduction | 662 | 85 € | 214 € | 143 € | 17 € | 126 € | 0.6× ✗ | 0.2× ✗ | 126 € | XL (3/bundle) | 2 800 € |
-| AG-0311 Coloriste junior | 1054 | 181 € | 350 € | 162 € | 36 € | 126 € | 1.1× ✗ | 0.4× ✗ | 126 € | XL (3/bundle) | 2 800 € |
+| AG-0311 Coloriste étalonneur | 1054 | 181 € | 350 € | 162 € | 36 € | 126 € | 1.1× ✗ | 0.4× ✗ | 126 € | XL (3/bundle) | 2 800 € |
 | AG-0312 Retoucheur photo | 1200 | 199 € | 398 € | 142 € | 40 € | 102 € | 1.4× ✗ | 0.4× ✗ | 102 € | XL (4/bundle) | 2 800 € |
-| AG-0313 Photographe produit assistant | 1200 | 162 € | 372 € | 134 € | 32 € | 102 € | 1.2× ✗ | 0.4× ✗ | 102 € | XL (4/bundle) | 2 800 € |
+| AG-0313 Photographe produit | 1200 | 162 € | 372 € | 134 € | 32 € | 102 € | 1.2× ✗ | 0.4× ✗ | 102 € | XL (4/bundle) | 2 800 € |
 | AG-0314 Créateur thumbnail | 1200 | 214 € | 403 € | 145 € | 43 € | 102 € | 1.5× ✗ | 0.5× ✗ | 102 € | XL (4/bundle) | 2 800 € |
-| AG-0315 Motion designer junior | 1200 | 286 € | 475 € | 183 € | 57 € | 126 € | 1.6× ✗ | 0.6× ✗ | 126 € | XL (3/bundle) | 2 800 € |
-| AG-0316 Assistant motion graphics | 1054 | 279 € | 459 € | 182 € | 56 € | 126 € | 1.5× ✗ | 0.6× ✗ | 126 € | XL (3/bundle) | 2 800 € |
+| AG-0315 Graphiste animateur | 1200 | 286 € | 475 € | 183 € | 57 € | 126 € | 1.6× ✗ | 0.6× ✗ | 126 € | XL (3/bundle) | 2 800 € |
+| AG-0316 Assistant animation graphique | 1054 | 279 € | 459 € | 182 € | 56 € | 126 € | 1.5× ✗ | 0.6× ✗ | 126 € | XL (3/bundle) | 2 800 € |
 | AG-0317 Vidéo publicitaire editor | 1054 | 264 € | 454 € | 179 € | 53 € | 126 € | 1.5× ✗ | 0.6× ✗ | 126 € | XL (3/bundle) | 2 800 € |
-| AG-0318 Social video editor | 1200 | 355 € | 544 € | 197 € | 71 € | 126 € | 1.8× ✗ | 0.7× ✗ | 126 € | XL (3/bundle) | 2 800 € |
-| AG-0319 Podcast producer assistant | 1504 | 161 € | 403 € | 75 € | 32 € | 43 € | 2.2× ✗ | 2.1× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-0318 Monteur vidéo réseaux sociaux | 1200 | 355 € | 544 € | 197 € | 71 € | 126 € | 1.8× ✗ | 0.7× ✗ | 126 € | XL (3/bundle) | 2 800 € |
+| AG-0319 Assistant production de podcasts | 1504 | 161 € | 403 € | 75 € | 32 € | 43 € | 2.2× ✗ | 2.1× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0320 Webinar editor | 1200 | 286 € | 475 € | 183 € | 57 € | 126 € | 1.6× ✗ | 0.6× ✗ | 126 € | XL (3/bundle) | 2 800 € |
 | AG-0321 Interview editor | 1200 | 224 € | 423 € | 171 € | 45 € | 126 € | 1.3× ✗ | 0.5× ✗ | 126 € | XL (3/bundle) | 2 800 € |
-| AG-0322 Media localization specialist | 1051 | 126 € | 315 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0323 Audio transcription specialist | 905 | 113 € | 281 € | 65 € | 23 € | 43 € | 1.7× ✗ | 1.7× ✗ | 38 € | S (1/bundle) | 2 800 € |
-| AG-0324 Video localization specialist | 1054 | 319 € | 488 € | 190 € | 64 € | 126 € | 1.7× ✗ | 0.7× ✗ | 126 € | XL (3/bundle) | 2 800 € |
-| AG-0325 Postproduction coordinator | 1264 | 156 € | 389 € | 81 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0322 Spécialiste localisation audiovisuelle | 1051 | 126 € | 315 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0323 Spécialiste transcription audio | 905 | 113 € | 281 € | 65 € | 23 € | 43 € | 1.7× ✗ | 1.7× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-0324 Sous-titreur adaptateur vidéo | 1054 | 319 € | 488 € | 190 € | 64 € | 126 € | 1.7× ✗ | 0.7× ✗ | 126 € | XL (3/bundle) | 2 800 € |
+| AG-0325 Coordinateur de postproduction | 1264 | 156 € | 389 € | 81 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0326 Traducteur généraliste | 1200 | 154 € | 384 € | 80 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0327 Traducteur e-commerce | 1200 | 140 € | 349 € | 77 € | 28 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0328 Traducteur marketing | 1200 | 140 € | 349 € | 105 € | 28 € | 77 € | 1.3× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
@@ -341,21 +341,21 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0333 Traducteur support client | 1504 | 182 € | 456 € | 74 € | 36 € | 37 € | 2.5× ✗ | 2.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0334 Traducteur RH | 1200 | 154 € | 384 € | 80 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0335 Traducteur financier | 1200 | 147 € | 367 € | 106 € | 29 € | 77 € | 1.4× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0336 Traducteur juridique assistant | 1200 | 154 € | 384 € | 108 € | 31 € | 77 € | 1.4× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0337 Localisation specialist | 1200 | 140 € | 349 € | 77 € | 28 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0336 Traducteur juridique | 1200 | 154 € | 384 € | 108 € | 31 € | 77 € | 1.4× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0337 Spécialiste localisation | 1200 | 140 € | 349 € | 77 € | 28 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0338 Post-editor traduction | 1054 | 140 € | 351 € | 78 € | 28 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0339 Sous-titreur | 1200 | 126 € | 314 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0340 Localisation e-commerce | 814 | 98 € | 246 € | 69 € | 20 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0341 Localisation app | 1200 | 154 € | 384 € | 92 € | 31 € | 61 € | 1.7× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0341 Localisation d'applications | 1200 | 154 € | 384 € | 92 € | 31 € | 61 € | 1.7× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0342 Localisation jeu vidéo | 1200 | 147 € | 367 € | 91 € | 29 € | 61 € | 1.6× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0343 QA linguistique | 1200 | 154 € | 384 € | 80 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0344 Terminologue assistant | 902 | 126 € | 315 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0343 Contrôleur qualité linguistique | 1200 | 154 € | 384 € | 80 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0344 Terminologue | 902 | 126 € | 315 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0345 Gestionnaire de glossaire | 607 | 78 € | 195 € | 53 € | 16 € | 37 € | 1.5× ✗ | 1.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0346 Coordinateur traduction | 1264 | 168 € | 421 € | 71 € | 34 € | 37 € | 2.4× ✗ | 2.2× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0347 Assistant interprétariat | 1054 | 126 € | 316 € | 62 € | 25 € | 37 € | 2.0× ✗ | 1.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0348 Traducteur SEO | 1051 | 126 € | 315 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0349 Traducteur catalogue | 1200 | 147 € | 367 € | 91 € | 29 € | 61 € | 1.6× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0350 Translation operations specialist | 309 | 36 € | 90 € | 57 € | 7 € | 49 € | 0.6× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0350 Responsable de production en traduction | 309 | 36 € | 90 € | 57 € | 7 € | 49 € | 0.6× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0351 Développeur junior | 1200 | 112 € | 280 € | 72 € | 22 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0352 Développeur frontend | 1200 | 126 € | 314 € | 86 € | 25 € | 61 € | 1.5× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0353 Développeur backend | 1200 | 112 € | 280 € | 99 € | 22 € | 77 € | 1.1× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
@@ -373,105 +373,105 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0365 Développeur .NET | 1051 | 112 € | 280 € | 99 € | 22 € | 77 € | 1.1× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0366 Développeur SQL | 1200 | 126 € | 314 € | 102 € | 25 € | 77 € | 1.2× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0367 Testeur logiciel | 1200 | 133 € | 332 € | 88 € | 27 € | 61 € | 1.5× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0368 QA engineer junior | 909 | 92 € | 230 € | 68 € | 18 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0368 Ingénieur test et qualité logicielle | 909 | 92 € | 230 € | 68 € | 18 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0369 Bug fixer | 1054 | 98 € | 246 € | 97 € | 20 € | 77 € | 1.0× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0370 Code reviewer | 934 | 89 € | 222 € | 95 € | 18 € | 77 € | 0.9× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0371 Technical writer | 902 | 84 € | 210 € | 78 € | 17 € | 61 € | 1.1× ✗ | 0.2× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0371 Rédacteur technique informatique | 902 | 84 € | 210 € | 78 € | 17 € | 61 € | 1.1× ✗ | 0.2× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0372 Support technique niveau 1 | 1384 | 129 € | 323 € | 63 € | 26 € | 37 € | 2.0× ✗ | 1.9× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0373 Support technique niveau 2 | 1355 | 126 € | 316 € | 102 € | 25 € | 77 € | 1.2× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0374 DevOps junior | 756 | 78 € | 194 € | 65 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0374 Ingénieur d'exploitation et déploiement | 756 | 78 € | 194 € | 65 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0375 Développeur automation | 934 | 96 € | 239 € | 69 € | 19 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0376 Data entry specialist | 1504 | 210 € | 526 € | 103 € | 42 € | 61 € | 2.0× ✗ | 0.5× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0377 Data analyst junior | 1200 | 126 € | 314 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0378 BI analyst junior | 902 | 91 € | 228 € | 68 € | 18 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0379 Reporting analyst | 760 | 78 € | 196 € | 65 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0380 Data quality analyst | 931 | 109 € | 273 € | 71 € | 22 € | 49 € | 1.5× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0381 Data cleaning specialist | 1650 | 161 € | 402 € | 82 € | 32 € | 49 € | 2.0× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0382 Data labeling specialist | 1200 | 119 € | 297 € | 85 € | 24 € | 61 € | 1.4× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0383 Research analyst | 1054 | 112 € | 281 € | 72 € | 22 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0384 Web analyst | 497 | 54 € | 135 € | 60 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0385 Product analyst junior | 611 | 78 € | 196 € | 65 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0386 Marketing data analyst | 756 | 92 € | 229 € | 68 € | 18 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0387 Sales data analyst | 167 | 16 € | 41 € | 53 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0388 Finance data analyst | 604 | 63 € | 159 € | 90 € | 13 € | 77 € | 0.7× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0389 Operations analyst | 348 | 42 € | 104 € | 58 € | 8 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0390 Forecasting assistant | 753 | 84 € | 211 € | 94 € | 17 € | 77 € | 0.9× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0376 Opérateur de saisie de données | 1504 | 210 € | 526 € | 103 € | 42 € | 61 € | 2.0× ✗ | 0.5× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0377 Analyste de données | 1200 | 126 € | 314 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0378 Analyste décisionnel | 902 | 91 € | 228 € | 68 € | 18 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0379 Chargé de reporting | 760 | 78 € | 196 € | 65 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0380 Analyste qualité des données | 931 | 109 € | 273 € | 71 € | 22 € | 49 € | 1.5× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0381 Spécialiste nettoyage de données | 1650 | 161 € | 402 € | 82 € | 32 € | 49 € | 2.0× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0382 Annotateur de données | 1200 | 119 € | 297 € | 85 € | 24 € | 61 € | 1.4× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0383 Chargé d'études | 1054 | 112 € | 281 € | 72 € | 22 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0384 Analyste d'audience web | 497 | 54 € | 135 € | 60 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0385 Analyste produit | 611 | 78 € | 196 € | 65 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0386 Analyste données marketing | 756 | 92 € | 229 € | 68 € | 18 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0387 Analyste données commerciales | 167 | 16 € | 41 € | 53 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0388 Analyste données financières | 604 | 63 € | 159 € | 90 € | 13 € | 77 € | 0.7× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0389 Analyste des opérations | 348 | 42 € | 104 € | 58 € | 8 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0390 Assistant prévisions | 753 | 84 € | 211 € | 94 € | 17 € | 77 € | 0.9× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0391 Dashboard builder | 902 | 105 € | 263 € | 82 € | 21 € | 61 € | 1.3× ✗ | 0.2× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0392 Data visualization assistant | 1051 | 120 € | 267 € | 85 € | 24 € | 61 € | 1.4× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0393 Database assistant | 782 | 74 € | 186 € | 64 € | 15 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0394 SQL analyst junior | 1054 | 112 € | 281 € | 72 € | 22 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0395 Data migration specialist | 1200 | 140 € | 349 € | 105 € | 28 € | 77 € | 1.3× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0396 ETL assistant | 694 | 73 € | 183 € | 64 € | 15 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0397 Data governance assistant | 756 | 78 € | 194 € | 93 € | 16 € | 77 € | 0.8× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0398 Master data specialist | 1061 | 141 € | 353 € | 78 € | 28 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0399 Data operations analyst | 662 | 72 € | 179 € | 64 € | 14 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0400 Analytics engineer junior | 934 | 95 € | 239 € | 96 € | 19 € | 77 € | 1.0× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0401 SOC analyst junior | 1384 | 157 € | 393 € | 81 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0402 Security monitoring analyst | 342 | 41 € | 102 € | 58 € | 8 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0403 Vulnerability analyst junior | 607 | 71 € | 177 € | 64 € | 14 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0404 Compliance security assistant | 313 | 44 € | 109 € | 58 € | 9 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0405 GRC analyst junior | 604 | 84 € | 211 € | 94 € | 17 € | 77 € | 0.9× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0406 Security documentation specialist | 604 | 56 € | 141 € | 61 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0407 IAM assistant | 1384 | 193 € | 484 € | 88 € | 39 € | 49 € | 2.2× ✗ | 0.7× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0408 Access review analyst | 604 | 84 € | 211 € | 66 € | 17 € | 49 € | 1.3× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0409 Security awareness coordinator | 788 | 74 € | 184 € | 64 € | 15 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0410 Phishing simulation coordinator | 902 | 98 € | 245 € | 69 € | 20 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0411 Incident documentation assistant | 1355 | 134 € | 334 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0412 Threat intelligence assistant | 491 | 60 € | 150 € | 89 € | 12 € | 77 € | 0.7× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0413 Security reporting analyst | 753 | 77 € | 193 € | 65 € | 15 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0414 Audit security assistant | 1051 | 133 € | 332 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0415 Risk assessment assistant | 902 | 112 € | 280 € | 100 € | 22 € | 77 € | 1.1× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0416 Asset inventory specialist | 167 | 23 € | 58 € | 54 € | 5 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0417 Security questionnaire analyst | 1501 | 161 € | 402 € | 82 € | 32 € | 49 € | 2.0× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0418 Third-party risk assistant | 1203 | 154 € | 385 € | 80 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0419 Privacy security assistant | 1054 | 105 € | 263 € | 98 € | 21 € | 77 € | 1.1× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0420 Endpoint monitoring assistant | 342 | 41 € | 102 € | 58 € | 8 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0421 Cloud security assistant | 342 | 41 € | 102 € | 58 € | 8 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0422 Security operations assistant | 374 | 44 € | 110 € | 46 € | 9 € | 37 € | 0.9× ✗ | 0.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0423 Cyber threat researcher junior | 1051 | 105 € | 262 € | 98 € | 21 € | 77 € | 1.1× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0424 Security policy assistant | 1051 | 112 € | 280 € | 72 € | 22 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0425 Cybersecurity operations analyst | 455 | 50 € | 124 € | 87 € | 10 € | 77 € | 0.6× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0392 Assistant visualisation de données | 1051 | 120 € | 267 € | 85 € | 24 € | 61 € | 1.4× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0393 Assistant bases de données | 782 | 74 € | 186 € | 64 € | 15 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0394 Analyste requêtes et bases de données | 1054 | 112 € | 281 € | 72 € | 22 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0395 Spécialiste migration de données | 1200 | 140 € | 349 € | 105 € | 28 € | 77 € | 1.3× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0396 Assistant intégration de données | 694 | 73 € | 183 € | 64 € | 15 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0397 Assistant gouvernance des données | 756 | 78 € | 194 € | 93 € | 16 € | 77 € | 0.8× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0398 Gestionnaire des données de référence | 1061 | 141 € | 353 € | 78 € | 28 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0399 Analyste exploitation des données | 662 | 72 € | 179 € | 64 € | 14 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0400 Ingénieur de données analytiques | 934 | 95 € | 239 € | 96 € | 19 € | 77 € | 1.0× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0401 Analyste en centre opérationnel de sécurité | 1384 | 157 € | 393 € | 81 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0402 Analyste surveillance sécurité | 342 | 41 € | 102 € | 58 € | 8 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0403 Analyste vulnérabilités | 607 | 71 € | 177 € | 64 € | 14 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0404 Assistant conformité sécurité | 313 | 44 € | 109 € | 58 € | 9 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0405 Analyste gouvernance, risques et conformité | 604 | 84 € | 211 € | 94 € | 17 € | 77 € | 0.9× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0406 Chargé de documentation sécurité | 604 | 56 € | 141 € | 61 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0407 Assistant gestion des identités et des accès | 1384 | 193 € | 484 € | 88 € | 39 € | 49 € | 2.2× ✗ | 0.7× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0408 Analyste revue des habilitations | 604 | 84 € | 211 € | 66 € | 17 € | 49 € | 1.3× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0409 Chargé de sensibilisation à la cybersécurité | 788 | 74 € | 184 € | 64 € | 15 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0410 Chargé de campagnes d'hameçonnage simulé | 902 | 98 € | 245 € | 69 € | 20 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0411 Assistant documentation des incidents | 1355 | 134 € | 334 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0412 Assistant renseignement sur les menaces | 491 | 60 € | 150 € | 89 € | 12 € | 77 € | 0.7× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0413 Analyste reporting sécurité | 753 | 77 € | 193 € | 65 € | 15 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0414 Assistant audit sécurité | 1051 | 133 € | 332 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0415 Assistant analyse de risques cyber | 902 | 112 € | 280 € | 100 € | 22 € | 77 € | 1.1× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0416 Gestionnaire de l'inventaire informatique | 167 | 23 € | 58 € | 54 € | 5 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0417 Analyste questionnaires de sécurité | 1501 | 161 € | 402 € | 82 € | 32 € | 49 € | 2.0× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0418 Assistant risques fournisseurs | 1203 | 154 € | 385 € | 80 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0419 Assistant protection des données | 1054 | 105 € | 263 € | 98 € | 21 € | 77 € | 1.1× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0420 Assistant surveillance des postes de travail | 342 | 41 € | 102 € | 58 € | 8 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0421 Assistant sécurité du cloud | 342 | 41 € | 102 € | 58 € | 8 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0422 Assistant opérations de sécurité | 374 | 44 € | 110 € | 46 € | 9 € | 37 € | 0.9× ✗ | 0.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0423 Chercheur en menaces cyber | 1051 | 105 € | 262 € | 98 € | 21 € | 77 € | 1.1× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0424 Assistant politique de sécurité | 1051 | 112 € | 280 € | 72 € | 22 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0425 Analyste opérations cybersécurité | 455 | 50 € | 124 € | 87 € | 10 € | 77 € | 0.6× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0426 Assistant juridique | 429 | 49 € | 121 € | 47 € | 10 € | 37 € | 1.0× ✗ | 0.9× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0427 Juriste junior | 1501 | 147 € | 367 € | 106 € | 29 € | 77 € | 1.4× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0428 Legal researcher | 1650 | 161 € | 402 € | 109 € | 32 € | 77 € | 1.5× ✗ | 0.4× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0429 Contract analyst | 1501 | 168 € | 420 € | 95 € | 34 € | 61 € | 1.8× ✗ | 0.4× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0427 Juriste | 1501 | 147 € | 367 € | 106 € | 29 € | 77 € | 1.4× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0428 Documentaliste juridique | 1650 | 161 € | 402 € | 109 € | 32 € | 77 € | 1.5× ✗ | 0.4× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0429 Juriste contrats | 1501 | 168 € | 420 € | 95 € | 34 € | 61 € | 1.8× ✗ | 0.4× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0430 Contract reviewer | 1650 | 175 € | 437 € | 112 € | 35 € | 77 € | 1.6× ✗ | 0.4× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0431 Clause analyst | 458 | 43 € | 108 € | 86 € | 9 € | 77 € | 0.5× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0432 Legal document specialist | 1530 | 158 € | 395 € | 69 € | 32 € | 37 € | 2.3× ✗ | 2.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0433 Due diligence assistant | 549 | 63 € | 156 € | 74 € | 13 € | 61 € | 0.8× ✗ | 0.1× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0434 Compliance assistant | 462 | 64 € | 161 € | 62 € | 13 € | 49 € | 1.0× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0435 GDPR assistant | 1504 | 147 € | 368 € | 79 € | 29 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0436 Corporate legal assistant | 607 | 78 € | 195 € | 65 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0437 IP assistant | 196 | 20 € | 51 € | 54 € | 4 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0438 Litigation research assistant | 1054 | 126 € | 316 € | 102 € | 25 € | 77 € | 1.2× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0439 Case file assistant | 1530 | 164 € | 409 € | 94 € | 33 € | 61 € | 1.7× ✗ | 0.4× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0440 Legal intake agent | 1381 | 137 € | 343 € | 65 € | 27 € | 37 € | 2.1× ✗ | 1.9× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0441 Legal correspondence agent | 1384 | 145 € | 361 € | 78 € | 29 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0442 Legal billing assistant | 374 | 51 € | 127 € | 47 € | 10 € | 37 € | 1.1× ✗ | 0.9× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0443 Legal operations specialist | 455 | 57 € | 142 € | 61 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0444 Contract lifecycle specialist | 1086 | 150 € | 376 € | 80 € | 30 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0445 Legal knowledge analyst | 604 | 70 € | 176 € | 64 € | 14 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0446 Regulatory monitoring analyst | 371 | 45 € | 112 € | 86 € | 9 € | 77 € | 0.5× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0447 Legal translation assistant | 1504 | 154 € | 386 € | 108 € | 31 € | 77 € | 1.4× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0431 Analyste des clauses contractuelles | 458 | 43 € | 108 € | 86 € | 9 € | 77 € | 0.5× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0432 Rédacteur d'actes juridiques | 1530 | 158 € | 395 € | 69 € | 32 € | 37 € | 2.3× ✗ | 2.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0433 Assistant audit juridique | 549 | 63 € | 156 € | 74 € | 13 € | 61 € | 0.8× ✗ | 0.1× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0434 Assistant conformité juridique | 462 | 64 € | 161 € | 62 € | 13 € | 49 € | 1.0× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0435 Assistant RGPD | 1504 | 147 € | 368 € | 79 € | 29 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0436 Assistant juridique droit des sociétés | 607 | 78 € | 195 € | 65 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0437 Assistant propriété intellectuelle | 196 | 20 € | 51 € | 54 € | 4 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0438 Assistant recherche contentieux | 1054 | 126 € | 316 € | 102 € | 25 € | 77 € | 1.2× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0439 Assistant dossiers contentieux | 1530 | 164 € | 409 € | 94 € | 33 € | 61 € | 1.7× ✗ | 0.4× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0440 Chargé d'accueil juridique | 1381 | 137 € | 343 € | 65 € | 27 € | 37 € | 2.1× ✗ | 1.9× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0441 Chargé de correspondance juridique | 1384 | 145 € | 361 € | 78 € | 29 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0442 Assistant facturation juridique | 374 | 51 € | 127 € | 47 € | 10 € | 37 € | 1.1× ✗ | 0.9× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0443 Spécialiste organisation juridique | 455 | 57 € | 142 € | 61 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0444 Gestionnaire du cycle de vie des contrats | 1086 | 150 € | 376 € | 80 € | 30 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0445 Gestionnaire de la documentation juridique | 604 | 70 € | 176 € | 64 € | 14 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0446 Chargé de veille réglementaire | 371 | 45 € | 112 € | 86 € | 9 € | 77 € | 0.5× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0447 Assistant traduction juridique | 1504 | 154 € | 386 € | 108 € | 31 € | 77 € | 1.4× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0448 Paralegal | 1054 | 119 € | 299 € | 101 € | 24 € | 77 € | 1.2× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0449 Legal project assistant | 669 | 93 € | 233 € | 68 € | 19 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0450 Legal operations manager | 157 | 22 € | 55 € | 81 € | 4 € | 77 € | 0.3× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0449 Assistant projets juridiques | 669 | 93 € | 233 € | 68 € | 19 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0450 Responsable organisation de la direction juridique | 157 | 22 € | 55 € | 81 € | 4 € | 77 € | 0.3× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0451 Assistant immobilier | 853 | 112 € | 280 € | 60 € | 22 € | 37 € | 1.9× ✗ | 1.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0452 Agent de qualification immobilier | 2130 | 282 € | 706 € | 106 € | 56 € | 49 € | 2.7× ✗ | 1.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0453 Agent de prospection immobilier | 429 | 53 € | 132 € | 48 € | 11 € | 37 € | 1.1× ✗ | 1.0× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0454 Rédacteur d'annonces immobilières | 1650 | 182 € | 454 € | 98 € | 36 € | 61 € | 1.9× ✗ | 0.4× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0455 Property listing manager | 257 | 28 € | 69 € | 43 € | 6 € | 37 € | 0.7× ✗ | 0.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0456 Property search agent | 1384 | 137 € | 343 € | 77 € | 27 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0455 Responsable des annonces immobilières | 257 | 28 € | 69 € | 43 € | 6 € | 37 € | 0.7× ✗ | 0.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0456 Chasseur immobilier | 1384 | 137 € | 343 € | 77 € | 27 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0457 Agent de prise de rendez-vous | 2580 | 323 € | 807 € | 102 € | 65 € | 37 € | **3.2×** | 3.0× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0458 Assistant gestion locative | 66 | 9 € | 23 € | 39 € | 2 € | 37 € | 0.2× ✗ | 0.2× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0459 Gestionnaire locatif junior | 970 | 120 € | 300 € | 73 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0459 Gestionnaire locatif | 970 | 120 € | 300 € | 73 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0460 Assistant syndic | 756 | 99 € | 247 € | 69 € | 20 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0461 Assistant transaction | 1119 | 141 € | 352 € | 78 € | 28 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0462 Assistant location | 1650 | 196 € | 489 € | 100 € | 39 € | 61 € | 1.9× ✗ | 0.4× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0463 Analyste immobilier junior | 753 | 98 € | 246 € | 97 € | 20 € | 77 € | 1.0× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0463 Analyste immobilier | 753 | 98 € | 246 € | 97 € | 20 € | 77 € | 1.0× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0464 Assistant estimation | 1051 | 140 € | 350 € | 89 € | 28 € | 61 € | 1.6× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0465 Assistant investissement immobilier | 1051 | 140 € | 350 € | 105 € | 28 € | 77 € | 1.3× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0466 Property data analyst | 455 | 50 € | 124 € | 87 € | 10 € | 77 € | 0.6× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0466 Analyste données immobilières | 455 | 50 € | 124 € | 87 € | 10 € | 77 € | 0.6× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0467 Agent relation locataire | 2370 | 303 € | 758 € | 110 € | 61 € | 49 € | 2.8× ✗ | 1.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0468 Agent relation propriétaire | 611 | 64 € | 160 € | 62 € | 13 € | 49 € | 1.0× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0469 Agent suivi visites | 254 | 26 € | 64 € | 42 € | 5 € | 37 € | 0.6× ✗ | 0.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
@@ -479,36 +479,36 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0471 Agent renouvellement bail | 789 | 103 € | 258 € | 70 € | 21 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0472 Assistant immobilier commercial | 753 | 91 € | 228 € | 79 € | 18 € | 61 € | 1.1× ✗ | 0.2× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0473 Assistant immobilier entreprise | 909 | 113 € | 283 € | 100 € | 23 € | 77 € | 1.1× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0474 Real estate marketing assistant | 756 | 100 € | 216 € | 81 € | 20 € | 61 € | 1.2× ✗ | 0.2× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0475 Property operations assistant | 1235 | 157 € | 393 € | 93 € | 31 € | 61 € | 1.7× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0476 E-commerce manager junior | 351 | 42 € | 105 € | 86 € | 8 € | 77 € | 0.5× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0474 Assistant marketing immobilier | 756 | 100 € | 216 € | 81 € | 20 € | 61 € | 1.2× ✗ | 0.2× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0475 Assistant gestion technique immobilière | 1235 | 157 € | 393 € | 93 € | 31 € | 61 € | 1.7× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0476 Responsable e-commerce | 351 | 42 € | 105 € | 86 € | 8 € | 77 € | 0.5× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0477 Gestionnaire catalogue | 345 | 48 € | 121 € | 47 € | 10 € | 37 € | 1.0× ✗ | 0.9× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0478 Product listing specialist | 1650 | 203 € | 507 € | 102 € | 41 € | 61 € | 2.0× ✗ | 0.5× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0478 Chargé de mise en ligne des produits | 1650 | 203 € | 507 € | 102 € | 41 € | 61 € | 2.0× ✗ | 0.5× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0479 Importateur produits | 1650 | 196 € | 489 € | 76 € | 39 € | 37 € | 2.6× ✗ | 2.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0480 Product description writer | 1501 | 175 € | 437 € | 96 € | 35 € | 61 € | 1.8× ✗ | 0.4× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0481 Product data specialist | 640 | 89 € | 223 € | 55 € | 18 € | 37 € | 1.6× ✗ | 1.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0482 Pricing assistant | 814 | 107 € | 267 € | 71 € | 21 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0483 Marketplace manager junior | 1119 | 121 € | 303 € | 74 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0484 Order management specialist | 1050 | 116 € | 290 € | 60 € | 23 € | 37 € | 1.9× ✗ | 1.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0485 Returns specialist | 999 | 138 € | 345 € | 89 € | 28 € | 61 € | 1.6× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0486 Customer support e-commerce | 4385 | 476 € | 1 190 € | 145 € | 95 € | 49 € | **3.3×** | 1.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0487 Review management specialist | 104 | 11 € | 29 € | 52 € | 2 € | 49 € | 0.2× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0488 Email commerce specialist | 225 | 24 € | 60 € | 54 € | 5 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0489 E-commerce SEO specialist | 79 | 9 € | 24 € | 51 € | 2 € | 49 € | 0.2× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0490 Product feed specialist | 131 | 18 € | 46 € | 41 € | 4 € | 37 € | 0.5× ✗ | 0.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0491 Inventory assistant | 131 | 18 € | 46 € | 41 € | 4 € | 37 € | 0.5× ✗ | 0.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0492 Supplier sourcing assistant | 905 | 106 € | 264 € | 71 € | 21 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0493 Dropshipping assistant | 251 | 28 € | 70 € | 43 € | 6 € | 37 € | 0.7× ✗ | 0.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0494 Product research specialist | 31 | 4 € | 9 € | 50 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0495 Conversion rate assistant | 494 | 55 € | 137 € | 60 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0496 Merchandising assistant | 50 | 7 € | 17 € | 63 € | 1 € | 61 € | 0.1× ✗ | 0.0× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0497 Marketplace operations specialist | 73 | 10 € | 25 € | 39 € | 2 € | 37 € | 0.3× ✗ | 0.2× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0480 Rédacteur de fiches produits | 1501 | 175 € | 437 € | 96 € | 35 € | 61 € | 1.8× ✗ | 0.4× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0481 Gestionnaire des données produits | 640 | 89 € | 223 € | 55 € | 18 € | 37 € | 1.6× ✗ | 1.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0482 Assistant tarification | 814 | 107 € | 267 € | 71 € | 21 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0483 Responsable places de marché | 1119 | 121 € | 303 € | 74 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0484 Gestionnaire des commandes | 1050 | 116 € | 290 € | 60 € | 23 € | 37 € | 1.9× ✗ | 1.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0485 Gestionnaire des retours | 999 | 138 € | 345 € | 89 € | 28 € | 61 € | 1.6× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0486 Conseiller service client e-commerce | 4385 | 476 € | 1 190 € | 145 € | 95 € | 49 € | **3.3×** | 1.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0487 Gestionnaire des avis clients | 104 | 11 € | 29 € | 52 € | 2 € | 49 € | 0.2× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0488 Chargé d'e-mailing commercial | 225 | 24 € | 60 € | 54 € | 5 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0489 Spécialiste référencement e-commerce | 79 | 9 € | 24 € | 51 € | 2 € | 49 € | 0.2× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0490 Gestionnaire des flux produits | 131 | 18 € | 46 € | 41 € | 4 € | 37 € | 0.5× ✗ | 0.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0491 Assistant gestion des stocks | 131 | 18 € | 46 € | 41 € | 4 € | 37 € | 0.5× ✗ | 0.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0492 Assistant recherche de fournisseurs | 905 | 106 € | 264 € | 71 € | 21 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0493 Assistant vente en livraison directe | 251 | 28 € | 70 € | 43 € | 6 € | 37 € | 0.7× ✗ | 0.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0494 Chargé de recherche de produits | 31 | 4 € | 9 € | 50 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0495 Assistant optimisation du taux de conversion | 494 | 55 € | 137 € | 60 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0496 Assistant marchandisage | 50 | 7 € | 17 € | 63 € | 1 € | 61 € | 0.1× ✗ | 0.0× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0497 Spécialiste opérations places de marché | 73 | 10 € | 25 € | 39 € | 2 € | 37 € | 0.3× ✗ | 0.2× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0498 E-commerce analyst | 251 | 26 € | 66 € | 82 € | 5 € | 77 € | 0.3× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0499 E-commerce automation specialist | 513 | 49 € | 123 € | 59 € | 10 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0500 E-commerce operations manager | 788 | 75 € | 188 € | 92 € | 15 € | 77 € | 0.8× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0499 Spécialiste automatisation e-commerce | 513 | 49 € | 123 € | 59 € | 10 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0500 Responsable des opérations e-commerce | 788 | 75 € | 188 € | 92 € | 15 € | 77 € | 0.8× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0501 Assistant achats | 211 | 27 € | 67 € | 43 € | 5 € | 37 € | 0.6× ✗ | 0.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0502 Acheteur junior | 960 | 98 € | 245 € | 69 € | 20 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0503 Sourcing specialist | 760 | 92 € | 230 € | 68 € | 18 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0502 Acheteur | 960 | 98 € | 245 € | 69 € | 20 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0503 Acheteur sourcing | 760 | 92 € | 230 € | 68 € | 18 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0504 Supplier researcher | 1051 | 119 € | 297 € | 73 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0505 Demandeur de devis | 960 | 105 € | 262 € | 58 € | 21 € | 37 € | 1.8× ✗ | 1.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0506 Comparateur fournisseurs | 1200 | 140 € | 349 € | 77 € | 28 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -516,46 +516,46 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0508 Analyste fournisseurs | 8 | 1 € | 2 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0509 Gestionnaire commandes fournisseurs | 334 | 38 € | 96 € | 45 € | 8 € | 37 € | 0.8× ✗ | 0.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0510 Gestionnaire contrats fournisseurs | 908 | 92 € | 230 € | 68 € | 18 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0511 Procurement operations assistant | 941 | 90 € | 224 € | 55 € | 18 € | 37 € | 1.6× ✗ | 1.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0511 Assistant opérations achats | 941 | 90 € | 224 € | 55 € | 18 € | 37 € | 1.6× ✗ | 1.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0512 Assistant négociation | 1051 | 112 € | 280 € | 72 € | 22 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0513 Assistant appels d'offres | 934 | 110 € | 274 € | 59 € | 22 € | 37 € | 1.9× ✗ | 1.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0514 Analyste dépenses | 157 | 15 € | 37 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0515 Spend analyst junior | 157 | 15 € | 37 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0516 Procurement data analyst | 306 | 29 € | 72 € | 83 € | 6 € | 77 € | 0.3× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0517 Supplier onboarding specialist | 1080 | 116 € | 290 € | 60 € | 23 € | 37 € | 1.9× ✗ | 1.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0518 Supplier compliance assistant | 371 | 42 € | 105 € | 58 € | 8 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0519 Purchase order specialist | 276 | 32 € | 79 € | 44 € | 6 € | 37 € | 0.7× ✗ | 0.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0520 Procurement reporting analyst | 157 | 15 € | 37 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0521 Category assistant | 309 | 36 € | 90 € | 57 € | 7 € | 49 € | 0.6× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0515 Analyste des dépenses | 157 | 15 € | 37 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0516 Analyste données achats | 306 | 29 € | 72 € | 83 € | 6 € | 77 € | 0.3× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0517 Chargé de référencement fournisseurs | 1080 | 116 € | 290 € | 60 € | 23 € | 37 € | 1.9× ✗ | 1.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0518 Assistant conformité fournisseurs | 371 | 42 € | 105 € | 58 € | 8 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0519 Gestionnaire des commandes d'achat | 276 | 32 € | 79 € | 44 € | 6 € | 37 € | 0.7× ✗ | 0.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0520 Analyste reporting achats | 157 | 15 € | 37 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0521 Assistant acheteur famille | 309 | 36 € | 90 € | 57 € | 7 € | 49 € | 0.6× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0522 Assistant approvisionnement | 40 | 6 € | 14 € | 38 € | 1 € | 37 € | 0.1× ✗ | 0.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0523 Assistant achats internationaux | 636 | 82 € | 205 € | 66 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0524 Procurement automation specialist | 484 | 47 € | 117 € | 59 € | 9 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0525 Procurement operations manager | 160 | 15 € | 38 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0524 Spécialiste automatisation des achats | 484 | 47 € | 117 € | 59 € | 9 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0525 Responsable des opérations achats | 160 | 15 € | 38 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0526 Assistant logistique | 240 | 28 € | 70 € | 43 € | 6 € | 37 € | 0.7× ✗ | 0.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0527 Dispatch assistant | 930 | 127 € | 318 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0528 Route planner | 131 | 18 € | 46 € | 53 € | 4 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0529 Transport planner | 422 | 51 € | 126 € | 60 € | 10 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0530 Fleet assistant | 795 | 76 € | 190 € | 52 € | 15 € | 37 € | 1.4× ✗ | 1.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0527 Assistant répartition des tournées | 930 | 127 € | 318 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0528 Planificateur de tournées de livraison | 131 | 18 € | 46 € | 53 € | 4 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0529 Planificateur transport | 422 | 51 € | 126 € | 60 € | 10 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0530 Assistant gestionnaire de parc | 795 | 76 € | 190 € | 52 € | 15 € | 37 € | 1.4× ✗ | 1.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0531 Shipment tracker | 542 | 60 € | 151 € | 49 € | 12 € | 37 € | 1.2× ✗ | 1.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0532 Order fulfillment specialist | 211 | 28 € | 70 € | 43 € | 6 € | 37 € | 0.7× ✗ | 0.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0533 Warehouse planning assistant | 127 | 18 € | 44 € | 53 € | 4 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0534 Inventory planner | 8 | 1 € | 3 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0535 Supply chain analyst junior | 157 | 15 € | 37 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0536 Demand planning assistant | 164 | 16 € | 40 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0537 Delivery coordinator | 1591 | 185 € | 462 € | 74 € | 37 € | 37 € | 2.5× ✗ | 2.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0538 Returns logistics specialist | 160 | 22 € | 55 € | 66 € | 4 € | 61 € | 0.3× ✗ | 0.1× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0539 Freight assistant | 170 | 17 € | 42 € | 41 € | 3 € | 37 € | 0.4× ✗ | 0.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0540 Carrier management assistant | 164 | 23 € | 57 € | 54 € | 5 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0541 Logistics customer support | 3241 | 369 € | 923 € | 111 € | 74 € | 37 € | **3.3×** | **3.1×** | 34 € | S (1/bundle) | 2 800 € |
-| AG-0542 Transport quotation assistant | 1051 | 119 € | 297 € | 61 € | 24 € | 37 € | 1.9× ✗ | 1.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0532 Chargé de préparation des commandes | 211 | 28 € | 70 € | 43 € | 6 € | 37 € | 0.7× ✗ | 0.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0533 Assistant planification d'entrepôt | 127 | 18 € | 44 € | 53 € | 4 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0534 Planificateur des stocks | 8 | 1 € | 3 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0535 Analyste chaîne logistique | 157 | 15 € | 37 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0536 Assistant prévision de la demande | 164 | 16 € | 40 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0537 Coordinateur des livraisons | 1591 | 185 € | 462 € | 74 € | 37 € | 37 € | 2.5× ✗ | 2.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0538 Spécialiste logistique des retours | 160 | 22 € | 55 € | 66 € | 4 € | 61 € | 0.3× ✗ | 0.1× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0539 Assistant fret | 170 | 17 € | 42 € | 41 € | 3 € | 37 € | 0.4× ✗ | 0.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0540 Assistant gestion des transporteurs | 164 | 23 € | 57 € | 54 € | 5 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0541 Conseiller service client logistique | 3241 | 369 € | 923 € | 111 € | 74 € | 37 € | **3.3×** | **3.1×** | 34 € | S (1/bundle) | 2 800 € |
+| AG-0542 Assistant cotation transport | 1051 | 119 € | 297 € | 61 € | 24 € | 37 € | 1.9× ✗ | 1.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0543 Delivery scheduling agent | 331 | 36 € | 91 € | 44 € | 7 € | 37 € | 0.8× ✗ | 0.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0544 Warehouse reporting analyst | 79 | 10 € | 24 € | 51 € | 2 € | 49 € | 0.2× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0545 Stock control assistant | 276 | 37 € | 93 € | 45 € | 7 € | 37 € | 0.8× ✗ | 0.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0546 Logistics data analyst | 310 | 34 € | 86 € | 84 € | 7 € | 77 € | 0.4× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0547 Supply chain documentation specialist | 931 | 102 € | 255 € | 82 € | 20 € | 61 € | 1.3× ✗ | 0.2× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0548 Logistics operations specialist | 200 | 19 € | 47 € | 53 € | 4 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0549 Procurement logistics assistant | 811 | 81 € | 203 € | 66 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0550 Logistics operations manager | 200 | 19 € | 47 € | 81 € | 4 € | 77 € | 0.2× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0544 Analyste reporting entrepôt | 79 | 10 € | 24 € | 51 € | 2 € | 49 € | 0.2× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0545 Assistant contrôle des stocks | 276 | 37 € | 93 € | 45 € | 7 € | 37 € | 0.8× ✗ | 0.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0546 Analyste données logistiques | 310 | 34 € | 86 € | 84 € | 7 € | 77 € | 0.4× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0547 Chargé de documentation logistique | 931 | 102 € | 255 € | 82 € | 20 € | 61 € | 1.3× ✗ | 0.2× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0548 Spécialiste des opérations logistiques | 200 | 19 € | 47 € | 53 € | 4 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0549 Assistant approvisionnement logistique | 811 | 81 € | 203 € | 66 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0550 Responsable des opérations logistiques | 200 | 19 € | 47 € | 81 € | 4 € | 77 € | 0.2× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0551 Dispatching agent | 1740 | 168 € | 419 € | 83 € | 34 € | 49 € | 2.0× ✗ | 0.7× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0552 Agent réservation transport | 5700 | 667 € | 1 667 € | 171 € | 133 € | 37 € | **3.9×** | **3.8×** | 34 € | S (1/bundle) | 2 800 € |
 | AG-0553 Planificateur de tournées | 31 | 4 € | 10 € | 78 € | 1 € | 77 € | 0.1× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
@@ -579,10 +579,10 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0571 Assistant affrètement | 515 | 54 € | 135 € | 60 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0572 Agent de recherche transporteurs | 31 | 4 € | 10 € | 50 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0573 Agent de confirmation livraison | 211 | 24 € | 60 € | 42 € | 5 € | 37 € | 0.6× ✗ | 0.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0574 Transport operations specialist | 47 | 5 € | 12 € | 50 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0575 Transport operations manager | 458 | 50 € | 124 € | 87 € | 10 € | 77 € | 0.6× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0574 Spécialiste exploitation transport | 47 | 5 € | 12 € | 50 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0575 Responsable d'exploitation transport | 458 | 50 € | 124 € | 87 € | 10 € | 77 € | 0.6× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0576 Agent de voyage | 4050 | 444 € | 1 111 € | 138 € | 89 € | 49 € | **3.2×** | 1.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0577 Travel planner | 1054 | 126 € | 315 € | 102 € | 25 € | 77 € | 1.2× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0577 Organisateur de voyages | 1054 | 126 € | 315 € | 102 € | 25 € | 77 € | 1.2× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0578 Agent réservation | 360 | 41 € | 101 € | 45 € | 8 € | 37 € | 0.9× ✗ | 0.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0579 Concierge virtuel | 8704 | 811 € | 2 028 € | 199 € | 162 € | 37 € | **4.1×** | **3.9×** | 34 € | S (1/bundle) | 2 800 € |
 | AG-0580 Agent support voyage | 4950 | 468 € | 1 171 € | 143 € | 94 € | 49 € | **3.3×** | 1.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -590,28 +590,28 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0582 Agent location vacances | 1921 | 206 € | 514 € | 102 € | 41 € | 61 € | 2.0× ✗ | 0.5× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0583 Agent recherche vols | 6510 | 742 € | 1 855 € | 198 € | 148 € | 49 € | **3.8×** | 2.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0584 Agent recherche hôtels | 6480 | 704 € | 1 761 € | 190 € | 141 € | 49 € | **3.7×** | 1.9× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0585 Itinerary planner | 1200 | 133 € | 332 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0586 Travel customer support | 1891 | 178 € | 444 € | 85 € | 36 € | 49 € | 2.1× ✗ | 0.7× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0585 Concepteur d'itinéraires | 1200 | 133 € | 332 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0586 Conseiller service client voyages | 1891 | 178 € | 444 € | 85 € | 36 € | 49 € | 2.1× ✗ | 0.7× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0587 Agent modification réservation | 4680 | 503 € | 1 258 € | 150 € | 101 € | 49 € | **3.4×** | 1.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0588 Agent annulation | 3964 | 420 € | 1 050 € | 133 € | 84 € | 49 € | **3.1×** | 1.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0589 Agent assurance voyage | 2134 | 224 € | 561 € | 122 € | 45 € | 77 € | 1.8× ✗ | 0.5× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0590 Destination advisor | 2885 | 319 € | 798 € | 141 € | 64 € | 77 € | 2.3× ✗ | 0.7× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0591 Travel content specialist | 753 | 77 € | 193 € | 65 € | 15 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0592 Travel marketing assistant | 309 | 36 € | 90 € | 57 € | 7 € | 49 € | 0.6× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0593 Travel pricing analyst | 18 | 2 € | 6 € | 78 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0594 Revenue management assistant | 486 | 67 € | 166 € | 90 € | 13 € | 77 € | 0.7× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0595 Guest relations assistant | 901 | 87 € | 217 € | 67 € | 17 € | 49 € | 1.3× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0596 Booking operations specialist | 156 | 22 € | 55 € | 42 € | 4 € | 37 € | 0.5× ✗ | 0.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0597 Travel expense assistant | 254 | 28 € | 71 € | 67 € | 6 € | 61 € | 0.4× ✗ | 0.1× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0598 Corporate travel assistant | 3932 | 368 € | 920 € | 123 € | 74 € | 49 € | 3.0× ✗ | 1.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0599 Travel operations specialist | 189 | 25 € | 62 € | 54 € | 5 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0600 Travel operations manager | 160 | 15 € | 38 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0591 Rédacteur de contenus touristiques | 753 | 77 € | 193 € | 65 € | 15 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0592 Assistant marketing touristique | 309 | 36 € | 90 € | 57 € | 7 € | 49 € | 0.6× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0593 Analyste tarification voyages | 18 | 2 € | 6 € | 78 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0594 Assistant gestion des recettes | 486 | 67 € | 166 € | 90 € | 13 € | 77 € | 0.7× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0595 Assistant relations clientèle | 901 | 87 € | 217 € | 67 € | 17 € | 49 € | 1.3× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0596 Spécialiste gestion des réservations | 156 | 22 € | 55 € | 42 € | 4 € | 37 € | 0.5× ✗ | 0.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0597 Assistant frais de déplacement | 254 | 28 € | 71 € | 67 € | 6 € | 61 € | 0.4× ✗ | 0.1× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0598 Assistant voyages d'affaires | 3932 | 368 € | 920 € | 123 € | 74 € | 49 € | 3.0× ✗ | 1.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0599 Spécialiste production voyages | 189 | 25 € | 62 € | 54 € | 5 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0600 Responsable de production voyages | 160 | 15 € | 38 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0601 Agent réservation restaurant | 2434 | 230 € | 575 € | 83 € | 46 € | 37 € | 2.8× ✗ | 2.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0602 Agent réservation hôtel | 5461 | 594 € | 1 485 € | 156 € | 119 € | 37 € | **3.8×** | **3.6×** | 34 € | S (1/bundle) | 2 800 € |
 | AG-0603 Réceptionniste virtuel | 10805 | 1 007 € | 2 517 € | 239 € | 201 € | 37 € | **4.2×** | **4.1×** | 34 € | S (1/bundle) | 2 800 € |
-| AG-0604 Concierge digital | 13111 | 1 255 € | 3 138 € | 288 € | 251 € | 37 € | **4.4×** | **4.3×** | 34 € | S (1/bundle) | 2 800 € |
-| AG-0605 Guest support agent | 12274 | 1 144 € | 2 860 € | 278 € | 229 € | 49 € | **4.1×** | 2.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0606 Restaurant customer support | 1570 | 147 € | 366 € | 79 € | 29 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0604 Concierge numérique | 13111 | 1 255 € | 3 138 € | 288 € | 251 € | 37 € | **4.4×** | **4.3×** | 34 € | S (1/bundle) | 2 800 € |
+| AG-0605 Conseiller clientèle hôtelière | 12274 | 1 144 € | 2 860 € | 278 € | 229 € | 49 € | **4.1×** | 2.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0606 Conseiller service client restauration | 1570 | 147 € | 366 € | 79 € | 29 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0607 Agent commandes | 15874 | 1 481 € | 3 702 € | 333 € | 296 € | 37 € | **4.4×** | **4.3×** | 34 € | S (1/bundle) | 2 800 € |
 | AG-0608 Agent avis clients | 156 | 15 € | 37 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0609 Assistant planning équipes | 1489 | 139 € | 349 € | 77 € | 28 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -620,17 +620,17 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0612 Assistant menu | 18 | 2 € | 5 € | 78 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0613 Assistant marketing restaurant | 53 | 6 € | 13 € | 62 € | 1 € | 61 € | 0.1× ✗ | 0.0× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0614 Assistant livraison restaurant | 4391 | 409 € | 1 023 € | 131 € | 82 € | 49 € | **3.1×** | 1.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0615 Revenue assistant hôtel | 134 | 14 € | 36 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0616 Pricing assistant hôtel | 182 | 21 € | 53 € | 81 € | 4 € | 77 € | 0.3× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0617 Housekeeping planning assistant | 1569 | 148 € | 370 € | 79 € | 30 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0618 Maintenance request coordinator | 5161 | 481 € | 1 202 € | 157 € | 96 € | 61 € | **3.1×** | 0.9× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0619 Hotel sales assistant | 737 | 69 € | 172 € | 63 € | 14 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0620 Restaurant sales assistant | 737 | 69 € | 173 € | 63 € | 14 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0621 Event booking assistant | 2281 | 215 € | 538 € | 93 € | 43 € | 49 € | 2.3× ✗ | 0.8× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0622 Catering booking assistant | 1591 | 151 € | 378 € | 80 € | 30 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0623 Hospitality CRM assistant | 98 | 11 € | 27 € | 52 € | 2 € | 49 € | 0.2× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0624 Hospitality operations specialist | 79 | 9 € | 22 € | 79 € | 2 € | 77 € | 0.1× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0625 Hospitality operations manager | 53 | 5 € | 14 € | 78 € | 1 € | 77 € | 0.1× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0615 Assistant gestion des recettes hôtelières | 134 | 14 € | 36 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0616 Assistant tarification hôtelière | 182 | 21 € | 53 € | 81 € | 4 € | 77 € | 0.3× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0617 Assistant planification des étages | 1569 | 148 € | 370 € | 79 € | 30 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0618 Coordinateur des demandes de maintenance | 5161 | 481 € | 1 202 € | 157 € | 96 € | 61 € | **3.1×** | 0.9× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0619 Assistant commercial hôtel | 737 | 69 € | 172 € | 63 € | 14 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0620 Assistant commercial restaurant | 737 | 69 € | 173 € | 63 € | 14 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0621 Assistant réservation événements | 2281 | 215 € | 538 € | 93 € | 43 € | 49 € | 2.3× ✗ | 0.8× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0622 Assistant réservation traiteur | 1591 | 151 € | 378 € | 80 € | 30 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0623 Assistant relation client hôtellerie | 98 | 11 € | 27 € | 52 € | 2 € | 49 € | 0.2× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0624 Spécialiste exploitation hôtelière | 79 | 9 € | 22 € | 79 € | 2 € | 77 € | 0.1× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0625 Responsable d'exploitation hôtellerie-restauration | 53 | 5 € | 14 € | 78 € | 1 € | 77 € | 0.1× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0626 Assistant pédagogique | 772 | 72 € | 181 € | 64 € | 14 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0627 Créateur de cours | 163 | 15 € | 38 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0628 Créateur d'exercices | 185 | 17 € | 43 € | 81 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
@@ -639,48 +639,48 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0631 Tuteur IA | 11584 | 1 080 € | 2 699 € | 293 € | 216 € | 77 € | **3.7×** | 1.7× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0632 Assistant professeur | 108 | 13 € | 32 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0633 Assistant formation | 8 | 1 € | 3 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0634 Learning content specialist | 40 | 4 € | 10 € | 62 € | 1 € | 61 € | 0.1× ✗ | 0.0× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0635 LMS administrator junior | 1486 | 139 € | 346 € | 77 € | 28 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0636 Formation linguistique assistant | 76 | 8 € | 19 € | 51 € | 2 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0637 Formation informatique assistant | 131 | 14 € | 34 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0638 Corporate training assistant | 47 | 6 € | 16 € | 51 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0639 Training coordinator | 189 | 22 € | 54 € | 42 € | 4 € | 37 € | 0.5× ✗ | 0.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0640 Learning analyst junior | 15 | 2 € | 4 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0641 Assessment assistant | 37 | 4 € | 9 € | 78 € | 1 € | 77 € | 0.1× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0642 Certification assistant | 95 | 12 € | 29 € | 52 € | 2 € | 49 € | 0.2× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0643 Student support agent | 6515 | 609 € | 1 521 € | 159 € | 122 € | 37 € | **3.8×** | **3.7×** | 34 € | S (1/bundle) | 2 800 € |
-| AG-0644 Enrollment assistant | 904 | 86 € | 215 € | 54 € | 17 € | 37 € | 1.6× ✗ | 1.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0645 Course localization specialist | 108 | 11 € | 26 € | 63 € | 2 € | 61 € | 0.2× ✗ | 0.0× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0646 Education content editor | 185 | 19 € | 47 € | 81 € | 4 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0647 Instructional design assistant | 134 | 14 € | 35 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0648 Learning operations specialist | 11 | 1 € | 4 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0649 Training operations assistant | 875 | 87 € | 218 € | 55 € | 17 € | 37 € | 1.6× ✗ | 1.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0650 Training operations manager | 8 | 1 € | 3 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0651 Consultant junior | 934 | 115 € | 288 € | 72 € | 23 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0652 Business analyst junior | 1054 | 133 € | 333 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0653 Strategy research assistant | 1054 | 119 € | 299 € | 73 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0634 Concepteur de contenus pédagogiques | 40 | 4 € | 10 € | 62 € | 1 € | 61 € | 0.1× ✗ | 0.0× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0635 Administrateur de plateforme de formation | 1486 | 139 € | 346 € | 77 € | 28 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0636 Assistant formation linguistique | 76 | 8 € | 19 € | 51 € | 2 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0637 Assistant formation informatique | 131 | 14 € | 34 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0638 Assistant formation en entreprise | 47 | 6 € | 16 € | 51 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0639 Coordinateur de formation | 189 | 22 € | 54 € | 42 € | 4 € | 37 € | 0.5× ✗ | 0.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0640 Analyste formation | 15 | 2 € | 4 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0641 Assistant évaluation des acquis | 37 | 4 € | 9 € | 78 € | 1 € | 77 € | 0.1× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0642 Assistant certification | 95 | 12 € | 29 € | 52 € | 2 € | 49 € | 0.2× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0643 Conseiller vie étudiante | 6515 | 609 € | 1 521 € | 159 € | 122 € | 37 € | **3.8×** | **3.7×** | 34 € | S (1/bundle) | 2 800 € |
+| AG-0644 Assistant inscriptions | 904 | 86 € | 215 € | 54 € | 17 € | 37 € | 1.6× ✗ | 1.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0645 Spécialiste adaptation de cours | 108 | 11 € | 26 € | 63 € | 2 € | 61 € | 0.2× ✗ | 0.0× ✗ | 61 € | XL (8/bundle) | 2 800 € |
+| AG-0646 Éditeur de contenus éducatifs | 185 | 19 € | 47 € | 81 € | 4 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0647 Assistant ingénierie pédagogique | 134 | 14 € | 35 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0648 Spécialiste organisation de la formation | 11 | 1 € | 4 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0649 Assistant gestion administrative de la formation | 875 | 87 € | 218 € | 55 € | 17 € | 37 € | 1.6× ✗ | 1.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0650 Responsable des opérations de formation | 8 | 1 € | 3 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0651 Consultant | 934 | 115 € | 288 € | 72 € | 23 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0652 Analyste métier | 1054 | 133 € | 333 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0653 Assistant recherche stratégique | 1054 | 119 € | 299 € | 73 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0654 Market research consultant | 1200 | 147 € | 367 € | 79 € | 29 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0655 Competitive intelligence consultant | 231 | 24 € | 59 € | 54 € | 5 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0656 Process analyst | 1200 | 133 € | 332 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0657 Operations consultant assistant | 607 | 78 € | 194 € | 65 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0658 Digital transformation assistant | 909 | 113 € | 282 € | 72 € | 23 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0659 SEO consultant assistant | 348 | 41 € | 103 € | 45 € | 8 € | 37 € | 0.9× ✗ | 0.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0660 Marketing consultant assistant | 306 | 36 € | 89 € | 57 € | 7 € | 49 € | 0.6× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0661 E-commerce consultant assistant | 228 | 25 € | 62 € | 54 € | 5 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0662 Financial consulting assistant | 1200 | 161 € | 402 € | 82 € | 32 € | 49 € | 2.0× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0663 HR consulting assistant | 604 | 63 € | 159 € | 62 € | 13 € | 49 € | 1.0× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0664 Procurement consulting assistant | 604 | 84 € | 211 € | 66 € | 17 € | 49 € | 1.3× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0665 Data consulting assistant | 1054 | 119 € | 299 € | 73 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0666 Technology consulting assistant | 1200 | 147 € | 367 € | 79 € | 29 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0656 Analyste processus | 1200 | 133 € | 332 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0657 Assistant consultant en organisation | 607 | 78 € | 194 € | 65 € | 16 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0658 Assistant transformation numérique | 909 | 113 € | 282 € | 72 € | 23 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0659 Assistant consultant référencement | 348 | 41 € | 103 € | 45 € | 8 € | 37 € | 0.9× ✗ | 0.8× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0660 Assistant consultant marketing | 306 | 36 € | 89 € | 57 € | 7 € | 49 € | 0.6× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0661 Assistant consultant e-commerce | 228 | 25 € | 62 € | 54 € | 5 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0662 Assistant conseil financier | 1200 | 161 € | 402 € | 82 € | 32 € | 49 € | 2.0× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0663 Assistant conseil RH | 604 | 63 € | 159 € | 62 € | 13 € | 49 € | 1.0× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0664 Assistant conseil achats | 604 | 84 € | 211 € | 66 € | 17 € | 49 € | 1.3× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0665 Assistant conseil données | 1054 | 119 € | 299 € | 73 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0666 Assistant conseil technologique | 1200 | 147 € | 367 € | 79 € | 29 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0667 Research consultant | 1054 | 112 € | 281 € | 100 € | 22 € | 77 € | 1.1× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0668 Benchmark analyst | 1200 | 154 € | 384 € | 80 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0669 Business plan analyst | 1200 | 154 € | 384 € | 80 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0670 Due diligence consultant assistant | 814 | 100 € | 250 € | 69 € | 20 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0671 PMO consultant assistant | 86 | 12 € | 29 € | 40 € | 2 € | 37 € | 0.3× ✗ | 0.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0668 Analyste études comparatives | 1200 | 154 € | 384 € | 80 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0669 Analyste plans d'affaires | 1200 | 154 € | 384 € | 80 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0670 Assistant consultant audit d'acquisition | 814 | 100 € | 250 € | 69 € | 20 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0671 Assistant bureau de gestion de projets | 86 | 12 € | 29 € | 40 € | 2 € | 37 € | 0.3× ✗ | 0.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0672 Reporting consultant | 306 | 36 € | 89 € | 44 € | 7 € | 37 € | 0.8× ✗ | 0.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0673 Process documentation consultant | 902 | 105 € | 263 € | 58 € | 21 € | 37 € | 1.8× ✗ | 1.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0674 Consulting analyst | 1200 | 133 € | 332 € | 104 € | 27 € | 77 € | 1.3× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0675 Consulting operations manager | 206 | 22 € | 54 € | 41 € | 4 € | 37 € | 0.5× ✗ | 0.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0674 Analyste en conseil | 1200 | 133 € | 332 € | 104 € | 27 € | 77 € | 1.3× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0675 Responsable des opérations du cabinet de conseil | 206 | 22 € | 54 € | 41 € | 4 € | 37 € | 0.5× ✗ | 0.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0676 Secrétaire médical | 7324 | 685 € | 1 713 € | 187 € | 137 € | 49 € | **3.7×** | 1.9× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0677 Assistant médical administratif | 160 | 16 € | 41 € | 64 € | 3 € | 61 € | 0.3× ✗ | 0.0× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0678 Agent prise de rendez-vous médical | 13684 | 1 275 € | 3 188 € | 292 € | 255 € | 37 € | **4.4×** | **4.3×** | 34 € | S (1/bundle) | 2 800 € |
@@ -703,9 +703,9 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0695 Agent gestion agenda médical | 2373 | 221 € | 553 € | 94 € | 44 € | 49 € | 2.4× ✗ | 0.8× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0696 Agent relation patient | 5731 | 534 € | 1 335 € | 156 € | 107 € | 49 € | **3.4×** | 1.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0697 Assistant télémédecine administratif | 211 | 21 € | 53 € | 54 € | 4 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0698 Medical office assistant | 795 | 77 € | 193 € | 53 € | 15 € | 37 € | 1.5× ✗ | 1.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-0699 Healthcare operations assistant | 21 | 3 € | 7 € | 78 € | 1 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0700 Healthcare operations manager | 11 | 1 € | 4 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0698 Secrétaire de cabinet médical | 795 | 77 € | 193 € | 53 € | 15 € | 37 € | 1.5× ✗ | 1.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
+| AG-0699 Assistant gestion d'établissement de santé | 21 | 3 € | 7 € | 78 € | 1 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0700 Responsable des opérations en établissement de santé | 11 | 1 € | 4 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0701 Assistant conducteur travaux | 1570 | 149 € | 373 € | 79 € | 30 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0702 Assistant chantier | 3694 | 352 € | 872 € | 132 € | 70 € | 61 € | 2.7× ✗ | 0.7× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0703 Assistant devis | 640 | 67 € | 167 € | 63 € | 13 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -725,12 +725,12 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0717 Assistant SAV BTP | 2731 | 255 € | 636 € | 112 € | 51 € | 61 € | 2.3× ✗ | 0.6× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0718 Assistant maintenance bâtiment | 2058 | 226 € | 565 € | 95 € | 45 € | 49 € | 2.4× ✗ | 0.8× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0719 Assistant patrimoine bâtiment | 1454 | 136 € | 340 € | 77 € | 27 € | 49 € | 1.8× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0720 Assistant facility management | 1358 | 128 € | 321 € | 75 € | 26 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0721 Estimating assistant | 902 | 112 € | 280 € | 100 € | 22 € | 77 € | 1.1× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0722 Construction cost analyst junior | 8 | 1 € | 3 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0723 Construction project assistant | 1371 | 163 € | 408 € | 82 € | 33 € | 49 € | 2.0× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0724 Construction operations specialist | 60 | 8 € | 20 € | 51 € | 2 € | 49 € | 0.2× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0725 Construction operations manager | 164 | 16 € | 40 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0720 Assistant services généraux et maintenance | 1358 | 128 € | 321 € | 75 € | 26 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0721 Assistant métreur | 902 | 112 € | 280 € | 100 € | 22 € | 77 € | 1.1× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0722 Analyste des coûts de construction | 8 | 1 € | 3 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0723 Assistant chef de projet construction | 1371 | 163 € | 408 € | 82 € | 33 € | 49 € | 2.0× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0724 Spécialiste exploitation chantiers | 60 | 8 € | 20 € | 51 € | 2 € | 49 € | 0.2× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-0725 Directeur des opérations travaux | 164 | 16 € | 40 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0726 Assistant plombier | 8310 | 986 € | 2 148 € | 258 € | 197 € | 61 € | **3.8×** | 1.6× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0727 Assistant électricien | 8550 | 1 049 € | 2 305 € | 271 € | 210 € | 61 € | **3.9×** | 1.7× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0728 Assistant peintre | 5820 | 782 € | 1 638 € | 218 € | 156 € | 61 € | **3.6×** | 1.4× ✗ | 61 € | XL (8/bundle) | 2 800 € |
@@ -755,7 +755,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0747 Agent suivi intervention | 334 | 40 € | 93 € | 69 € | 8 € | 61 € | 0.6× ✗ | 0.1× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0748 Agent facturation artisan | 811 | 92 € | 231 € | 68 € | 18 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0749 Agent avis clients artisan | 940 | 89 € | 222 € | 67 € | 18 € | 49 € | 1.3× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0750 Artisan operations manager | 160 | 15 € | 38 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0750 Gérant d'entreprise artisanale | 160 | 15 € | 38 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0751 Assistant jardinier | 309 | 32 € | 79 € | 56 € | 6 € | 49 € | 0.6× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0752 Assistant paysagiste | 1200 | 133 € | 332 € | 88 € | 27 € | 61 € | 1.5× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0753 Agent devis jardinage | 1080 | 123 € | 307 € | 74 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -780,7 +780,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0772 Agent recrutement jardiniers | 636 | 61 € | 152 € | 62 € | 12 € | 49 € | 1.0× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0773 Agent matching jardiniers | 247 | 23 € | 58 € | 54 € | 5 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0774 Agent opérations paysagisme | 1290 | 129 € | 321 € | 87 € | 26 € | 61 € | 1.5× ✗ | 0.3× ✗ | 61 € | XL (8/bundle) | 2 800 € |
-| AG-0775 Jardinage operations manager | 11 | 1 € | 4 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0775 Responsable d'exploitation paysagiste | 11 | 1 € | 4 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0776 Assistant entreprise nettoyage | 1050 | 99 € | 248 € | 69 € | 20 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0777 Agent devis nettoyage | 1200 | 154 € | 384 € | 108 € | 31 € | 77 € | 1.4× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0778 Agent planning nettoyage | 21 | 3 € | 6 € | 50 € | 1 € | 49 € | 0.1× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -804,8 +804,8 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0796 Agent B2B nettoyage | 785 | 103 € | 257 € | 98 € | 21 € | 77 € | 1.1× ✗ | 0.2× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0797 Agent B2C nettoyage | 1656 | 190 € | 474 € | 87 € | 38 € | 49 € | 2.2× ✗ | 0.7× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0798 Agent planning récurrent | 8563 | 800 € | 1 999 € | 197 € | 160 € | 37 € | **4.1×** | **3.9×** | 34 € | S (1/bundle) | 2 800 € |
-| AG-0799 Cleaning operations specialist | 15 | 2 € | 5 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0800 Cleaning operations manager | 18 | 2 € | 5 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0799 Chargé d'exploitation propreté | 15 | 2 € | 5 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0800 Responsable d'exploitation propreté | 18 | 2 € | 5 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0801 Assistant garage | 7174 | 670 € | 1 675 € | 183 € | 134 € | 49 € | **3.6×** | 1.9× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0802 Agent prise de rendez-vous garage | 2469 | 230 € | 576 € | 83 € | 46 € | 37 € | 2.8× ✗ | 2.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-0803 Agent qualification panne | 3450 | 321 € | 804 € | 114 € | 64 € | 49 € | 2.8× ✗ | 1.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -829,8 +829,8 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0821 Agent support atelier | 6124 | 579 € | 1 448 € | 165 € | 116 € | 49 € | **3.5×** | 1.7× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0822 Agent estimation réparation assistant | 2553 | 273 € | 682 € | 104 € | 55 € | 49 € | 2.6× ✗ | 1.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0823 Agent documentation technique automobile | 44 | 4 € | 11 € | 78 € | 1 € | 77 € | 0.1× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0824 Automotive operations specialist | 21 | 3 € | 7 € | 78 € | 1 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0825 Automotive operations manager | 15 | 2 € | 4 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0824 Chargé d'exploitation après-vente automobile | 21 | 3 € | 7 € | 78 € | 1 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0825 Directeur après-vente automobile | 15 | 2 € | 4 € | 77 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0826 Agent état des lieux | 1500 | 196 € | 489 € | 100 € | 39 € | 61 € | 1.9× ✗ | 0.4× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-0827 Agent collecte documents immobiliers | 1564 | 161 € | 403 € | 82 € | 32 € | 49 € | 2.0× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0828 Agent dossier location | 1950 | 203 € | 507 € | 90 € | 41 € | 49 € | 2.3× ✗ | 0.8× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -854,8 +854,8 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0846 Agent maintenance locative | 1205 | 119 € | 299 € | 73 € | 24 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0847 Agent réclamation locataire | 1234 | 115 € | 288 € | 72 € | 23 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0848 Agent reporting patrimoine | 7 | 1 € | 2 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0849 Property legal operations assistant | 610 | 64 € | 160 € | 90 € | 13 € | 77 € | 0.7× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0850 Property operations manager | 159 | 22 € | 56 € | 82 € | 4 € | 77 € | 0.3× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0849 Assistant juridique immobilier | 610 | 64 € | 160 € | 90 € | 13 € | 77 € | 0.7× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0850 Responsable de gestion immobilière | 159 | 22 € | 56 € | 82 € | 4 € | 77 € | 0.3× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0851 Agent support SaaS | 1089 | 103 € | 258 € | 70 € | 21 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0852 Agent support e-commerce | 1085 | 101 € | 253 € | 70 € | 20 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0853 Agent support marketplace | 1231 | 116 € | 290 € | 73 € | 23 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -879,35 +879,35 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0871 Agent réclamation | 1231 | 116 € | 290 € | 100 € | 23 € | 77 € | 1.2× ✗ | 0.3× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-0872 Agent fidélisation | 1202 | 112 € | 280 € | 72 € | 22 € | 49 € | 1.6× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-0873 Agent renouvellement | 755 | 84 € | 211 € | 66 € | 17 € | 49 € | 1.3× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-0874 Customer success specialist | 312 | 29 € | 73 € | 83 € | 6 € | 77 € | 0.3× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0875 Customer operations manager | 43 | 6 € | 14 € | 78 € | 1 € | 77 € | 0.1× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-0876 Assistant CEO | 103 | 10 € | 24 € | 48 € | 2 € | 46 € | 0.2× ✗ | 0.0× ✗ | 46 € | XL (13/bundle) | 2 800 € |
-| AG-0877 Assistant COO | 51 | 7 € | 17 € | 45 € | 1 € | 44 € | 0.1× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0878 Assistant CFO | 38 | 4 € | 10 € | 47 € | 1 € | 46 € | 0.1× ✗ | 0.0× ✗ | 46 € | XL (13/bundle) | 2 800 € |
-| AG-0879 Assistant CTO | 38 | 5 € | 13 € | 47 € | 1 € | 46 € | 0.1× ✗ | 0.0× ✗ | 46 € | XL (13/bundle) | 2 800 € |
-| AG-0880 Assistant CMO | 608 | 85 € | 212 € | 61 € | 17 € | 44 € | 1.4× ✗ | 1.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0881 Executive assistant | 695 | 65 € | 162 € | 57 € | 13 € | 44 € | 1.1× ✗ | 1.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0882 Meeting assistant | 3600 | 363 € | 908 € | 117 € | 73 € | 44 € | **3.1×** | 3.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0883 Research assistant | 900 | 98 € | 245 € | 72 € | 20 € | 52 € | 1.4× ✗ | 0.2× ✗ | 52 € | XL (11/bundle) | 2 800 € |
-| AG-0884 Decision support assistant | 900 | 105 € | 262 € | 63 € | 21 € | 42 € | 1.7× ✗ | 0.2× ✗ | 42 € | XL (15/bundle) | 2 800 € |
-| AG-0885 OKR assistant | 13 | 1 € | 4 € | 36 € | 0 € | 35 € | 0.0× ✗ | 0.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0886 Project management assistant | 77 | 10 € | 26 € | 46 € | 2 € | 44 € | 0.2× ✗ | 0.2× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0887 PMO assistant | 19 | 2 € | 5 € | 39 € | 0 € | 39 € | 0.1× ✗ | 0.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0874 Responsable réussite client | 312 | 29 € | 73 € | 83 € | 6 € | 77 € | 0.3× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0875 Responsable du service client | 43 | 6 € | 14 € | 78 € | 1 € | 77 € | 0.1× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-0876 Assistant du dirigeant | 103 | 10 € | 24 € | 48 € | 2 € | 46 € | 0.2× ✗ | 0.0× ✗ | 46 € | XL (13/bundle) | 2 800 € |
+| AG-0877 Assistant du directeur des opérations | 51 | 7 € | 17 € | 45 € | 1 € | 44 € | 0.1× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0878 Assistant du directeur administratif et financier | 38 | 4 € | 10 € | 47 € | 1 € | 46 € | 0.1× ✗ | 0.0× ✗ | 46 € | XL (13/bundle) | 2 800 € |
+| AG-0879 Assistant du directeur technique | 38 | 5 € | 13 € | 47 € | 1 € | 46 € | 0.1× ✗ | 0.0× ✗ | 46 € | XL (13/bundle) | 2 800 € |
+| AG-0880 Assistant du directeur marketing | 608 | 85 € | 212 € | 61 € | 17 € | 44 € | 1.4× ✗ | 1.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0881 Assistant de direction générale | 695 | 65 € | 162 € | 57 € | 13 € | 44 € | 1.1× ✗ | 1.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0882 Assistant préparation des réunions | 3600 | 363 € | 908 € | 117 € | 73 € | 44 € | **3.1×** | 3.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0883 Assistant documentaliste | 900 | 98 € | 245 € | 72 € | 20 € | 52 € | 1.4× ✗ | 0.2× ✗ | 52 € | XL (11/bundle) | 2 800 € |
+| AG-0884 Assistant aide à la décision | 900 | 105 € | 262 € | 63 € | 21 € | 42 € | 1.7× ✗ | 0.2× ✗ | 42 € | XL (15/bundle) | 2 800 € |
+| AG-0885 Assistant suivi des objectifs | 13 | 1 € | 4 € | 36 € | 0 € | 35 € | 0.0× ✗ | 0.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0886 Assistant chef de projet | 77 | 10 € | 26 € | 46 € | 2 € | 44 € | 0.2× ✗ | 0.2× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0887 Assistant bureau des projets | 19 | 2 € | 5 € | 39 € | 0 € | 39 € | 0.1× ✗ | 0.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0888 Task management agent | 9000 | 839 € | 2 097 € | 202 € | 168 € | 35 € | **4.1×** | **4.0×** | 26 € | S (1/bundle) | 2 800 € |
 | AG-0889 Documentation agent | 634 | 59 € | 148 € | 51 € | 12 € | 39 € | 1.2× ✗ | 0.9× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0890 Knowledge management agent | 162 | 15 € | 38 € | 42 € | 3 € | 39 € | 0.4× ✗ | 0.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0891 Internal search agent | 900 | 84 € | 210 € | 66 € | 17 € | 49 € | 1.3× ✗ | 1.2× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-0891 Agent recherche documentaire interne | 900 | 84 € | 210 € | 66 € | 17 € | 49 € | 1.3× ✗ | 1.2× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-0892 Company wiki agent | 13 | 2 € | 4 € | 35 € | 0 € | 35 € | 0.0× ✗ | 0.0× ✗ | 26 € | S (1/bundle) | 2 800 € |
-| AG-0893 Policy assistant | 641 | 60 € | 150 € | 48 € | 12 € | 35 € | 1.3× ✗ | 1.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0893 Assistant procédures internes | 641 | 60 € | 150 € | 48 € | 12 € | 35 € | 1.3× ✗ | 1.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0894 Process automation agent | 511 | 49 € | 123 € | 54 € | 10 € | 44 € | 0.9× ✗ | 0.8× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0895 Workflow analyst | 900 | 112 € | 280 € | 61 € | 22 € | 39 € | 1.8× ✗ | 1.5× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0896 Business operations assistant | 38 | 5 € | 13 € | 40 € | 1 € | 39 € | 0.1× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0897 Executive reporting assistant | 6 | 1 € | 2 € | 39 € | 0 € | 39 € | 0.0× ✗ | 0.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0895 Analyste des flux de travail | 900 | 112 € | 280 € | 61 € | 22 € | 39 € | 1.8× ✗ | 1.5× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0896 Assistant organisation de l'entreprise | 38 | 5 € | 13 € | 40 € | 1 € | 39 € | 0.1× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0897 Assistant reporting de direction | 6 | 1 € | 2 € | 39 € | 0 € | 39 € | 0.0× ✗ | 0.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0898 Management reporting agent | 6 | 1 € | 2 € | 39 € | 0 € | 39 € | 0.0× ✗ | 0.0× ✗ | 28 € | S (1/bundle) | 2 800 € |
-| AG-0899 Operations analyst | 13 | 2 € | 4 € | 44 € | 0 € | 44 € | 0.0× ✗ | 0.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0900 AI operations manager | 223 | 31 € | 78 € | 45 € | 6 € | 39 € | 0.7× ✗ | 0.6× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0899 Analyste organisation et méthodes | 13 | 2 € | 4 € | 44 € | 0 € | 44 € | 0.0× ✗ | 0.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0900 Responsable des opérations IA | 223 | 31 € | 78 € | 45 € | 6 € | 39 € | 0.7× ✗ | 0.6× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0901 Assistant événementiel | 750 | 99 € | 248 € | 55 € | 20 € | 35 € | 1.8× ✗ | 1.6× ✗ | 26 € | S (1/bundle) | 2 800 € |
-| AG-0902 Event planner assistant | 300 | 29 € | 73 € | 36 € | 6 € | 30 € | 0.8× ✗ | 0.6× ✗ | 24 € | S (2/bundle) | 2 800 € |
+| AG-0902 Assistant organisateur d'événements | 300 | 29 € | 73 € | 36 € | 6 € | 30 € | 0.8× ✗ | 0.6× ✗ | 24 € | S (2/bundle) | 2 800 € |
 | AG-0903 Agent réservation salle | 1230 | 150 € | 374 € | 65 € | 30 € | 35 € | 2.3× ✗ | 2.0× ✗ | 26 € | S (1/bundle) | 2 800 € |
 | AG-0904 Agent inscription participants | 1560 | 180 € | 451 € | 71 € | 36 € | 35 € | 2.5× ✗ | 2.3× ✗ | 26 € | S (1/bundle) | 2 800 € |
 | AG-0905 Agent invitations | 1230 | 115 € | 287 € | 58 € | 23 € | 35 € | 2.0× ✗ | 1.7× ✗ | 26 € | S (1/bundle) | 2 800 € |
@@ -919,18 +919,18 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0911 Agent devis événement | 1230 | 137 € | 342 € | 63 € | 27 € | 35 € | 2.2× ✗ | 1.8× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0912 Agent communication événement | 540 | 64 € | 161 € | 52 € | 13 € | 39 € | 1.2× ✗ | 1.1× ✗ | 28 € | S (1/bundle) | 2 800 € |
 | AG-0913 Agent emailing événement | 660 | 63 € | 157 € | 47 € | 13 € | 35 € | 1.3× ✗ | 1.1× ✗ | 26 € | S (1/bundle) | 2 800 € |
-| AG-0914 Agent accueil digital | 4740 | 442 € | 1 104 € | 128 € | 88 € | 39 € | **3.5×** | **3.4×** | 28 € | S (1/bundle) | 2 800 € |
+| AG-0914 Agent d'accueil numérique | 4740 | 442 € | 1 104 € | 128 € | 88 € | 39 € | **3.5×** | **3.4×** | 28 € | S (1/bundle) | 2 800 € |
 | AG-0915 Agent FAQ événement | 870 | 82 € | 206 € | 47 € | 16 € | 30 € | 1.8× ✗ | 1.4× ✗ | 24 € | S (2/bundle) | 2 800 € |
-| AG-0916 Agent billetterie support | 1800 | 176 € | 440 € | 74 € | 35 € | 39 € | 2.4× ✗ | 2.2× ✗ | 28 € | S (1/bundle) | 2 800 € |
+| AG-0916 Agent support billetterie | 1800 | 176 € | 440 € | 74 € | 35 € | 39 € | 2.4× ✗ | 2.2× ✗ | 28 € | S (1/bundle) | 2 800 € |
 | AG-0917 Agent sponsors | 540 | 73 € | 182 € | 53 € | 15 € | 39 € | 1.4× ✗ | 1.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0918 Agent partenaires | 390 | 45 € | 112 € | 39 € | 9 € | 30 € | 1.1× ✗ | 0.8× ✗ | 24 € | S (2/bundle) | 2 800 € |
 | AG-0919 Agent reporting événement | 750 | 91 € | 227 € | 49 € | 18 € | 30 € | 1.9× ✗ | 1.3× ✗ | 37 € | S (2/bundle) | 2 800 € |
 | AG-0920 Agent post-event survey | 900 | 91 € | 227 € | 49 € | 18 € | 30 € | 1.9× ✗ | 1.3× ✗ | 37 € | S (2/bundle) | 2 800 € |
 | AG-0921 Agent gestion hôtels participants | 1680 | 212 € | 531 € | 77 € | 42 € | 35 € | 2.8× ✗ | 2.5× ✗ | 26 € | S (1/bundle) | 2 800 € |
 | AG-0922 Agent transport participants | 900 | 98 € | 245 € | 54 € | 20 € | 35 € | 1.8× ✗ | 1.6× ✗ | 26 € | S (1/bundle) | 2 800 € |
-| AG-0923 Event operations assistant | 540 | 59 € | 147 € | 47 € | 12 € | 35 € | 1.3× ✗ | 1.1× ✗ | 26 € | S (1/bundle) | 2 800 € |
-| AG-0924 Event marketing assistant | 660 | 75 € | 189 € | 54 € | 15 € | 39 € | 1.4× ✗ | 1.3× ✗ | 28 € | S (1/bundle) | 2 800 € |
-| AG-0925 Event operations manager | 784 | 89 € | 222 € | 68 € | 18 € | 51 € | 1.3× ✗ | 1.3× ✗ | 40 € | S (1/bundle) | 2 800 € |
+| AG-0923 Assistant régie événementielle | 540 | 59 € | 147 € | 47 € | 12 € | 35 € | 1.3× ✗ | 1.1× ✗ | 26 € | S (1/bundle) | 2 800 € |
+| AG-0924 Chargé de promotion d'événements | 660 | 75 € | 189 € | 54 € | 15 € | 39 € | 1.4× ✗ | 1.3× ✗ | 28 € | S (1/bundle) | 2 800 € |
+| AG-0925 Directeur de production événementielle | 784 | 89 € | 222 € | 68 € | 18 € | 51 € | 1.3× ✗ | 1.3× ✗ | 40 € | S (1/bundle) | 2 800 € |
 | AG-0926 Assistant association | 514 | 69 € | 172 € | 49 € | 14 € | 35 € | 1.4× ✗ | 1.2× ✗ | 26 € | S (1/bundle) | 2 800 € |
 | AG-0927 Agent adhésions | 365 | 41 € | 103 € | 43 € | 8 € | 35 € | 1.0× ✗ | 0.8× ✗ | 26 € | S (1/bundle) | 2 800 € |
 | AG-0928 Agent dons | 220 | 28 € | 69 € | 40 € | 6 € | 35 € | 0.7× ✗ | 0.6× ✗ | 26 € | S (1/bundle) | 2 800 € |
@@ -954,8 +954,8 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0946 Agent suivi bénévoles | 307 | 36 € | 89 € | 37 € | 7 € | 30 € | 0.9× ✗ | 0.7× ✗ | 24 € | S (2/bundle) | 2 800 € |
 | AG-0947 Agent recrutement bénévoles | 511 | 48 € | 119 € | 44 € | 10 € | 35 € | 1.1× ✗ | 0.9× ✗ | 26 € | S (1/bundle) | 2 800 € |
 | AG-0948 Agent gestion partenaires | 460 | 57 € | 143 € | 42 € | 11 € | 30 € | 1.4× ✗ | 1.0× ✗ | 24 € | S (2/bundle) | 2 800 € |
-| AG-0949 Association operations specialist | 194 | 19 € | 49 € | 39 € | 4 € | 35 € | 0.5× ✗ | 0.4× ✗ | 26 € | S (1/bundle) | 2 800 € |
-| AG-0950 Association operations manager | 305 | 36 € | 89 € | 43 € | 7 € | 35 € | 0.8× ✗ | 0.6× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0949 Chargé de gestion associative | 194 | 19 € | 49 € | 39 € | 4 € | 35 € | 0.5× ✗ | 0.4× ✗ | 26 € | S (1/bundle) | 2 800 € |
+| AG-0950 Directeur d'association | 305 | 36 € | 89 € | 43 € | 7 € | 35 € | 0.8× ✗ | 0.6× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0951 Assistant visa | 514 | 55 € | 137 € | 55 € | 11 € | 44 € | 1.0× ✗ | 0.9× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0952 Agent collecte documents visa | 394 | 37 € | 92 € | 46 € | 7 € | 39 € | 0.8× ✗ | 0.6× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0953 Agent suivi dossier visa | 249 | 23 € | 58 € | 39 € | 5 € | 35 € | 0.6× ✗ | 0.5× ✗ | 26 € | S (1/bundle) | 2 800 € |
@@ -973,14 +973,14 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0965 Agent assurance expatrié | 751 | 91 € | 227 € | 54 € | 18 € | 35 € | 1.7× ✗ | 1.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0966 Agent voyage administratif | 754 | 91 € | 228 € | 57 € | 18 € | 39 € | 1.6× ✗ | 1.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0967 Agent support expatriation | 274 | 26 € | 64 € | 44 € | 5 € | 39 € | 0.6× ✗ | 0.5× ✗ | 28 € | S (1/bundle) | 2 800 € |
-| AG-0968 Agent relocation assistant | 369 | 41 € | 103 € | 43 € | 8 € | 35 € | 1.0× ✗ | 0.8× ✗ | 26 € | S (1/bundle) | 2 800 € |
+| AG-0968 Chargé d'installation des expatriés | 369 | 41 € | 103 € | 43 € | 8 € | 35 € | 1.0× ✗ | 0.8× ✗ | 26 € | S (1/bundle) | 2 800 € |
 | AG-0969 Agent onboarding expatrié | 317 | 37 € | 91 € | 42 € | 7 € | 35 € | 0.9× ✗ | 0.7× ✗ | 26 € | S (1/bundle) | 2 800 € |
 | AG-0970 Agent renouvellement documents | 609 | 57 € | 142 € | 46 € | 11 € | 35 € | 1.2× ✗ | 1.0× ✗ | 26 € | S (1/bundle) | 2 800 € |
-| AG-0971 Agent compliance immigration assistant | 165 | 23 € | 56 € | 48 € | 5 € | 44 € | 0.5× ✗ | 0.4× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0971 Assistant conformité immigration | 165 | 23 € | 56 € | 48 € | 5 € | 44 € | 0.5× ✗ | 0.4× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0972 Agent mobilité internationale | 336 | 32 € | 79 € | 42 € | 6 € | 35 € | 0.8× ✗ | 0.6× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-0973 Agent travel documentation | 314 | 29 € | 73 € | 38 € | 6 € | 32 € | 0.8× ✗ | 0.5× ✗ | 37 € | S (2/bundle) | 2 800 € |
-| AG-0974 Mobility operations specialist | 220 | 22 € | 55 € | 39 € | 4 € | 35 € | 0.6× ✗ | 0.5× ✗ | 26 € | S (1/bundle) | 2 800 € |
-| AG-0975 Mobility operations manager | 155 | 15 € | 37 € | 38 € | 3 € | 35 € | 0.4× ✗ | 0.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-0973 Agent documents de voyage | 314 | 29 € | 73 € | 38 € | 6 € | 32 € | 0.8× ✗ | 0.5× ✗ | 37 € | S (2/bundle) | 2 800 € |
+| AG-0974 Spécialiste mobilité internationale | 220 | 22 € | 55 € | 39 € | 4 € | 35 € | 0.6× ✗ | 0.5× ✗ | 26 € | S (1/bundle) | 2 800 € |
+| AG-0975 Responsable mobilité internationale | 155 | 15 € | 37 € | 38 € | 3 € | 35 € | 0.4× ✗ | 0.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0976 Assistant énergie | 197 | 19 € | 46 € | 43 € | 4 € | 39 € | 0.4× ✗ | 0.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0977 Agent suivi consommation | 125 | 13 € | 33 € | 44 € | 3 € | 41 € | 0.3× ✗ | 0.3× ✗ | 29 € | S (1/bundle) | 2 800 € |
 | AG-0978 Agent analyse factures énergie | 197 | 26 € | 64 € | 56 € | 5 € | 51 € | 0.5× ✗ | 0.5× ✗ | 40 € | S (1/bundle) | 2 800 € |
@@ -1003,9 +1003,9 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-0995 Agent suivi recyclage | 16 | 2 € | 5 € | 35 € | 0 € | 35 € | 0.1× ✗ | 0.0× ✗ | 26 € | S (1/bundle) | 2 800 € |
 | AG-0996 Agent gestion fournisseurs énergie | 42 | 5 € | 13 € | 40 € | 1 € | 39 € | 0.1× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-0997 Agent opérations énergie | 150 | 18 € | 45 € | 38 € | 4 € | 34 € | 0.5× ✗ | 0.4× ✗ | 31 € | S (1/bundle) | 2 800 € |
-| AG-0998 Energy data analyst junior | 154 | 17 € | 43 € | 45 € | 3 € | 41 € | 0.4× ✗ | 0.4× ✗ | 29 € | S (1/bundle) | 2 800 € |
-| AG-0999 Energy operations specialist | 45 | 6 € | 14 € | 45 € | 1 € | 44 € | 0.1× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-1000 Energy operations manager | 19 | 2 € | 5 € | 47 € | 0 € | 46 € | 0.0× ✗ | 0.0× ✗ | 46 € | XL (13/bundle) | 2 800 € |
+| AG-0998 Analyste données énergétiques | 154 | 17 € | 43 € | 45 € | 3 € | 41 € | 0.4× ✗ | 0.4× ✗ | 29 € | S (1/bundle) | 2 800 € |
+| AG-0999 Chargé d'exploitation énergie | 45 | 6 € | 14 € | 45 € | 1 € | 44 € | 0.1× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1000 Responsable d'exploitation énergie | 19 | 2 € | 5 € | 47 € | 0 € | 46 € | 0.0× ✗ | 0.0× ✗ | 46 € | XL (13/bundle) | 2 800 € |
 | AG-1001 Assistant production | 390 | 48 € | 119 € | 59 € | 10 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1002 Assistant maintenance | 674 | 66 € | 165 € | 63 € | 13 € | 49 € | 1.1× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1003 Agent planning production | 253 | 27 € | 67 € | 82 € | 5 € | 77 € | 0.3× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
@@ -1029,33 +1029,33 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1021 Agent commande industrielle | 2490 | 291 € | 727 € | 108 € | 58 € | 49 € | 2.7× ✗ | 1.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1022 Agent support SAV industriel | 2461 | 287 € | 717 € | 107 € | 57 € | 49 € | 2.7× ✗ | 1.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1023 Agent analyse performance industrielle | 163 | 16 € | 39 € | 80 € | 3 € | 77 € | 0.2× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-1024 Industrial operations specialist | 308 | 43 € | 107 € | 86 € | 9 € | 77 € | 0.5× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
-| AG-1025 Industrial operations manager | 17 | 2 € | 6 € | 78 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-1024 Responsable amélioration continue | 308 | 43 € | 107 € | 86 € | 9 € | 77 € | 0.5× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
+| AG-1025 Directeur des opérations industrielles | 17 | 2 € | 6 € | 78 € | 0 € | 77 € | 0.0× ✗ | 0.0× ✗ | 77 € | XL (6/bundle) | 2 800 € |
 | AG-1026 Assistant éditeur | 279 | 36 € | 90 € | 59 € | 7 € | 52 € | 0.6× ✗ | 0.2× ✗ | 50 € | L (5/bundle) | 2 800 € |
 | AG-1027 Correcteur | 1050 | 126 € | 314 € | 112 € | 25 € | 87 € | 1.1× ✗ | 0.3× ✗ | 87 € | XL (5/bundle) | 2 800 € |
 | AG-1028 Relecteur | 1050 | 126 € | 314 € | 112 € | 25 € | 87 € | 1.1× ✗ | 0.3× ✗ | 87 € | XL (5/bundle) | 2 800 € |
 | AG-1029 Rédacteur technique | 1209 | 127 € | 317 € | 77 € | 25 € | 52 € | 1.6× ✗ | 0.5× ✗ | 50 € | L (5/bundle) | 2 800 € |
 | AG-1030 Rédacteur documentation | 315 | 37 € | 91 € | 59 € | 7 € | 52 € | 0.6× ✗ | 0.2× ✗ | 50 € | L (5/bundle) | 2 800 € |
 | AG-1031 Assistant recherche | 1050 | 105 € | 262 € | 108 € | 21 € | 87 € | 1.0× ✗ | 0.2× ✗ | 87 € | XL (5/bundle) | 2 800 € |
-| AG-1032 Research assistant | 169 | 23 € | 59 € | 57 € | 5 € | 52 € | 0.4× ✗ | 0.1× ✗ | 50 € | L (5/bundle) | 2 800 € |
-| AG-1033 Fact-checking assistant | 1050 | 126 € | 314 € | 112 € | 25 € | 87 € | 1.1× ✗ | 0.3× ✗ | 87 € | XL (5/bundle) | 2 800 € |
-| AG-1034 Bibliography assistant | 901 | 105 € | 262 € | 73 € | 21 € | 52 € | 1.4× ✗ | 0.4× ✗ | 50 € | L (5/bundle) | 2 800 € |
-| AG-1035 Indexation specialist | 762 | 71 € | 178 € | 66 € | 14 € | 52 € | 1.1× ✗ | 0.3× ✗ | 50 € | L (5/bundle) | 2 800 € |
-| AG-1036 Metadata specialist | 1082 | 109 € | 273 € | 109 € | 22 € | 87 € | 1.0× ✗ | 0.3× ✗ | 87 € | XL (5/bundle) | 2 800 € |
-| AG-1037 Content editor junior | 930 | 102 € | 255 € | 108 € | 20 € | 87 € | 0.9× ✗ | 0.2× ✗ | 87 € | XL (5/bundle) | 2 800 € |
-| AG-1038 Content curator | 246 | 33 € | 82 € | 58 € | 7 € | 52 € | 0.6× ✗ | 0.1× ✗ | 50 € | L (5/bundle) | 2 800 € |
+| AG-1032 Assistant de recherche documentaire | 169 | 23 € | 59 € | 57 € | 5 € | 52 € | 0.4× ✗ | 0.1× ✗ | 50 € | L (5/bundle) | 2 800 € |
+| AG-1033 Vérificateur de faits | 1050 | 126 € | 314 € | 112 € | 25 € | 87 € | 1.1× ✗ | 0.3× ✗ | 87 € | XL (5/bundle) | 2 800 € |
+| AG-1034 Assistant bibliographie | 901 | 105 € | 262 € | 73 € | 21 € | 52 € | 1.4× ✗ | 0.4× ✗ | 50 € | L (5/bundle) | 2 800 € |
+| AG-1035 Indexeur | 762 | 71 € | 178 € | 66 € | 14 € | 52 € | 1.1× ✗ | 0.3× ✗ | 50 € | L (5/bundle) | 2 800 € |
+| AG-1036 Gestionnaire de métadonnées | 1082 | 109 € | 273 € | 109 € | 22 € | 87 € | 1.0× ✗ | 0.3× ✗ | 87 € | XL (5/bundle) | 2 800 € |
+| AG-1037 Éditeur de contenus | 930 | 102 € | 255 € | 108 € | 20 € | 87 € | 0.9× ✗ | 0.2× ✗ | 87 € | XL (5/bundle) | 2 800 € |
+| AG-1038 Veilleur de contenus | 246 | 33 € | 82 € | 58 € | 7 € | 52 € | 0.6× ✗ | 0.1× ✗ | 50 € | L (5/bundle) | 2 800 € |
 | AG-1039 Newsletter editor | 52 | 5 € | 13 € | 53 € | 1 € | 52 € | 0.1× ✗ | 0.0× ✗ | 50 € | L (5/bundle) | 2 800 € |
 | AG-1040 Knowledge base editor | 914 | 86 € | 214 € | 69 € | 17 € | 52 € | 1.2× ✗ | 0.4× ✗ | 50 € | L (5/bundle) | 2 800 € |
-| AG-1041 Documentation manager junior | 14 | 1 € | 4 € | 52 € | 0 € | 52 € | 0.0× ✗ | 0.0× ✗ | 50 € | L (5/bundle) | 2 800 € |
-| AG-1042 Technical documentation specialist | 312 | 36 € | 91 € | 95 € | 7 € | 87 € | 0.4× ✗ | 0.1× ✗ | 87 € | XL (5/bundle) | 2 800 € |
-| AG-1043 Content localization specialist | 464 | 57 € | 144 € | 63 € | 11 € | 52 € | 0.9× ✗ | 0.3× ✗ | 50 € | L (5/bundle) | 2 800 € |
-| AG-1044 Digital publishing assistant | 1050 | 119 € | 297 € | 76 € | 24 € | 52 € | 1.6× ✗ | 0.5× ✗ | 50 € | L (5/bundle) | 2 800 € |
-| AG-1045 Publishing operations assistant | 969 | 128 € | 320 € | 78 € | 26 € | 52 € | 1.6× ✗ | 0.5× ✗ | 50 € | L (5/bundle) | 2 800 € |
-| AG-1046 Research data assistant | 1060 | 113 € | 282 € | 74 € | 23 € | 52 € | 1.5× ✗ | 0.5× ✗ | 50 € | L (5/bundle) | 2 800 € |
-| AG-1047 Literature review assistant | 1050 | 112 € | 280 € | 110 € | 22 € | 87 € | 1.0× ✗ | 0.3× ✗ | 87 € | XL (5/bundle) | 2 800 € |
-| AG-1048 Editorial operations specialist | 221 | 29 € | 73 € | 93 € | 6 € | 87 € | 0.3× ✗ | 0.1× ✗ | 87 € | XL (5/bundle) | 2 800 € |
-| AG-1049 Editorial operations manager | 10 | 1 € | 3 € | 88 € | 0 € | 87 € | 0.0× ✗ | 0.0× ✗ | 87 € | XL (5/bundle) | 2 800 € |
-| AG-1050 Knowledge operations manager | 10 | 1 € | 3 € | 88 € | 0 € | 87 € | 0.0× ✗ | 0.0× ✗ | 87 € | XL (5/bundle) | 2 800 € |
+| AG-1041 Responsable documentation | 14 | 1 € | 4 € | 52 € | 0 € | 52 € | 0.0× ✗ | 0.0× ✗ | 50 € | L (5/bundle) | 2 800 € |
+| AG-1042 Rédacteur de documentation technique | 312 | 36 € | 91 € | 95 € | 7 € | 87 € | 0.4× ✗ | 0.1× ✗ | 87 € | XL (5/bundle) | 2 800 € |
+| AG-1043 Spécialiste adaptation de contenus | 464 | 57 € | 144 € | 63 € | 11 € | 52 € | 0.9× ✗ | 0.3× ✗ | 50 € | L (5/bundle) | 2 800 € |
+| AG-1044 Assistant édition numérique | 1050 | 119 € | 297 € | 76 € | 24 € | 52 € | 1.6× ✗ | 0.5× ✗ | 50 € | L (5/bundle) | 2 800 € |
+| AG-1045 Assistant de fabrication éditoriale | 969 | 128 € | 320 € | 78 € | 26 € | 52 € | 1.6× ✗ | 0.5× ✗ | 50 € | L (5/bundle) | 2 800 € |
+| AG-1046 Assistant données de recherche | 1060 | 113 € | 282 € | 74 € | 23 € | 52 € | 1.5× ✗ | 0.5× ✗ | 50 € | L (5/bundle) | 2 800 € |
+| AG-1047 Assistant revue de littérature | 1050 | 112 € | 280 € | 110 € | 22 € | 87 € | 1.0× ✗ | 0.3× ✗ | 87 € | XL (5/bundle) | 2 800 € |
+| AG-1048 Secrétaire de rédaction | 221 | 29 € | 73 € | 93 € | 6 € | 87 € | 0.3× ✗ | 0.1× ✗ | 87 € | XL (5/bundle) | 2 800 € |
+| AG-1049 Directeur de production éditoriale | 10 | 1 € | 3 € | 88 € | 0 € | 87 € | 0.0× ✗ | 0.0× ✗ | 87 € | XL (5/bundle) | 2 800 € |
+| AG-1050 Responsable gestion des connaissances | 10 | 1 € | 3 € | 88 € | 0 € | 87 € | 0.0× ✗ | 0.0× ✗ | 87 € | XL (5/bundle) | 2 800 € |
 | AG-1051 Assistant gestion patrimoine | 849 | 116 € | 289 € | 75 € | 23 € | 52 € | 1.5× ✗ | 0.5× ✗ | 50 € | L (5/bundle) | 2 800 € |
 | AG-1052 Agent collecte documents patrimoine | 2584 | 305 € | 763 € | 122 € | 61 € | 61 € | 2.5× ✗ | 0.6× ✗ | 61 € | XL (8/bundle) | 2 800 € |
 | AG-1053 Agent reporting patrimoine | 7 | 1 € | 2 € | 52 € | 0 € | 52 € | 0.0× ✗ | 0.0× ✗ | 50 € | L (5/bundle) | 2 800 € |
@@ -1075,13 +1075,13 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1067 Agent conformité patrimoine | 758 | 106 € | 264 € | 108 € | 21 € | 87 € | 1.0× ✗ | 0.2× ✗ | 87 € | XL (5/bundle) | 2 800 € |
 | AG-1068 Agent préparation réunion | 1354 | 168 € | 421 € | 86 € | 34 € | 52 € | 2.0× ✗ | 0.7× ✗ | 50 € | L (5/bundle) | 2 800 € |
 | AG-1069 Agent synthèse portefeuille | 7 | 1 € | 2 € | 52 € | 0 € | 52 € | 0.0× ✗ | 0.0× ✗ | 50 € | L (5/bundle) | 2 800 € |
-| AG-1070 Agent analyse patrimoine junior | 1050 | 133 € | 332 € | 114 € | 27 € | 87 € | 1.2× ✗ | 0.3× ✗ | 87 € | XL (5/bundle) | 2 800 € |
+| AG-1070 Analyste patrimonial | 1050 | 133 € | 332 € | 114 € | 27 € | 87 € | 1.2× ✗ | 0.3× ✗ | 87 € | XL (5/bundle) | 2 800 € |
 | AG-1071 Agent suivi échéances | 969 | 134 € | 335 € | 64 € | 27 € | 37 € | 2.1× ✗ | 1.9× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-1072 Agent reporting fiscal assistant | 606 | 85 € | 212 € | 104 € | 17 € | 87 € | 0.8× ✗ | 0.2× ✗ | 87 € | XL (5/bundle) | 2 800 € |
-| AG-1073 Wealth operations assistant | 965 | 134 € | 334 € | 79 € | 27 € | 52 € | 1.7× ✗ | 0.5× ✗ | 50 € | L (5/bundle) | 2 800 € |
-| AG-1074 Wealth operations specialist | 10 | 1 € | 3 € | 88 € | 0 € | 87 € | 0.0× ✗ | 0.0× ✗ | 87 € | XL (5/bundle) | 2 800 € |
-| AG-1075 Wealth operations manager | 17 | 2 € | 5 € | 88 € | 0 € | 87 € | 0.0× ✗ | 0.0× ✗ | 87 € | XL (5/bundle) | 2 800 € |
-| AG-1083 Auditeur interne junior | 51 | 7 € | 16 € | 40 € | 1 € | 39 € | 0.2× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1072 Assistant reporting fiscal patrimonial | 606 | 85 € | 212 € | 104 € | 17 € | 87 € | 0.8× ✗ | 0.2× ✗ | 87 € | XL (5/bundle) | 2 800 € |
+| AG-1073 Assistant back-office patrimonial | 965 | 134 € | 334 € | 79 € | 27 € | 52 € | 1.7× ✗ | 0.5× ✗ | 50 € | L (5/bundle) | 2 800 € |
+| AG-1074 Gestionnaire back-office patrimonial | 10 | 1 € | 3 € | 88 € | 0 € | 87 € | 0.0× ✗ | 0.0× ✗ | 87 € | XL (5/bundle) | 2 800 € |
+| AG-1075 Responsable du back-office patrimonial | 17 | 2 € | 5 € | 88 € | 0 € | 87 € | 0.0× ✗ | 0.0× ✗ | 87 € | XL (5/bundle) | 2 800 € |
+| AG-1083 Auditeur interne | 51 | 7 € | 16 € | 40 € | 1 € | 39 € | 0.2× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-1084 Superviseur audit interne | 77 | 8 € | 19 € | 43 € | 2 € | 42 € | 0.2× ✗ | 0.0× ✗ | 42 € | XL (15/bundle) | 2 800 € |
 | AG-1085 Auditeur conformité interne | 22 | 3 € | 7 € | 39 € | 1 € | 39 € | 0.1× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
 | AG-1086 Auditeur opérationnel | 22 | 3 € | 7 € | 39 € | 1 € | 39 € | 0.1× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
@@ -1093,7 +1093,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1092 Gestionnaire documentation audit | 96 | 11 € | 27 € | 41 € | 2 € | 39 € | 0.3× ✗ | 0.2× ✗ | 28 € | S (1/bundle) | 2 800 € |
 | AG-1093 Specialiste recommandations audit | 26 | 3 € | 7 € | 42 € | 1 € | 42 € | 0.1× ✗ | 0.0× ✗ | 42 € | XL (15/bundle) | 2 800 € |
 | AG-1094 Coordinateur suivi correction | 45 | 5 € | 12 € | 40 € | 1 € | 39 € | 0.1× ✗ | 0.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
-| AG-1095 Analyste fiscal junior | 487 | 54 € | 135 € | 60 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-1095 Analyste fiscal | 487 | 54 € | 135 € | 60 € | 11 € | 49 € | 0.9× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1096 Specialiste impot revenu | 1054 | 126 € | 315 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1097 Assistant planification fiscale | 309 | 36 € | 91 € | 57 € | 7 € | 49 € | 0.6× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1098 Coordinateur fiscalité international | 309 | 36 € | 91 € | 84 € | 7 € | 77 € | 0.4× ✗ | 0.1× ✗ | 77 € | XL (6/bundle) | 2 800 € |
@@ -1108,7 +1108,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1107 Assistant audit fiscal | 1682 | 221 € | 553 € | 94 € | 44 € | 49 € | 2.4× ✗ | 0.8× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1108 Gestionnaire amendes fiscales | 1682 | 193 € | 483 € | 76 € | 39 € | 37 € | 2.5× ✗ | 2.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1109 Coordinateur verifications fiscales | 1264 | 156 € | 389 € | 81 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-1110 Assistant budget junior | 8 | 1 € | 3 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-1110 Assistant contrôle budgétaire | 8 | 1 € | 3 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1111 Coordinateur prévisions financières | 8 | 1 € | 3 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1112 Analyste ecarts budgetaires | 8 | 1 € | 2 € | 50 € | 0 € | 49 € | 0.0× ✗ | 0.0× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1113 Gestionnaire allocations budgétaires | 756 | 106 € | 264 € | 58 € | 21 € | 37 € | 1.8× ✗ | 1.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
@@ -1149,7 +1149,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1148 Gestionnaire paiements multis | 1384 | 180 € | 449 € | 73 € | 36 € | 37 € | 2.5× ✗ | 2.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1149 Assistant gestion cash pool | 98 | 14 € | 34 € | 40 € | 3 € | 37 € | 0.3× ✗ | 0.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1150 Agent souscription assurance | 1384 | 180 € | 449 € | 85 € | 36 € | 49 € | 2.1× ✗ | 0.7× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-1151 Analyste actuariel junior | 306 | 29 € | 72 € | 55 € | 6 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-1151 Analyste actuariel | 306 | 29 € | 72 € | 55 € | 6 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1152 Coordinateur sinistres assurance | 905 | 135 € | 303 € | 64 € | 27 € | 37 € | 2.1× ✗ | 1.9× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1153 Assistant gestion portefeuille assurance | 610 | 85 € | 213 € | 54 € | 17 € | 37 € | 1.6× ✗ | 1.4× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1154 Specialiste garanties assurance | 1051 | 133 € | 332 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -1166,7 +1166,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1165 Agent indemnisation sinistres | 465 | 65 € | 162 € | 50 € | 13 € | 37 € | 1.3× ✗ | 1.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1166 Analyste provisions techniques | 306 | 43 € | 107 € | 58 € | 9 € | 49 € | 0.7× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1167 Gestionnaire dossiers contentieux assurance | 760 | 99 € | 248 € | 69 € | 20 € | 49 € | 1.4× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-1168 Assistant gestion risques residuels | 157 | 15 € | 37 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-1168 Assistant gestion des risques résiduels | 157 | 15 € | 37 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1169 Coordinateur assurance conformité | 309 | 36 € | 91 € | 44 € | 7 € | 37 € | 0.8× ✗ | 0.7× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1170 Agent suivi expiration contrats | 338 | 46 € | 114 € | 46 € | 9 € | 37 € | 1.0× ✗ | 0.9× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1171 Analyste benchmarking assurance | 455 | 50 € | 124 € | 59 € | 10 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -1205,12 +1205,12 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1204 Analyste synergies | 1200 | 147 € | 367 € | 79 € | 29 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1205 Coordinateur closing M&A | 1080 | 130 € | 325 € | 75 € | 26 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1206 Agent suivi conditions suspensives | 763 | 92 € | 231 € | 56 € | 18 € | 37 € | 1.7× ✗ | 1.5× ✗ | 34 € | S (1/bundle) | 2 800 € |
-| AG-1207 Assistant gestion earnouts | 1210 | 127 € | 318 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-1207 Assistant compléments de prix | 1210 | 127 € | 318 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1208 Analyste comparables M&A | 1200 | 154 € | 384 € | 80 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1209 Gestionnaire communications M&A | 1200 | 154 € | 384 € | 68 € | 31 € | 37 € | 2.3× ✗ | 2.1× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1210 Assistant gestion réactions marchés | 571 | 64 € | 161 € | 62 € | 13 € | 49 € | 1.0× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1211 Coordinateur approbations réglementaires | 763 | 106 € | 266 € | 71 € | 21 € | 49 € | 1.5× ✗ | 0.4× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-1212 Commercial BtoB junior | 720 | 67 € | 168 € | 56 € | 13 € | 43 € | 1.2× ✗ | 1.2× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1212 Commercial BtoB | 720 | 67 € | 168 € | 56 € | 13 € | 43 € | 1.2× ✗ | 1.2× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-1213 Coordinateur prospection commerciale | 202 | 21 € | 52 € | 54 € | 4 € | 49 € | 0.4× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1214 Agent suivi pipeline ventes | 111 | 14 € | 34 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1215 Analyste conversion prospects | 157 | 15 € | 37 € | 52 € | 3 € | 49 € | 0.3× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
@@ -1235,7 +1235,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1234 Specialiste solutions personnalisées | 1504 | 154 € | 386 € | 80 € | 31 € | 49 € | 1.9× ✗ | 0.6× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1235 Coordinateur promotion produits | 1080 | 123 € | 307 € | 74 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1236 Assistant gestion objectifs ventes | 316 | 44 € | 109 € | 58 € | 9 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
-| AG-1237 Consultant Business Development | 462 | 50 € | 126 € | 60 € | 10 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-1237 Consultant en développement commercial | 462 | 50 € | 126 € | 60 € | 10 € | 49 € | 0.8× ✗ | 0.2× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1238 Analyste opportunités marché | 465 | 58 € | 144 € | 61 € | 12 € | 49 € | 0.9× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1239 Coordinateur prospection stratégique | 640 | 75 € | 189 € | 52 € | 15 € | 37 € | 1.4× ✗ | 1.3× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1240 Agent identification partenaires | 1051 | 126 € | 315 € | 75 € | 25 € | 49 € | 1.7× ✗ | 0.5× ✗ | 48 € | L (6/bundle) | 2 800 € |
