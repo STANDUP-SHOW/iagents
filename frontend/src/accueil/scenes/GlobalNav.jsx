@@ -1,19 +1,41 @@
 import { useEffect, useState } from 'react';
-import { Logo, LIENS, RECRUTER } from '../composants.jsx';
+import { Logo, LIENS } from '../composants.jsx';
 import { suivre } from '../analytique.js';
 
-// The Business navigation of max's global document (07/10, §3).
+// The navigation of max's art-direction audit (08/10, §18): five entries,
+// four of them opening a drawer, and one way in, the demo. Resources moved
+// to the footer.
 const ENTREES = [
-  { libelle: 'Produit', href: '/workforce', page: 'workforce' },
-  { libelle: 'Agents', href: LIENS.catalogue, page: 'catalogue', evenement: 'catalog_click' },
-  { libelle: 'Activités', href: '/activites', page: 'activites' },
-  { libelle: 'Secteurs', href: '/secteurs', page: 'secteurs' },
-  { libelle: 'Créer votre entreprise', href: '/create', page: 'create', evenement: 'create_company_click' },
-  { libelle: 'Voice', href: '/voice', page: 'voice' },
-  { libelle: 'iAgent Box', href: '/box', page: 'box', evenement: 'box_click' },
-  { libelle: 'Entreprise', href: '/enterprise', page: 'enterprise', evenement: 'enterprise_click' },
-  { libelle: 'Ressources', href: '/how-it-works', page: 'how-it-works' },
+  { libelle: 'Produit', href: '/workforce', page: 'workforce', tiroir: [
+    ['Workforce', '/workforce', 'vos experts, métier par métier'],
+    ['Desktop Commander', '/#desktop-commander', 'toute l’équipe sur un écran'],
+    ['Box Commander', '/box', 'le poste posé dans vos bureaux'],
+    ['Voice', '/voice', 'parlez à vos agents'],
+    ['Standard téléphonique', '/standard-telephonique', 'bientôt'],
+    ['Support Center', '/support-center', 'le service client'],
+    ['Sales Center', '/sales-center', 'la force commerciale'],
+  ] },
+  { libelle: 'Agents', href: LIENS.catalogue, page: 'catalogue', evenement: 'catalog_click', tiroir: [
+    ['Catalogue', LIENS.catalogue, 'tous les métiers'],
+    ['Activités', '/activites', 'entrez par votre branche'],
+    ['Secteurs', '/secteurs', 'les familles de métiers'],
+    ['Évolution des agents', '/skills', 'compétences et packs'],
+  ] },
+  { libelle: 'Créer', href: '/create', page: 'create', evenement: 'create_company_click', tiroir: [
+    ['Créer votre entreprise', '/create', 'de l’idée à l’équipe'],
+    ['Opportunités', '/opportunities', 'les idées qui marchent'],
+    ['Business plan et financement', LIENS.entreprise, 'avec vos experts'],
+  ] },
+  { libelle: 'Entreprise', href: '/enterprise', page: 'enterprise', evenement: 'enterprise_click', tiroir: [
+    ['iAgent Enterprise', '/enterprise', 'pour les grands groupes'],
+    ['Local, hybride ou cloud', '/local-ai', 'où tournent vos agents'],
+    ['Sécurité et contrôle', '/security', 'vos données, vos règles'],
+    ['iAgent inside iAgent', '/iagent-inside-iagent', 'notre propre équipe'],
+  ] },
+  { libelle: 'Tarifs', href: '/pricing', page: 'pricing' },
 ];
+
+const DEMO = '/contact';
 
 const Loupe = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" fill="none" /><path d="M20 20l-4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
@@ -45,20 +67,27 @@ export default function GlobalNav({ page = 'accueil', seuil = 24 }) {
     <header className={`entete ${opaque || ouvert ? 'entete-opaque' : ''}`}>
       <div className="entete-ligne">
         <a href="/" aria-label="iAgent, accueil" className="flex-none"><Logo className="h-[28px] md:h-[32px] w-auto" /></a>
-        <nav className="entete-nav hidden xl:flex items-center gap-[18px] 2xl:gap-7 ml-6 2xl:ml-8" aria-label="Navigation principale">
+        <nav className="entete-nav hidden lg:flex items-center gap-6 2xl:gap-9 ml-8 2xl:ml-12" aria-label="Navigation principale">
           {ENTREES.map((e) => (
-            <a key={e.libelle} href={e.href} aria-current={e.page && page === e.page ? 'page' : undefined} onClick={() => e.evenement && suivre(e.evenement)}>{e.libelle}</a>
+            <div key={e.libelle} className="menu-entree relative">
+              <a href={e.href} aria-current={e.page && page === e.page ? 'page' : undefined} onClick={() => e.evenement && suivre(e.evenement)}>{e.libelle}</a>
+              {e.tiroir && (
+                <div className="menu-tiroir neon">
+                  {e.tiroir.map(([nom, href, detail]) => <a key={nom} href={href}>{nom}<span>{detail}</span></a>)}
+                </div>
+              )}
+            </div>
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-3">
-          <form action="/catalogue" method="get" role="search" className="entete-recherche hidden lg:flex xl:hidden min-[1720px]:flex" onSubmit={() => suivre('catalog_click', { depuis: 'recherche' })}>
+          <form action="/catalogue" method="get" role="search" className="entete-recherche hidden min-[1720px]:flex" onSubmit={() => suivre('catalog_click', { depuis: 'recherche' })}>
             <Loupe />
             <label htmlFor="recherche-entete" className="sr-only">Rechercher un agent, un métier</label>
             <input id="recherche-entete" name="q" type="search" placeholder="Rechercher un agent, un métier…" autoComplete="off" />
           </form>
-          <a href="/catalogue" className="inline-flex lg:hidden 2xl:inline-flex min-[1720px]:hidden items-center justify-center w-11 h-11 rounded-xl text-[var(--texte-doux)] hover:text-white" aria-label="Rechercher un agent ou un métier"><Loupe /></a>
-          <a href={RECRUTER} className="bouton bouton-braise !min-h-[40px] !px-4 !text-sm hidden sm:inline-flex">Recruter un agent</a>
-          <button type="button" className="xl:hidden w-11 h-11 inline-flex items-center justify-center rounded-xl border border-[var(--trait-fort)]" aria-expanded={ouvert} aria-controls="menu-mobile" aria-label={ouvert ? 'Fermer le menu' : 'Ouvrir le menu'} onClick={() => setOuvert(!ouvert)}>
+          <a href="/catalogue" className="inline-flex min-[1720px]:hidden items-center justify-center w-11 h-11 rounded-xl text-[var(--texte-doux)] hover:text-white" aria-label="Rechercher un agent ou un métier"><Loupe /></a>
+          <a href={DEMO} className="bouton bouton-plein !min-h-[40px] !px-4 !text-sm hidden sm:inline-flex" onClick={() => suivre('demo_click')}>Demander une démo</a>
+          <button type="button" className="lg:hidden w-11 h-11 inline-flex items-center justify-center rounded-xl border border-[var(--trait-fort)]" aria-expanded={ouvert} aria-controls="menu-mobile" aria-label={ouvert ? 'Fermer le menu' : 'Ouvrir le menu'} onClick={() => setOuvert(!ouvert)}>
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
               {ouvert
                 ? <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -68,7 +97,7 @@ export default function GlobalNav({ page = 'accueil', seuil = 24 }) {
         </div>
       </div>
       {ouvert && (
-        <nav id="menu-mobile" className="xl:hidden pb-8 pt-2 max-w-[var(--largeur)] mx-auto" aria-label="Navigation principale">
+        <nav id="menu-mobile" className="lg:hidden pb-8 pt-2 max-w-[var(--largeur)] mx-auto" aria-label="Navigation principale">
           <form action="/catalogue" method="get" role="search" className="entete-recherche flex mb-4">
             <Loupe />
             <label htmlFor="recherche-menu" className="sr-only">Rechercher un agent, un métier</label>
@@ -76,12 +105,17 @@ export default function GlobalNav({ page = 'accueil', seuil = 24 }) {
           </form>
           <ul className="flex flex-col">
             {ENTREES.map((e) => (
-              <li key={e.libelle}>
-                <a href={e.href} className="block py-4 text-xl font-[Montserrat] font-semibold tracking-wide border-b border-[var(--trait)]" onClick={() => { setOuvert(false); e.evenement && suivre(e.evenement); }}>{e.libelle}</a>
+              <li key={e.libelle} className="border-b border-[var(--trait)] py-3">
+                <a href={e.href} className="block py-1 text-xl font-[Montserrat] font-bold tracking-wide" onClick={() => { setOuvert(false); e.evenement && suivre(e.evenement); }}>{e.libelle}</a>
+                {e.tiroir && (
+                  <ul className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                    {e.tiroir.map(([nom, href]) => <li key={nom}><a href={href} className="text-sm text-[var(--texte-doux)]" onClick={() => setOuvert(false)}>{nom}</a></li>)}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>
-          <a href={RECRUTER} className="bouton bouton-braise w-full mt-6">Recruter un agent</a>
+          <a href={DEMO} className="bouton bouton-plein w-full mt-6">Demander une démo</a>
         </nav>
       )}
     </header>

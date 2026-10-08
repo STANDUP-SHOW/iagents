@@ -76,14 +76,14 @@ const urlPosteActivite = (f, a) => `${urlActivite.get(a.id)}/${f.slug}`;
 // way back on every page: these pages are where a search engine lands people.
 const RECRUTER = '/how-it-works';
 const MENU = [
-  ['Produit', '/workforce'], ['Agents', '/catalogue'], ['Activités', '/activites'], ['Secteurs', '/secteurs'], ['Créer votre entreprise', '/create'], ['Voice', '/voice'],
-  ['iAgent Box', '/box'], ['Entreprise', '/enterprise'], ['Ressources', '/how-it-works'],
+  ['Produit', '/workforce'], ['Agents', '/catalogue'], ['Créer', '/create'], ['Entreprise', '/enterprise'], ['Tarifs', '/pricing'],
 ];
 const PIED = [
   ['Produit', [['iAgent Workforce', '/workforce'], ['iAgent Box', '/box'], ['Tarifs', '/pricing'], ['Pourquoi louer', '/why-rent'], ['Recruter un agent', RECRUTER]]],
   ['Agents', [['Le catalogue des métiers', '/catalogue'], ['Par activité', '/activites'], ['Par secteur', '/secteurs'], ['Skill Packs', '/skills'], ['Créer votre entreprise', '/create'], ['Opportunités', '/opportunities']]],
   ['Voice', [['iAgent Voice', '/voice'], ['Standard téléphonique', '/standard-telephonique'], ['Support Center', '/support-center'], ['Sales Center', '/sales-center']]],
   ['Entreprise', [['iAgent Enterprise', '/enterprise'], ['IA locale et hybride', '/local-ai'], ['Sécurité', '/security'], ['Questions fréquentes', '/faq'], ['Contact', '/contact']]],
+  ['Ressources', [['Comment ça marche', '/how-it-works'], ['Activités', '/activites'], ['Secteurs', '/secteurs']]],
 ];
 const POLICES = [400, 600, 800].map((g) => `@font-face{font-family:Montserrat;font-style:normal;font-weight:${g};font-display:swap;src:url(/polices/montserrat-latin-${g}-normal.woff2) format("woff2")}`).join('');
 const STYLE = `${POLICES}
@@ -161,9 +161,9 @@ function page({ url, titre, description, fil = [], corps, portrait = null, appel
 <header class="tete"><div class="cadre tete-ligne">
 <a class="logo" href="/" aria-label="iAgent, accueil"><img src="/accueil/logo-iagent-blanc.svg" alt="iAgent" width="91" height="26"></a>
 <nav class="menu" aria-label="Navigation principale">${liens(MENU)}</nav>
-<a class="bouton bouton-degrade" href="${RECRUTER}">Recruter un agent</a>
+<a class="bouton bouton-degrade" href="/contact">Demander une démo</a>
 <details class="mobile"><summary aria-label="Ouvrir le menu"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16M4 16h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></summary>
-<nav aria-label="Menu">${liens(MENU)}<a href="${RECRUTER}">Recruter un agent</a></nav></details>
+<nav aria-label="Menu">${liens(MENU)}<a href="/contact">Demander une démo</a></nav></details>
 </div></header>
 <div class="bandeau"><div class="cadre">
 <nav class="fil" aria-label="Fil d'Ariane">${filHtml}<a class="retour" href="/catalogue">← Retour au catalogue</a></nav>
@@ -178,7 +178,7 @@ ${portrait ? `<div class="portrait"><img src="${portrait}" alt="" width="320" he
 <footer class="pied"><div class="cadre pied-grille">
 <div><img src="/accueil/logo-iagent-blanc.svg" alt="iAgent" width="112" height="32"><p>Des collaborateurs IA par métier, qui connaissent vos logiciels et travaillent chez vous, en local, ou par API.</p></div>
 ${PIED.map(([t, items]) => `<nav aria-label="${t}"><b>${t}</b>${liens(items)}</nav>`).join('')}
-</div><div class="cadre pied-bas"><span>© 2026 iAgent · e-Agent Agency</span><span>Human ambition. Agentic execution.</span></div></footer>
+</div><div class="cadre pied-bas"><span>© 2026 iAgent</span><span>Human ambition. Agentic execution.</span></div></footer>
 </body></html>
 `;
 }
