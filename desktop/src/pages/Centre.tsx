@@ -5,6 +5,7 @@ import { TITRES, type Onglet } from '../components/Dashboard'
 import type { AgentInstalle } from '../agents/fiche'
 import { estTeamHolder } from '../agents/team-holder'
 import Avatar from '../shell/Avatar'
+import { portraitDe } from '../shell/portraits'
 import { IconeModule } from '../shell/Shell'
 import { SOUS_PAGES, type Module } from '../shell/modules'
 import type { Cible } from '../shell/intentions'
@@ -159,7 +160,7 @@ export default function Centre({
           {equipe.map((a, i) => (
             <div key={a.prenom} className="place-agent" style={{ ['--angle' as string]: `${(i * 360) / Math.max(equipe.length, 1) + 180 / n}deg` }}>
               <button className="noeud-agent" onClick={() => aller({ onglet: 'agents', agent: a.prenom })} title={`${a.prenom}, ${a.fiche.nom}`}>
-                <Avatar prenom={a.prenom} photo={a.photo} taille="s" statut={statuts[a.fiche.id] ? 'actif' : 'pause'} />
+                <Avatar prenom={a.prenom} photo={portraitDe(a)} taille="s" statut={statuts[a.fiche.id] ? 'actif' : 'pause'} />
                 <span>{a.prenom}</span>
               </button>
             </div>
@@ -179,7 +180,7 @@ export default function Centre({
             <circle className="na na-arc-marque" r="72" />
           </svg>
           <span className="noyau-portrait">
-            {chef ? <Avatar prenom={chef.prenom} photo={chef.photo} taille="xl" /> : <img src={puce} alt="" className="noyau-puce-dc" />}
+            {chef ? <Avatar prenom={chef.prenom} photo={portraitDe(chef)} taille="xl" /> : <img src={puce} alt="" className="noyau-puce-dc" />}
           </span>
           <span className="noyau-nom">{chef ? chef.prenom : 'iAgent'}</span>
           <span className="noyau-role">{chef ? 'Task Commander' : 'Aucun Task Commander'}</span>

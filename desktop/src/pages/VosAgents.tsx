@@ -4,6 +4,7 @@ import type { AgentInstalle, Planification } from '../agents/fiche'
 import { estTeamHolder } from '../agents/team-holder'
 import { travailDuJour } from '../agents/travail'
 import Avatar from '../shell/Avatar'
+import { portraitDe } from '../shell/portraits'
 import { EntetePage } from '../shell/Shell'
 import type { Cible } from '../shell/intentions'
 
@@ -151,7 +152,7 @@ export default function VosAgents({
                   setPlus(false)
                 }}
               >
-                <Avatar prenom={a.prenom} photo={a.photo} taille="l" />
+                <Avatar prenom={a.prenom} photo={portraitDe(a)} taille="l" />
                 <span className="carte-agent-nom">{a.prenom}</span>
                 <span className="carte-agent-role">{estTeamHolder(a) ? 'Task Commander' : a.fiche.nom}</span>
                 <span className={`statut-ligne ${statuts[a.fiche.id] ? 'statut-actif' : 'statut-pause'}`}>
@@ -238,7 +239,7 @@ function FicheAgent({
   return (
     <section className="fiche-agent carte-verre">
       <div className="fiche-portrait">
-        <Avatar prenom={agent.prenom} photo={agent.photo} taille="xl" />
+        <Avatar prenom={agent.prenom} photo={portraitDe(agent)} taille="xl" />
       </div>
       <div className="fiche-identite">
         <div className="fiche-nom">
@@ -308,7 +309,14 @@ function FicheAgent({
           </button>
           {plus && (
             <div className="menu-flottant">
-              {dossier && <p className="precision">Son dossier : {dossier}</p>}
+              <button
+                onClick={() =>
+                  invoke('montrer_resultat', { prenom: agent.prenom, ficheId: agent.fiche.id, fichier: null }).catch((e) => setDossier(String(e)))
+                }
+              >
+                Ouvrir son dossier de travail
+              </button>
+              {dossier && <p className="precision">{dossier}</p>}
               <button onClick={() => aller({ onglet: 'travail', agent: agent.prenom })}>Voir son travail du jour</button>
               <button onClick={() => aller({ onglet: 'equipe' })}>Voir l’équipe</button>
             </div>

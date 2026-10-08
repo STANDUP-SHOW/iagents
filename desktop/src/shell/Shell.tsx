@@ -269,6 +269,7 @@ export function DockVocal({
   ouvrir,
   replie,
   onReplier,
+  onDire,
 }: {
   voix: EtatVoix
   interlocuteur: { prenom: string; photo?: string } | null
@@ -276,7 +277,10 @@ export function DockVocal({
   ouvrir: (o: Onglet) => void
   replie: boolean
   onReplier: () => void
+  /** A sentence typed or tapped goes the same way as a spoken one: « Voice », a first name, the request. */
+  onDire: (phrase: string) => void
 }) {
+  const [ecrit, setEcrit] = useState('')
   const etat = voix.motif ? 'indisponible' : voix.reflexion ? 'reflexion' : voix.eveillee ? 'eveil' : voix.active ? 'ecoute' : 'repos'
   const libelle = {
     indisponible: 'Écoute indisponible',
@@ -287,11 +291,17 @@ export function DockVocal({
   }[etat]
   const exemples = prenoms.length
     ? [
-        `« Voice, ${prenoms[0]}, qu’as-tu fait aujourd’hui ? »`,
-        ...(prenoms[1] ? [`« Voice, ${prenoms[1]}, où en est ton travail ? »`] : []),
-        `« Voice, ${prenoms[0]}, prépare le compte rendu. »`,
+        { prenom: prenoms[0], demande: 'qu’as-tu fait aujourd’hui ?' },
+        ...(prenoms[1] ? [{ prenom: prenoms[1], demande: 'où en est ton travail ?' }] : []),
+        { prenom: prenoms[0], demande: 'prépare le compte rendu.' },
       ]
-    : ['Embauchez un agent : vous l’appellerez par « Voice » puis son prénom.']
+    : []
+  const destinataire = interlocuteur?.prenom ?? prenoms[0]
+  const envoyer = () => {
+    if (!ecrit.trim() || !destinataire) return
+    onDire(`Voice ${destinataire}, ${ecrit.trim()}`)
+    setEcrit('')
+  }
 
   if (replie) {
     return (
@@ -344,6 +354,25 @@ export function DockVocal({
         <Onde vivante={voix.active && !voix.motif} />
       </div>
 
+      {destinataire ? (
+        <form
+          className="dock-ecrire"
+          onSubmit={(e) => {
+            e.preventDefault()
+            envoyer()
+          }}
+        >
+          <input value={ecrit} onChange={(e) => setEcrit(e.target.value)} placeholder="Écrire…" aria-label={`Écrire à ${destinataire}`} />
+          <button type="submit" className="bouton-cyan" disabled={!ecrit.trim() || voix.reflexion} aria-label="Envoyer">
+            ›
+          </button>
+        </form>
+      ) : (
+        <button className="bouton-contour" onClick={() => ouvrir('embauche')}>
+          Embaucher un premier agent
+        </button>
+      )}
+
       {voix.motif ? (
         <p className="dock-motif">{voix.motif}</p>
       ) : voix.partiel || voix.reponse ? (
@@ -362,14 +391,20 @@ export function DockVocal({
           )}
         </div>
       ) : (
-        <p className="dock-aide">Dites « Voice », puis le prénom de l’agent. Tout reste aussi faisable au doigt et au clavier.</p>
+        <p className="dock-aide">Dites « Voice », puis le prénom de l’agent. Ou écrivez-lui, ou touchez une phrase ci-dessous.</p>
       )}
 
-      <ul className="dock-exemples">
-        {exemples.map((e) => (
-          <li key={e}>{e}</li>
-        ))}
-      </ul>
+      {exemples.length > 0 && (
+        <ul className="dock-exemples">
+          {exemples.map((e) => (
+            <li key={e.prenom + e.demande}>
+              <button onClick={() => onDire(`Voice ${e.prenom}, ${e.demande}`)} disabled={voix.reflexion}>
+                « Voice, {e.prenom}, {e.demande} »
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <button className="dock-reglages" onClick={() => ouvrir('voice')}>
         <svg className="icone" viewBox="0 0 24 24" aria-hidden="true">

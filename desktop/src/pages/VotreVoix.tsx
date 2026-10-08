@@ -5,6 +5,7 @@ import VoiceTraining from '../components/VoiceTraining'
 import type { AgentInstalle } from '../agents/fiche'
 import { estTeamHolder } from '../agents/team-holder'
 import Avatar from '../shell/Avatar'
+import { portraitDe } from '../shell/portraits'
 import { EntetePage, Onde, type EtatVoix } from '../shell/Shell'
 import { publier } from '../shell/evenements'
 import type { Cible } from '../shell/intentions'
@@ -87,7 +88,7 @@ export default function VotreVoix({
           <section className={`scene-voix etat-${etat}`}>
             <div className="scene-terre" aria-hidden="true" />
             <div className="scene-portrait">
-              {chef ? <Avatar prenom={chef.prenom} photo={chef.photo} taille="xl" /> : <span className="scene-vide">iAgent</span>}
+              {chef ? <Avatar prenom={chef.prenom} photo={portraitDe(chef)} taille="xl" /> : <span className="scene-vide">iAgent</span>}
             </div>
             <div className="scene-onde">
               <Onde vivante={voix.active && !voix.motif} barres={48} />
@@ -154,7 +155,7 @@ export default function VotreVoix({
             <div className="grille-voix-agents">
               {installes.map((a) => (
                 <div key={a.prenom} className="voix-agent">
-                  <Avatar prenom={a.prenom} photo={a.photo} taille="l" statut={statuts[a.fiche.id] ? 'actif' : 'pause'} />
+                  <Avatar prenom={a.prenom} photo={portraitDe(a)} taille="l" statut={statuts[a.fiche.id] ? 'actif' : 'pause'} />
                   <div>
                     <strong>{a.prenom}</strong>
                     <span className="precision">{estTeamHolder(a) ? 'Task Commander' : a.fiche.nom}</span>

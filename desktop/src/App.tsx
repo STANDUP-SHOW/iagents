@@ -666,6 +666,7 @@ function App() {
         prenoms={installes.map((a) => a.prenom)}
         ouvrir={ouvrir}
         replie={dockReplie}
+        onDire={(phrase) => void processVoiceCommand(phrase)}
         onReplier={() =>
           setDockReplie((r) => {
             poserPreference('iagent-dock-replie', !r)

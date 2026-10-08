@@ -3,6 +3,8 @@ import { invoke } from '@tauri-apps/api/core'
 import type { AgentInstalle } from '../agents/fiche'
 import { travailDuJour, type TacheDuJour } from '../agents/travail'
 import Avatar from '../shell/Avatar'
+import Tiroir from '../shell/Tiroir'
+import { portraitDe } from '../shell/portraits'
 import { EntetePage } from '../shell/Shell'
 import { debutExecution, finExecution, publier } from '../shell/evenements'
 import type { Cible } from '../shell/intentions'
@@ -25,6 +27,8 @@ interface Resultat {
   motif: string
   validation_humaine: boolean
 }
+
+const nomDuFichier = (chemin: string) => chemin.split(/[\\/]/).pop() ?? chemin
 
 const VOIES: Record<string, string> = {
   local: 'sur votre ordinateur',
@@ -52,6 +56,13 @@ export default function TravailDuJour({
   const [type, setType] = useState('')
   const [recherche, setRecherche] = useState(cible?.recherche ?? '')
   const [enCours, setEnCours] = useState<string | null>(null)
+  const [echecMontrer, setEchecMontrer] = useState<string | null>(null)
+
+  // The file is shown selected in its folder: the client opens it there.
+  const montrer = (agent: AgentInstalle, fichier: string) => {
+    setEchecMontrer(null)
+    invoke('montrer_resultat', { prenom: agent.prenom, ficheId: agent.fiche.id, fichier }).catch((e) => setEchecMontrer(String(e)))
+  }
   const [resultats, setResultats] = useState<Record<string, Resultat>>({})
   const [echecs, setEchecs] = useState<Record<string, string>>({})
   const [ouverte, setOuverte] = useState<string | null>(null)
@@ -263,7 +274,7 @@ export default function TravailDuJour({
                   </span>
                 </button>
                 <span className="tache-agent">
-                  <Avatar prenom={l.agent.prenom} photo={l.agent.photo} taille="s" />
+                  <Avatar prenom={l.agent.prenom} photo={portraitDe(l.agent)} taille="s" />
                   <span>
                     <strong>{l.agent.prenom}</strong>
                     <span className="precision">{l.agent.fiche.nom}</span>
@@ -315,15 +326,20 @@ export default function TravailDuJour({
             <p className="vide">Aucun document depuis l’ouverture.</p>
           ) : (
             <ul className="liste-documents">
-              {documents.map(([clef, r]) => (
-                <li key={clef}>
-                  <span className="doc-format">{r.fichier.split('.').pop()?.toUpperCase()}</span>
-                  <span>
-                    <strong>{r.fichier.split(/[\\/]/).pop()}</strong>
-                    <span className="precision">{clef.split(':')[0]} · {VOIES[r.voie] ?? r.voie}</span>
-                  </span>
-                </li>
-              ))}
+              {documents.map(([clef, r]) => {
+                const agent = installes.find((a) => a.prenom === clef.split(':')[0])
+                return (
+                  <li key={clef}>
+                    <button className="document-ligne" onClick={() => agent && montrer(agent, r.fichier)} disabled={!agent}>
+                      <span className="doc-format">{r.fichier.split('.').pop()?.toUpperCase()}</span>
+                      <span>
+                        <strong>{nomDuFichier(r.fichier)}</strong>
+                        <span className="precision">{clef.split(':')[0]} · {VOIES[r.voie] ?? r.voie}</span>
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </section>
@@ -342,8 +358,7 @@ export default function TravailDuJour({
       </div>
 
       {detail && (
-        <div className="tiroir-voile" onClick={() => setOuverte(null)}>
-          <aside className="tiroir" role="dialog" aria-label={detail.tache.nom} onClick={(e) => e.stopPropagation()}>
+        <Tiroir titre={detail.tache.nom} onFermer={() => setOuverte(null)}>
             <div className="tiroir-entete">
               <h2>{detail.tache.nom}</h2>
               <button className="bouton-rond" onClick={() => setOuverte(null)} title="Fermer">
@@ -367,6 +382,7 @@ export default function TravailDuJour({
               </ul>
             )}
             <h4>Ce qu’elle produit</h4>
+            {detail.tache.sorties.length === 0 && <p className="vide">Aucun document : le résultat est un message, qui part par le canal de la tâche.</p>}
             <ul className="liste-simple">
               {detail.tache.sorties.map((s) => (
                 <li key={s.dossier + s.format}>
@@ -388,16 +404,25 @@ export default function TravailDuJour({
             )}
             <h4>Validation humaine</h4>
             <p>{detail.validation ? 'Vous relirez le résultat avant qu’il serve.' : 'L’agent va seul sur cette tâche. Rien ne part du poste sans votre accord.'}</p>
-            {detail.empechement && <p className="lecture-refus">Ne peut pas partir : {detail.empechement}.</p>}
+            {detail.empechement && (
+              <p className="lecture-refus">
+                Ne peut pas partir : {detail.empechement}. C’est à iAgent de le livrer, vous n’avez rien à régler.
+              </p>
+            )}
             {resultats[detail.clef] && (
               <>
                 <h4>Résultat</h4>
                 <p className="fait">
-                  Écrit dans {resultats[detail.clef].fichier}, {VOIES[resultats[detail.clef].voie] ?? resultats[detail.clef].voie}.
+                  {detail.agent.prenom} l’a écrit {VOIES[resultats[detail.clef].voie] ?? resultats[detail.clef].voie} : {nomDuFichier(resultats[detail.clef].fichier)}.
                   {resultats[detail.clef].validation_humaine && ' Rien n’a été envoyé : le résultat vous attend.'}
                 </p>
+                <button className="bouton-cyan" onClick={() => montrer(detail.agent, resultats[detail.clef].fichier)}>
+                  Montrer le document
+                </button>
+                {echecMontrer && <p className="lecture-refus">{echecMontrer}</p>}
                 <details className="avance">
                   <summary>Mode avancé</summary>
+                  <p className="precision">{resultats[detail.clef].fichier}</p>
                   <p className="precision">{resultats[detail.clef].motif}</p>
                 </details>
               </>
@@ -413,8 +438,7 @@ export default function TravailDuJour({
                 Voir {detail.agent.prenom}
               </button>
             </div>
-          </aside>
-        </div>
+        </Tiroir>
       )}
     </div>
   )

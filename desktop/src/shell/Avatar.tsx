@@ -1,11 +1,10 @@
 /**
- * An agent's portrait. max's official portraits are not delivered yet, so an
- * agent without a displayable photo gets its initial on the brand gradient:
- * never a stock face that would pass for the agent.
+ * An agent's portrait, from max's bank (see portraits.ts); the initial on the
+ * brand gradient only when no portrait applies.
  *
- * A photo is shown only when it is an address the window can load (http(s) or
- * data:). A bare path on the disk would need the asset protocol, which this
- * application does not open.
+ * A photo is shown only when it is an address the window can load (http(s),
+ * data: or a portrait shipped with the application). A bare path on the disk
+ * would need the asset protocol, which this application does not open.
  */
 export default function Avatar({
   prenom,
@@ -18,7 +17,7 @@ export default function Avatar({
   taille?: 's' | 'm' | 'l' | 'xl'
   statut?: 'actif' | 'pause' | 'tache' | 'hors-ligne'
 }) {
-  const affichable = !!photo && /^(https?:|data:)/.test(photo)
+  const affichable = !!photo && /^(https?:|data:|\/portraits\/)/.test(photo)
   return (
     <span className={`avatar avatar-${taille}`} aria-hidden="true">
       {affichable ? (

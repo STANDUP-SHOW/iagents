@@ -835,6 +835,7 @@ fn main() {
             llm::cle_api_retirer,
             executer_tache,
             tache::dossier_de_travail,
+            tache::montrer_resultat,
             repondre,
             courriel::courriel_enregistrer_motdepasse,
             courriel::courriel_motdepasse_present,

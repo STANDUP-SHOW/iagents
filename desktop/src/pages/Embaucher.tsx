@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import plans from '../../../plateforme/tarifs/plans.json'
 import Embauche from '../components/Embauche'
@@ -6,6 +6,9 @@ import type { Fiche } from '../agents/fiche'
 import { EntetePage, Onde } from '../shell/Shell'
 import { publier } from '../shell/evenements'
 import type { Cible } from '../shell/intentions'
+import { activitesNommees, placeDansActivite, sansAccents, type Activite } from '../agents/activites'
+import { portraitDeFiche } from '../shell/portraits'
+import Tiroir from '../shell/Tiroir'
 
 /**
  * Embaucher (brief §7): search, the ready-made team, the catalogue of métiers
@@ -52,6 +55,13 @@ export default function Embaucher({
   const [recrue, setRecrue] = useState<string | undefined>(cible?.ficheId)
   const [profil, setProfil] = useState<Fiche | null>(null)
   const [profilMotif, setProfilMotif] = useState<string | null>(null)
+  const [activites, setActivites] = useState<Activite[]>([])
+  const entretien = useRef<HTMLElement>(null)
+
+  // On a touch screen the interview may sit out of sight: bring it to the finger.
+  useEffect(() => {
+    if (recrue) entretien.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [recrue])
 
   useEffect(() => {
     invoke<string>('lire_referentiel', { nom: 'catalogue' })
@@ -61,6 +71,9 @@ export default function Embaucher({
         setSecteurs(c.secteurs ?? [])
       })
       .catch((e) => setMotif(String(e)))
+    invoke<string>('lire_referentiel', { nom: 'activites' })
+      .then((brut) => setActivites(JSON.parse(brut).activites ?? []))
+      .catch(() => setActivites([]))
   }, [])
 
   useEffect(() => {
@@ -72,14 +85,29 @@ export default function Embaucher({
 
   const nomSecteur = (id: string) => secteurs.find((s) => s.id === id)?.nom ?? id.replace(/-/g, ' ')
 
+  // The client's own branch: « imprimerie » names an activity, not a métier.
+  const activite = useMemo(() => activitesNommees(recherche, activites)[0] ?? null, [recherche, activites])
+
   const retenus = useMemo(() => {
-    const t = recherche.trim().toLowerCase()
-    let l = catalogue.filter((c) => (!secteur || c.secteur === secteur) && (!t || `${c.metier} ${c.secteur}`.toLowerCase().includes(t)))
+    const t = sansAccents(recherche)
+    const parMetier = (c: EntreeCatalogue) => sansAccents(`${c.metier} ${nomSecteur(c.secteur)}`).includes(t)
+    let l = catalogue.filter((c) => !secteur || c.secteur === secteur)
+    if (t) {
+      // A métier named in the search comes first; then, when the search names
+      // an activity, every métier that works there, its own branch first.
+      const directs = l.filter(parMetier)
+      const parActivite = activite
+        ? l
+            .filter((c) => !directs.includes(c) && placeDansActivite(c, activite) != null)
+            .sort((a, b) => (placeDansActivite(a, activite) ?? 2) - (placeDansActivite(b, activite) ?? 2))
+        : []
+      l = [...directs, ...parActivite]
+    }
     if (tri === 'metier') l = [...l].sort((a, b) => a.metier.localeCompare(b.metier, 'fr'))
     if (tri === 'secteur') l = [...l].sort((a, b) => a.secteur.localeCompare(b.secteur, 'fr'))
-    if (tri === 'pertinence' && t) l = [...l].sort((a, b) => Number(!a.metier.toLowerCase().startsWith(t)) - Number(!b.metier.toLowerCase().startsWith(t)))
+    if (tri === 'pertinence' && t) l = [...l].sort((a, b) => Number(!sansAccents(a.metier).startsWith(t)) - Number(!sansAccents(b.metier).startsWith(t)))
     return l
-  }, [catalogue, recherche, secteur, tri])
+  }, [catalogue, recherche, secteur, tri, activite, secteurs])
 
   const voirProfil = async (id: string) => {
     setProfil(null)
@@ -108,8 +136,14 @@ export default function Embaucher({
             <circle cx="11" cy="11" r="6.5" />
             <path d="M16 16l4.5 4.5" />
           </svg>
-          <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher un métier, une compétence…" />
-          <span className="precision">Ex. : comptable, juriste, community manager, facturation</span>
+          <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Un métier ou votre activité…" />
+          {recherche ? (
+            <button className="effacer-recherche" onClick={() => setRecherche('')} aria-label="Effacer la recherche">
+              ×
+            </button>
+          ) : (
+            <span className="precision">Ex. : comptable, imprimerie, boulangerie, facturation</span>
+          )}
         </label>
 
         <div className="filtres-dc">
@@ -138,6 +172,7 @@ export default function Embaucher({
           </label>
         </div>
 
+        {!recherche.trim() && (
         <section className="equipe-ideale">
           <div className="ei-gauche">
             <span className="badge-magenta">Pack Team</span>
@@ -169,6 +204,7 @@ export default function Embaucher({
             </button>
           </div>
         </section>
+        )}
 
         <div className="catalogue-entete">
           <div>
@@ -190,12 +226,35 @@ export default function Embaucher({
 
         {motif && <p className="lecture-refus">{motif}</p>}
 
+        {activite && (
+          <div className="activite-reconnue" role="status">
+            <strong>{activite.nom}</strong>
+            <span>
+              Ces métiers travaillent pour votre activité. Celui que vous embauchez reçoit le pack {activite.nom.toLowerCase()} : son vocabulaire, ses
+              documents, ses règles et ses logiciels.
+            </span>
+          </div>
+        )}
+        {recherche.trim() && retenus.length === 0 && catalogue.length > 0 && (
+          <div className="vide-dc">
+            <p>Aucun métier ni aucune activité ne répond à « {recherche.trim()} ».</p>
+            <div className="ligne-boutons">
+              <button className="bouton-contour" onClick={() => setRecherche('')}>
+                Voir tout le catalogue
+              </button>
+              <button className="bouton-cyan" onClick={() => aller({ onglet: 'create' })}>
+                Le décrire à iAgent Create
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="grille-catalogue">
           {retenus.slice(0, pages * PAR_PAGE).map((c) => (
             <article key={c.id} className={`carte-metier${recrue === c.id ? ' carte-choisie' : ''}`}>
-              <div className="metier-visuel" aria-hidden="true">
-                <span className="metier-initiale">{c.metier.trim()[0]?.toUpperCase()}</span>
-              </div>
+              <button className="metier-visuel" onClick={() => voirProfil(c.id)} aria-label={`Voir le profil : ${c.metier}`}>
+                <img src={portraitDeFiche(c.id)} alt="" loading="lazy" />
+              </button>
               <div className="metier-corps">
                 <strong className="metier-nom">{c.metier}</strong>
                 <span className="precision">{nomSecteur(c.secteur)}</span>
@@ -222,7 +281,7 @@ export default function Embaucher({
       </div>
 
       <aside className="embaucher-cote">
-        <section className="carte-verre entretien-carte">
+        <section className="carte-verre entretien-carte" ref={entretien}>
           <h3 className="carte-titre">
             Entretien d’embauche
           </h3>
@@ -244,6 +303,8 @@ export default function Embaucher({
             <Embauche
               compact
               ficheInitiale={recrue}
+              activiteInitiale={activite?.nom}
+              onVoir={(p) => aller({ onglet: 'agents', agent: p })}
               apresEmbauche={(p) => {
                 publier({ type: 'embauche', agent: p, texte: `${p} a rejoint votre équipe`, gravite: 'succes' })
                 apresEmbauche(p)
@@ -281,8 +342,7 @@ export default function Embaucher({
       </aside>
 
       {(profil || profilMotif) && (
-        <div className="tiroir-voile" onClick={() => (setProfil(null), setProfilMotif(null))}>
-          <aside className="tiroir" role="dialog" aria-label="Profil du métier" onClick={(e) => e.stopPropagation()}>
+        <Tiroir titre="Profil du métier" onFermer={() => (setProfil(null), setProfilMotif(null))}>
             <div className="tiroir-entete">
               <h2>{profil?.nom ?? 'Profil'}</h2>
               <button className="bouton-rond" onClick={() => (setProfil(null), setProfilMotif(null))} title="Fermer">
@@ -292,7 +352,11 @@ export default function Embaucher({
             {profilMotif && <p className="lecture-refus">{profilMotif}</p>}
             {profil && (
               <>
-                <p className="precision">{nomSecteur(profil.secteur)}</p>
+                <img className="tiroir-portrait" src={portraitDeFiche(profil.id)} alt="" />
+                <p className="precision">
+                  {nomSecteur(profil.secteur)}
+                  {activite && placeDansActivite({ metier: profil.nom, secteur: profil.secteur }, activite) != null ? ` · avec le pack ${activite.nom}` : ''}
+                </p>
                 <p>{profil.description}</p>
                 <h4>Son travail ({profil.taches.length} tâches)</h4>
                 <ul className="liste-simple">
@@ -323,8 +387,7 @@ export default function Embaucher({
                 </div>
               </>
             )}
-          </aside>
-        </div>
+        </Tiroir>
       )}
     </div>
   )

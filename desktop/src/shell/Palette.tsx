@@ -4,10 +4,12 @@ import type { Onglet } from '../components/Dashboard'
 import type { AgentInstalle } from '../agents/fiche'
 import { MODULES, SOUS_PAGES } from './modules'
 import { comprendre, type Cible } from './intentions'
+import { activitesNommees, type Activite } from '../agents/activites'
 
 /**
  * The universal command (brief §16): Ctrl+K, or a tap on the search bar.
- * One field searches modules, agents, their tasks and the 1 250 métiers of the
+ * One field searches modules, agents, their tasks, the client's activity
+ * (« imprimerie ») and the 1 250 métiers of the
  * catalogue, and understands a few plain intents (« tâches bloquées »,
  * « ouvre le courrier », « embaucher un comptable »). The same intent reader
  * is what a spoken command will go through, so both paths stay identical.
@@ -40,6 +42,7 @@ export default function Palette({
   const [q, setQ] = useState('')
   const [choix, setChoix] = useState(0)
   const [metiers, setMetiers] = useState<Metier[] | null>(null)
+  const [activites, setActivites] = useState<Activite[]>([])
   const champ = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -55,6 +58,9 @@ export default function Palette({
           setMetiers((c.agents ?? []).map((m) => ({ ...m, secteur: noms.get(m.secteur) ?? m.secteur.replace(/-/g, ' ') })))
         })
         .catch(() => setMetiers([]))
+      invoke<string>('lire_referentiel', { nom: 'activites' })
+        .then((brut) => setActivites(JSON.parse(brut).activites ?? []))
+        .catch(() => setActivites([]))
     }
   }, [ouvert])
 
@@ -83,6 +89,16 @@ export default function Palette({
           }
         }
       }
+      activitesNommees(q, activites)
+        .slice(0, 4)
+        .forEach((a) =>
+          out.push({
+            groupe: 'Votre activité',
+            titre: a.nom,
+            detail: 'les métiers qui la servent',
+            cible: { onglet: 'embauche', recherche: a.nom },
+          })
+        )
       if (t.length >= 3 && metiers) {
         metiers
           .filter((m) => sansAccents(`${m.metier} ${m.secteur}`).includes(t))
@@ -98,7 +114,7 @@ export default function Palette({
       }
     }
     return out.slice(0, 40)
-  }, [q, installes, metiers, admin])
+  }, [q, installes, metiers, activites, admin])
 
   useEffect(() => setChoix(0), [q])
 
