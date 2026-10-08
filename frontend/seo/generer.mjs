@@ -27,6 +27,7 @@ const secteurs = new Map(lire('catalogue/catalogue.json').secteurs.map((s) => [s
 
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
 import { slugifier } from './slug.mjs';
+import { portraitDe } from '../src/data/portraits.js';
 export { slugifier };
 
 const echapper = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -68,37 +69,123 @@ const transversaux = fiches.filter((f) => SECTEURS_TRANSVERSAUX.has(f.secteur) &
 const urlPosteActivite = (f, a) => `${urlActivite.get(a.id)}/${f.slug}`;
 
 // --- layout ---------------------------------------------------------------
-const STYLE = `
-:root{--fond:#0b0d17;--carte:#141827;--trait:#262c44;--texte:#e6e8f2;--doux:#a3a9c2;--neon:#03f3ff;--rose:#e65090;--braise:#f28e44}
-*{box-sizing:border-box}body{margin:0;background:var(--fond);color:var(--texte);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-header,main,footer{max-width:960px;margin:0 auto;padding:16px}
-header a{color:var(--neon);font-weight:700;text-decoration:none;letter-spacing:.04em}
-h1{font-size:1.9rem;line-height:1.25;margin:.4em 0}h2{color:var(--rose);font-size:1.2rem;margin-top:1.8em}
-a{color:var(--neon)}p.accroche{font-size:1.15rem;color:var(--doux)}
-.carte{background:var(--carte);border:1px solid var(--trait);border-radius:12px;padding:16px;margin:12px 0}
-ul{padding-left:1.2em}li{margin:.3em 0}.fil{font-size:.85rem;color:var(--doux)}
-.cta{display:inline-block;margin-top:16px;padding:12px 20px;border-radius:10px;background:rgba(3,243,255,.12);border:1px solid var(--neon);color:var(--neon);font-weight:600;text-decoration:none}
-footer{color:var(--doux);font-size:.85rem;border-top:1px solid var(--trait);margin-top:32px}`;
+// The same header, colours and type as the rest of iagent.agency (charte
+// e-agent: Montserrat, the eight-colour gradient), with the full menu and a
+// way back on every page: these pages are where a search engine lands people.
+const TELECHARGEMENT = 'https://github.com/STANDUP-SHOW/iagents/releases/latest/download/iAgent-Windows.msi';
+const MENU = [
+  ['Produit', '/workforce'], ['Agents', '/catalogue'], ['Créer votre entreprise', '/create'], ['Voice', '/voice'],
+  ['iAgent Box', '/box'], ['Entreprise', '/enterprise'], ['Ressources', '/how-it-works'],
+];
+const PIED = [
+  ['Produit', [['iAgent Workforce', '/workforce'], ['iAgent Box', '/box'], ['Tarifs', '/pricing'], ['Pourquoi louer', '/why-rent'], ['Télécharger pour Windows', TELECHARGEMENT]]],
+  ['Agents', [['Le catalogue des métiers', '/catalogue'], ['Skill Packs', '/skills'], ['Créer votre entreprise', '/create'], ['Opportunités', '/opportunities']]],
+  ['Voice', [['iAgent Voice', '/voice'], ['Standard téléphonique', '/standard-telephonique'], ['Support Center', '/support-center'], ['Sales Center', '/sales-center']]],
+  ['Entreprise', [['iAgent Enterprise', '/enterprise'], ['IA locale et hybride', '/local-ai'], ['Sécurité', '/security'], ['Questions fréquentes', '/faq'], ['Contact', '/contact']]],
+];
+const POLICES = [400, 600, 800].map((g) => `@font-face{font-family:Montserrat;font-style:normal;font-weight:${g};font-display:swap;src:url(/polices/montserrat-latin-${g}-normal.woff2) format("woff2")}`).join('');
+const STYLE = `${POLICES}
+:root{--fond:#020817;--fond-2:#061226;--carte:rgba(10,22,44,.72);--trait:rgba(118,202,233,.16);--trait-fort:rgba(118,202,233,.32);--texte:#eef3fb;--doux:#a9b6cc;--pale:#6f7f99;--cyan:#03f3ff;
+--degrade:linear-gradient(90deg,#e5007e 0%,#e6216d 22.63%,#de6970 29.33%,#bcce00 37.71%,#76cae9 57.26%,#b61180 71.23%,#ed744b 84.08%,#fdc802 97.49%)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--fond);color:var(--texte);font:16px/1.65 Montserrat,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--cyan)}img{max-width:100%}
+.cadre{max-width:1180px;margin:0 auto;padding:0 20px}
+.tete{position:sticky;top:0;z-index:10;background:rgba(2,8,23,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--trait)}
+.tete-ligne{display:flex;align-items:center;gap:28px;height:68px}
+.logo img{height:26px;width:auto;display:block}
+.menu{display:flex;gap:24px;flex:1}.menu a{color:var(--doux);text-decoration:none;font-size:.92rem;font-weight:500;white-space:nowrap}.menu a:hover{color:#fff}
+.bouton{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 22px;font-weight:700;font-size:.92rem;text-decoration:none;border-radius:14px 4px 14px 4px;white-space:nowrap}
+.bouton-degrade{background:var(--degrade);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35);box-shadow:0 8px 28px rgba(229,0,126,.25)}
+.bouton-contour{border:1px solid var(--trait-fort);color:#fff;background:rgba(255,255,255,.03)}.bouton-contour:hover{border-color:var(--cyan)}
+.mobile{display:none;margin-left:auto;position:relative}.mobile summary{list-style:none;cursor:pointer;width:44px;height:44px;border:1px solid var(--trait-fort);border-radius:12px;display:grid;place-items:center}
+.mobile summary::-webkit-details-marker{display:none}.mobile nav{position:absolute;right:0;top:54px;width:260px;padding:12px;background:#061226;border:1px solid var(--trait-fort);border-radius:16px;display:flex;flex-direction:column}
+.mobile nav a{padding:10px 12px;color:var(--texte);text-decoration:none;border-radius:10px}.mobile nav a:hover{background:rgba(3,243,255,.08)}
+.bandeau{position:relative;overflow:hidden;border-bottom:1px solid var(--trait);background:radial-gradient(900px 380px at 85% -10%,rgba(118,202,233,.16),transparent 70%),radial-gradient(700px 300px at 0% 120%,rgba(229,0,126,.12),transparent 70%),var(--fond)}
+.bandeau::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--degrade);opacity:.8}
+.fil{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-top:22px;font-size:.84rem;color:var(--pale)}.fil a{color:var(--doux);text-decoration:none}.fil a:hover{color:var(--cyan)}
+.retour{margin-left:auto;color:var(--cyan)!important;font-weight:600}
+.heros{display:grid;grid-template-columns:1fr;gap:32px;align-items:center;padding:28px 0 48px}
+.heros.avec-portrait{grid-template-columns:minmax(0,1fr) 260px}
+.heros h1{font-weight:800;font-size:clamp(1.9rem,3.6vw,3rem);line-height:1.12;letter-spacing:-.01em;margin:.2em 0 .35em}
+.accroche{font-size:1.15rem;color:var(--doux);max-width:46em;margin:0}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+.portrait{position:relative;border-radius:22px;overflow:hidden;aspect-ratio:4/5;border:1px solid var(--trait-fort);box-shadow:0 24px 60px rgba(0,0,0,.45)}
+.portrait img{width:100%;height:100%;object-fit:cover;object-position:50% 10%;display:block}
+.portrait::before{content:'';position:absolute;inset:auto 0 0 0;height:4px;background:var(--degrade)}
+main.cadre{padding-top:12px;padding-bottom:24px}
+main h2{font-weight:800;font-size:1.35rem;margin:2.2em 0 .9em;display:flex;align-items:center;gap:12px}
+main h2::before{content:'';width:28px;height:4px;border-radius:2px;background:var(--degrade);flex:none}
+.carte{background:var(--carte);border:1px solid var(--trait);border-radius:20px;padding:22px 26px;margin:24px 0}
+.carte p{margin:.4em 0}
+main ul{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+main li{background:var(--carte);border:1px solid var(--trait);border-radius:16px;padding:16px 18px;color:var(--doux);font-size:.95rem;transition:border-color .2s}
+main li:hover{border-color:var(--trait-fort)}main li strong{display:block;color:var(--texte);font-weight:700;margin-bottom:4px}
+main li a{font-weight:600;text-decoration:none}
+main p{color:var(--doux)}main p a{text-decoration:none;border-bottom:1px solid rgba(3,243,255,.35)}
+.appel{margin:56px auto 0;padding:36px 32px;border-radius:24px;position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(6,18,38,.95),rgba(2,8,23,.95));border:1px solid var(--trait-fort);display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between}
+.appel::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--degrade)}
+.appel h2{margin:0;font-size:1.5rem;font-weight:800}.appel p{margin:.3em 0 0;color:var(--doux)}
+.pied{margin-top:64px;border-top:1px solid var(--trait);color:var(--doux);font-size:.9rem}
+.pied-grille{display:grid;grid-template-columns:1.3fr repeat(4,1fr);gap:32px;padding:48px 20px}
+.pied b{display:block;color:var(--pale);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;margin-bottom:12px}
+.pied a{display:block;color:var(--doux);text-decoration:none;padding:4px 0}.pied a:hover{color:var(--cyan)}
+.pied-bas{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;padding:0 20px 32px;color:var(--pale);font-size:.8rem}
+.puces{display:flex;flex-wrap:wrap;gap:8px;margin:0}.puces a{border:1px solid var(--trait-fort)!important;border-radius:999px;padding:6px 14px;font-size:.86rem;color:var(--texte);background:rgba(255,255,255,.03)}.puces a:hover{border-color:var(--cyan)!important;color:var(--cyan)}
+.suite{margin-top:12px}.suite summary{cursor:pointer;color:var(--cyan);font-weight:600;margin-bottom:12px}
+@media (max-width:1180px){.menu{display:none}.tete .bouton-degrade{display:none}.mobile{display:block}}
+@media (max-width:820px){.heros.avec-portrait{grid-template-columns:1fr}.heros.avec-portrait .portrait{max-width:220px;order:-1}.pied-grille{grid-template-columns:1fr 1fr}.retour{margin-left:0}}
+@media (max-width:480px){main ul{grid-template-columns:1fr}.pied-grille{grid-template-columns:1fr}.appel{padding:28px 22px}}`;
 
-function page({ url, titre, description, fil = [], corps }) {
-  const filHtml = fil.length
-    ? `<p class="fil">${fil.map(([t, u]) => (u ? `<a href="${u}">${echapper(t)}</a>` : echapper(t))).join(' › ')}</p>`
-    : '';
+const liens = (items) => items.map(([t, u]) => `<a href="${u}">${echapper(t)}</a>`).join('');
+
+function page({ url, titre, description, fil = [], corps, portrait = null, appel = null }) {
+  // The page's title and hook open the coloured band; the rest is the body.
+  const m = corps.match(/^\s*(<h1>[\s\S]*?<\/h1>)\s*(<p class="accroche">[\s\S]*?<\/p>)?/);
+  const tete = m ? m[0] : '';
+  const reste = (m ? corps.slice(m[0].length) : corps)
+    .replace(/<\/strong> : /g, '</strong>').replace(/(<li><a [^>]*>[^<]*<\/a>) : /g, '$1<br>');
+  const filHtml = [['Accueil', '/'], ...fil].map(([t, u]) => (u ? `<a href="${u}">${echapper(t)}</a>` : `<span>${echapper(t)}</span>`)).join('<span aria-hidden="true">›</span>');
+  const [appelTitre, appelTexte] = appel ?? ['Trouvez le collaborateur IA de votre métier', '1 249 métiers, réglés sur votre secteur et votre activité.'];
   return `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${echapper(titre)} | iAgent</title>
 <meta name="description" content="${echapper(description.slice(0, 300))}">
+<meta name="theme-color" content="#020817">
 <link rel="canonical" href="${SITE}${url}"><link rel="icon" type="image/png" href="/puce-cerveau.png">
+<link rel="preload" href="/polices/montserrat-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/seo.css"></head>
-<body><header><a href="/">iAgent</a></header>
-<main>${filHtml}${corps}
-<a class="cta" href="/catalogue">Voir le catalogue des agents</a></main>
-<footer>iAgent : des agents IA métier qui travaillent chez vous, en local, ou par API.</footer>
+<body>
+<header class="tete"><div class="cadre tete-ligne">
+<a class="logo" href="/" aria-label="iAgent, accueil"><img src="/accueil/logo-iagent-blanc.svg" alt="iAgent" width="91" height="26"></a>
+<nav class="menu" aria-label="Navigation principale">${liens(MENU)}</nav>
+<a class="bouton bouton-degrade" href="${TELECHARGEMENT}">Télécharger l'app</a>
+<details class="mobile"><summary aria-label="Ouvrir le menu"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16M4 16h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></summary>
+<nav aria-label="Menu">${liens(MENU)}<a href="${TELECHARGEMENT}">Télécharger l'app</a></nav></details>
+</div></header>
+<div class="bandeau"><div class="cadre">
+<nav class="fil" aria-label="Fil d'Ariane">${filHtml}<a class="retour" href="/catalogue">← Retour au catalogue</a></nav>
+<div class="heros${portrait ? ' avec-portrait' : ''}"><div>${tete}
+<div class="actions"><a class="bouton bouton-degrade" href="/catalogue">Recruter un agent</a><a class="bouton bouton-contour" href="/how-it-works">Comment ça marche</a></div></div>
+${portrait ? `<div class="portrait"><img src="${portrait}" alt="" width="320" height="320"></div>` : ''}</div>
+</div></div>
+<main class="cadre">${reste}
+<section class="appel"><div><h2>${echapper(appelTitre)}</h2><p>${echapper(appelTexte)}</p></div>
+<div class="actions" style="margin:0"><a class="bouton bouton-degrade" href="/catalogue">Voir le catalogue</a><a class="bouton bouton-contour" href="/pricing">Voir les tarifs</a></div></section>
+</main>
+<footer class="pied"><div class="cadre pied-grille">
+<div><img src="/accueil/logo-iagent-blanc.svg" alt="iAgent" width="112" height="32"><p>Des collaborateurs IA par métier, qui connaissent vos logiciels et travaillent chez vous, en local, ou par API.</p></div>
+${PIED.map(([t, items]) => `<nav aria-label="${t}"><b>${t}</b>${liens(items)}</nav>`).join('')}
+</div><div class="cadre pied-bas"><span>© 2026 iAgent · e-Agent Agency</span><span>Human ambition. Agentic execution.</span></div></footer>
 </body></html>
 `;
 }
 
 const liste = (items) => `<ul>${items.join('')}</ul>`;
+// A long run of links reads as chips, folded beyond two dozen.
+const puces = (items) => items.length <= 24
+  ? `<p class="puces">${items.join('')}</p>`
+  : `<p class="puces">${items.slice(0, 24).join('')}</p><details class="suite"><summary>Voir les ${items.length - 24} autres</summary><p class="puces">${items.slice(24).join('')}</p></details>`;
 const lien = (texte, url) => `<a href="${url}">${echapper(texte)}</a>`;
 
 // --- pages ----------------------------------------------------------------
@@ -112,7 +199,9 @@ for (const f of fiches) {
     url,
     titre: `${f.nom} : agent IA`,
     description: f.accroche,
-    fil: [['Agents', null], [secteur, null]],
+    fil: [['Agents', '/catalogue'], [secteur, null]],
+    portrait: portraitDe(f),
+    appel: [`Recrutez votre ${f.nom.toLowerCase()}`, "Un entretien d'embauche dans l'application, et il se met au travail chez vous."],
     corps: `<h1>${echapper(f.nom)}, un agent IA qui travaille pour vous</h1>
 <p class="accroche">${echapper(f.accroche)}</p>
 <div class="carte"><p>${echapper(f.description)}</p></div>
@@ -120,7 +209,7 @@ for (const f of fiches) {
 ${liste(f.taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}</li>`))}
 <h2>Les logiciels qu'il sait tenir</h2>
 ${liste(quals.map((q) => `<li>${lien(logParId.get(q.logiciel).nom, urlPosteLogiciel(f, q.logiciel))} : ${echapper(q.usage)}</li>`))}
-${transversaux.includes(f) ? `<h2>Dans votre activité</h2><p>${activites.map((a) => lien(a.nom, urlPosteActivite(f, a))).join(', ')}</p>` : ''}`,
+${transversaux.includes(f) ? `<h2>Dans votre activité</h2>${puces(activites.map((a) => lien(a.nom, urlPosteActivite(f, a))))}` : ''}`,
   }));
 
   for (const q of quals) {
@@ -133,14 +222,15 @@ ${transversaux.includes(f) ? `<h2>Dans votre activité</h2><p>${activites.map((a
       url: u,
       titre: `${f.nom} sur ${l.nom}`,
       description: `${f.nom} qui sait travailler sur ${l.nom}. ${q.usage}`,
-      fil: [[f.nom, urlFiche.get(f.id)], [l.nom, urlLogiciel.get(q.logiciel)]],
+      fil: [['Agents', '/catalogue'], [f.nom, urlFiche.get(f.id)], [l.nom, urlLogiciel.get(q.logiciel)]],
+      portrait: portraitDe(f),
       corps: `<h1>Un agent ${echapper(f.nom.toLowerCase())} qui travaille sur ${echapper(l.nom)}</h1>
 <p class="accroche">${echapper(q.usage)}</p>
 <div class="carte"><p>${echapper(f.accroche)}</p></div>
 ${taches.length ? `<h2>Ses tâches dans ${echapper(l.nom)}</h2>${liste(taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}</li>`))}` : ''}
 <h2>À propos de ${echapper(l.nom)}</h2>
 <p>${echapper(l.nom)}${l.editeur ? `, édité par ${echapper(l.editeur)}` : ''}. ${lien(`Tous nos agents qui savent tenir ${l.nom}`, urlLogiciel.get(q.logiciel))}.</p>
-${autres.length ? `<h2>Il sait aussi tenir</h2><p>${autres.join(', ')}</p>` : ''}`,
+${autres.length ? `<h2>Il sait aussi tenir</h2>${puces(autres)}` : ''}`,
     }));
   }
 }
@@ -187,7 +277,7 @@ ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocab
 ${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
 ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}
 ${p.logiciels?.length ? `<h2>Les logiciels de l'activité</h2>${liste(p.logiciels.map((id) => `<li>${lien(logParId.get(id).nom, urlLogiciel.get(id))}</li>`))}` : ''}
-<h2>Les postes pour votre activité</h2><p>${transversaux.map((f) => lien(f.nom, urlPosteActivite(f, a))).join(', ')}</p>`,
+<h2>Les postes pour votre activité</h2>${puces(transversaux.map((f) => lien(f.nom, urlPosteActivite(f, a))))}`,
   }));
 }
 
@@ -208,6 +298,7 @@ for (const a of activites) {
       titre: `${f.nom} pour ${activite}${sur}`,
       description: `${f.nom} pour ${activite}${sur}. ${f.accroche} ${a.trait}`,
       fil: [[a.nom, urlActivite.get(a.id)], [f.nom, urlFiche.get(f.id)]],
+      portrait: portraitDe(f),
       corps: `<h1>Un agent ${echapper(f.nom.toLowerCase())} pour ${echapper(activite)}${echapper(sur)}</h1>
 <p class="accroche">${echapper(f.accroche)}</p>
 <div class="carte"><p>${echapper(a.trait)}</p><p>Il reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p></div>
@@ -223,9 +314,10 @@ ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r
 
 // --- checks, then write ---------------------------------------------------
 const cibles = new Set(pages.keys());
+const HORS_SEO = new Set(['/', '/catalogue', '/puce-cerveau.png', '/seo.css', ...PAGES_OFFRE.map((p) => `/${p.nom}`)]);
 for (const [url, html] of pages) {
   for (const [, href] of html.matchAll(/href="(\/[^"]*)"/g)) {
-    if (href === '/' || href === '/catalogue' || href === '/puce-cerveau.png' || href === '/seo.css') continue;
+    if (HORS_SEO.has(href) || href.startsWith('/polices/')) continue;
     if (!cibles.has(href)) throw new Error(`${url} renvoie vers ${href}, page non générée`);
   }
 }
