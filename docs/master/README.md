@@ -16,7 +16,7 @@ et ce qui ne peut se faire qu'avec max (un compte, un secret, un achat).
 | 8 | 180 000 profils | 182 490 postes comptés (PR #35) | compteur servi par la plateforme | — |
 | 9 | iAgent Create | équipe levée de fonds (PR #32) | opportunités du jour, étude à trois scénarios, entreprise composée en 5 phases (`plateforme/create`) | — |
 | 10 | Voice multi-moteur | voix locale Piper/whisper | abstraction VoiceProvider + registre de voix (Gemini Live, ElevenLabs, local) | clés des moteurs |
-| 11-12 | Téléphonie, standard, centre d'appels | rien | PhoneProvider (Telnyx, Twilio, SIP), standard, extensions, transferts, prise en main humaine, files, campagnes avec consentement (`plateforme/voix`) | compte opérateur, numéros |
+| 11-12 | Téléphonie, standard, centre d'appels | rien | PhoneProvider (Telnyx, Twilio, SIP), standard, extensions, transferts, prise en main humaine, files, campagnes avec consentement (`plateforme/voix`) ; pont média : l'agent tient l'appel au téléphone (voir « §11 : le pont média ») | compte opérateur, numéros, `VOIX_URL_PUBLIQUE` |
 | 13 | iAgent Home | rien | site `home/` séparé, charte claire | domaine home.iagent.agency |
 | 14 | Modules du Desktop | tableau de bord, embauche, équipe, machine | Workforce, Voice, Create, Box, Validations, Consommation, Sécurité | — |
 | 15 | Back-office | rien | `back-office/` sur les routes `admin` de la plateforme | — |
@@ -59,6 +59,29 @@ Reste au matériel et à l'hébergement (rien de ceci n'est fait ni simulé) :
 - mTLS vers le Control Plane, posé chez l'hébergeur devant le serveur ;
 - la clé `PLATEFORME_CLE_SIGNATURE`, à générer et garder hors du dépôt (un HSM
   ou le coffre de l'hébergeur la rendrait non exportable côté plateforme aussi).
+
+## §11 : le pont média
+
+Un agent décroche vraiment (`plateforme/voix/pont.ts`, `audio.ts`, `plateforme/ws.ts`).
+Quand le standard passe l'appel à un agent, la plateforme émet une adresse de
+flux à usage unique (jeton de 24 octets, seule son empreinte est gardée, perdue
+au bout de deux minutes) et demande à l'opérateur de l'ouvrir : `<Connect><Stream>`
+dans la réponse au webhook Twilio, `streaming_start` chez Telnyx. Le son de la
+ligne (μ-law 8 kHz) part au moteur de voix en PCM 16 kHz, la voix revient en
+μ-law. Le pont découpe les tours de l'appelant, coupe l'agent quand on lui parle
+par-dessus, fait dire par l'agent les phrases du standard, passe la ligne d'un
+agent à l'autre, se tait pendant qu'un humain est prévenu, et compte chaque
+session de voix dans le coût de l'appel.
+
+Le pont n'est proposé que s'il peut marcher : `VOIX_URL_PUBLIQUE` posée, un
+opérateur qui envoie le son (Twilio, Telnyx ; pas encore la passerelle SIP) et un
+moteur de voix du téléphone avec sa clé. Sinon le standard passe l'appel à un
+humain, à la messagerie ou au rappel, comme avant. Format des messages relu chez
+Twilio et Telnyx le 08/10/2026 ; aucun appel réel n'a encore été passé.
+
+Reste : remettre dans l'ordre les trames que Telnyx dit pouvoir livrer en
+désordre ; la messagerie vocale pendant un appel tenu par un agent ; le flux de
+la passerelle SIP.
 
 ## Règles du socle
 

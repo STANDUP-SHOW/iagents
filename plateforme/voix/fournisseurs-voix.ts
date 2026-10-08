@@ -90,6 +90,8 @@ export interface SessionVoix {
   interrupt(): Promise<void>;
   setVoice(voix: string): Promise<void>;
   sendContext(c: ContexteSession): Promise<void>;
+  /** Says this exact sentence (the switchboard's own words: greeting, "please hold"…), then ends a turn. */
+  say(texte: string): Promise<void>;
   executeTool(appel: AppelOutil, executeur: Executeur): Promise<void>;
   closeSession(): Promise<Metriques>;
 }
@@ -315,6 +317,24 @@ class SessionTourParTour implements SessionVoix {
   async interrupt(): Promise<void> { this.interrompu = true; this.file.pousser({ type: 'interrompu' }); }
   async setVoice(voix: string): Promise<void> { this.voix = voix; }
   async sendContext(c: ContexteSession): Promise<void> { this.systeme = consigneDe(c); }
+  async say(texte: string): Promise<void> {
+    // Not pushed into the history (the brain's first message must be the caller's);
+    // the instruction remembers it instead, so the agent does not greet twice.
+    this.systeme += `\nTu as déjà dit à l’appelant : « ${texte} »`;
+    this.enCours = this.enCours.then(async () => {
+      this.interrompu = false;
+      const { pcm, taux } = await this.bouche(texte, this.voix, this.langue);
+      this.m.caracteres_synthetises += texte.length;
+      this.m.secondes_audio_sortie += pcm.length / (2 * taux);
+      if (!this.interrompu) {
+        this.file.pousser({ type: 'audio', pcm, taux });
+        this.file.pousser({ type: 'transcription', qui: 'agent', texte });
+      }
+      this.file.pousser({ type: 'fin-de-tour' });
+    }).catch((e) => {
+      this.file.pousser({ type: 'erreur', motif: e instanceof Error ? e.message : 'La phrase n’a pas pu être dite.' });
+    });
+  }
   async executeTool(appel: AppelOutil, executeur: Executeur): Promise<void> {
     this.m.appels_outils++;
     let r: unknown;
@@ -440,6 +460,10 @@ class SessionGemini implements SessionVoix {
   }
   async sendContext(c: ContexteSession): Promise<void> {
     this.envoyer({ clientContent: { turns: [{ role: 'user', parts: [{ text: `Contexte : ${consigneDe(c)}` }] }], turnComplete: false } });
+  }
+  async say(texte: string): Promise<void> {
+    // Gemini Live speaks only what it generates: it is asked to repeat the sentence word for word.
+    this.envoyer({ clientContent: { turns: [{ role: 'user', parts: [{ text: `Dis mot pour mot à l’appelant, sans rien ajouter : « ${texte} »` }] }], turnComplete: true } });
   }
   async executeTool(appel: AppelOutil, executeur: Executeur): Promise<void> {
     this.m.appels_outils++;

@@ -10,13 +10,19 @@
 //                provisioning. C'est l'identité cryptographique unique du §6 ;
 //                le mTLS se pose devant, chez l'hébergeur, et ne remplace pas ceci.
 // Aucun secret n'est journalisé (§18) : seuls la méthode, le chemin et le statut.
+//
+// Un module peut aussi déclarer des flux (`flux` dans ses routes) : une connexion
+// WebSocket qu'ouvre un opérateur téléphonique pour porter le son d'un appel
+// (`ws.ts`). Le flux s'authentifie lui-même — l'opérateur ne signe pas cette
+// connexion : c'est un jeton à usage unique dans le chemin, émis par la plateforme.
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { createHash, createPublicKey, timingSafeEqual, verify } from 'node:crypto';
 import { Stockage } from './stockage.ts';
 import type { Box } from './modele.ts';
 import { routes as routesControle } from './controle/routes.ts';
-import { routes as routesVoix } from './voix/routes.ts';
+import { flux as fluxVoix, routes as routesVoix } from './voix/routes.ts';
+import { accepter, refuserUpgrade, type ConnexionWs } from './ws.ts';
 import { routes as routesCreate } from './create/routes.ts';
 import { routes as routesTarifs } from './tarifs/routes.ts';
 
@@ -47,6 +53,11 @@ export type Route = {
   acces: Acces;
   traiter: (ctx: Contexte) => Reponse | Promise<Reponse>;
 };
+
+export type ContexteFlux = { stockage: Stockage; params: Record<string, string>; maintenant: () => Date };
+/** Une chaîne : le refus (rien n'est ouvert). Une fonction : elle reçoit la connexion acceptée. */
+export type RouteFlux = { chemin: string; ouvrir: (ctx: ContexteFlux) => Promise<string | ((ws: ConnexionWs) => void)> };
+export const tousLesFlux: RouteFlux[] = [...fluxVoix];
 
 /** Refus en français, sans jargon, jamais avec un secret dedans. */
 export const refus = (statut: number, message: string): Reponse => ({ statut, corps: { erreur: message } });
@@ -118,7 +129,7 @@ export function reglagesDeLEnvironnement(env: Record<string, string | undefined>
 
 export function creerPlateforme(
   reglages: Reglages,
-  options: { stockage?: Stockage; maintenant?: () => Date; routes?: Route[] } = {},
+  options: { stockage?: Stockage; maintenant?: () => Date; routes?: Route[]; flux?: RouteFlux[] } = {},
 ) {
   const stockage = options.stockage ?? new Stockage(reglages.fichierDonnees);
   const maintenant = options.maintenant ?? (() => new Date());
@@ -189,6 +200,19 @@ export function creerPlateforme(
     } catch (e) {
       repondre(res, refus(400, e instanceof Error ? e.message : 'Requête refusée.'));
     }
+  });
+  const flux = options.flux ?? tousLesFlux;
+  serveur.on('upgrade', async (req: IncomingMessage, sock: import('node:stream').Duplex, tete: Buffer) => {
+    sock.on('error', () => {});
+    const url = new URL(req.url ?? '/', 'http://plateforme');
+    let trouve: { f: RouteFlux; params: Record<string, string> } | null = null;
+    for (const f of flux) { const params = correspond(f.chemin, url.pathname); if (params) { trouve = { f, params }; break; } }
+    if (!trouve || req.method !== 'GET') return refuserUpgrade(sock, 404, "Cette adresse n'existe pas.");
+    let r: string | ((ws: ConnexionWs) => void);
+    try { r = await trouve.f.ouvrir({ stockage, params: trouve.params, maintenant }); } catch { r = 'Flux refusé.'; }
+    if (typeof r === 'string') return refuserUpgrade(sock, 401, r);
+    const ws = accepter(req, sock, tete);
+    if (ws) r(ws);
   });
   return { serveur, stockage };
 }
