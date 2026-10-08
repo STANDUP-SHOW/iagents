@@ -115,7 +115,8 @@ const COEUR_PAR_FAMILLE = {
 const COEUR_PAR_ACTIVITE = [
   [/plomb|chauff|[ée]lectric|peintur|carrel|couvert|couvreur|serrur|vitr|pl[aâ]tr|plaqu|climati|isolation|menuiserie de pose|fa[çc]ade|ramonage|cl[ôo]ture|piscine/i, [['Deviseur', 'AG-0741'], ['Métreur', 'AG-0704'], ['Planning des chantiers', 'AG-0742'], ['Suivi des interventions', 'AG-0747'], ['Achats chantier', 'AG-0707'], ['Service après-vente', 'AG-0743']], 'batiment'],
   [/boulang|p[âa]tiss|boucher|charcut|chocolat|confiser|fromag|glaci|biscuit/i, [['Devis commandes (événements, entreprises)', 'AG-0741'], ['Planning de production du laboratoire', 'AG-1003'], ['Assistant de production', 'AG-1001'], ['Approvisionnement matières', 'AG-1012'], ['Traçabilité et hygiène', 'AG-1008'], ['Stocks', 'AG-0545']]],
-  [/immobili|syndic|lotissement|foncier|marchand de biens/i, [['Estimation — avis de valeur', 'AG-0464'], ['Gestion locative', 'AG-0458'], ['Syndic', 'AG-0460']]],
+  [/diagnostic/i, [['Deviseur', 'AG-0741'], ['Planning des rendez-vous de diagnostic', 'AG-0742'], ['Suivi des interventions', 'AG-0747']], 'batiment'],
+  [/immobili|syndic|lotissement|foncier|marchand de biens/i, [['Estimation — avis de valeur', 'AG-0464'], ['Gestion locative', 'AG-0458'], ['Syndic', 'AG-0460']], 'finance-immobilier'],
   [/assurance|mutuelle|pr[ée]voyance/i, [['Devis et tarification', 'AG-1150'], ['Souscription', 'AG-0081'], ["Appels d'offres", 'AG-1158']]],
   [/coiffure|barbier|esth[ée]ti|onglerie|tatou/i, [['Devis prestations (mariages, événements)', 'AG-0741'], ['Planning des rendez-vous', 'AG-0742'], ['Stocks de produits', 'AG-0545']]],
   [/restaura|traiteur|bar, caf|brasserie/i, [['Devis groupes et traiteur', 'AG-0622'], ['Chef de cuisine — menus et fiches techniques', 'AG-0612'], ['Planning de la brigade', 'AG-0609'], ['Achats cuisine', 'AG-0610'], ['Stocks et inventaire', 'AG-0611'], ['Commandes et vente à emporter', 'AG-0607']]],
