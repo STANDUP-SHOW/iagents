@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { FINANCEMENT } from '../../../dimensionnement/offre-box.ts';
-import { conseilPour, euros, ficheDe, installationDe } from '../data/offres.js';
+import { conseilPour, euros, ficheDe, installationDe, LOCATION_BOX } from '../data/offres.js';
 
 const PROVISOIRE = 'prix provisoire';
 
@@ -32,7 +32,7 @@ export default function ConseilMachine({ ids, compact = false }) {
           {!compact && (
             <ul className="text-xs text-nuit-300 space-y-0.5">
               {cout.lignes.map((b) => (
-                <li key={b.id}>{b.nom} : {euros(b.mensualite)} HT par mois pendant {FINANCEMENT.mois} mois, abonnement {euros(b.abonnement)} par mois</li>
+                <li key={b.id}>{b.nom} : {b.id === LOCATION_BOX.id ? LOCATION_BOX.phrase : `${euros(b.mensualite)} HT par mois pendant ${FINANCEMENT.mois} mois, abonnement ${euros(b.abonnement)} par mois`}</li>
               ))}
               <li>Électricité : {euros(c.electricite)} par mois</li>
               <li>Part restée par API : {euros(c.api)} par mois</li>

@@ -60,8 +60,8 @@ export default {
         succes: '#2dfc9a',
       },
       fontFamily: {
-        sans: ['"Exo 2"', 'system-ui', 'sans-serif'],
-        display: ['Orbitron', '"Exo 2"', 'system-ui', 'sans-serif'],
+        sans: ['Montserrat', 'system-ui', 'sans-serif'],
+        display: ['Montserrat', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
         neon: '0 0 6px rgba(3, 243, 255, 0.6), 0 0 22px rgba(3, 243, 255, 0.25)',

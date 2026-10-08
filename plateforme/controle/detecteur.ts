@@ -7,7 +7,7 @@
 // a false acceptance ships a client's data to every other client. It never
 // returns the matched value, only its kind, so a refusal does not echo the data.
 
-import { readFileSync } from 'node:fs';
+import logicielsJson from '../../catalogue/logiciels.json' with { type: 'json' };
 
 export type TypeDonnee =
   | 'adresse e-mail'
@@ -70,7 +70,7 @@ function motsConnus(): Set<string> {
   if (connus) return connus;
   connus = new Set(['iagent', 'box', 'skill', 'pack', 'commander', 'workforce', 'france', 'europe', 'union', 'européenne']);
   try {
-    const ref = JSON.parse(readFileSync(new URL('../../catalogue/logiciels.json', import.meta.url), 'utf8'));
+    const ref = logicielsJson as { logiciels?: { nom: string }[] };
     for (const l of ref.logiciels ?? []) {
       for (const mot of String(l.nom).split(/[\s/()-]+/)) if (mot) connus.add(mot.toLowerCase());
     }

@@ -2,6 +2,7 @@
 // (routing policy, queue, campaign, handoff). They belong in modele.ts — the
 // module does not own that file, so they live here until the coordinator moves
 // them. Nothing else in the repository defines them.
+import type { Metriques } from './fournisseurs-voix.ts';
 import type { Call, Id, Iso, PhoneNumber } from '../modele.ts';
 
 export type MoteurVoix = 'gemini' | 'elevenlabs' | 'mistral' | 'local';
@@ -13,7 +14,11 @@ export const PROVIDERS_TEL: ProviderTel[] = ['telnyx', 'twilio', 'sip'];
 /** A time slot, days 1 = Monday … 7 = Sunday, times "HH:MM" in the standard's time zone. */
 export type Plage = { jours: number[]; debut: string; fin: string };
 
-export type Extension = { numero: string; agent_instance_id: Id; prenom: string; departement: string };
+export type Extension = {
+  numero: string; agent_instance_id: Id; prenom: string; departement: string;
+  /** The VoiceProfile that lends this agent its voice on the phone; else the profile whose persona_id is agent_instance_id. */
+  profil_voix?: Id;
+};
 
 export type CibleHumaine = {
   type: 'desktop' | 'webrtc' | 'mobile' | 'fixe';
@@ -85,6 +90,8 @@ export type AppelVoix = Call & {
   cout_manquants: string[];
   enregistre: boolean;
   fin: Iso | null;
+  /** What each voice session of the call used (engine, seconds, characters, tokens), set when the media bridge closes. */
+  sessions_voix?: Metriques[];
 };
 
 export type ConsentementContact = { source: string; date: Iso; retire_le?: Iso | null };

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import agents from '../data/loader.js';
 import { CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee } from '../data/offres.js';
+import { agentsPourDemande } from '../data/recherche.js';
 import ConseilMachine from './ConseilMachine.jsx';
 
 function LigneAgent({ id, coche, onBasculer }) {
@@ -8,7 +9,7 @@ function LigneAgent({ id, coche, onBasculer }) {
   if (!fiche) return null;
   return (
     <label className="flex items-start gap-3 py-2 cursor-pointer">
-      <input type="checkbox" checked={coche} onChange={() => onBasculer(id)} className="mt-1 accent-neon-400 w-5 h-5" />
+      <input type="checkbox" checked={coche} onChange={() => onBasculer(id)} className="mt-1 accent-neon-400 w-5 h-5 flex-none" />
       <span>
         <span className="text-white text-sm font-semibold">{fiche.nom}</span>
         <span className="block text-xs text-nuit-300 line-clamp-2">{fiche.accroche}</span>
@@ -23,9 +24,14 @@ function LigneAgent({ id, coche, onBasculer }) {
  * lets every agent be switched on or off, and sizes the machine for what is
  * left. Everything runs in the browser: the idea is sent nowhere.
  */
+// « J'ai une imprimerie », « je suis plombier », « mon cabinet »: the business
+// exists, so building the project (business plan, market study, funding) is
+// offered but not ticked.
+const DEJA_EN_ACTIVITE = /\b(j'ai|j’ai|je suis|mon|ma|mes|notre|nos)\b/i;
+
 export default function CreezEntreprise({ ideeInitiale = '' }) {
   const [idee, setIdee] = useState(ideeInitiale);
-  const [retires, setRetires] = useState(() => new Set());
+  const [retires, setRetires] = useState(() => new Set(DEJA_EN_ACTIVITE.test(ideeInitiale) ? CYCLE_1.flatMap((e) => e.agents) : []));
   const [ajoutes, setAjoutes] = useState([]);
   const [recherche, setRecherche] = useState('');
 
@@ -37,8 +43,9 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
     });
 
   const activites = useMemo(() => activitesPourIdee(idee), [idee]);
+  const pourLaDemande = useMemo(() => agentsPourDemande(idee), [idee]);
   const cycle1 = CYCLE_1.flatMap((e) => e.agents);
-  const pack = [...new Set([...cycle1, ...CYCLE_2, ...ajoutes])].filter((id) => !retires.has(id));
+  const pack = [...new Set([...pourLaDemande, ...cycle1, ...CYCLE_2, ...ajoutes])].filter((id) => !retires.has(id));
 
   const trouves = useMemo(() => {
     const q = recherche.trim().toLowerCase();
@@ -52,9 +59,9 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
   return (
     <div className="space-y-6">
       <div className="card border-2 border-rose-500/50">
-        <h2 className="font-display text-2xl text-white mb-1">Créez votre entreprise</h2>
-        <p className="text-nuit-300 mb-4">Gérée par des agents de A à Z : du projet à l'équipe qui la fait tourner.</p>
-        <label htmlFor="idee" className="text-sm text-nuit-200">Votre idée d'entreprise</label>
+        <h2 className="font-display text-2xl text-white mb-1">Que voulez-vous accomplir ?</h2>
+        <p className="text-nuit-300 mb-4">Un besoin dans votre entreprise, ou une entreprise à créer de A à Z : iAgent propose l'équipe qui y répond.</p>
+        <label htmlFor="idee" className="text-sm text-nuit-200">Votre demande</label>
         <textarea
           id="idee"
           value={idee}
@@ -67,16 +74,28 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
         {idee.trim() && (
           <p className="text-sm text-nuit-200 mt-3">
             {activites.length
-              ? <>Activité reconnue : {activites.map((a) => <span key={a.id} className="badge bg-neon-400/15 text-neon-300 border border-neon-400/50 mr-2">{a.nom}</span>)} Ses usages, ses documents et ses logiciels s'ajoutent à chaque agent.</>
-              : "Aucune de nos 282 activités ne correspond encore aux mots de l'idée : les agents travaillent quand même, avec un pack activité à préciser à l'entretien d'embauche."}
+              ? <>Votre activité : {activites.map((a) => <span key={a.id} className="badge bg-neon-400/15 text-neon-300 border border-neon-400/50 mr-2">{a.nom}</span>)} Ses usages, ses documents et ses logiciels s'ajoutent à chaque agent.</>
+              : "Votre activité n'est pas encore dans nos 282 : les agents travaillent quand même, et elle se précise à l'entretien d'embauche."}
           </p>
         )}
       </div>
 
+      {pourLaDemande.length > 0 && (
+        <div className="card border-2 border-neon-400/50">
+          <p className="text-xs font-mono text-neon-300">Pour votre demande</p>
+          <h3 className="font-display text-lg text-white mb-1">Les agents qui répondent à ce que vous avez écrit</h3>
+          <p className="text-xs text-nuit-400 mb-3">Les plus proches de votre activité d'abord, puis ceux qui font ce que vous demandez. Décochez ceux qui ne vous servent pas.</p>
+          <div className="grid md:grid-cols-2 gap-x-6">
+            {pourLaDemande.map((id) => <LigneAgent key={id} id={id} coche={!retires.has(id)} onBasculer={basculer} />)}
+          </div>
+        </div>
+      )}
+
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="card">
           <p className="text-xs font-mono text-neon-300">Cycle 1</p>
-          <h3 className="font-display text-lg text-white mb-3">Construire le projet</h3>
+          <h3 className="font-display text-lg text-white mb-1">Construire le projet</h3>
+          <p className="text-xs text-nuit-400 mb-3">{DEJA_EN_ACTIVITE.test(idee) ? "Votre entreprise existe déjà : ces agents sont décochés. Cochez-les pour un nouveau projet." : "Pour un projet à lancer : étude, plan, financement, formalités."}</p>
           {CYCLE_1.map((etape) => (
             <div key={etape.etape} className="mb-3">
               <p className="text-sm text-rose-300 font-semibold">{etape.etape}</p>

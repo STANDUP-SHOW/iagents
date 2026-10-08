@@ -2,8 +2,8 @@
 // des Box et des Skill Packs, comparaison de versions, et ce qui se lit dans
 // le catalogue (templates d'agents, compteur public).
 
-import { readdirSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { depot } from '../depot.ts';
+import catalogueJson from '../../catalogue/catalogue.json' with { type: 'json' };
 import type { Box, SkillPack } from '../modele.ts';
 
 type StatutBox = Box['statut'];
@@ -80,21 +80,8 @@ export function urlRecevable(v: unknown): string | null {
 
 // --- Catalogue ---------------------------------------------------------------
 
-const RACINE = new URL('../../', import.meta.url);
-
-let fiches: Map<string, string> | null = null;
-/** AG-XXXX -> absolute path of its sheet in agents/ or socle/ (the same two folders the app reads). */
-function fichesConnues(): Map<string, string> {
-  if (fiches) return fiches;
-  fiches = new Map();
-  for (const dossier of ['agents', 'socle']) {
-    for (const f of readdirSync(new URL(`${dossier}/`, RACINE))) {
-      const m = /^(AG-\d{4})-.*\.json$/.exec(f);
-      if (m && !fiches.has(m[1])) fiches.set(m[1], fileURLToPath(new URL(`${dossier}/${f}`, RACINE)));
-    }
-  }
-  return fiches;
-}
+/** AG-XXXX -> path of its sheet in agents/ or socle/ (the same two folders the app reads), from the repository root. */
+const fichesConnues = (): Map<string, string> => depot().fiches();
 
 /** AG-XXXX ids that have a sheet in agents/ or socle/. */
 export function templatesConnus(): Set<string> {
@@ -122,7 +109,7 @@ export type Compteur = {
  * result would be the hand-written figure §8 forbids.
  */
 export function calculerCompteur(maintenant: Date): Compteur {
-  const cat = JSON.parse(readFileSync(new URL('catalogue/catalogue.json', RACINE), 'utf8'));
+  const cat = catalogueJson as { agents?: { id: string; secteur: string }[] };
   const agents: { id: string; secteur: string }[] = cat.agents ?? [];
   return {
     metiers: agents.length,

@@ -82,6 +82,7 @@ export function fauxMoteurs(paroles: string[]) {
 /** The same "intent" for every engine: that is what makes the comparison fair. */
 export function decider(texte: string): { nom: string; args: Record<string, unknown> } | null {
   if (texte.includes('comptabilit')) return { nom: 'transferer_vers', args: { destination: 'comptabilite' } };
+  if (texte.includes('au revoir')) return { nom: 'appel_traite', args: { resume: 'Horaires donnés.' } };
   if (texte.includes('quelqu')) return { nom: 'demander_un_humain', args: { motif: 'litige sur une facture', resume: 'Client mécontent de la facture de septembre.' } };
   return null;
 }
@@ -114,17 +115,20 @@ function lireTrames(tampon: Buffer): { textes: string[]; reste: Buffer; ferme: b
   return { textes, reste: tampon.subarray(i), ferme };
 }
 
+/** Turns are counted across connections: a transfer opens a second session on the same call. */
 export function fauxGemini(paroles: string[], cleAttendue: string) {
-  const recus: { url: string; messages: Record<string, unknown>[] } = { url: '', messages: [] };
+  const recus: { url: string; messages: Record<string, unknown>[]; connexions: number } = { url: '', messages: [], connexions: 0 };
+  let tour = 0;
   const serveur = createServer((_q, r) => { r.writeHead(426); r.end(); });
   serveur.on('upgrade', (req: IncomingMessage, sock: Duplex) => {
     recus.url = req.url ?? '';
+    recus.connexions++;
     const k = new URL(req.url ?? '/', 'http://x').searchParams.get('key');
     if (k !== cleAttendue) { sock.end('HTTP/1.1 403 Forbidden\r\n\r\n'); return; }
     const accept = createHash('sha1').update(`${req.headers['sec-websocket-key']}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`).digest('base64');
     sock.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);
     const envoyer = (o: unknown) => sock.write(trame(JSON.stringify(o)));
-    let tampon = Buffer.alloc(0); let tour = 0; let n = 0;
+    let tampon = Buffer.alloc(0); let n = 0;
     sock.on('data', (d: Buffer) => {
       const r = lireTrames(Buffer.concat([tampon, d])); tampon = Buffer.from(r.reste);
       for (const t of r.textes) {
@@ -137,6 +141,10 @@ export function fauxGemini(paroles: string[], cleAttendue: string) {
           const outil = decider(dit.toLowerCase());
           if (outil) envoyer({ toolCall: { functionCalls: [{ id: `g${++n}`, name: outil.nom, args: outil.args }] } });
           else envoyer({ serverContent: { turnComplete: true } });
+        }
+        if (m.clientContent?.turnComplete) {
+          envoyer({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: 'audio/pcm;rate=24000', data: Buffer.alloc(4800).toString('base64') } }] } } });
+          envoyer({ serverContent: { turnComplete: true } });
         }
         if (m.toolResponse) {
           envoyer({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: 'audio/pcm;rate=24000', data: Buffer.alloc(4800).toString('base64') } }] }, outputTranscription: { text: 'Très bien.' } } });

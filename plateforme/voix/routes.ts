@@ -3,35 +3,41 @@
 // human handoff, outbound campaigns and the Box's view of its calls.
 //
 // What leaves for an operator or an engine is a real HTTP call behind an
-// adapter (`telephonie.ts`, `fournisseurs-voix.ts`). The media bridge that would
-// carry a phone line's audio to a voice engine (Telnyx `stream_url`, Twilio
-// Media Streams) needs a WebSocket upgrade the platform server does not offer
-// yet: until then `pont_media` is false, and the switchboard sends calls to a
-// human, the voicemail or a callback instead of pretending an agent answers.
-import { randomUUID } from 'node:crypto';
+// adapter (`telephonie.ts`, `fournisseurs-voix.ts`). An agent answers the phone
+// through the media bridge (`pont.ts`): when the switchboard connects an agent,
+// the platform issues a one-time stream address and asks the operator to open
+// it (TwiML <Connect><Stream> for Twilio, `streaming_start` for Telnyx). The
+// bridge is offered only when it can really work — `pont_media`, a public
+// address (VOIX_URL_PUBLIQUE), an operator that streams and a phone engine with
+// its key; otherwise the switchboard sends calls to a human, the voicemail or a
+// callback instead of pretending an agent answers.
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { ModeVoix, PhoneNumber, VoiceProfile } from '../modele.ts';
-import { ok, refus, type Contexte, type Reponse, type Route } from '../serveur.ts';
+import { ok, refus, type Contexte, type Reponse, type Route } from '../http.ts';
 import type { Stockage } from '../stockage.ts';
 import { campagneInvalide, verifierContact } from './campagnes.ts';
-import type { Env } from './cles.ts';
+import { cle, type Env } from './cles.ts';
 import { coutAppel } from './cout.ts';
-import { BASES_OFFICIELLES as BASES_VOIX, disponibilites, type Bases as BasesVoix, type Cerveau } from './fournisseurs-voix.ts';
+import { BASES_OFFICIELLES as BASES_VOIX, disponibilites, fournisseur, type Bases as BasesVoix, type Cerveau } from './fournisseurs-voix.ts';
+import { Pont, ponts, type Protocole, type SessionOuverte } from './pont.ts';
+import type { ConnexionWs } from '../ws.ts';
+import type { RouteFlux } from '../http.ts';
 import { admettre, depasses, enfiler, fileInvalide, suivant } from './hub.ts';
-import { choisirMoteur, MODES, profilInvalide } from './registre.ts';
-import { ETAT_INITIAL, standardInvalide, transition, type Action, type EtatAppel, type Evenement, type Transition } from './standard.ts';
-import { BASES_OFFICIELLES as BASES_TEL, echapperXml, normaliserE164, operateur, type Bases as BasesTel, type PhoneProvider } from './telephonie.ts';
+import { choisirMoteur, FICHES, MODES, profilInvalide } from './registre.ts';
+import { ETAT_INITIAL, OUTILS_STANDARD, standardInvalide, transition, type Action, type EtatAppel, type Evenement, type Transition } from './standard.ts';
+import { BASES_OFFICIELLES as BASES_TEL, echapperXml, normaliserE164, operateur, twimlFlux, type Bases as BasesTel, type PhoneProvider } from './telephonie.ts';
 import taux from './taux.json' with { type: 'json' };
 import type { AppelVoix, Campagne, Canal, DecisionHandoff, EnFile, FileAttente, Handoff, Opposition, Standard } from './types.ts';
-import { PROVIDERS_TEL } from './types.ts';
+import { MOTEURS, PROVIDERS_TEL } from './types.ts';
 
 export type ConfigVoix = { env: Env; basesVoix: BasesVoix; basesTel: BasesTel; cerveau: Cerveau | null; pont_media: boolean };
-let config: ConfigVoix = { env: process.env, basesVoix: BASES_VOIX, basesTel: BASES_TEL, cerveau: null, pont_media: false };
+let config: ConfigVoix = { env: process.env, basesVoix: BASES_VOIX, basesTel: BASES_TEL, cerveau: null, pont_media: true };
 /** The bench points the adapters at local fakes; production keeps the official addresses. */
 export function configurerVoix(c: Partial<ConfigVoix>): void { config = { ...config, ...c }; }
 
 const C = {
   profils: 'voix_profils', numeros: 'numeros', standards: 'voix_standards', files: 'voix_files', enFile: 'voix_en_file',
-  appels: 'voix_appels', handoffs: 'voix_handoffs', rappels: 'voix_rappels', campagnes: 'voix_campagnes', opposition: 'voix_opposition',
+  appels: 'voix_appels', flux: 'voix_flux', handoffs: 'voix_handoffs', rappels: 'voix_rappels', campagnes: 'voix_campagnes', opposition: 'voix_opposition',
 };
 
 const iso = (d: Date) => d.toISOString();
@@ -46,16 +52,55 @@ function tenantBox(ctx: Contexte): string | Reponse {
 // Executing the machine's actions
 // ---------------------------------------------------------------------------
 
-type Fait = { action: Action['type']; fait: boolean; motif: string };
+/** `flux`: the stream address to put in the TwiML answer (Twilio, during its webhook). */
+type Fait = { action: Action['type']; fait: boolean; motif: string; flux?: string };
 
 const ACTIONS_MEDIA = new Set(['dire', 'messagerie', 'mettre_en_attente', 'connecter_agent']);
+const JETON_FLUX_S = 120;
 
-/** Runs the actions that leave through the operator's REST API; the rest is stored here. */
+/** Null when an agent can really hold a call on this operator; otherwise why not. */
+export function pontIndisponible(provider: string): string | null {
+  if (!config.pont_media) return 'Le pont média est coupé sur cette plateforme.';
+  if (!cle('url_publique', config.env)) return 'VOIX_URL_PUBLIQUE n’est pas posée : l’opérateur ne saurait pas où envoyer le son de l’appel.';
+  const p = operateur(provider, config.env, config.basesTel);
+  if (!p?.fluxPossible) return `${provider} n’envoie pas le son de ses appels à la plateforme.`;
+  const d = disponibilites({ env: config.env, bases: config.basesVoix, cerveau: config.cerveau });
+  if (!MOTEURS.some((m) => FICHES[m].canaux.includes('telephone') && d[m] === null)) return 'Aucun moteur de voix pour le téléphone n’a sa clé.';
+  return null;
+}
+
+type JetonFlux = { id: string; appel_id: string; tenant_id: string; provider: string; expire: string; utilise: boolean; premiers_mots: string[] };
+
+/** A one-time stream address: only its digest is stored, it expires unused after two minutes. */
+function emettreFlux(s: Stockage, appel: AppelVoix, premiers: string[], maintenant: Date): string {
+  const jeton = randomBytes(24).toString('base64url');
+  const id = createHash('sha256').update(jeton).digest('hex');
+  s.poser<JetonFlux>(C.flux, id, { id, appel_id: appel.id, tenant_id: appel.tenant_id, provider: appel.provider, expire: iso(new Date(maintenant.getTime() + JETON_FLUX_S * 1000)), utilise: false, premiers_mots: premiers });
+  const base = cle('url_publique', config.env)!.replace(/\/$/, '').replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
+  return `${base}/voix/flux/${appel.provider}/${jeton}`;
+}
+
+/** Runs the actions that leave through the operator's REST API or the open bridge; the rest is stored here. */
 async function executer(s: Stockage, p: PhoneProvider, appel: AppelVoix, actions: Action[], maintenant: Date, parWebhook: boolean): Promise<Fait[]> {
   const faits: Fait[] = [];
+  const pont = ponts.get(appel.id);
+  const nonDits: string[] = [];
   for (const a of actions) {
     try {
-      if (a.type === 'notifier_handoff') {
+      if (a.type === 'connecter_agent') {
+        const manque = pont ? null : pontIndisponible(p.nom);
+        if (pont) { pont.basculer(a.extension); faits.push({ action: a.type, fait: true, motif: `L’extension ${a.extension} prend la ligne.` }); }
+        else if (manque) faits.push({ action: a.type, fait: false, motif: manque });
+        else {
+          const url = emettreFlux(s, appel, parWebhook && p.repondParWebhook ? [] : nonDits.splice(0), maintenant);
+          if (parWebhook && p.repondParWebhook) faits.push({ action: a.type, fait: true, motif: 'Flux du son demandé dans la réponse au webhook.', flux: url });
+          else { await p.brancherFlux(appel.id_operateur, url); faits.push({ action: a.type, fait: true, motif: 'Flux du son demandé à l’opérateur.' }); }
+        }
+      } else if (pont && a.type === 'dire') {
+        pont.dire(a.texte); faits.push({ action: a.type, fait: true, motif: 'Dit par l’agent en ligne.' });
+      } else if (pont && a.type === 'mettre_en_attente') {
+        faits.push({ action: a.type, fait: true, motif: 'L’appelant reste en ligne, l’agent ne l’écoute plus.' });
+      } else if (a.type === 'notifier_handoff') {
         const h: Handoff = { id: appel.id, tenant_id: appel.tenant_id, appel_id: appel.id, appelant: a.appelant, motif: a.motif, resume: a.resume, humain_id: a.humain_id, cree_le: iso(maintenant), statut: 'en-attente', decide_le: null };
         s.pourTenant(appel.tenant_id).poser(C.handoffs, h.id, h);
         faits.push({ action: a.type, fait: true, motif: 'Demande de prise en main posée pour la Box.' });
@@ -71,6 +116,7 @@ async function executer(s: Stockage, p: PhoneProvider, appel: AppelVoix, actions
       } else if (a.type === 'raccrocher') {
         await p.raccrocher(appel.id_operateur); faits.push({ action: a.type, fait: true, motif: 'Raccroché chez l’opérateur.' });
       } else if (ACTIONS_MEDIA.has(a.type)) {
+        if (a.type === 'dire') nonDits.push(a.texte);
         faits.push({ action: a.type, fait: false, motif: p.nom === 'twilio' ? 'Hors webhook, Twilio ne reçoit ce geste que par le pont média, absent.' : 'Demande le pont média (ou une commande d’opérateur non relevée) : non exécuté.' });
       }
     } catch (e) {
@@ -82,9 +128,11 @@ async function executer(s: Stockage, p: PhoneProvider, appel: AppelVoix, actions
 }
 
 /** TwiML answered to Twilio's webhook (verbs Say, Record, Pause, Dial, Sip, Hangup — NOT re-read 07/10/2026). */
-export function twiml(actions: Action[]): string {
+export function twiml(actions: Action[], faits: Fait[] = []): string {
   const v: string[] = [];
+  const flux = faits.find((f) => f.flux)?.flux;
   for (const a of actions) {
+    if (a.type === 'connecter_agent' && flux) v.push(twimlFlux(flux));
     if (a.type === 'dire') v.push(`<Say language="fr-FR">${echapperXml(a.texte)}</Say>`);
     else if (a.type === 'messagerie') v.push('<Record maxLength="120" playBeep="true"/>');
     else if (a.type === 'mettre_en_attente') v.push('<Pause length="60"/>');
@@ -96,7 +144,7 @@ export function twiml(actions: Action[]): string {
 
 function contexteAppel(s: Stockage, std: Standard, appel: AppelVoix, maintenant: Date, exclure = true) {
   const actives = s.pourTenant(std.tenant_id).lister<AppelVoix>(C.appels, (a) => (!exclure || a.id !== appel.id) && ['conversation', 'handoff'].includes((a.etat as EtatAppel).etape)).length;
-  return { standard: std, appelant: appel.appelant, maintenant, agent_au_telephone: config.pont_media, places_libres: admettre(actives, std.plafond_sessions).admis };
+  return { standard: std, appelant: appel.appelant, maintenant, agent_au_telephone: pontIndisponible(appel.provider) === null, places_libres: admettre(actives, std.plafond_sessions).admis };
 }
 
 /** Applies one event to a stored call: transition, actions, queue bookkeeping, cost at the end. */
@@ -115,6 +163,7 @@ export async function appliquerEvenement(s: Stockage, tenant: string, appelId: s
   const ext = std.extensions.find((e) => e.numero === t.etat.extension);
   if (ext) appel.agent_instance_id = ext.agent_instance_id;
   if (t.etat.resume) appel.resume = t.etat.resume;
+  ponts.get(appel.id)?.etape(t.etat.etape);
   const faits = await executer(s, p, appel, t.actions, maintenant, parWebhook);
 
   // Queue bookkeeping
@@ -136,9 +185,7 @@ export async function appliquerEvenement(s: Stockage, tenant: string, appelId: s
     appel.fin = iso(maintenant);
     appel.duree_s = Math.max(0, Math.round((maintenant.getTime() - Date.parse(appel.debut)) / 1000));
     appel.issue = t.etat.issue ?? 'abandonne';
-    const c = coutAppel({ duree_s: appel.duree_s, direction: appel.direction, provider: appel.provider, appele: appel.appele, voix: null, outils: [] });
-    appel.cout_manquants = c.manquants;
-    appel.cout = c.total === null ? null : { telephonie: c.telephonie!, voix: c.voix!, llm: c.llm!, outils: c.outils!, total: c.total, devise: c.devise };
+    chiffrer(appel);
     const h = vue.lire<Handoff>(C.handoffs, appel.id);
     if (h && h.statut === 'en-attente') vue.poser(C.handoffs, h.id, { ...h, statut: 'refuser', decide_le: iso(maintenant) });
   }
@@ -151,6 +198,24 @@ export async function appliquerEvenement(s: Stockage, tenant: string, appelId: s
     if (prochain) await appliquerEvenement(s, tenant, prochain.appel_id, { type: 'file_libre' }, maintenant);
   }
   return { t, faits, appel };
+}
+
+/** Cost of a finished call: telephony on its duration, plus each voice session the bridge opened. */
+function chiffrer(appel: AppelVoix): void {
+  const base = { direction: appel.direction, provider: appel.provider, appele: appel.appele, outils: [] };
+  const c = coutAppel({ ...base, duree_s: appel.duree_s, voix: null });
+  const manquants = [...c.manquants];
+  let voix: number | null = 0; let llm: number | null = 0;
+  for (const m of appel.sessions_voix ?? []) {
+    const v = coutAppel({ ...base, duree_s: 0, voix: m });
+    manquants.push(...v.manquants.filter((x) => !x.startsWith('téléphonie')));
+    voix = voix === null || v.voix === null ? null : voix + v.voix;
+    llm = llm === null || v.llm === null ? null : llm + v.llm;
+  }
+  appel.cout_manquants = manquants;
+  const r = (x: number) => Math.round(x * 1e6) / 1e6;
+  appel.cout = c.total === null || voix === null || llm === null ? null
+    : { telephonie: c.telephonie!, voix: r(voix), llm: r(llm), outils: c.outils!, total: r(c.telephonie! + voix + llm + c.outils!), devise: c.devise };
 }
 
 /** Calls that waited too long overflow as their queue says. Run lazily on each webhook and supervision read. */
@@ -177,7 +242,7 @@ async function entrant(ctx: Contexte): Promise<Reponse> {
   if (motif) return refus(401, motif);
   let ev;
   try { ev = p.lire(req); } catch { return refus(400, 'Webhook illisible.'); }
-  const repondre = (actions: Action[]): Reponse => (p.repondParWebhook ? { statut: 200, corps: twiml(actions), type: 'text/xml; charset=utf-8' } : ok({ recu: true }));
+  const repondre = (actions: Action[], faits: Fait[] = []): Reponse => (p.repondParWebhook ? { statut: 200, corps: twiml(actions, faits), type: 'text/xml; charset=utf-8' } : ok({ recu: true }));
   const s = ctx.stockage;
   const existant = s.lister<AppelVoix>(C.appels, (a) => a.provider === p.nom && a.id_operateur === ev.id_operateur)[0];
 
@@ -197,7 +262,7 @@ async function entrant(ctx: Contexte): Promise<Reponse> {
     };
     s.pourTenant(num.tenant_id).poser(C.appels, appel.id, appel);
     const r = await appliquerEvenement(s, num.tenant_id, appel.id, { type: 'entrant' }, maintenant, true);
-    return repondre(r?.t.actions ?? []);
+    return repondre(r?.t.actions ?? [], r?.faits);
   }
   if (!existant) return repondre([]);
   if (ev.type === 'raccroche') {
@@ -291,6 +356,89 @@ function consommation(ctx: Contexte): Reponse {
     manquants: [...manquants],
   });
 }
+
+// ---------------------------------------------------------------------------
+// The media stream an operator opens towards us
+// ---------------------------------------------------------------------------
+
+const langueCourte = (l: string) => l.toLowerCase().split(/[-_]/)[0];
+
+function consigneTelephone(std: Standard, ext: Standard['extensions'][number]): string {
+  return `Tu réponds au téléphone pour « ${std.nom} », extension ${ext.numero} (${ext.departement}).`
+    + ' Pour passer l’appel à un collègue, demander un humain, prendre un message, proposer un rappel ou clore l’appel, emploie tes outils : ils sont la seule façon d’agir sur l’appel.'
+    + ' Quand un outil te rend « a_dire », dis cette phrase telle quelle avant toute autre chose.';
+}
+
+async function ouvrirFlux(ctx: { stockage: Stockage; params: Record<string, string>; maintenant: () => Date }): Promise<string | ((ws: ConnexionWs) => void)> {
+  const s = ctx.stockage;
+  const protocole = ctx.params.provider as Protocole;
+  if (protocole !== 'twilio' && protocole !== 'telnyx') return 'Cet opérateur n’ouvre pas de flux.';
+  const id = createHash('sha256').update(ctx.params.jeton ?? '').digest('hex');
+  const j = s.lire<JetonFlux>(C.flux, id);
+  if (!j || j.provider !== protocole) return 'Adresse de flux inconnue.';
+  if (j.utilise) return 'Cette adresse de flux a déjà servi.';
+  const maintenant = ctx.maintenant();
+  if (Date.parse(j.expire) < maintenant.getTime()) return 'Cette adresse de flux a expiré.';
+  s.poser<JetonFlux>(C.flux, id, { ...j, utilise: true });
+  const vue = s.pourTenant(j.tenant_id);
+  const appel = vue.lire<AppelVoix>(C.appels, j.appel_id);
+  const etat = appel?.etat as EtatAppel | undefined;
+  if (!appel || appel.fin || !etat || etat.etape !== 'conversation' || !etat.extension) return 'Cet appel n’attend plus d’agent.';
+  if (ponts.has(appel.id)) return 'Cet appel a déjà sa ligne.';
+  const std = appel.standard_id ? vue.lire<Standard>(C.standards, appel.standard_id) : null;
+  if (!std) return 'Cet appel n’a plus de standard.';
+  const tenant = j.tenant_id;
+  const deps = { env: config.env, bases: config.basesVoix, cerveau: config.cerveau };
+  const noter = (quoi: string) => {
+    const a = vue.lire<AppelVoix>(C.appels, appel.id);
+    if (!a) return;
+    a.journal.push({ quand: iso(ctx.maintenant()), quoi });
+    vue.poser(C.appels, a.id, a);
+  };
+
+  const ouvrirSession = async (numero: string, apresTransfert: boolean): Promise<SessionOuverte> => {
+    const ext = std.extensions.find((e) => e.numero === numero);
+    if (!ext) return { session: null, motif: `L’extension ${numero} n’existe pas dans ce standard.` };
+    const profil = ext.profil_voix ? s.lire<VoiceProfile>(C.profils, ext.profil_voix) : s.lister<VoiceProfile>(C.profils, (p) => p.persona_id === ext.agent_instance_id)[0];
+    if (!profil) return { session: null, motif: `${ext.prenom} n’a pas de profil vocal : aucune voix ne peut lui être prêtée.` };
+    const choix = choisirMoteur({ profil, mode: 'balanced', langue: profil.locale, canal: 'telephone', disponibilite: disponibilites(deps) });
+    const essais = choix.moteur ? [{ moteur: choix.moteur, voix: choix.voix! }, ...choix.repli] : [];
+    const rates: string[] = [];
+    for (const e of essais) {
+      try {
+        const session = await fournisseur(e.moteur, deps).startSession({
+          voix: e.voix, langue: langueCourte(profil.locale), outils: OUTILS_STANDARD,
+          contexte: { tenant_id: tenant, agent: `${ext.prenom}, ${ext.departement}`, consigne: consigneTelephone(std, ext) },
+        });
+        const a = vue.lire<AppelVoix>(C.appels, appel.id);
+        if (a) { a.moteur_voix = e.moteur; a.agent_instance_id = ext.agent_instance_id; vue.poser(C.appels, a.id, a); }
+        return { session, moteur: e.moteur, agent: ext.prenom, accueil: apresTransfert ? `${ext.prenom}, ${ext.departement}, je vous écoute.` : null, motif: choix.motif };
+      } catch (err) {
+        rates.push(`${FICHES[e.moteur].libelle} : ${err instanceof Error ? err.message : 'refus'}`);
+      }
+    }
+    return { session: null, motif: choix.moteur ? `Aucun moteur ne s’est ouvert (${rates.join(' ; ')}).` : choix.motif };
+  };
+
+  return (ws: ConnexionWs) => {
+    const pont = new Pont({
+      ws, protocole, appel_id: appel.id, extension: etat.extension!, premiers_mots: j.premiers_mots,
+      ouvrirSession,
+      appliquer: async (ev: Evenement) => (await appliquerEvenement(s, tenant, appel.id, ev, ctx.maintenant()))?.t ?? null,
+      journal: noter,
+      surFin: (b) => {
+        const a = vue.lire<AppelVoix>(C.appels, appel.id);
+        if (!a) return;
+        a.sessions_voix = [...(a.sessions_voix ?? []), ...b.sessions];
+        if (a.fin) chiffrer(a);
+        vue.poser(C.appels, a.id, a);
+      },
+    });
+    ponts.set(appel.id, pont);
+  };
+}
+
+export const flux: RouteFlux[] = [{ chemin: '/voix/flux/:provider/:jeton', ouvrir: ouvrirFlux }];
 
 export const routes: Route[] = [
   {
