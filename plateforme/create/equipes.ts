@@ -4,7 +4,7 @@
 // the engine's), each agent once. The engine never names an agent; it returns
 // need labels from a closed list, and the metier shown comes from the catalogue.
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { depot, lireFiche } from '../depot.ts';
 import type { MembreEquipe, NumeroPhase } from '../modele.ts';
 import phasesJson from './equipes-phases.json' with { type: 'json' };
 import catalogueJson from '../../catalogue/catalogue.json' with { type: 'json' };
@@ -24,14 +24,8 @@ export const PHASES = phasesJson.phases as Phase[];
 export const BESOINS = Object.keys(phasesJson.besoins) as readonly string[];
 export const DESCRIPTION_BESOINS = phasesJson.besoins as Record<string, string>;
 
-const DOSSIER_AGENTS = new URL('../../agents/', import.meta.url);
 const profils = new Map(catalogueJson.profils.map((p) => [p.id, p]));
 const duCatalogue = new Map(catalogueJson.agents.map((a) => [a.id, a]));
-const fichiers = new Map<string, string>();
-for (const f of readdirSync(DOSSIER_AGENTS)) {
-  const m = /^(AG-\d{4})-.+\.json$/.exec(f);
-  if (m) fichiers.set(m[1], f);
-}
 
 /**
  * Licence tier of a catalogue agent, from its commercial profile (§5: Essential for
@@ -49,10 +43,8 @@ export function licencePour(agentId: string): MembreEquipe['licence'] {
 }
 
 /** The package of an agent, as written in agents/. */
-export function ficheDe(agentId: string): Record<string, unknown> {
-  const f = fichiers.get(agentId);
-  if (!f) throw new Error(`L'agent ${agentId} n'existe pas dans agents/.`);
-  return JSON.parse(readFileSync(new URL(f, DOSSIER_AGENTS), 'utf8'));
+export async function ficheDe(agentId: string): Promise<Record<string, unknown>> {
+  return (await lireFiche(agentId)).fiche;
 }
 
 /** Every reason the phase file cannot be used. Empty = usable. */
@@ -63,7 +55,7 @@ export function fautesDesPhases(phases: Phase[] = PHASES): string[] {
   for (const p of phases) {
     for (const r of [...p.socle, ...p.options]) {
       if (!duCatalogue.has(r.agent)) fautes.push(`phase ${p.numero} : ${r.agent} absent de catalogue/catalogue.json`);
-      if (!fichiers.has(r.agent) || !existsSync(new URL(fichiers.get(r.agent)!, DOSSIER_AGENTS))) {
+      if (!depot().fiches().has(r.agent)) {
         fautes.push(`phase ${p.numero} : ${r.agent} n'a pas de fiche dans agents/`);
       }
     }

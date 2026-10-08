@@ -13,7 +13,7 @@
 // callback instead of pretending an agent answers.
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { ModeVoix, PhoneNumber, VoiceProfile } from '../modele.ts';
-import { ok, refus, type Contexte, type Reponse, type Route } from '../serveur.ts';
+import { ok, refus, type Contexte, type Reponse, type Route } from '../http.ts';
 import type { Stockage } from '../stockage.ts';
 import { campagneInvalide, verifierContact } from './campagnes.ts';
 import { cle, type Env } from './cles.ts';
@@ -21,7 +21,7 @@ import { coutAppel } from './cout.ts';
 import { BASES_OFFICIELLES as BASES_VOIX, disponibilites, fournisseur, type Bases as BasesVoix, type Cerveau } from './fournisseurs-voix.ts';
 import { Pont, ponts, type Protocole, type SessionOuverte } from './pont.ts';
 import type { ConnexionWs } from '../ws.ts';
-import type { RouteFlux } from '../serveur.ts';
+import type { RouteFlux } from '../http.ts';
 import { admettre, depasses, enfiler, fileInvalide, suivant } from './hub.ts';
 import { choisirMoteur, FICHES, MODES, profilInvalide } from './registre.ts';
 import { ETAT_INITIAL, OUTILS_STANDARD, standardInvalide, transition, type Action, type EtatAppel, type Evenement, type Transition } from './standard.ts';

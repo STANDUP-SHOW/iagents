@@ -11,7 +11,7 @@
 // price. Its output passes `schemas.ts` or is refused whole.
 
 import { randomBytes } from 'node:crypto';
-import { ok, refus, type Contexte, type Reponse, type Route } from '../serveur.ts';
+import { ok, refus, type Contexte, type Reponse, type Route } from '../http.ts';
 import type { Audit, Estimation, Etude, Opportunity, ProjetCree } from '../modele.ts';
 import { AVERTISSEMENT, MAX_OPPORTUNITES_PAR_JOUR, SCHEMA_ETUDE, controler, controlerEtude, estimationDe, schemaOpportunites } from './schemas.ts';
 import { DESCRIPTION_BESOINS, PHASES, agentsParPhase, equipePour } from './equipes.ts';
@@ -220,10 +220,10 @@ export function creerRoutes(options: Options = {}): Route[] {
     const quand = ctx.maintenant().toISOString();
     const prix = await sourcePrix(ctx.stockage, quand);
 
-    const phases: ProjetCree['phases'] = PHASES.map((p) => {
+    const phases: ProjetCree['phases'] = await Promise.all(PHASES.map(async (p) => {
       const equipe = equipePour(p, etude.besoins);
       const duree = etude.plan_execution.find((x) => x.phase === p.numero)!.duree_mois;
-      const b = budgetPhase(equipe, duree, prix);
+      const b = await budgetPhase(equipe, duree, prix);
       return {
         numero: p.numero,
         nom: p.nom,
@@ -235,7 +235,7 @@ export function creerRoutes(options: Options = {}): Route[] {
         jalons: [...p.jalons],
         responsabilites_humaines: [...p.responsabilites_humaines],
       };
-    });
+    }));
     const plusGrande = Math.max(...phases.map((p) => p.equipe.length));
     const nbBox = boxPour(plusGrande);
     const somme = (k: 'min' | 'max') => phases.reduce((t, p) => t + p.budget.total_ht[k] + p.budget.consommation_ia[k], 0);
