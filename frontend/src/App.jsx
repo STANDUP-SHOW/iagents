@@ -1,29 +1,36 @@
-import { useState, useMemo } from 'react';
-import Navbar from './components/Navbar.jsx';
-import FicheList from './components/FicheList.jsx';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import FicheDetail from './components/FicheDetail.jsx';
 import PacksEntreprise from './components/PacksEntreprise.jsx';
 import CreezEntreprise from './components/CreezEntreprise.jsx';
-import IAgentBox, { CarteInstallation } from './components/IAgentBox.jsx';
-import { AGENTS_RESEAUX, PACKS_ENTREPRISE, INSTALLATIONS, ficheDe, installationDe } from './data/offres.js';
-import agents, {
-  filterAgents,
-  getSectors,
-  getFamilles,
-  groupBySetor
-} from './data/loader.js';
+import IAgentBox from './components/IAgentBox.jsx';
+import GlobalNav from './accueil/scenes/GlobalNav.jsx';
+import Terre from './accueil/Terre.jsx';
+import { CarteAgent, Apercu, Recherche, GroupeFiltre } from './bibliotheque/composants.jsx';
+import { AGENTS_RESEAUX, PACKS_ENTREPRISE, INSTALLATIONS, ficheDe, installationDe, devisAgent } from './data/offres.js';
+import agents from './data/loader.js';
+import {
+  filtrer, decompte, FILTRES_VIDES, libelleSecteur, libelleFamille, logicielsDe, portraitDe, COMPTEURS,
+} from './data/recherche.js';
 
-// The shop's three pages, and the three ways to browse the catalogue.
+// The shop's three pages, and the ways to browse the catalogue.
 export const PAGES = [
   { id: 'catalogue', libelle: 'Catalogue' },
   { id: 'entreprise', libelle: 'Créez votre entreprise' },
   { id: 'box', libelle: 'iAgent Box' },
 ];
 export const VUES = [
-  { id: 'metier', libelle: 'Agents métier' },
+  { id: 'metier', libelle: 'Tous les agents' },
   { id: 'reseaux', libelle: 'Agents réseaux' },
   { id: 'packs', libelle: 'Packs entreprise' },
 ];
+
+const TRIS = [
+  ['pertinence', 'Pertinence'],
+  ['reference', 'Référence'],
+  ['missions', 'Nombre de missions'],
+  ['charge', 'Volume de travail'],
+];
+const PAR_PAGE = 24;
 
 // The chosen installation survives page changes and reloads; storage can be
 // missing (private window, SSR bench), so every access is guarded.
@@ -35,26 +42,62 @@ const ecrireInstallation = (id) => {
   try { globalThis.localStorage?.setItem(CLE_INSTALLATION, id); } catch { /* per-visitor convenience only */ }
 };
 
-const onglet = (actif) =>
-  `px-4 py-3 rounded-lg text-sm md:text-base font-semibold transition min-h-[44px] ${
-    actif ? 'bg-neon-400/15 text-neon-300 border border-neon-400 shadow-neon' : 'bg-nuit-800 text-nuit-300 border border-nuit-700 hover:bg-nuit-700'
-  }`;
+const nombre = (x) => x.toLocaleString('fr-FR');
+const OU = { 'chez-vous': 'Chez vous', api: 'Par API' };
 
-export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier', installationInitiale }) {
+const ATOUTS = [
+  ['M4 20V10 M10 20V4 M16 20v-7 M22 20H2', 'Des agents pour chaque métier', 'du terrain au stratégique'],
+  ['M3 21h18 M5 21V8l7-4 7 4v13 M9 12h.01 M15 12h.01 M9 16h.01 M15 16h.01', 'Experts de votre secteur', 'banque, santé, industrie, services…'],
+  ['M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z', 'Déjà formés à vos outils', 'CRM, ERP, comptabilité, bureautique…'],
+  ['M4 20l1.3-3.9A8 8 0 1112 20a8 8 0 01-4.1-1.1z', 'Recrutés par conversation', 'un entretien, pas un paramétrage'],
+];
+
+/** The catalogue's entry, as max's mockup: the planet, the promise, the search. */
+function Entree({ requete, setRequete }) {
+  return (
+    <section className="bi-entree" aria-labelledby="titre-bibliotheque">
+      <Terre className="bi-entree-terre" cx={0.62} cy={1.5} r={0.95} />
+      <div className="bi-entree-fond" aria-hidden="true" />
+      <div className="bi-cadre bi-entree-grille">
+        <div>
+          <p className="mq-surtitre">Un métier, votre secteur, votre activité : votre expert.</p>
+          <h1 id="titre-bibliotheque" className="mq-display bi-h1">Le catalogue des <span className="mq-cyan">métiers</span></h1>
+          <p className="bi-chapeau">Choisissez un métier, puis votre secteur et votre activité : iAgent en fait un expert taillé pour votre entreprise. Une assistante commerciale peut servir le commerce maritime, une imprimerie en Espagne ou une compagnie aérienne à Paris.</p>
+          <dl className="bi-compteurs">
+            <div><dt>métiers</dt><dd>{nombre(COMPTEURS.agents)}</dd></div>
+            <div><dt>familles de métiers</dt><dd>{COMPTEURS.secteurs}</dd></div>
+            <div><dt>logiciels connus</dt><dd>{nombre(COMPTEURS.logiciels)}</dd></div>
+            <div><dt>missions décrites</dt><dd>{nombre(COMPTEURS.taches)}</dd></div>
+          </dl>
+          <div className="bi-entree-recherche"><Recherche valeur={requete} onChange={setRequete} /></div>
+        </div>
+        <ul className="bi-atouts" aria-label="Ce que vous trouvez ici">
+          {ATOUTS.map(([d, t, s]) => (
+            <li key={t}>
+              <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d={d} stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              <p><b>{t}</b><span>{s}</span></p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier', installationInitiale, rechercheInitiale = '', ideeInitiale = '' }) {
   const [page, setPage] = useState(pageInitiale);
   const [installation, setInstallationEtat] = useState(() => installationInitiale ?? lireInstallation());
   const choisirInstallation = (id) => { setInstallationEtat(id); ecrireInstallation(id); };
   const [vue, setVue] = useState(vueInitiale);
   const [packOuvert, setPackOuvert] = useState(null);
-  const [search, setSearch] = useState('');
-  const [selectedSector, setSelectedSector] = useState('');
-  const [selectedFamille, setSelectedFamille] = useState('');
-  const [selectedAgent, setSelectedAgent] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  const sectors = useMemo(() => getSectors(), []);
-  const familles = useMemo(() => getFamilles(), []);
-  const groupedAgents = useMemo(() => groupBySetor(agents), []);
+  const [requete, setRequete] = useState(rechercheInitiale);
+  const [filtres, setFiltres] = useState(FILTRES_VIDES);
+  const [tri, setTri] = useState('pertinence');
+  const [compact, setCompact] = useState(false);
+  const [apercu, setApercu] = useState(null);
+  const [ficheOuverte, setFicheOuverte] = useState(null);
+  const [tiroir, setTiroir] = useState(false);
+  const [combien, setCombien] = useState(PAR_PAGE);
 
   // The list the filters apply to: the whole catalogue, the network agents, or
   // the agents of the business pack that is open.
@@ -64,203 +107,210 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
     return agents;
   }, [vue, packOuvert]);
 
-  const filteredAgents = useMemo(() =>
-    filterAgents(base, search, selectedSector, selectedFamille),
-    [base, search, selectedSector, selectedFamille]
+  // Where each agent works on the visitor's installation, from the same quote
+  // the full fiche shows (dimensionnement/offre-box.ts).
+  const ouParAgent = useMemo(() => {
+    if (!installation) return null;
+    return new Map(agents.map((a) => [a.id, devisAgent(a).find((l) => l.offre === installation)?.enLocal ? 'chez-vous' : 'api']));
+  }, [installation]);
+  const ouTravaille = useCallback((a) => ouParAgent?.get(a.id), [ouParAgent]);
+
+  const resultats = useMemo(() => {
+    const liste = filtrer(base, { requete, ...filtres, ou: ouParAgent ? filtres.ou : [] }, ouTravaille);
+    const par = {
+      reference: (x, y) => x.id.localeCompare(y.id),
+      missions: (x, y) => (y.taches?.length ?? 0) - (x.taches?.length ?? 0),
+      charge: (x, y) => (y.execution?.appelsParJourEstimes ?? 0) - (x.execution?.appelsParJourEstimes ?? 0),
+    }[tri];
+    return par ? [...liste].sort(par) : liste;
+  }, [base, requete, filtres, tri, ouParAgent, ouTravaille]);
+
+  const options = useMemo(() => ({
+    secteurs: decompte(base, (a) => [a.secteur]),
+    familles: decompte(base, (a) => [a.famille]),
+    logiciels: decompte(base, logicielsDe),
+    ou: ouParAgent ? decompte(base, (a) => [ouParAgent.get(a.id)]) : [],
+  }), [base, ouParAgent]);
+
+  useEffect(() => { setCombien(PAR_PAGE); }, [requete, filtres, tri, vue, packOuvert]);
+
+  // More profiles as the reader reaches the end of the list; the button stays
+  // for keyboards and for browsers without IntersectionObserver.
+  const fin = useRef(null);
+  useEffect(() => {
+    if (!fin.current || typeof IntersectionObserver === 'undefined') return undefined;
+    const o = new IntersectionObserver((e) => { if (e[0].isIntersecting) setCombien((c) => c + PAR_PAGE); }, { rootMargin: '600px' });
+    o.observe(fin.current);
+    return () => o.disconnect();
+  }, [resultats.length, combien]);
+
+  const changer = (cle) => (valeurs) => setFiltres((f) => ({ ...f, [cle]: valeurs }));
+  const choisis = [
+    ...filtres.secteurs.map((v) => ['secteurs', v, libelleSecteur(v)]),
+    ...filtres.familles.map((v) => ['familles', v, libelleFamille(v)]),
+    ...filtres.logiciels.map((v) => ['logiciels', v, v]),
+    ...(ouParAgent ? filtres.ou.map((v) => ['ou', v, OU[v]]) : []),
+  ];
+  const reinitialiser = () => { setFiltres(FILTRES_VIDES); setRequete(''); };
+  const montrerListe = vue !== 'packs' || packOuvert;
+  const fermerApercu = useCallback(() => setApercu(null), []);
+
+  // On a wide screen the preview is always there, as on the mockup: the
+  // first profile of the list until the visitor picks another.
+  // On a wide screen the first profile opens beside the grid, as on the
+  // mockup; once, so closing it is respected.
+  const apercuOuvertSeul = useRef(false);
+  useEffect(() => {
+    if (apercuOuvertSeul.current || page !== 'catalogue' || !montrerListe || apercu || !resultats.length) return;
+    apercuOuvertSeul.current = resultats[0].id;
+    if (window.matchMedia?.('(min-width: 1280px)').matches) setApercu(resultats[0]);
+  }, [page, montrerListe, resultats, apercu]);
+
+  const panneauFiltres = (
+    <div className="bi-filtres-contenu">
+      {installation ? (
+        <div className="bi-installation">
+          <span>Votre installation</span>
+          <strong>{installationDe(installation).nom}</strong>
+          <button type="button" onClick={() => setPage('box')}>changer</button>
+        </div>
+      ) : (
+        <div className="bi-installation bi-installation-choix">
+          <h2>D'abord, votre installation</h2>
+          <p>Elle décide de ce que chaque agent vous coûte, chez vous ou par API.</p>
+          <div className="bi-installations">
+            {INSTALLATIONS.map((o) => <button key={o.id} type="button" onClick={() => choisirInstallation(o.id)}>{o.nom}</button>)}
+          </div>
+        </div>
+      )}
+      <div className="flex items-center justify-between mb-2">
+        <p className="bi-filtres-titre">Filtres</p>
+        {choisis.length > 0 && <button type="button" className="bi-reinit" onClick={() => setFiltres(FILTRES_VIDES)}>Réinitialiser</button>}
+      </div>
+      <GroupeFiltre titre="Secteur" options={options.secteurs} choisis={filtres.secteurs} onChange={changer('secteurs')} libelle={libelleSecteur} cherchable ouvertParDefaut />
+      <GroupeFiltre titre="Type de profil" options={options.familles} choisis={filtres.familles} onChange={changer('familles')} libelle={libelleFamille} />
+      <GroupeFiltre titre="Logiciels maîtrisés" options={options.logiciels} choisis={filtres.logiciels} onChange={changer('logiciels')} cherchable />
+      {ouParAgent && (
+        <GroupeFiltre titre={`Sur votre ${installationDe(installation).nom}`} options={options.ou} choisis={filtres.ou} onChange={changer('ou')} libelle={(v) => OU[v]} ouvertParDefaut />
+      )}
+    </div>
   );
 
-  const montrerListe = vue !== 'packs' || packOuvert;
-
   return (
-    <div className="min-h-screen bg-nuit-900">
-      <Navbar search={search} onSearchChange={(q) => { setSearch(q); setPage('catalogue'); }} />
+    <div className="bi-page">
+      <GlobalNav page="catalogue" seuil={40} />
+      <main id="contenu" className="pt-[72px]">
+        {page === 'catalogue' && <Entree requete={requete} setRequete={setRequete} />}
 
-      <nav className="bg-nuit-900 border-b border-nuit-700 px-4 py-3 flex flex-wrap gap-2" aria-label="Sections de la boutique">
-        {PAGES.map((p) => (
-          <button key={p.id} onClick={() => setPage(p.id)} className={onglet(page === p.id)} aria-current={page === p.id ? 'page' : undefined}>
-            {p.libelle}
-          </button>
-        ))}
-      </nav>
+        {page !== 'catalogue' && (
+          <nav className="bi-cadre bi-pages pt-6" aria-label="Sections de la bibliothèque">
+            {PAGES.map((p) => (
+              <button key={p.id} type="button" onClick={() => setPage(p.id)} aria-current={page === p.id ? 'page' : undefined}>{p.libelle}</button>
+            ))}
+          </nav>
+        )}
 
-      {installation && (
-        <div className="bg-nuit-800 border-b border-nuit-700 px-4 py-2 text-sm text-nuit-300 flex flex-wrap items-center gap-2">
-          Votre installation : <span className="text-neon-300 font-semibold">{installationDe(installation).nom}</span>
-          <button onClick={() => setPage('box')} className="underline text-nuit-200 hover:text-white min-h-[44px] px-2">changer</button>
+        {page !== 'catalogue' && installation && (
+          <div className="bi-cadre bi-installation">
+            <span>Votre installation : <strong>{installationDe(installation).nom}</strong></span>
+            <button type="button" onClick={() => setPage('box')}>changer</button>
+          </div>
+        )}
+
+        {page === 'entreprise' && <div className="bi-cadre py-8"><CreezEntreprise ideeInitiale={ideeInitiale} /></div>}
+        {page === 'box' && <div className="bi-cadre py-8"><IAgentBox installation={installation} onChoisir={(id) => { choisirInstallation(id); setPage('catalogue'); }} /></div>}
+
+        {page === 'catalogue' && (
+          <div className={`bi-cadre bi-catalogue ${apercu ? 'avec-apercu' : ''}`}>
+            <aside className="bi-filtres" aria-label="Filtres">{panneauFiltres}</aside>
+
+            <section className="bi-resultats" aria-label="Profils">
+              <div className="bi-haut">
+                <p className="bi-total"><strong>{nombre(montrerListe ? resultats.length : PACKS_ENTREPRISE.length)}</strong> {montrerListe ? (resultats.length > 1 ? 'métiers' : 'métier') : 'packs'}</p>
+                <div className="bi-vues" role="tablist" aria-label="Parcourir le catalogue">
+                  {VUES.map((v) => (
+                    <button key={v.id} type="button" role="tab" aria-selected={vue === v.id} onClick={() => { setVue(v.id); setPackOuvert(null); setFiltres(FILTRES_VIDES); setApercu(null); }}>{v.libelle}</button>
+                  ))}
+                </div>
+                <div className="bi-outils-liste">
+                  <button type="button" className="bi-bouton-filtres" onClick={() => setTiroir(true)}>Filtres{choisis.length > 0 && <span className="bi-nb">{choisis.length}</span>}</button>
+                  <label className="bi-tri">
+                    <span className="sr-only">Trier par</span>
+                    <select value={tri} onChange={(e) => setTri(e.target.value)}>
+                      {TRIS.map(([id, l]) => <option key={id} value={id}>{l}</option>)}
+                    </select>
+                  </label>
+                  <div className="bi-affichage" role="group" aria-label="Affichage">
+                    <button type="button" aria-pressed={!compact} onClick={() => setCompact(false)} aria-label="Grandes cartes">
+                      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" /><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" /><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" /><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" /></svg>
+                    </button>
+                    <button type="button" aria-pressed={compact} onClick={() => setCompact(true)} aria-label="Liste compacte">
+                      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="2" width="14" height="3" rx="1.5" fill="currentColor" /><rect x="1" y="6.5" width="14" height="3" rx="1.5" fill="currentColor" /><rect x="1" y="11" width="14" height="3" rx="1.5" fill="currentColor" /></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {(choisis.length > 0 || requete) && (
+                <div className="bi-choisis">
+                  {requete && <button type="button" onClick={() => setRequete('')}>« {requete} » <span aria-hidden="true">×</span><span className="sr-only">retirer</span></button>}
+                  {choisis.map(([cle, v, l]) => (
+                    <button key={cle + v} type="button" onClick={() => changer(cle)(filtres[cle].filter((x) => x !== v))}>{l} <span aria-hidden="true">×</span><span className="sr-only">retirer</span></button>
+                  ))}
+                  <button type="button" className="bi-reinit" onClick={reinitialiser}>Tout effacer</button>
+                </div>
+              )}
+
+              {vue === 'packs' && <div className="mb-6"><PacksEntreprise packOuvert={packOuvert} onOuvrir={setPackOuvert} /></div>}
+
+              {montrerListe && (resultats.length > 0 ? (
+                <>
+                  <div className={compact ? 'bi-liste-compacte' : 'bi-grille'}>
+                    {resultats.slice(0, combien).map((a, i) => (
+                      <CarteAgent key={a.id} agent={a} compact={compact} choisi={apercu?.id === a.id} onVoir={setApercu} prioritaire={i < 6} />
+                    ))}
+                  </div>
+                  {combien < resultats.length && (
+                    <div ref={fin} className="flex justify-center py-10">
+                      <button type="button" className="bouton bouton-contour" onClick={() => setCombien((c) => c + PAR_PAGE)}>
+                        Afficher plus de profils ({nombre(resultats.length - combien)} restants)
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="bi-vide">
+                  <p className="titre-display titre-petit">Aucun profil ne correspond.</p>
+                  <p className="mt-2 text-[var(--texte-doux)]">Essayez un autre mot, ou retirez un filtre.</p>
+                  <button type="button" className="bouton bouton-contour mt-6" onClick={reinitialiser}>Tout effacer</button>
+                </div>
+              ))}
+            </section>
+
+            {apercu && (
+              <>
+                <div className="bi-voile" onClick={fermerApercu} aria-hidden="true" />
+                <div className="bi-apercu-zone">
+                  <Apercu agent={apercu} installation={installation} onFermer={fermerApercu} onFicheComplete={setFicheOuverte} focaliser={apercu.id !== apercuOuvertSeul.current} />
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </main>
+
+      {tiroir && (
+        <div className="bi-tiroir" role="dialog" aria-modal="true" aria-label="Filtres">
+          <div className="bi-voile !block" onClick={() => setTiroir(false)} aria-hidden="true" />
+          <div className="bi-tiroir-panneau">
+            {panneauFiltres}
+            <button type="button" className="bouton bouton-plein w-full mt-6" onClick={() => setTiroir(false)}>Voir les {nombre(resultats.length)} profils</button>
+          </div>
         </div>
       )}
 
-      {page === 'entreprise' && <div className="p-4 md:p-8 max-w-7xl mx-auto"><CreezEntreprise /></div>}
-      {page === 'box' && <div className="p-4 md:p-8 max-w-7xl mx-auto"><IAgentBox installation={installation} onChoisir={(id) => { choisirInstallation(id); setPage('catalogue'); }} /></div>}
-
-      {page === 'catalogue' && <div className="flex">
-        {/* Sidebar Filters */}
-        <div className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-nuit-800 border-r border-nuit-700 overflow-y-auto transition-all duration-300 shadow-lg`}>
-          <div className="p-4 space-y-6">
-            {/* Toggle Button */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="absolute -right-10 top-20 bg-nuit-700 hover:bg-nuit-600 text-white p-2 rounded transition"
-              title="Toggle sidebar"
-            >
-              {sidebarOpen ? '→' : '←'}
-            </button>
-
-            {/* Sectors */}
-            <div>
-              <h3 className="font-bold text-nuit-200 mb-3 flex items-center gap-2">
-                <span>🏢</span> Secteurs
-              </h3>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                <button
-                  onClick={() => {
-                    setSelectedSector('');
-                    setSelectedAgent(null);
-                  }}
-                  className={`w-full text-left px-3 py-2 rounded transition text-sm ${
-                    selectedSector === ''
-                      ? 'bg-neon-400/15 text-neon-300 border border-neon-400 shadow-neon'
-                      : 'bg-nuit-700 text-nuit-300 hover:bg-nuit-600'
-                  }`}
-                >
-                  ✓ Tous ({agents.length})
-                </button>
-                {sectors.map((sector) => (
-                  <button
-                    key={sector}
-                    onClick={() => {
-                      setSelectedSector(sector);
-                      setSelectedAgent(null);
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded transition text-sm ${
-                      selectedSector === sector
-                        ? 'bg-neon-400/15 text-neon-300 border border-neon-400 shadow-neon'
-                        : 'bg-nuit-700 text-nuit-300 hover:bg-nuit-600'
-                    }`}
-                  >
-                    {sector} ({groupedAgents[sector]?.length || 0})
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Familles */}
-            <div>
-              <h3 className="font-bold text-nuit-200 mb-3 flex items-center gap-2">
-                <span>🔖</span> Familles
-              </h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                <button
-                  onClick={() => setSelectedFamille('')}
-                  className={`w-full text-left px-3 py-2 rounded transition text-sm ${
-                    selectedFamille === ''
-                      ? 'bg-rose-500/15 text-rose-300 border border-rose-500 shadow-rose'
-                      : 'bg-nuit-700 text-nuit-300 hover:bg-nuit-600'
-                  }`}
-                >
-                  ✓ Toutes
-                </button>
-                {familles.map((famille) => (
-                  <button
-                    key={famille}
-                    onClick={() => setSelectedFamille(famille)}
-                    className={`w-full text-left px-3 py-2 rounded transition text-sm ${
-                      selectedFamille === famille
-                        ? 'bg-rose-500/15 text-rose-300 border border-rose-500 shadow-rose'
-                        : 'bg-nuit-700 text-nuit-300 hover:bg-nuit-600'
-                    }`}
-                  >
-                    {famille}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="border-t border-nuit-700 pt-4">
-              <div className="text-xs text-nuit-400">
-                <p>Agents affichés: <span className="font-bold text-neon-300">{filteredAgents.length}</span></p>
-                <p>Total: <span className="font-bold text-nuit-300">{agents.length}</span></p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-8 max-w-7xl mx-auto">
-            <div className="mb-6 flex flex-wrap gap-2" role="tablist" aria-label="Parcourir le catalogue">
-              {VUES.map((v) => (
-                <button
-                  key={v.id}
-                  role="tab"
-                  aria-selected={vue === v.id}
-                  onClick={() => { setVue(v.id); setPackOuvert(null); setSelectedSector(''); setSelectedFamille(''); }}
-                  className={onglet(vue === v.id)}
-                >
-                  {v.libelle}
-                </button>
-              ))}
-            </div>
-
-            {!installation && (
-              <div className="mb-6">
-                <h2 className="font-display text-xl text-white mb-1">D'abord, votre installation</h2>
-                <p className="text-sm text-nuit-300 mb-3">Elle décide de ce que chaque agent vous coûte, chez vous ou par API. Vous pourrez la changer à tout moment.</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                  {INSTALLATIONS.map((o) => <CarteInstallation key={o.id} o={o} compact onChoisir={choisirInstallation} />)}
-                </div>
-              </div>
-            )}
-
-            {vue === 'packs' && <div className="mb-6"><PacksEntreprise packOuvert={packOuvert} onOuvrir={setPackOuvert} /></div>}
-
-            {montrerListe && <>
-            {/* Header Stats */}
-            <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-nuit-800 rounded-lg p-4 border border-nuit-700">
-                <p className="text-xs text-nuit-400 mb-1">Fiches visibles</p>
-                <p className="text-2xl font-bold text-neon-300">{filteredAgents.length}</p>
-              </div>
-              <div className="bg-nuit-800 rounded-lg p-4 border border-nuit-700">
-                <p className="text-xs text-nuit-400 mb-1">Total</p>
-                <p className="text-2xl font-bold text-nuit-300">{agents.length}</p>
-              </div>
-              <div className="bg-nuit-800 rounded-lg p-4 border border-nuit-700">
-                <p className="text-xs text-nuit-400 mb-1">Secteurs</p>
-                <p className="text-2xl font-bold text-rose-300">{sectors.length}</p>
-              </div>
-              <div className="bg-nuit-800 rounded-lg p-4 border border-nuit-700">
-                <p className="text-xs text-nuit-400 mb-1">Familles</p>
-                <p className="text-2xl font-bold text-green-300">{familles.length}</p>
-              </div>
-            </div>
-
-            {/* Fiches Grid */}
-            {filteredAgents.length > 0 ? (
-              <FicheList
-                agents={filteredAgents}
-                onSelectAgent={setSelectedAgent}
-                selectedAgent={selectedAgent}
-              />
-            ) : (
-              <div className="text-center py-16">
-                <p className="text-2xl text-nuit-400 mb-2">😴 Aucun agent trouvé</p>
-                <p className="text-nuit-500">Essayez de modifier les filtres</p>
-              </div>
-            )}
-            </>}
-          </div>
-        </div>
-      </div>}
-
-      {/* Detail Modal */}
-      {selectedAgent && (
-        <FicheDetail
-          agent={selectedAgent}
-          installation={installation}
-          onClose={() => setSelectedAgent(null)}
-        />
+      {ficheOuverte && (
+        <FicheDetail agent={ficheOuverte} installation={installation} onClose={() => setFicheOuverte(null)} />
       )}
     </div>
   );

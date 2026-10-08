@@ -11,10 +11,12 @@ export default function Navbar({ search, onSearchChange }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="iAgent" className="h-9 w-auto drop-shadow-[0_0_6px_rgba(3,243,255,0.5)]" />
+            <a href="/" aria-label="iAgent, accueil">
+              <img src={logo} alt="iAgent" className="h-9 w-auto drop-shadow-[0_0_6px_rgba(3,243,255,0.5)]" />
+            </a>
             <div>
               <h1 className="sr-only">iAgent</h1>
-              <p className="text-xs text-nuit-400">1251 fiches d'agents métier</p>
+              <p className="text-xs text-nuit-400">1 249 métiers</p>
             </div>
           </div>
 

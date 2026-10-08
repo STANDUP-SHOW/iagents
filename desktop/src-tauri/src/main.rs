@@ -33,6 +33,8 @@ mod mise_a_jour;
 mod partage;
 mod mission;
 mod voix_api;
+mod plateforme;
+mod administration;
 
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
@@ -290,6 +292,9 @@ async fn call_agent_llm(
     command: String,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
+    // These sample agents have no catalogue sheet, hence no right: on a
+    // provisioned Box they never run.
+    plateforme::autoriser(&agent_id).await?;
     let agent = {
         let agents = state.agents.lock().unwrap();
         agents
@@ -345,6 +350,8 @@ async fn repondre(
     state: State<'_, AppState>,
 ) -> Result<ReponseAgent, String> {
     let _travail = mise_a_jour::travail()?;
+    // On a provisioned Box, no right, no answer (plateforme.rs).
+    plateforme::autoriser(&fiche_id).await?;
     if prompt_systeme.trim().is_empty() {
         return Err("prompt systeme vide : la fiche n a pas ete chargee".to_string());
     }
@@ -410,6 +417,9 @@ async fn executer_tache(
     state: State<'_, AppState>,
 ) -> Result<tache::Resultat, String> {
     let _travail = mise_a_jour::travail()?;
+    // On a provisioned Box, no right, no task: refused before anything is read
+    // or written (plateforme.rs).
+    plateforme::autoriser(&fiche_id).await?;
     let installation = fiches::lire_installation()?;
     let fiche = fiches::lire_fiche(fiche_id.clone())?;
     let maintenant = std::time::SystemTime::now()
@@ -838,6 +848,7 @@ fn main() {
             voix_api::voix_api_ranger,
             voix_api::voix_api_retirer,
             tache::dossier_de_travail,
+            tache::montrer_resultat,
             repondre,
             courriel::courriel_enregistrer_motdepasse,
             courriel::courriel_motdepasse_present,
@@ -858,6 +869,28 @@ fn main() {
             navigateur::navigateur_oublier_site,
             navigateur::navigateur_effacer_sessions,
             mise_a_jour::mise_a_jour_etat,
+            plateforme::plateforme_etat,
+            plateforme::plateforme_identite,
+            plateforme::plateforme_regler,
+            plateforme::plateforme_droits,
+            plateforme::plateforme_sante,
+            plateforme::plateforme_telemetrie_envoyer,
+            plateforme::plateforme_mises_a_jour,
+            plateforme::plateforme_skills,
+            plateforme::plateforme_skill_ouvrir,
+            plateforme::plateforme_appels,
+            plateforme::plateforme_handoffs,
+            plateforme::plateforme_handoff_decider,
+            plateforme::plateforme_consommation,
+            plateforme::plateforme_projets,
+            plateforme::plateforme_projet_creer,
+            administration::admin_present,
+            administration::plateforme_appeler,
+            administration::jeton_poser,
+            administration::jeton_present,
+            administration::jeton_oublier,
+            administration::adresse_lire,
+            administration::adresse_poser,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
