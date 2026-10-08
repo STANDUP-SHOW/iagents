@@ -30,6 +30,8 @@ export type EtatLicence = {
 
 export type EtatPlateforme = {
   relie: boolean
+  /** Box build: an unlinked machine runs no agent. */
+  edition_box: boolean
   adresse: string | null
   device_id: string | null
   cle_plateforme_posee: boolean
