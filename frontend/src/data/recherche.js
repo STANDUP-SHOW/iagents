@@ -146,6 +146,7 @@ export const COMPTEURS = {
   agents: agents.length,
   // The catalogue's sector list, the number the home page shows too.
   secteurs: catalogue.secteurs.length,
+  activites: activitesJson.activites.length,
   logiciels: LOGICIELS.length,
   taches: agents.reduce((n, a) => n + (a.taches?.length ?? 0), 0),
 };

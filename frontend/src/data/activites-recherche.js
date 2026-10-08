@@ -14,6 +14,15 @@ export const SECTEURS_TRANSVERSAUX = new Set(['administration', 'comptabilite', 
 const METIER_PROPRE = /immobilier|médical|juridique|cabinet de recrutement/i;
 export const estTransversal = (f) => SECTEURS_TRANSVERSAUX.has(f.secteur) && !METIER_PROPRE.test(f.nom);
 
+/** The fifteen families the 282 activities are sorted in, as a visitor reads them. */
+export const FAMILLES_ACTIVITE = {
+  industrie: 'Industrie', batiment: 'Bâtiment', artisanat: 'Artisanat et commerce de proximité', 'commerce-detail': 'Commerce de détail',
+  'negoce-gros': 'Négoce et commerce de gros', 'transport-logistique': 'Transport et logistique', agriculture: 'Agriculture',
+  'environnement-energie': 'Environnement et énergie', 'sante-social': 'Santé et social', 'hotellerie-tourisme': 'Hôtellerie, restauration et loisirs',
+  'services-entreprises': 'Services aux entreprises', 'numerique-audiovisuel': 'Numérique et audiovisuel',
+  'automobile-mobilite': 'Automobile et mobilité', 'finance-immobilier': 'Finance et immobilier', 'public-associatif': 'Public et associatif',
+};
+
 // « gros œuvre »: the ligatures do not decompose, so they are spelt out.
 const normaliser = (texte) => String(texte ?? '').toLowerCase().replace(/œ/g, 'oe').replace(/æ/g, 'ae').normalize('NFD').replace(/[̀-ͯ]/g, '');
 const mots = (texte) => normaliser(texte).split(/[^a-z0-9]+/).filter(Boolean);

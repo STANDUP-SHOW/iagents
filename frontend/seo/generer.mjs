@@ -28,7 +28,7 @@ const secteurs = new Map(lire('catalogue/catalogue.json').secteurs.map((s) => [s
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
 import { slugifier } from './slug.mjs';
 import { portraitDe } from '../src/data/portraits.js';
-import { estTransversal, cerclesDeLActivite } from '../src/data/activites-recherche.js';
+import { estTransversal, cerclesDeLActivite, FAMILLES_ACTIVITE } from '../src/data/activites-recherche.js';
 export { slugifier };
 
 const echapper = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -44,6 +44,7 @@ function reserver(url, qui) {
 
 const urlFiche = new Map(fiches.map((f) => [f.id, reserver(`/agents/${f.slug}`, f.id)]));
 const urlActivite = new Map(activites.map((a) => [a.id, reserver(`/activites/${slugifier(a.nom)}`, a.id)]));
+const urlSecteur = new Map([...secteurs].map(([id, nom]) => [id, reserver(`/secteurs/${slugifier(nom)}`, id)]));
 
 // Only software something cites gets a page: a page about a tool no agent
 // uses would promise nothing.
@@ -75,12 +76,12 @@ const urlPosteActivite = (f, a) => `${urlActivite.get(a.id)}/${f.slug}`;
 // way back on every page: these pages are where a search engine lands people.
 const RECRUTER = '/how-it-works';
 const MENU = [
-  ['Produit', '/workforce'], ['Agents', '/catalogue'], ['Créer votre entreprise', '/create'], ['Voice', '/voice'],
+  ['Produit', '/workforce'], ['Agents', '/catalogue'], ['Activités', '/activites'], ['Secteurs', '/secteurs'], ['Créer votre entreprise', '/create'], ['Voice', '/voice'],
   ['iAgent Box', '/box'], ['Entreprise', '/enterprise'], ['Ressources', '/how-it-works'],
 ];
 const PIED = [
   ['Produit', [['iAgent Workforce', '/workforce'], ['iAgent Box', '/box'], ['Tarifs', '/pricing'], ['Pourquoi louer', '/why-rent'], ['Recruter un agent', RECRUTER]]],
-  ['Agents', [['Le catalogue des métiers', '/catalogue'], ['Par activité', '/activites'], ['Skill Packs', '/skills'], ['Créer votre entreprise', '/create'], ['Opportunités', '/opportunities']]],
+  ['Agents', [['Le catalogue des métiers', '/catalogue'], ['Par activité', '/activites'], ['Par secteur', '/secteurs'], ['Skill Packs', '/skills'], ['Créer votre entreprise', '/create'], ['Opportunités', '/opportunities']]],
   ['Voice', [['iAgent Voice', '/voice'], ['Standard téléphonique', '/standard-telephonique'], ['Support Center', '/support-center'], ['Sales Center', '/sales-center']]],
   ['Entreprise', [['iAgent Enterprise', '/enterprise'], ['IA locale et hybride', '/local-ai'], ['Sécurité', '/security'], ['Questions fréquentes', '/faq'], ['Contact', '/contact']]],
 ];
@@ -94,7 +95,7 @@ a{color:var(--cyan)}img{max-width:100%}
 .cadre{max-width:1180px;margin:0 auto;padding:0 20px}
 .tete{position:sticky;top:0;z-index:10;background:rgba(2,8,23,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--trait)}
 .tete-ligne{display:flex;align-items:center;gap:28px;height:68px}
-.logo img{height:26px;width:auto;display:block}
+.logo{flex:none}.logo img{height:26px;width:auto;display:block}
 .menu{display:flex;gap:24px;flex:1}.menu a{color:var(--doux);text-decoration:none;font-size:.92rem;font-weight:500;white-space:nowrap}.menu a:hover{color:#fff}
 .bouton{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 22px;font-weight:700;font-size:.92rem;text-decoration:none;border-radius:14px 4px 14px 4px;white-space:nowrap}
 .bouton-degrade{background:var(--degrade);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35);box-shadow:0 8px 28px rgba(229,0,126,.25)}
@@ -200,7 +201,7 @@ for (const f of fiches) {
     url,
     titre: `${f.nom} : agent IA`,
     description: f.accroche,
-    fil: [['Agents', '/catalogue'], [secteur, null]],
+    fil: [['Secteurs', '/secteurs'], [secteur, urlSecteur.get(f.secteur)]],
     portrait: portraitDe(f),
     appel: [`Recrutez votre ${f.nom.toLowerCase()}`, "Un entretien d'embauche dans l'application, et il se met au travail chez vous."],
     corps: `<h1>${echapper(f.nom)}, un agent IA qui travaille pour vous</h1>
@@ -265,20 +266,38 @@ ${acts.length ? `<h2>Les activités qui l'emploient</h2>${liste(acts.map((a) => 
 
 // Every activity, by family: the way in for a visitor who knows their trade
 // (« imprimerie ») and not the name of the job they need.
-const FAMILLES_ACTIVITE = {
-  industrie: 'Industrie', batiment: 'Bâtiment', artisanat: 'Artisanat', 'commerce-detail': 'Commerce de détail',
-  'negoce-gros': 'Négoce et commerce de gros', 'transport-logistique': 'Transport et logistique', agriculture: 'Agriculture',
-  'environnement-energie': 'Environnement et énergie', 'sante-social': 'Santé et social', 'hotellerie-tourisme': 'Hôtellerie et tourisme',
-  'services-entreprises': 'Services aux entreprises', 'numerique-audiovisuel': 'Numérique et audiovisuel',
-  'automobile-mobilite': 'Automobile et mobilité', 'finance-immobilier': 'Finance et immobilier', 'public-associatif': 'Public et associatif',
-};
+// Every family of jobs (the 43 sectors), each with its own page listing its
+// jobs: the other way in, for a visitor who knows the field and not the title.
+pages.set('/secteurs', page({
+  url: '/secteurs',
+  titre: `Agents IA par secteur : ${secteurs.size} familles de métiers`,
+  description: `Comptabilité, commerce, santé, juridique, logistique… Les ${fiches.length} métiers iAgent rangés en ${secteurs.size} secteurs.`,
+  fil: [['Secteurs', null]],
+  corps: `<h1>Les métiers, secteur par secteur</h1>
+<p class="accroche">${secteurs.size} familles de métiers, ${fiches.length} agents. Vous connaissez votre activité plutôt que le métier ? <a href="/activites">Cherchez par activité</a>.</p>
+${liste([...secteurs].map(([id, nom]) => `<li>${lien(nom, urlSecteur.get(id))}<br>${fiches.filter((f) => f.secteur === id).length} métiers</li>`))}`,
+}));
+for (const [id, nom] of secteurs) {
+  const leurs = fiches.filter((f) => f.secteur === id);
+  const url = urlSecteur.get(id);
+  pages.set(url, page({
+    url,
+    titre: `Agents IA ${nom.toLowerCase()} : ${leurs.length} métiers`,
+    description: `${leurs.length} agents IA du secteur ${nom.toLowerCase()} : ${leurs.slice(0, 4).map((f) => f.nom.toLowerCase()).join(', ')}…`,
+    fil: [['Secteurs', '/secteurs'], [nom, null]],
+    corps: `<h1>${echapper(nom)} : ${leurs.length} métiers</h1>
+<p class="accroche">Chaque agent est un professionnel du métier, réglé sur votre activité et vos logiciels pendant l'entretien d'embauche.</p>
+${liste(leurs.map((f) => `<li>${lien(f.nom, urlFiche.get(f.id))} : ${echapper(f.accroche)}</li>`))}`,
+  }));
+}
+
 pages.set('/activites', page({
   url: '/activites',
   titre: `Agents IA par activité : ${activites.length} activités`,
   description: `Imprimerie, boulangerie, cabinet comptable, transport… Trouvez les agents IA de votre activité parmi ${activites.length} activités.`,
   fil: [['Activités', null]],
   corps: `<h1>Votre activité, vos agents</h1>
-<p class="accroche">Choisissez votre activité : chaque agent que vous recrutez reçoit son vocabulaire, ses documents, ses règles et ses logiciels.</p>
+<p class="accroche">Choisissez votre activité parmi ${activites.length} : chaque agent que vous recrutez reçoit son vocabulaire, ses documents, ses règles et ses logiciels. Vous préférez chercher par famille de métiers ? <a href="/secteurs">Les secteurs</a>.</p>
 ${Object.entries(FAMILLES_ACTIVITE).map(([id, nom]) => {
     const siennes = activites.filter((a) => a.famille === id);
     return siennes.length ? `<h2>${echapper(nom)}</h2>${puces(siennes.map((a) => lien(a.nom, urlActivite.get(a.id))))}` : '';

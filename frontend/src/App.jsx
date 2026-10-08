@@ -10,10 +10,11 @@ import { AGENTS_RESEAUX, PACKS_ENTREPRISE, INSTALLATIONS, ficheDe, installationD
 import agents from './data/loader.js';
 import {
   filtrer, decompte, FILTRES_VIDES, libelleSecteur, libelleFamille, logicielsDe, portraitDe, COMPTEURS,
-  activitesDeLaRecherche, urlActivite,
+  activitesDeLaRecherche, urlActivite, ACTIVITES,
 } from './data/recherche.js';
-import { estTransversal } from './data/activites-recherche.js';
+import { estTransversal, FAMILLES_ACTIVITE } from './data/activites-recherche.js';
 import { LIENS } from './accueil/composants.jsx';
+import { suivre } from './accueil/analytique.js';
 
 // What the library offers when nothing matches: the jobs every business has.
 const POUR_TOUS = agents.filter(estTransversal).slice(0, 12);
@@ -26,6 +27,8 @@ export const PAGES = [
 ];
 export const VUES = [
   { id: 'metier', libelle: 'Tous les agents' },
+  { id: 'activites', libelle: 'Par activité' },
+  { id: 'secteurs', libelle: 'Par secteur' },
   { id: 'reseaux', libelle: 'Agents réseaux' },
   { id: 'packs', libelle: 'Packs entreprise' },
 ];
@@ -71,9 +74,9 @@ function Entree({ requete, setRequete }) {
           <p className="bi-chapeau">Choisissez un métier, puis votre secteur et votre activité : iAgent en fait un expert taillé pour votre entreprise. Une assistante commerciale peut servir le commerce maritime, une imprimerie en Espagne ou une compagnie aérienne à Paris.</p>
           <dl className="bi-compteurs">
             <div><dt>métiers</dt><dd>{nombre(COMPTEURS.agents)}</dd></div>
-            <div><dt>familles de métiers</dt><dd>{COMPTEURS.secteurs}</dd></div>
+            <div><dt>secteurs</dt><dd>{COMPTEURS.secteurs}</dd></div>
+            <div><dt>activités</dt><dd>{COMPTEURS.activites}</dd></div>
             <div><dt>logiciels connus</dt><dd>{nombre(COMPTEURS.logiciels)}</dd></div>
-            <div><dt>missions décrites</dt><dd>{nombre(COMPTEURS.taches)}</dd></div>
           </dl>
           <div className="bi-entree-recherche"><Recherche valeur={requete} onChange={setRequete} /></div>
         </div>
@@ -90,14 +93,14 @@ function Entree({ requete, setRequete }) {
   );
 }
 
-export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier', installationInitiale, rechercheInitiale = '', ideeInitiale = '' }) {
+export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier', installationInitiale, rechercheInitiale = '', secteurInitial = '', ideeInitiale = '' }) {
   const [page, setPage] = useState(pageInitiale);
   const [installation, setInstallationEtat] = useState(() => installationInitiale ?? lireInstallation());
   const choisirInstallation = (id) => { setInstallationEtat(id); ecrireInstallation(id); };
-  const [vue, setVue] = useState(vueInitiale);
+  const [vue, setVue] = useState(VUES.some((v) => v.id === vueInitiale) ? vueInitiale : 'metier');
   const [packOuvert, setPackOuvert] = useState(null);
   const [requete, setRequete] = useState(rechercheInitiale);
-  const [filtres, setFiltres] = useState(FILTRES_VIDES);
+  const [filtres, setFiltres] = useState(secteurInitial ? { ...FILTRES_VIDES, secteurs: [secteurInitial] } : FILTRES_VIDES);
   const [tri, setTri] = useState('pertinence');
   const [compact, setCompact] = useState(false);
   const [apercu, setApercu] = useState(null);
@@ -134,7 +137,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
   // Someone who searched from the header came for the answer, not the hero:
   // take them to the results.
   useEffect(() => {
-    if (rechercheInitiale) document.getElementById('resultats')?.scrollIntoView({ block: 'start' });
+    if (rechercheInitiale || secteurInitial || vueInitiale !== 'metier') document.getElementById('resultats')?.scrollIntoView({ block: 'start' });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The trade the visitor typed (« imprimerie »), told above the results.
@@ -167,7 +170,12 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
     ...(ouParAgent ? filtres.ou.map((v) => ['ou', v, OU[v]]) : []),
   ];
   const reinitialiser = () => { setFiltres(FILTRES_VIDES); setRequete(''); };
-  const montrerListe = vue !== 'packs' || packOuvert;
+  const montrerListe = (vue !== 'packs' || packOuvert) && vue !== 'activites' && vue !== 'secteurs';
+  // The two other ways in: pick your trade or your family of jobs, and the
+  // list opens on it.
+  const auxResultats = () => document.getElementById('resultats')?.scrollIntoView({ block: 'start' });
+  const ouvrirActivite = (a) => { setVue('metier'); setFiltres(FILTRES_VIDES); setRequete(a.nom); suivre('catalog_click', { activite: a.nom }); auxResultats(); };
+  const ouvrirSecteur = (id) => { setVue('metier'); setRequete(''); setFiltres({ ...FILTRES_VIDES, secteurs: [id] }); auxResultats(); };
   const fermerApercu = useCallback(() => setApercu(null), []);
 
   // On a wide screen the preview is always there, as on the mockup: the
@@ -241,7 +249,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
 
             <section id="resultats" className="bi-resultats" aria-label="Profils">
               <div className="bi-haut">
-                <p className="bi-total">{montrerListe && !resultats.length
+                <p className="bi-total">{vue === 'activites' ? <><strong>{nombre(ACTIVITES.length)}</strong> activités</> : vue === 'secteurs' ? <><strong>{COMPTEURS.secteurs}</strong> secteurs</> : montrerListe && !resultats.length
                   ? <><strong>{nombre(POUR_TOUS.length)}</strong> métiers proposés</>
                   : <><strong>{nombre(montrerListe ? resultats.length : PACKS_ENTREPRISE.length)}</strong> {montrerListe ? (resultats.length > 1 ? 'métiers' : 'métier') : 'packs'}</>}</p>
                 <div className="bi-vues" role="tablist" aria-label="Parcourir le catalogue">
@@ -249,7 +257,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
                     <button key={v.id} type="button" role="tab" aria-selected={vue === v.id} onClick={() => { setVue(v.id); setPackOuvert(null); setFiltres(FILTRES_VIDES); setApercu(null); }}>{v.libelle}</button>
                   ))}
                 </div>
-                <div className="bi-outils-liste">
+                <div className="bi-outils-liste" hidden={vue === 'activites' || vue === 'secteurs'}>
                   <button type="button" className="bi-bouton-filtres" onClick={() => setTiroir(true)}>Filtres{choisis.length > 0 && <span className="bi-nb">{choisis.length}</span>}</button>
                   <label className="bi-tri">
                     <span className="sr-only">Trier par</span>
@@ -290,6 +298,32 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
                     <a href={urlActivite(activitesVues[0])} className="bouton bouton-contour">Tout sur votre activité</a>
                     {activitesVues.slice(1).map((a) => <a key={a.id} href={urlActivite(a)} className="bouton bouton-contour">{a.nom}</a>)}
                   </div>
+                </div>
+              )}
+
+              {vue === 'activites' && (
+                <div className="bi-index">
+                  <p className="text-[var(--texte-doux)] mb-6">Choisissez votre activité : chaque métier que vous recrutez reçoit son vocabulaire, ses documents, ses règles et ses logiciels.</p>
+                  {Object.entries(FAMILLES_ACTIVITE).map(([id, nom]) => (
+                    <section key={id} className="mb-8">
+                      <p className="surtitre mb-3">{nom}</p>
+                      <ul className="bi-index-liste">
+                        {ACTIVITES.filter((a) => a.famille === id).map((a) => (
+                          <li key={a.id}><button type="button" onClick={() => ouvrirActivite(a)}>{a.nom}</button></li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
+              )}
+              {vue === 'secteurs' && (
+                <div className="bi-index">
+                  <p className="text-[var(--texte-doux)] mb-6">Les {nombre(COMPTEURS.agents)} métiers rangés en {COMPTEURS.secteurs} familles.</p>
+                  <ul className="bi-index-liste bi-index-secteurs">
+                    {options.secteurs.map(([id, n]) => (
+                      <li key={id}><button type="button" onClick={() => ouvrirSecteur(id)}>{libelleSecteur(id)}<span>{n} métiers</span></button></li>
+                    ))}
+                  </ul>
                 </div>
               )}
 

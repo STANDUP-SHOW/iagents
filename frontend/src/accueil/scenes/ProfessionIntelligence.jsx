@@ -12,7 +12,7 @@ import { suivre } from '../analytique.js';
  */
 export default function ProfessionIntelligence() {
   const ref = useRef(null);
-  const { compteurs, metierDansTroisMondes: m, vitrine } = donnees;
+  const { compteurs, metierDansTroisMondes: m, vitrine, activitesEntree } = donnees;
   const FORMULE = [
     ['Métier', `${nombre(compteurs.fiches)} fiches`],
     ['Secteur', `${nombre(compteurs.secteurs)} secteurs · ${nombre(compteurs.activites)} activités`],
@@ -77,6 +77,23 @@ export default function ProfessionIntelligence() {
               Le secteur et l'activité y ajoutent leurs mots et leurs usages. Votre entreprise fait le reste, pendant l'entretien.
             </p>
             <Bouton href="/catalogue" evenement="catalog_click" className="mt-8">Explorer le catalogue</Bouton>
+          </div>
+        </div>
+
+        <div className="pi-entree verre mt-20 p-6 md:p-10">
+          <p className="surtitre">Entrez par votre activité</p>
+          <h3 className="titre-display titre-petit mt-2">Imprimeur, boulanger, garagiste, avocat ? Commencez par ce que vous faites.</h3>
+          <form action="/catalogue" method="get" role="search" className="entete-recherche flex mt-6 max-w-2xl" onSubmit={() => suivre('catalog_click', { depuis: 'activite' })}>
+            <label htmlFor="recherche-activite" className="sr-only">Votre activité</label>
+            <input id="recherche-activite" name="q" type="search" placeholder="Imprimerie, boulangerie, garage…" autoComplete="off" />
+            <button type="submit" className="bouton bouton-plein !min-h-[40px] !px-4 sm:!px-5 !text-sm flex-none"><span className="hidden sm:inline">Trouver mes agents</span><span className="sm:hidden">Trouver</span></button>
+          </form>
+          <ul className="flex flex-wrap gap-2 mt-6" aria-label="Quelques activités">
+            {activitesEntree.map((a) => <li key={a.url}><a href={a.url} className="puce puce-lien">{a.nom}</a></li>)}
+          </ul>
+          <div className="flex flex-wrap gap-3 mt-8">
+            <Bouton href="/activites" evenement="catalog_click">Les {nombre(compteurs.activites)} activités</Bouton>
+            <Bouton href="/secteurs" variante="contour" evenement="catalog_click">Les {nombre(compteurs.secteurs)} secteurs de métiers</Bouton>
           </div>
         </div>
 

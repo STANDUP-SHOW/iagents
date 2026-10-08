@@ -175,7 +175,7 @@ export function Apercu({ agent, installation, onFermer, onFicheComplete, focalis
   );
 }
 
-const EXEMPLES = ['commercial immobilier', 'Salesforce', 'assistant comptable', 'prospection', 'conformité bancaire'];
+const EXEMPLES = ['imprimerie', 'boulangerie', 'garage', 'assistant comptable', 'Salesforce', 'cabinet dentaire'];
 
 /** The library's main field, with suggestions from the jobs, sectors and software. */
 export function Recherche({ valeur, onChange }) {

@@ -125,7 +125,7 @@ for (const page of PAGES) {
   for (const vue of page.id === 'catalogue' ? VUES : [{ id: 'metier' }]) {
     try {
       const html = renderToString(<App pageInitiale={page.id} vueInitiale={vue.id} />);
-      const attendu = { catalogue: vue.id === 'packs' ? 'PACK-01' : 'AG-0', entreprise: 'Cycle 1', box: 'Box Commandeur' }[page.id];
+      const attendu = { catalogue: { packs: 'PACK-01', activites: 'Imprimerie offset et numérique', secteurs: 'Comptabilité' }[vue.id] ?? 'AG-0', entreprise: 'Cycle 1', box: 'Box Commandeur' }[page.id];
       if (!html.includes(attendu)) echoue(`page « ${page.libelle} »${vue.libelle ? `, vue « ${vue.libelle} »` : ''} : « ${attendu} » absent`);
       else ok(`page « ${page.libelle} »${vue.libelle ? `, vue « ${vue.libelle} »` : ''} se rend`);
     } catch (e) {
