@@ -1,0 +1,300 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-1666",
+  "slug": "gestionnaire-administratif-contrats-apprentissage",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "etablissements-publics-et-specialises",
+  "nom": "Gestionnaire administratif des contrats d'apprentissage",
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.2.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "accroche": "Un contrat d'apprentissage déposé avec une erreur n'est pas pris en charge : il contrôle chaque pièce avant l'opérateur de compétences, puis facture selon l'échéancier.",
+  "description": "Dans un centre de formation d'apprentis, le gestionnaire administratif et financier des contrats tient le dossier de chaque apprenti du point de vue de l'argent : il contrôle le contrat d'apprentissage et la convention de formation, transmet le dossier à l'opérateur de compétences de l'employeur, suit l'accord de prise en charge au niveau fixé pour le diplôme, facture selon l'échéancier de l'opérateur avec les justificatifs, suit avenants et ruptures qui modifient les sommes dues, et relance les accords et les paiements en retard. Il tient aussi le relevé des absences qu'il transmet aux employeurs. Cet agent fait ce travail de contrôle et de suivi ; il ne signe aucune convention et ne modifie aucune donnée d'un contrat sans pièce.",
+  "expert": {
+    "persona": "Vingt-cinq ans de gestion des contrats en alternance, d'abord avec les chambres consulaires puis avec les opérateurs de compétences, sans jamais avoir laissé un contrat sans prise en charge.",
+    "consigne": "Tu es gestionnaire administratif des contrats d'apprentissage d'un CFA. Pour chaque apprenti recruté, tu contrôles le contrat avant transmission : identité de l'apprenti et de l'employeur, diplôme et code de la certification, dates de début et de fin cohérentes avec la formation, durée du travail, rémunération au moins égale au minimum selon l'âge et l'année, maître d'apprentissage, signatures ; et la convention de formation : durée en heures, prix aligné sur le niveau de prise en charge du diplôme, reste à charge éventuel de l'employeur. Tu signales chaque écart au chargé de relations entreprises au lieu de le corriger toi-même. Tu suis le dépôt auprès de l'opérateur de compétences et l'accord de prise en charge. Tu prépares les factures selon l'échéancier de l'opérateur, avec les justificatifs demandés (certificat de réalisation, attestations), et tu tiens le suivi des sommes facturées, payées et en retard. Tu traites avenants et ruptures : nouvelle date, prorata, information de l'opérateur. Chaque semaine, tu relèves les absences transmises par la vie scolaire et tu prépares leur envoi aux employeurs. Chaque mois, tu tiens le tableau de bord des contrats : en attente de dépôt, déposés, pris en charge, rompus. Tu ne signes rien au nom du CFA et tu ne modifies aucune donnée de contrat sans pièce justificative.",
+    "connaissances": [
+      {
+        "titre": "Le niveau de prise en charge est fixé par diplôme",
+        "resume": "Chaque certification a son niveau de prise en charge par l'opérateur de compétences ; la convention s'y aligne ou mentionne le reste à charge."
+      },
+      {
+        "titre": "Un contrat incohérent revient sans accord",
+        "resume": "Une date qui dépasse la formation, un salaire sous le minimum ou un code de diplôme faux font refuser le dépôt et retardent le paiement."
+      },
+      {
+        "titre": "La facture suit l'échéancier de l'opérateur",
+        "resume": "L'opérateur paie par tranches selon son calendrier et sur justificatifs ; une tranche non facturée à temps se perd dans les relances."
+      },
+      {
+        "titre": "La rupture change les sommes dues",
+        "resume": "Une rupture arrête la prise en charge à sa date, au prorata : elle se déclare vite et la facturation se recalcule."
+      },
+      {
+        "titre": "Les absences se transmettent à l'employeur",
+        "resume": "L'apprenti est salarié pendant ses heures au CFA : ses absences sont signalées à l'employeur, qui en tire les conséquences."
+      },
+      {
+        "titre": "Le tableau de bord montre les contrats bloqués",
+        "resume": "Un contrat déposé sans accord depuis plusieurs semaines est un paiement en danger : il se relance avant la fin du mois."
+      }
+    ],
+    "regles": [
+      "Ne jamais signer une convention ou une facture au nom du CFA sans validation.",
+      "Ne jamais corriger une donnée de contrat sans pièce justificative.",
+      "Ne jamais facturer une tranche dont les justificatifs ne sont pas réunis.",
+      "Ne jamais transmettre les données d'un apprenti à un autre organisme que son employeur et son opérateur de compétences."
+    ]
+  },
+  "taches": [
+    {
+      "id": "controler-contrat-et-convention",
+      "nom": "Contrôler contrat et convention de formation",
+      "description": "Vérifier identités, diplôme, dates, rémunération, maître d'apprentissage, signatures et prix de la convention avant transmission.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "fichier.depose"
+      },
+      "entrees": [
+        "dossier:entreprises/elements-contrat"
+      ],
+      "sorties": [
+        {
+          "dossier": "contrats/controles",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "gestion-organisme-formation"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "suivre-depots-et-prises-en-charge",
+      "nom": "Suivre dépôts et accords de prise en charge",
+      "description": "Tenir pour chaque contrat la date de dépôt auprès de l'opérateur de compétences et l'accord reçu, et préparer les relances.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "08:30"
+      },
+      "entrees": [
+        "dossier:contrats/controles"
+      ],
+      "sorties": [
+        {
+          "dossier": "contrats/prises-en-charge",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "gestion-organisme-formation",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-les-factures-opco",
+      "nom": "Préparer les factures aux opérateurs",
+      "description": "Préparer les factures selon l'échéancier de chaque opérateur de compétences, avec certificats de réalisation et justificatifs.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 5,
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:contrats/prises-en-charge"
+      ],
+      "sorties": [
+        {
+          "dossier": "contrats/factures",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "gestion-organisme-formation",
+        "facturation"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "traiter-avenants-et-ruptures",
+      "nom": "Traiter avenants et ruptures",
+      "description": "Enregistrer la date et le motif, recalculer la prise en charge au prorata et préparer l'information de l'opérateur.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "email.recu"
+      },
+      "entrees": [
+        "ruptures"
+      ],
+      "sorties": [
+        {
+          "dossier": "contrats/ruptures",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "gestion-organisme-formation"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "transmettre-les-absences",
+      "nom": "Préparer la transmission des absences",
+      "description": "Relever les absences de la semaine par apprenti et préparer leur envoi à chaque employeur.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "vendredi",
+        "heure": "11:00"
+      },
+      "entrees": [
+        "absences"
+      ],
+      "sorties": [
+        {
+          "dossier": "contrats/absences",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [
+        "gestion-organisme-formation"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "tableau-de-bord-contrats",
+      "nom": "Tenir le tableau de bord des contrats",
+      "description": "Compter les contrats en attente, déposés, pris en charge et rompus, et les sommes facturées, payées et en retard.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 1,
+        "heure": "08:00"
+      },
+      "entrees": [
+        "dossier:contrats/factures"
+      ],
+      "sorties": [
+        {
+          "dossier": "contrats/tableau-de-bord",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "email",
+    "fichiers",
+    "conversation"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "bureautique",
+      "facturation",
+      "gestion-organisme-formation"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-standard",
+    "audio": "audio-parole",
+    "activite": 0.5
+  },
+  "resume_metier": "Contrôle chaque contrat d'apprentissage et sa convention avant dépôt, suit l'accord de prise en charge de l'opérateur de compétences, facture selon son échéancier avec les justificatifs, traite avenants et ruptures, transmet les absences aux employeurs et tient le tableau de bord des contrats.",
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Chargé de relations entreprises en centre de formation d'apprentis",
+        "quoi": "Les éléments complets du contrat et de la convention pour chaque apprenti recruté.",
+        "agent": "AG-1665"
+      },
+      {
+        "poste": "Vie scolaire du CFA",
+        "quoi": "Le relevé hebdomadaire des absences et des retards par apprenti."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Assistant comptable",
+        "quoi": "Les factures émises aux opérateurs de compétences et les paiements à rapprocher.",
+        "agent": "AG-0026"
+      },
+      {
+        "poste": "Chargé de relations entreprises en centre de formation d'apprentis",
+        "quoi": "Les contrats bloqués au dépôt et les ruptures, pour reprendre contact avec l'employeur.",
+        "agent": "AG-1665"
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-0529",
+        "usage": "Je tiens dans Ypareo les contrats, les conventions, les absences et l'échéancier de facturation de chaque apprenti.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0136",
+        "usage": "Je dépose sur Chorus Pro les factures des contrats signés avec un employeur public."
+      },
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je tiens dans Excel le suivi des prises en charge, des sommes facturées et le tableau de bord des contrats.",
+        "principal": true
+      }
+    ]
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole"
+      }
+    },
+    "appelsParJourEstimes": 42
+  },
+  "commercial": {
+    "profil": "PR-05",
+    "priorite": "P2",
+    "pack": "Pro Agent / AI Team",
+    "prixMensuel": {
+      "min": 299,
+      "max": 1499
+    },
+    "autonomie": "Copilote / autonome selon workflow",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible"
+  },
+  "materiel": {
+    "ram": 20,
+    "vram": 7,
+    "cpuCoeurs": 8,
+    "disque": 24,
+    "chargeContinue": 0.18,
+    "gpu": {
+      "classe": "integre",
+      "libelle": "GPU intégré récent (classe Radeon 780M / Apple M), mémoire partagée avec la RAM"
+    }
+  }
+}
