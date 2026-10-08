@@ -1,6 +1,6 @@
 # Coût par agent et par mois — API seule contre Local-Agent
 
-Généré par `outils/economie.ts` le 2026-10-08 sur 1306 fiches. Hypothèses dans `dimensionnement/tarifs-api.json` (version 2026-09-19) : 12 000 jetons d'entrée par tour dont 70 % en cache, 800 en sortie, 6 tours par exécution (+4 avec navigateur, +3 pour un document lourd), 20 % des exécutions restent par l'API chez Local-Agent, matériel amorti sur 12 mois, électricité 0.25 €/kWh, un poste N150 par agent. **Ce sont des hypothèses, pas des mesures** : à remplacer par les moyennes relevées dès que des agents tournent.
+Généré par `outils/economie.ts` le 2026-10-08 sur 1307 fiches. Hypothèses dans `dimensionnement/tarifs-api.json` (version 2026-09-19) : 12 000 jetons d'entrée par tour dont 70 % en cache, 800 en sortie, 6 tours par exécution (+4 avec navigateur, +3 pour un document lourd), 20 % des exécutions restent par l'API chez Local-Agent, matériel amorti sur 12 mois, électricité 0.25 €/kWh, un poste N150 par agent. **Ce sont des hypothèses, pas des mesures** : à remplacer par les moyennes relevées dès que des agents tournent.
 
 Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que l'API seule. « Partagé » = le bundle d'un petit client porte un mélange d'agents et celui-ci paie sa part de charge (5 % au minimum) ; « seul » = un seul agent sur son bundle, le pire cas ; « en flotte » = sa part sur le bundle au meilleur prix par unité de puissance (gros client).
 
@@ -1255,6 +1255,7 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1254 Coordinateur approbation nouveaux projets | 756 | 99 € | 247 € | 57 € | 20 € | 37 € | 1.7× ✗ | 1.6× ✗ | 34 € | S (1/bundle) | 2 800 € |
 | AG-1255 Specialiste innovation produits | 753 | 77 € | 193 € | 65 € | 15 € | 49 € | 1.2× ✗ | 0.3× ✗ | 48 € | L (6/bundle) | 2 800 € |
 | AG-1256 Agent suivi tendances marchés | 306 | 29 € | 72 € | 55 € | 6 € | 49 € | 0.5× ✗ | 0.1× ✗ | 48 € | L (6/bundle) | 2 800 € |
+| AG-1257 Graphiste prépresse | 1689 | 173 € | 432 € | 116 € | 35 € | 82 € | 1.5× ✗ | 1.1× ✗ | 58 € | M (1/bundle) | 2 800 € |
 | AG-1300 Deviseur en industrie graphique | 1655 | 175 € | 439 € | 105 € | 35 € | 70 € | 1.7× ✗ | 0.4× ✗ | 70 € | XL (7/bundle) | 2 800 € |
 | AG-1301 Opérateur prépresse | 1230 | 123 € | 307 € | 106 € | 25 € | 82 € | 1.2× ✗ | 0.8× ✗ | 58 € | M (1/bundle) | 2 800 € |
 | AG-1302 Technicien CTP et flux RIP | 939 | 89 € | 223 € | 89 € | 18 € | 71 € | 1.0× ✗ | 0.7× ✗ | 51 € | M (1/bundle) | 2 800 € |
@@ -1313,6 +1314,6 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1394 Assistant de programme immobilier | 1389 | 194 € | 485 € | 86 € | 39 € | 47 € | 2.3× ✗ | 0.7× ✗ | 45 € | L (6/bundle) | 2 800 € |
 | AG-1395 Secrétaire commercial automobile | 1084 | 117 € | 292 € | 70 € | 23 € | 47 € | 1.7× ✗ | 0.5× ✗ | 45 € | L (6/bundle) | 2 800 € |
 
-**57 fiches sur 1306 tiennent la règle des 3× en bundle partagé, 21 avec un agent seul sur son bundle.** Un agent seul sur un bundle à carte dédiée (image, vidéo) ne la tient pas : le bundle doit être partagé ou l'agent vendu en mode API.
+**57 fiches sur 1307 tiennent la règle des 3× en bundle partagé, 21 avec un agent seul sur son bundle.** Un agent seul sur un bundle à carte dédiée (image, vidéo) ne la tient pas : le bundle doit être partagé ou l'agent vendu en mode API.
 
 Lecture : un employé au coût employeur médian revient à 2 800 € par mois, un SMIC chargé à 2 100 €. L'abonnement à l'agent (prix cible du catalogue) s'ajoute aux colonnes Local-Agent et n'entre pas dans la règle des 3×.
