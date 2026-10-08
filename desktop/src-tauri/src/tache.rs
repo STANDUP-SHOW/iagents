@@ -903,6 +903,83 @@ pub fn dossier_de_travail(prenom: String, fiche_id: String) -> Result<String, St
     }
 }
 
+/// Les dossiers où un agent a le droit d'écrire : le sien, et ceux que le
+/// client lui a désignés. C'est hors de là que `montrer_resultat` refuse.
+fn dossiers_permis(agent: &serde_json::Value, prenom: &str) -> Result<Vec<PathBuf>, String> {
+    let mut permis = vec![match agent.get("racine").and_then(serde_json::Value::as_str).map(str::trim) {
+        Some(r) if !r.is_empty() => PathBuf::from(r),
+        _ => dossier_par_defaut(prenom)?,
+    }];
+    if let Some(d) = agent.get("dossiers").and_then(serde_json::Value::as_object) {
+        permis.extend(d.values().filter_map(serde_json::Value::as_str).map(PathBuf::from));
+    }
+    Ok(permis)
+}
+
+/// Un fichier n'est montré que s'il vit sous un dossier permis, une fois les
+/// `..` et les liens résolus : sans ça, l'écran ouvrirait n'importe quoi.
+pub fn chemin_montrable(fichier: &Path, permis: &[PathBuf]) -> bool {
+    let Ok(f) = fichier.canonicalize() else { return false };
+    permis.iter().filter_map(|d| d.canonicalize().ok()).any(|d| f.starts_with(&d))
+}
+
+/// Montre au client, dans l'explorateur de son système, le dossier de travail
+/// de l'agent, ou un résultat qu'il vient d'écrire, sélectionné dans son
+/// dossier. Rien n'est lancé : le fichier est montré, pas exécuté, et le client
+/// l'ouvre lui-même. Sans ce bouton, « écrit dans C:\…\devis.pdf » laissait le
+/// client recopier un chemin à la main.
+#[tauri::command]
+pub fn montrer_resultat(prenom: String, fiche_id: String, fichier: Option<String>) -> Result<(), String> {
+    let installation: serde_json::Value = serde_json::from_str(&crate::fiches::lire_installation()?)
+        .map_err(|e| format!("installation illisible : {}", e))?;
+    let agent = agent_installe(&installation, &prenom, &fiche_id)?;
+    let permis = dossiers_permis(&agent, &prenom)?;
+    let cible = match fichier {
+        Some(f) => {
+            let f = PathBuf::from(f);
+            if !chemin_montrable(&f, &permis) {
+                return Err(format!("Ce fichier n'est pas dans un dossier de {} : il n'est pas montré.", prenom));
+            }
+            Some(f)
+        }
+        None => None,
+    };
+    let dossier = permis[0].clone();
+    if cible.is_none() {
+        std::fs::create_dir_all(&dossier).map_err(|e| format!("Le dossier de {} n'a pas pu être créé : {}", prenom, e))?;
+    }
+    let resultat = montrer(&dossier, cible.as_deref());
+    resultat.map_err(|e| format!("L'explorateur de fichiers ne s'est pas ouvert : {}", e))
+}
+
+#[cfg(target_os = "windows")]
+fn montrer(dossier: &Path, fichier: Option<&Path>) -> std::io::Result<()> {
+    let mut c = std::process::Command::new("explorer.exe");
+    match fichier {
+        // One argument, as Explorer expects it: « /select,<path> ».
+        Some(f) => c.arg(format!("/select,{}", f.display())),
+        None => c.arg(dossier),
+    };
+    c.spawn().map(|_| ())
+}
+
+#[cfg(target_os = "macos")]
+fn montrer(dossier: &Path, fichier: Option<&Path>) -> std::io::Result<()> {
+    let mut c = std::process::Command::new("open");
+    match fichier {
+        Some(f) => c.arg("-R").arg(f),
+        None => c.arg(dossier),
+    };
+    c.spawn().map(|_| ())
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+fn montrer(dossier: &Path, fichier: Option<&Path>) -> std::io::Result<()> {
+    // xdg-open has no « select »: the folder holding the file is opened.
+    let d = fichier.and_then(Path::parent).unwrap_or(dossier);
+    std::process::Command::new("xdg-open").arg(d).spawn().map(|_| ())
+}
+
 #[derive(Debug, Deserialize)]
 struct SortieDeclaree {
     dossier: String,
@@ -2139,4 +2216,21 @@ mod tests {
         .unwrap_err();
         assert!(e.contains("autre-chose"), "{}", e);
     }
+    #[test]
+    fn un_fichier_hors_des_dossiers_de_l_agent_n_est_pas_montre() {
+        let base = std::env::temp_dir().join(format!("iagent-montrer-{}", std::process::id()));
+        let chez_lui = base.join("Carla");
+        let ailleurs = base.join("ailleurs");
+        std::fs::create_dir_all(&chez_lui).unwrap();
+        std::fs::create_dir_all(&ailleurs).unwrap();
+        std::fs::write(chez_lui.join("devis.pdf"), b"x").unwrap();
+        std::fs::write(ailleurs.join("secret.txt"), b"x").unwrap();
+        let permis = vec![chez_lui.clone()];
+        assert!(super::chemin_montrable(&chez_lui.join("devis.pdf"), &permis));
+        assert!(!super::chemin_montrable(&ailleurs.join("secret.txt"), &permis));
+        assert!(!super::chemin_montrable(&chez_lui.join("..").join("ailleurs").join("secret.txt"), &permis));
+        assert!(!super::chemin_montrable(&chez_lui.join("absent.pdf"), &permis));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
 }

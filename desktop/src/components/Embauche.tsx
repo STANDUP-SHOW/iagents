@@ -18,6 +18,7 @@ import {
   type Reponse,
 } from '../agents/entretien'
 import type { Sexe } from '../agents/fiche'
+import { visagesProposes } from '../shell/portraits'
 
 /**
  * Le parcours d'embauche.
@@ -44,7 +45,24 @@ const ETAPES: { cle: Etape; titre: string }[] = [
   { cle: 'recapitulatif', titre: 'Ce qu’il a compris' },
 ]
 
-export default function Embauche() {
+export default function Embauche({
+  ficheInitiale,
+  activiteInitiale,
+  apresEmbauche,
+  onVoir,
+  compact = false,
+}: {
+  /** A card chosen in the catalogue: the interview starts on it. */
+  ficheInitiale?: string
+  /** What the client searched by (« imprimerie »): the client's answer on the activity, already given. */
+  activiteInitiale?: string
+  /** Told once installation.json is written, so the rest of the app re-reads it. */
+  apresEmbauche?: (prenom: string) => void
+  /** « Voir Julie » once hired: opens the agent. */
+  onVoir?: (prenom: string) => void
+  /** Inside the hiring page: no page title, the catalogue does the choosing. */
+  compact?: boolean
+} = {}) {
   const [etape, setEtape] = useState<Etape>('identite')
   const [erreur, setErreur] = useState('')
   const [enregistre, setEnregistre] = useState('')
@@ -59,7 +77,7 @@ export default function Embauche() {
   const [prenom, setPrenom] = useState('')
   const [sexe, setSexe] = useState<Sexe | ''>('')
   const [photo, setPhoto] = useState('')
-  const [voix, setVoix] = useState('')
+  const [voix] = useState('')
 
   const [activite, setActivite] = useState<Activite | null>(null)
   const [reponsesCadre, setReponsesCadre] = useState<Record<string, string>>({})
@@ -76,6 +94,30 @@ export default function Embauche() {
       .then((brut) => setRefActivites(JSON.parse(brut)))
       .catch((e) => setErreur(String(e)))
   }, [])
+
+  useEffect(() => {
+    if (ficheInitiale && ficheInitiale !== ficheId) {
+      setEtape('identite')
+      setEnregistre('')
+      void chargerFiche(ficheInitiale)
+    }
+  }, [ficheInitiale])
+
+  useEffect(() => {
+    if (activiteInitiale && refActivites && reponsesCadre.activite === undefined) direActivite(activiteInitiale)
+  }, [activiteInitiale, refActivites])
+
+  // A second hire starts clean: same page, nothing of the previous one kept.
+  const recommencer = () => {
+    setEnregistre('')
+    setPrenom('')
+    setSexe('')
+    setPhoto('')
+    setReponsesCadre({})
+    setReponsesOutils({})
+    setActivite(null)
+    setEtape('identite')
+  }
 
   const chargerFiche = async (id: string) => {
     setErreur('')
@@ -170,8 +212,9 @@ export default function Embauche() {
         null,
         2
       )
-      const chemin = await invoke<string>('installation_ecrire', { contenu })
-      setEnregistre(`${prenom.trim()} est embauché. Configuration écrite dans ${chemin}.`)
+      await invoke<string>('installation_ecrire', { contenu })
+      setEnregistre(`${prenom.trim()} a rejoint votre équipe.`)
+      apresEmbauche?.(prenom.trim())
     } catch (e) {
       setErreur(String(e))
     }
@@ -180,8 +223,8 @@ export default function Embauche() {
   const identitePrete = ficheId.length > 0 && fiche !== null && prenom.trim().length > 0
 
   return (
-    <div className="embauche">
-      <h2>Embaucher un agent</h2>
+    <div className={compact ? 'embauche embauche-compacte' : 'embauche'}>
+      {!compact && <h2>Embaucher un agent</h2>}
 
       <ol className="etapes">
         {ETAPES.map((e) => (
@@ -192,7 +235,6 @@ export default function Embauche() {
       </ol>
 
       {erreur && <div className="error-banner">{erreur}</div>}
-      {enregistre && <div className="succes-banner">{enregistre}</div>}
 
       {etape === 'identite' && (
         <section>
@@ -201,6 +243,8 @@ export default function Embauche() {
             Choisissez le poste, donnez-lui un prénom. C'est tout ce que vous remplissez :
             le reste, c'est lui qui vous le demandera.
           </p>
+          {!(compact && fiche) && (
+            <>
           <input
             type="text"
             placeholder="cherchez un poste : facturation, paie, atelier…"
@@ -221,6 +265,8 @@ export default function Embauche() {
               ? ' Affinez votre recherche pour voir les suivants.'
               : ''}
           </p>
+            </>
+          )}
           {fiche && <p className="precision">Poste reconnu : {fiche.nom}.</p>}
           <div className="ligne">
             <input
@@ -249,22 +295,26 @@ export default function Embauche() {
         <section>
           <h3>Sa voix, son visage</h3>
           <p className="precision">
-            Une seule voix française est installée pour l'instant, et c'est elle qui parlera
-            quoi que vous choisissiez ici. Le choix de voix comptera le jour où les autres
-            voix seront livrées ; ce que vous mettez est conservé jusque-là.
+            Il parlera avec la voix française installée sur ce poste. Le choix de la voix
+            viendra avec les autres voix.
           </p>
-          <input
-            type="text"
-            placeholder="identifiant de voix (facultatif)"
-            value={voix}
-            onChange={(e) => setVoix(e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="chemin d'une photo sur votre poste (facultatif)"
-            value={photo}
-            onChange={(e) => setPhoto(e.target.value)}
-          />
+          <p className="precision">
+            Touchez le visage de {prenom.trim() || 'votre agent'}. Sans choix, il garde le portrait de son métier.
+          </p>
+          <div className="choix-visages" role="radiogroup" aria-label="Son visage">
+            {visagesProposes(sexe).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="radio"
+                aria-checked={photo === v}
+                className={`choix-visage${photo === v ? ' choisi' : ''}`}
+                onClick={() => setPhoto(photo === v ? '' : v)}
+              >
+                <img src={v} alt="" />
+              </button>
+            ))}
+          </div>
           <div className="ligne">
             <button onClick={() => setEtape('entretien')}>Passer à l'entretien</button>
             <button className="lien" onClick={() => setEtape('identite')}>
@@ -364,12 +414,22 @@ export default function Embauche() {
             Ce qui reste à préciser peut l'être plus tard : il le redemandera plutôt que de
             choisir à votre place.
           </p>
-          <div className="ligne">
-            <button onClick={embaucher}>Embaucher {prenom.trim()}</button>
-            <button className="lien" onClick={() => setEtape('entretien')}>
-              Reprendre l'entretien
-            </button>
-          </div>
+          {enregistre && <div className="succes-banner">{enregistre}</div>}
+          {enregistre ? (
+            <div className="ligne">
+              {onVoir && <button onClick={() => onVoir(prenom.trim())}>Voir {prenom.trim()}</button>}
+              <button className="lien" onClick={recommencer}>
+                Embaucher quelqu'un d'autre
+              </button>
+            </div>
+          ) : (
+            <div className="ligne">
+              <button onClick={embaucher}>Embaucher {prenom.trim()}</button>
+              <button className="lien" onClick={() => setEtape('entretien')}>
+                Reprendre l'entretien
+              </button>
+            </div>
+          )}
         </section>
       )}
     </div>
