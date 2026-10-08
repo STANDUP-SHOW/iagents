@@ -6,7 +6,7 @@ import agents from './loader.js';
 import catalogue from '../../../catalogue/catalogue.json';
 import logicielsJson from '../../../catalogue/logiciels.json';
 import activitesJson from '../../../catalogue/activites.json';
-import { activitesReconnues, cerclesDeLActivite, coeurDeLActivite, estTransversal } from './activites-recherche.js';
+import { activitesReconnues, cerclesDeLActivite, coeurDeLActivite, estTransversal, personnelDeLActivite } from './activites-recherche.js';
 import { slugifier } from '../../seo/slug.mjs';
 
 const LOGICIELS = logicielsJson.logiciels;
@@ -141,10 +141,11 @@ const racinesDesMetiers = new Set(ACTIVITES.flatMap((a) => racinesDe([a.nom, ...
  * proposes, before any ready-made cycle.
  */
 /**
- * The heart of the trades a request names (estimator, workshop, production),
- * each job under the name the trade gives its role, the first trade first.
+ * The staff of the trades a request names (estimator, production, management,
+ * office), each job under the name the trade gives its role and with its
+ * service, the first trade first. A print shop's staff alone is sixteen jobs.
  */
-export function coeurPourDemande(idee, limite = 8) {
+export function coeurPourDemande(idee, limite = 24) {
   // Two recognized activities both bring an estimator: keep the first one,
   // the role is what the visitor reads.
   const vus = new Set();
@@ -154,6 +155,12 @@ export function coeurPourDemande(idee, limite = 8) {
     .flatMap((a) => coeurDeLActivite(a, agents))
     .filter(({ fiche, role }) => !vus.has(fiche.id) && !roles.has(cle(role)) && vus.add(fiche.id) && roles.add(cle(role)))
     .slice(0, limite);
+}
+
+/** The hands-on jobs of the first trade a request names, which stay people: [{ metier, fiche }]. */
+export function terrainPourDemande(idee) {
+  const [activite] = activitesDeLaRecherche(idee);
+  return activite ? personnelDeLActivite(activite, agents)?.terrain ?? [] : [];
 }
 
 export function agentsPourDemande(idee, limite = 8) {

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import agents from '../data/loader.js';
 import { CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee } from '../data/offres.js';
-import { agentsPourDemande, coeurPourDemande, logicielsPourDemande } from '../data/recherche.js';
+import { agentsPourDemande, coeurPourDemande, logicielsPourDemande, terrainPourDemande } from '../data/recherche.js';
 import ConseilMachine from './ConseilMachine.jsx';
 
 function LigneAgent({ id, coche, onBasculer, role }) {
@@ -45,6 +45,7 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
 
   const activites = useMemo(() => activitesPourIdee(idee), [idee]);
   const coeur = useMemo(() => coeurPourDemande(idee), [idee]);
+  const terrain = useMemo(() => terrainPourDemande(idee), [idee]);
   const logiciels = useMemo(() => logicielsPourDemande(idee), [idee]);
   const pourLaDemande = useMemo(() => {
     const deja = new Set(coeur.map((c) => c.fiche.id));
@@ -89,11 +90,21 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
       {coeur.length > 0 && (
         <div className="card border-2 border-rose-500/50">
           <p className="text-xs font-mono text-rose-300">Le cœur de votre métier</p>
-          <h3 className="font-display text-lg text-white mb-1">Les postes qui font tourner votre activité : devis, production, suivi</h3>
-          <p className="text-xs text-nuit-400 mb-3">Le deviseur qui chiffre chaque demande de client, ceux qui planifient l'atelier et suivent la production. Décochez ceux que vous avez déjà.</p>
-          <div className="grid md:grid-cols-2 gap-x-6">
-            {coeur.map(({ role, fiche }) => <LigneAgent key={fiche.id} id={fiche.id} role={role} coche={!retires.has(fiche.id)} onBasculer={basculer} />)}
-          </div>
+          <h3 className="font-display text-lg text-white mb-1">Tout le personnel d'une entreprise de votre branche</h3>
+          <p className="text-xs text-nuit-400 mb-3">Sous les vrais noms des postes : le deviseur qui chiffre chaque demande, ceux qui préparent et suivent la production, la direction et l'administration. Décochez ceux que vous avez déjà.</p>
+          {[...new Set(coeur.map((c) => c.service))].map((service) => (
+            <div key={service} className="mb-3">
+              <p className="text-sm font-semibold text-rose-200 mb-1">{service}</p>
+              <div className="grid md:grid-cols-2 gap-x-6">
+                {coeur.filter((c) => c.service === service).map(({ role, fiche }) => <LigneAgent key={fiche.id} id={fiche.id} role={role} coche={!retires.has(fiche.id)} onBasculer={basculer} />)}
+              </div>
+            </div>
+          ))}
+          {terrain.length > 0 && (
+            <p className="text-xs text-nuit-300 mt-1">
+              Sur le terrain, vos équipes restent les vôtres : {terrain.map((t) => t.metier.charAt(0).toLowerCase() + t.metier.slice(1)).join(', ')}. Vos agents préparent leur travail, ils ne prennent pas leur place.
+            </p>
+          )}
         </div>
       )}
 

@@ -1,6 +1,6 @@
 # Coût par agent et par mois — API seule contre Local-Agent
 
-Généré par `outils/economie.ts` le 2026-10-08 sur 1255 fiches. Hypothèses dans `dimensionnement/tarifs-api.json` (version 2026-09-19) : 12 000 jetons d'entrée par tour dont 70 % en cache, 800 en sortie, 6 tours par exécution (+4 avec navigateur, +3 pour un document lourd), 20 % des exécutions restent par l'API chez Local-Agent, matériel amorti sur 12 mois, électricité 0.25 €/kWh, un poste N150 par agent. **Ce sont des hypothèses, pas des mesures** : à remplacer par les moyennes relevées dès que des agents tournent.
+Généré par `outils/economie.ts` le 2026-10-08 sur 1306 fiches. Hypothèses dans `dimensionnement/tarifs-api.json` (version 2026-09-19) : 12 000 jetons d'entrée par tour dont 70 % en cache, 800 en sortie, 6 tours par exécution (+4 avec navigateur, +3 pour un document lourd), 20 % des exécutions restent par l'API chez Local-Agent, matériel amorti sur 12 mois, électricité 0.25 €/kWh, un poste N150 par agent. **Ce sont des hypothèses, pas des mesures** : à remplacer par les moyennes relevées dès que des agents tournent.
 
 Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que l'API seule. « Partagé » = le bundle d'un petit client porte un mélange d'agents et celui-ci paie sa part de charge (5 % au minimum) ; « seul » = un seul agent sur son bundle, le pire cas ; « en flotte » = sa part sur le bundle au meilleur prix par unité de puissance (gros client).
 
@@ -1261,7 +1261,58 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1303 Correcteur-lecteur d'imprimerie | 1200 | 147 € | 367 € | 74 € | 29 € | 45 € | 2.0× ✗ | 0.6× ✗ | 43 € | L (7/bundle) | 2 800 € |
 | AG-1304 Chef de fabrication en industrie graphique | 1084 | 110 € | 274 € | 73 € | 22 € | 51 € | 1.5× ✗ | 0.5× ✗ | 49 € | L (6/bundle) | 2 800 € |
 | AG-1305 Chef d'atelier d'imprimerie | 274 | 31 € | 78 € | 59 € | 6 € | 53 € | 0.5× ✗ | 0.1× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1310 Technicien méthodes et industrialisation | 755 | 92 € | 229 € | 78 € | 18 € | 60 € | 1.2× ✗ | 0.2× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1311 Programmeur en commande numérique et CFAO | 1655 | 168 € | 421 € | 120 € | 34 € | 86 € | 1.4× ✗ | 0.4× ✗ | 86 € | XL (5/bundle) | 2 800 € |
+| AG-1312 Dessinateur-projeteur en mécanique | 1830 | 191 € | 479 € | 98 € | 38 € | 60 € | 1.9× ✗ | 0.4× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1313 Technicien qualité en industrie | 1205 | 154 € | 386 € | 94 € | 31 € | 63 € | 1.6× ✗ | 0.3× ✗ | 63 € | XL (8/bundle) | 2 800 € |
+| AG-1314 Chargé d'affaires réglementaires | 2254 | 252 € | 630 € | 130 € | 50 € | 79 € | 1.9× ✗ | 0.5× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1315 Modéliste industriel textile, chaussure et cuir | 1354 | 175 € | 438 € | 91 € | 35 € | 56 € | 1.9× ✗ | 0.4× ✗ | 56 € | XL (10/bundle) | 2 800 € |
+| AG-1316 Technicien hygiène sécurité environnement | 1506 | 183 € | 456 € | 100 € | 37 € | 63 € | 1.8× ✗ | 0.4× ✗ | 63 € | XL (8/bundle) | 2 800 € |
+| AG-1317 Responsable sécurité sanitaire des aliments | 1082 | 115 € | 287 € | 86 € | 23 € | 63 € | 1.3× ✗ | 0.3× ✗ | 63 € | XL (8/bundle) | 2 800 € |
+| AG-1320 Chargé d'affaires du bâtiment | 1535 | 185 € | 463 € | 90 € | 37 € | 53 € | 2.1× ✗ | 0.7× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1321 Technicien de bureau d'études en électricité | 1950 | 245 € | 611 € | 128 € | 49 € | 79 € | 1.9× ✗ | 0.5× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1322 Technicien d'études en génie climatique | 1950 | 245 € | 611 € | 128 € | 49 € | 79 € | 1.9× ✗ | 0.5× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1323 Dessinateur-projeteur du bâtiment | 1830 | 193 € | 482 € | 99 € | 39 € | 60 € | 2.0× ✗ | 0.4× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1324 Économiste de la construction | 1801 | 224 € | 559 € | 131 € | 45 € | 86 € | 1.7× ✗ | 0.5× ✗ | 86 € | XL (5/bundle) | 2 800 € |
+| AG-1325 Chargé d'études photovoltaïques | 1354 | 161 € | 403 € | 92 € | 32 € | 60 € | 1.8× ✗ | 0.4× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1326 Gestionnaire de dossiers d'aides à la rénovation énergétique | 1680 | 193 € | 482 € | 89 € | 39 € | 51 € | 2.2× ✗ | 0.7× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1327 Chargé d'études amiante et démolition | 1234 | 138 € | 344 € | 107 € | 28 € | 79 € | 1.3× ✗ | 0.3× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1328 Technicien géomètre-topographe | 1804 | 189 € | 473 € | 98 € | 38 € | 60 € | 1.9× ✗ | 0.4× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1330 Chef de fabrication en boulangerie-pâtisserie | 815 | 114 € | 284 € | 73 € | 23 € | 51 € | 1.6× ✗ | 0.5× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1331 Chef de laboratoire en boucherie-charcuterie-traiteur | 1419 | 198 € | 495 € | 103 € | 40 € | 63 € | 1.9× ✗ | 0.4× ✗ | 63 € | XL (8/bundle) | 2 800 € |
+| AG-1332 Chef de laboratoire en chocolaterie, confiserie et glacerie | 1060 | 148 € | 370 € | 77 € | 30 € | 47 € | 1.9× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1340 Responsable de magasin | 194 | 26 € | 64 € | 56 € | 5 € | 51 € | 0.5× ✗ | 0.1× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1341 Préparateur en pharmacie, gestion et tiers payant | 100 | 13 € | 31 € | 50 € | 3 € | 47 € | 0.3× ✗ | 0.1× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1342 Opticien-lunetier, devis et tiers payant | 460 | 64 € | 160 € | 73 € | 13 € | 60 € | 0.9× ✗ | 0.1× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1343 Caviste | 910 | 127 € | 317 € | 70 € | 25 € | 45 € | 1.8× ✗ | 0.5× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1344 Responsable de salon de coiffure et d'institut de beauté | 790 | 74 € | 185 € | 55 € | 15 € | 40 € | 1.3× ✗ | 0.6× ✗ | 40 € | M (4/bundle) | 2 800 € |
+| AG-1350 Secrétaire-comptable d'exploitation agricole | 762 | 99 € | 249 € | 66 € | 20 € | 46 € | 1.5× ✗ | 0.2× ✗ | 46 € | XL (13/bundle) | 2 800 € |
+| AG-1351 Technicien d'élevage | 1385 | 164 € | 411 € | 80 € | 33 € | 47 € | 2.0× ✗ | 2.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1352 Responsable de vente directe en exploitation agricole | 940 | 131 € | 328 € | 65 € | 26 € | 39 € | 2.0× ✗ | 1.9× ✗ | 35 € | S (1/bundle) | 2 800 € |
+| AG-1353 Maître de chai | 1531 | 186 € | 465 € | 79 € | 37 € | 42 € | 2.3× ✗ | 2.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1354 Directeur de centre équestre | 764 | 79 € | 197 € | 52 € | 16 € | 36 € | 1.5× ✗ | 1.3× ✗ | 33 € | S (1/bundle) | 2 800 € |
+| AG-1355 Conducteur de travaux en entreprise de travaux agricoles | 969 | 128 € | 321 € | 64 € | 26 € | 39 € | 2.0× ✗ | 1.8× ✗ | 35 € | S (1/bundle) | 2 800 € |
+| AG-1356 Technicien forestier | 1055 | 147 € | 369 € | 71 € | 29 € | 42 € | 2.1× ✗ | 0.3× ✗ | 42 € | XL (15/bundle) | 2 800 € |
+| AG-1357 Chargé d'armement à la pêche et en conchyliculture | 790 | 109 € | 272 € | 65 € | 22 € | 44 € | 1.7× ✗ | 1.7× ✗ | 30 € | S (1/bundle) | 2 800 € |
+| AG-1358 Chef de culture | 794 | 110 € | 274 € | 73 € | 22 € | 51 € | 1.5× ✗ | 1.5× ✗ | 40 € | S (1/bundle) | 2 800 € |
+| AG-1360 Attaché d'exploitation déchets | 301 | 38 € | 95 € | 58 € | 8 € | 51 € | 0.7× ✗ | 0.2× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1361 Technicien de supervision de centrales d'énergie renouvelable | 3067 | 287 € | 719 € | 111 € | 58 € | 53 € | 2.6× ✗ | 1.0× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1362 Chargé d'études environnement | 1354 | 154 € | 386 € | 110 € | 31 € | 79 € | 1.4× ✗ | 0.3× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1363 Technicien autosurveillance des systèmes d'assainissement | 907 | 120 € | 299 € | 71 € | 24 € | 47 € | 1.7× ✗ | 0.5× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1370 Déclarant en douane | 1804 | 189 € | 473 € | 108 € | 38 € | 70 € | 1.8× ✗ | 0.4× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1371 Technico-commercial sédentaire en négoce | 1234 | 158 € | 396 € | 104 € | 32 € | 73 € | 1.5× ✗ | 0.3× ✗ | 73 € | XL (7/bundle) | 2 800 € |
+| AG-1380 Régulateur en transport sanitaire | 1419 | 135 € | 338 € | 84 € | 27 € | 57 € | 1.6× ✗ | 0.5× ✗ | 54 € | L (5/bundle) | 2 800 € |
+| AG-1381 Auxiliaire spécialisé vétérinaire | 819 | 85 € | 212 € | 57 € | 17 € | 40 € | 1.5× ✗ | 0.6× ✗ | 40 € | M (4/bundle) | 2 800 € |
+| AG-1382 Responsable de secteur d'aide à domicile | 1386 | 138 € | 345 € | 81 € | 28 € | 53 € | 1.7× ✗ | 0.6× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1383 Chargé des admissions et de la facturation en établissement médico-social | 936 | 103 € | 257 € | 68 € | 21 € | 47 € | 1.5× ✗ | 0.4× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1384 Directeur adjoint de crèche | 906 | 127 € | 317 € | 72 € | 25 € | 47 € | 1.8× ✗ | 0.5× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1390 Clerc de notaire | 1085 | 122 € | 306 € | 95 € | 24 € | 70 € | 1.3× ✗ | 0.3× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1391 Clerc de commissaire de justice | 1294 | 152 € | 379 € | 116 € | 30 € | 86 € | 1.3× ✗ | 0.3× ✗ | 86 € | XL (5/bundle) | 2 800 € |
+| AG-1392 Assistant d'exploitation en sécurité privée | 786 | 81 € | 201 € | 69 € | 16 € | 53 € | 1.2× ✗ | 0.3× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1393 Secrétaire général de mairie | 2105 | 266 € | 666 € | 100 € | 53 € | 47 € | 2.7× ✗ | 1.0× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1394 Assistant de programme immobilier | 1389 | 194 € | 485 € | 86 € | 39 € | 47 € | 2.3× ✗ | 0.7× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1395 Secrétaire commercial automobile | 1084 | 117 € | 292 € | 70 € | 23 € | 47 € | 1.7× ✗ | 0.5× ✗ | 45 € | L (6/bundle) | 2 800 € |
 
-**57 fiches sur 1255 tiennent la règle des 3× en bundle partagé, 21 avec un agent seul sur son bundle.** Un agent seul sur un bundle à carte dédiée (image, vidéo) ne la tient pas : le bundle doit être partagé ou l'agent vendu en mode API.
+**57 fiches sur 1306 tiennent la règle des 3× en bundle partagé, 21 avec un agent seul sur son bundle.** Un agent seul sur un bundle à carte dédiée (image, vidéo) ne la tient pas : le bundle doit être partagé ou l'agent vendu en mode API.
 
 Lecture : un employé au coût employeur médian revient à 2 800 € par mois, un SMIC chargé à 2 100 €. L'abonnement à l'agent (prix cible du catalogue) s'ajoute aux colonnes Local-Agent et n'entre pas dans la règle des 3×.

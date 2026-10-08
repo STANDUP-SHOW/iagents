@@ -28,7 +28,7 @@ const secteurs = new Map(lire('catalogue/catalogue.json').secteurs.map((s) => [s
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
 import { slugifier } from './slug.mjs';
 import { portraitDe } from '../src/data/portraits.js';
-import { estTransversal, cerclesDeLActivite, coeurDeLActivite, FAMILLES_ACTIVITE } from '../src/data/activites-recherche.js';
+import { estTransversal, cerclesDeLActivite, personnelDeLActivite, FAMILLES_ACTIVITE } from '../src/data/activites-recherche.js';
 export { slugifier };
 
 const echapper = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -310,7 +310,7 @@ for (const a of activites) {
   const url = urlActivite.get(a.id);
   const p = a.pack ?? {};
   const { proches, outilles } = cerclesDeLActivite(a, fiches);
-  const coeur = coeurDeLActivite(a, fiches);
+  const personnel = personnelDeLActivite(a, fiches);
   pages.set(url, page({
     url,
     titre: `Agents IA pour ${a.nom.toLowerCase()}`,
@@ -319,7 +319,10 @@ for (const a of activites) {
     corps: `<h1>Des agents IA pour votre activité : ${echapper(a.nom.toLowerCase())}</h1>
 <p class="accroche">${echapper(a.trait)}</p>
 <p>Chaque agent iAgent reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p>
-${coeur.length ? `<h2>Le cœur de votre métier : les postes qui font tourner votre activité</h2>${liste(coeur.map(({ role, fiche }) => `<li><strong>${echapper(role)}</strong> : ${lien(fiche.nom, urlFiche.get(fiche.id))}</li>`))}` : ''}
+${personnel ? `<h2>Tout le personnel d'une entreprise de votre branche</h2><p>Sous les vrais noms des postes, service par service. Chacun est un agent que vous recrutez.</p>
+${personnel.services.filter((s) => s.postes.length).map((s) => `<h3>${echapper(s.libelle)}</h3>${liste(s.postes.map(({ role, fiche }) => `<li><strong>${echapper(role)}</strong> : ${lien(fiche.nom, urlFiche.get(fiche.id))}</li>`))}`).join('\n')}
+${personnel.terrain.length ? `<h3>Sur le terrain</h3><p>Ces métiers restent les vôtres : vos agents préparent leur travail, ils ne prennent pas leur place.</p>${liste(personnel.terrain.map(({ metier, fiche }) => `<li><strong>${echapper(metier)}</strong> : préparé par ${lien(fiche.nom, urlFiche.get(fiche.id))}</li>`))}` : ''}
+<p class="sources">Postes relevés dans ${echapper(personnel.sources.join(' ; '))}.</p>` : ''}
 ${p.logiciels?.length ? `<h2>Les logiciels de votre métier</h2><p>Vos agents y travaillent : à l'entretien d'embauche, chacun vous demande lesquels tourne votre entreprise.</p>${liste(p.logiciels.map((id) => logParId.get(id)).map((l) => `<li>${lien(l.nom, urlLogiciel.get(l.id))}${l.editeur ? `, de ${echapper(l.editeur)}` : ''}</li>`))}` : ''}
 ${proches.length + outilles.length ? `<h2>Les métiers les plus proches de votre activité</h2>${puces([...proches, ...outilles].map((f) => lien(f.nom, urlFiche.get(f.id))))}` : ''}
 ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
