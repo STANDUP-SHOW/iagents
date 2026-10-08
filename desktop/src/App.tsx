@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import './App.css'
 import './centre.css'
+import './commander.css'
 import { installerAgents, type AgentInstalle, type Fiche, type Installation } from './agents/fiche'
 import type { Jauge } from './agents/jauge'
 import { ConversationEngine } from './engines/ConversationEngine'
@@ -23,6 +24,14 @@ import Telegram from './components/Telegram'
 import InstallerVoix from './components/InstallerVoix'
 import MiseAJour from './components/MiseAJour'
 import Equipe from './components/Equipe'
+import Workforce from './components/commander/Workforce'
+import Standard from './components/commander/Standard'
+import Create from './components/commander/Create'
+import BoxPage from './components/commander/BoxPage'
+import Validations from './components/commander/Validations'
+import Consommation from './components/commander/Consommation'
+import Securite from './components/commander/Securite'
+import Administration from './components/commander/Administration'
 import {
   comprendreDemande,
   contexteDuTeamHolder,
@@ -84,6 +93,14 @@ function App() {
     setPropositionEtat(p)
   }
   const [versionEquipe, setVersionEquipe] = useState(0)
+  // The admin space exists only when an admin key is in the keyring. Rust
+  // answers a boolean; the key never reaches the screen.
+  const [admin, setAdmin] = useState(false)
+  useEffect(() => {
+    invoke<boolean>('admin_present')
+      .then(setAdmin)
+      .catch(() => setAdmin(false))
+  }, [])
   const luReel = useLectures(activeTab)
   const travailReel = useTravail(installes)
   // Le mode démo montre un cabinet d'exemple, pour une démonstration client ou
@@ -433,7 +450,7 @@ function App() {
     setLastResponse("D'accord, je ne change rien.")
   }
 
-  const onglets = Object.keys(TITRES) as Exclude<Onglet, 'dashboard'>[]
+  const onglets = (Object.keys(TITRES) as Exclude<Onglet, 'dashboard'>[]).filter((o) => o !== 'admin' || admin)
 
 
   // Le bouton VOICE. Rust allume et coupe le micro lui-même
@@ -622,6 +639,7 @@ function App() {
             eveillee={ecoute.ou_en_est === 'eveillee' || reveillee}
             onBasculerVoix={basculerVoix}
             onOuvrir={setActiveTab}
+            admin={admin}
           />
         )}
         {activeTab !== 'dashboard' && (
@@ -657,6 +675,16 @@ function App() {
                 version={versionEquipe}
               />
             )}
+            {/* Desktop Commander modules (§14). They read the platform and this
+                workstation only; demo mode does not lend them sample figures. */}
+            {activeTab === 'workforce' && <Workforce installes={demo ? [] : installes} onOuvrir={setActiveTab} />}
+            {activeTab === 'standard' && <Standard onOuvrir={setActiveTab} />}
+            {activeTab === 'create' && <Create onOuvrir={setActiveTab} />}
+            {activeTab === 'box' && <BoxPage />}
+            {activeTab === 'validations' && <Validations installes={demo ? [] : installes} onOuvrir={setActiveTab} />}
+            {activeTab === 'consommation' && <Consommation onOuvrir={setActiveTab} />}
+            {activeTab === 'securite' && <Securite installes={demo ? [] : installes} onOuvrir={setActiveTab} />}
+            {activeTab === 'admin' && admin && <Administration />}
           </div>
         )}
       </main>
