@@ -86,6 +86,55 @@ const SPKI_ED25519: [u8; 12] = [
 pub const DECISIONS_HANDOFF: [&str; 4] = ["prendre", "refuser", "rappeler", "laisser"];
 
 // ---------------------------------------------------------------------------
+// Edition
+// ---------------------------------------------------------------------------
+
+/// Which build this is, fixed when the binary is compiled, never read from
+/// disk. The licence is enforced only on a linked Box, and what links it
+/// (`config/plateforme.json`) lives in the user's folder: on the free build,
+/// deleting that file turns a Box back into an unlinked workstation where
+/// every agent runs. The Box build (`IAGENT_EDITION=box`) closes that door:
+/// unlinked means no agent runs, and the platform address and key can be
+/// compiled in (`IAGENT_PLATEFORME_URL`, `IAGENT_CLE_PLATEFORME`, PEM), so a
+/// deleted or rewritten file gives them back as they were at the factory.
+/// Not a lock against whoever controls the disk or the binary: that is the
+/// factory lockdown's job (MASTER §6, `docs/box-e-agent.md`).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Edition {
+    pub box_figee: bool,
+    pub adresse: Option<&'static str>,
+    pub cle_plateforme: Option<&'static str>,
+}
+
+fn figee(v: Option<&'static str>) -> Option<&'static str> {
+    v.map(str::trim).filter(|s| !s.is_empty())
+}
+
+impl Edition {
+    pub fn compilee() -> Edition {
+        Edition {
+            box_figee: matches!(option_env!("IAGENT_EDITION").map(str::trim), Some("box")),
+            adresse: figee(option_env!("IAGENT_PLATEFORME_URL")),
+            cle_plateforme: figee(option_env!("IAGENT_CLE_PLATEFORME")),
+        }
+    }
+
+    /// The settings as this build sees them: on the Box build, what was
+    /// compiled in wins over the file and over `PLATEFORME_URL`.
+    pub fn appliquer(&self, mut r: Reglages) -> Reglages {
+        if self.box_figee {
+            if let Some(a) = self.adresse {
+                r.adresse = Some(a.trim_end_matches('/').to_string());
+            }
+            if let Some(c) = self.cle_plateforme {
+                r.cle_plateforme = Some(c.replace("\\n", "\n"));
+            }
+        }
+        r
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Settings
 // ---------------------------------------------------------------------------
 
@@ -135,7 +184,7 @@ pub fn lire_reglages() -> Reglages {
             r.adresse = Some(v.trim().to_string());
         }
     }
-    r
+    Edition::compilee().appliquer(r)
 }
 
 fn ecrire_json<T: Serialize>(chemin: std::path::PathBuf, valeur: &T) -> Result<(), String> {
@@ -569,8 +618,24 @@ pub struct Contexte<'a> {
 /// The whole licence decision, without I/O. `jeton` is the last token that
 /// was verified and stored.
 pub fn decider(reglages: &Reglages, jeton: Option<&str>, ctx: &Contexte, maintenant: DateTime<Utc>) -> Result<(), String> {
+    decider_en(Edition::compilee(), reglages, jeton, ctx, maintenant)
+}
+
+/// `decider` for a given build, so both builds are tested from one binary.
+pub fn decider_en(
+    edition: Edition,
+    reglages: &Reglages,
+    jeton: Option<&str>,
+    ctx: &Contexte,
+    maintenant: DateTime<Utc>,
+) -> Result<(), String> {
     let fiche_id = ctx.fiche_id;
     if !reglages.provisionnee() {
+        if edition.box_figee {
+            return Err(
+                "Cet agent ne s'exécute pas : cette Box n'est plus reliée à sa plateforme, et une Box ne fait travailler aucun agent sans elle. Contactez le support iAgent pour la relier de nouveau.".to_string(),
+            );
+        }
         return Ok(());
     }
     let refus = |motif: String| Err(format!("Cet agent ne s'exécute pas : {}.", motif));
@@ -869,7 +934,8 @@ fn empreinte_sur_disque(fiche_id: &str) -> Option<String> {
 pub async fn autoriser(fiche_id: &str) -> Result<(), String> {
     let reglages = lire_reglages();
     if !reglages.provisionnee() {
-        return Ok(());
+        let ctx = Contexte { fiche_id, empreinte_disque: None, joignable: Joignabilite::Joignable };
+        return decider(&reglages, None, &ctx, maintenant());
     }
     let empreinte = empreinte_sur_disque(fiche_id);
     let mut ctx = Contexte { fiche_id, empreinte_disque: empreinte.as_deref(), joignable: Joignabilite::Joignable };
@@ -947,6 +1013,8 @@ pub fn mesurer_sante() -> Sante {
 #[derive(Debug, Clone, Serialize)]
 pub struct EtatPlateforme {
     pub relie: bool,
+    /// Box build: an unlinked machine runs no agent (see `Edition`).
+    pub edition_box: bool,
     pub adresse: Option<String>,
     pub device_id: Option<String>,
     pub cle_plateforme_posee: bool,
@@ -979,6 +1047,7 @@ fn etat(reglages: &Reglages, licence: EtatLicence) -> EtatPlateforme {
     }
     EtatPlateforme {
         relie: reglages.provisionnee(),
+        edition_box: Edition::compilee().box_figee,
         adresse: non_vide(&reglages.adresse).map(String::from),
         device_id: non_vide(&reglages.device_id).map(String::from),
         cle_plateforme_posee: non_vide(&reglages.cle_plateforme).is_some(),
@@ -1032,6 +1101,9 @@ pub async fn plateforme_regler(
         .ok()
         .and_then(|t| serde_json::from_str(&t).ok())
         .unwrap_or_default();
+    // On the Box build the compiled key is the pinned one: the screen cannot
+    // pose another, even on a Box whose file was deleted.
+    let fichier = Edition::compilee().appliquer(fichier);
     let mut neuf = reglages_modifies(&fichier, adresse, device_id, cle_plateforme)?;
     if non_vide(&neuf.cle_plateforme).is_none() {
         let mut vue = neuf.clone();
@@ -1641,6 +1713,53 @@ mod tests {
         // An address alone is not provisioning: the platform key is also needed.
         let adresse_seule = Reglages { adresse: Some("https://p.exemple".into()), ..Default::default() };
         assert_eq!(decider(&adresse_seule, None, &ctx("AG-0028"), t), Ok(()));
+    }
+
+    fn edition_box() -> Edition {
+        Edition { box_figee: true, ..Default::default() }
+    }
+
+    #[test]
+    fn une_box_dont_on_efface_la_liaison_ne_redevient_pas_un_poste_libre() {
+        let t = quand("2026-10-07T12:00:00Z");
+        // Free build: deleting the file gives a free workstation, as before.
+        assert_eq!(decider_en(Edition::default(), &Reglages::default(), None, &ctx("AG-0028"), t), Ok(()));
+        // Box build: the same deleted file stops every agent, and says why.
+        let e = decider_en(edition_box(), &Reglages::default(), None, &ctx("AG-0028"), t).unwrap_err();
+        assert!(e.contains("plus reliée") && e.contains("support"), "{}", e);
+        let adresse_seule = Reglages { adresse: Some("https://p.exemple".into()), ..Default::default() };
+        assert!(decider_en(edition_box(), &adresse_seule, None, &ctx("AG-0028"), t).is_err());
+        // A linked Box with its rights runs the same on both builds.
+        assert_eq!(decider_en(edition_box(), &reliee(), Some(&jeton()), &ctx("AG-0179"), t), Ok(()));
+    }
+
+    #[test]
+    fn la_box_retrouve_sa_plateforme_compilee_quand_le_fichier_disparait() {
+        let t = quand("2026-10-07T12:00:00Z");
+        let r = reliee();
+        let cle: &'static str = Box::leak(r.cle_plateforme.clone().unwrap().into_boxed_str());
+        let adresse: &'static str = Box::leak(format!("{}/", r.adresse.clone().unwrap()).into_boxed_str());
+        let edition = Edition { box_figee: true, adresse: Some(adresse), cle_plateforme: Some(cle) };
+        // File deleted: address and key come back from the binary, so the Box
+        // is linked again and refuses for want of its Box id, not as a free post.
+        let vue = edition.appliquer(Reglages::default());
+        assert!(vue.provisionnee());
+        assert_eq!(vue.adresse, r.adresse);
+        let e = decider_en(edition, &vue, None, &ctx("AG-0179"), t).unwrap_err();
+        assert!(e.contains("identifiant de Box"), "{}", e);
+        // File rewritten towards another platform: the compiled one wins.
+        let truquee = Reglages {
+            adresse: Some("https://fausse.exemple".into()),
+            cle_plateforme: Some(temoins()["box"]["cle_publique_pem"].as_str().unwrap().into()),
+            ..r.clone()
+        };
+        let vue = edition.appliquer(truquee);
+        assert_eq!(vue.adresse, r.adresse);
+        assert_eq!(vue.cle_plateforme, r.cle_plateforme);
+        assert_eq!(decider_en(edition, &vue, Some(&jeton()), &ctx("AG-0179"), t), Ok(()));
+        // The free build ignores what was compiled.
+        let libre = Edition { box_figee: false, ..edition };
+        assert!(!libre.appliquer(Reglages::default()).provisionnee());
     }
 
     #[test]
