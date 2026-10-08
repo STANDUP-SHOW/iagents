@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react';
 import agents from '../data/loader.js';
 import { CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee } from '../data/offres.js';
-import { agentsPourDemande } from '../data/recherche.js';
+import { agentsPourDemande, coeurPourDemande, logicielsPourDemande, terrainPourDemande } from '../data/recherche.js';
 import ConseilMachine from './ConseilMachine.jsx';
 
-function LigneAgent({ id, coche, onBasculer }) {
+function LigneAgent({ id, coche, onBasculer, role }) {
   const fiche = ficheDe(id);
   if (!fiche) return null;
   return (
     <label className="flex items-start gap-3 py-2 cursor-pointer">
       <input type="checkbox" checked={coche} onChange={() => onBasculer(id)} className="mt-1 accent-neon-400 w-5 h-5 flex-none" />
       <span>
+        {role && <span className="block text-xs font-semibold text-rose-300">{role}</span>}
         <span className="text-white text-sm font-semibold">{fiche.nom}</span>
         <span className="block text-xs text-nuit-300 line-clamp-2">{fiche.accroche}</span>
       </span>
@@ -43,9 +44,15 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
     });
 
   const activites = useMemo(() => activitesPourIdee(idee), [idee]);
-  const pourLaDemande = useMemo(() => agentsPourDemande(idee), [idee]);
+  const coeur = useMemo(() => coeurPourDemande(idee), [idee]);
+  const terrain = useMemo(() => terrainPourDemande(idee), [idee]);
+  const logiciels = useMemo(() => logicielsPourDemande(idee), [idee]);
+  const pourLaDemande = useMemo(() => {
+    const deja = new Set(coeur.map((c) => c.fiche.id));
+    return agentsPourDemande(idee).filter((id) => !deja.has(id));
+  }, [idee, coeur]);
   const cycle1 = CYCLE_1.flatMap((e) => e.agents);
-  const pack = [...new Set([...pourLaDemande, ...cycle1, ...CYCLE_2, ...ajoutes])].filter((id) => !retires.has(id));
+  const pack = [...new Set([...coeur.map((c) => c.fiche.id), ...pourLaDemande, ...cycle1, ...CYCLE_2, ...ajoutes])].filter((id) => !retires.has(id));
 
   const trouves = useMemo(() => {
     const q = recherche.trim().toLowerCase();
@@ -79,6 +86,43 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
           </p>
         )}
       </div>
+
+      {coeur.length > 0 && (
+        <div className="card border-2 border-rose-500/50">
+          <p className="text-xs font-mono text-rose-300">Le cœur de votre métier</p>
+          <h3 className="font-display text-lg text-white mb-1">Tout le personnel d'une entreprise de votre branche</h3>
+          <p className="text-xs text-nuit-400 mb-3">Sous les vrais noms des postes : le deviseur qui chiffre chaque demande, ceux qui préparent et suivent la production, la direction et l'administration. Décochez ceux que vous avez déjà.</p>
+          {[...new Set(coeur.map((c) => c.service))].map((service) => (
+            <div key={service} className="mb-3">
+              <p className="text-sm font-semibold text-rose-200 mb-1">{service}</p>
+              <div className="grid md:grid-cols-2 gap-x-6">
+                {coeur.filter((c) => c.service === service).map(({ role, fiche }) => <LigneAgent key={fiche.id} id={fiche.id} role={role} coche={!retires.has(fiche.id)} onBasculer={basculer} />)}
+              </div>
+            </div>
+          ))}
+          {terrain.length > 0 && (
+            <p className="text-xs text-nuit-300 mt-1">
+              Sur le terrain, vos équipes restent les vôtres : {terrain.map((t) => t.metier.charAt(0).toLowerCase() + t.metier.slice(1)).join(', ')}. Vos agents préparent leur travail, ils ne prennent pas leur place.
+            </p>
+          )}
+        </div>
+      )}
+
+      {logiciels.length > 0 && (
+        <div className="card border-2 border-rose-500/50">
+          <p className="text-xs font-mono text-rose-300">Les logiciels de votre métier</p>
+          <h3 className="font-display text-lg text-white mb-1">Vos agents travaillent dans les outils de votre branche</h3>
+          <p className="text-xs text-nuit-400 mb-3">À l'entretien d'embauche, chaque agent vous demande lesquels tournent dans votre entreprise, et s'y règle.</p>
+          <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+            {logiciels.map((l) => (
+              <li key={l.id} className="text-sm">
+                <span className="text-white font-semibold">{l.nom}</span>
+                {l.editeur && <span className="text-nuit-400"> · {l.editeur}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {pourLaDemande.length > 0 && (
         <div className="card border-2 border-neon-400/50">

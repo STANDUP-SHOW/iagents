@@ -1,8 +1,10 @@
 // Recognising the visitor's trade in what they type, and the jobs that serve
 // it. A printer types « imprimerie », not « graphiste de production »: no
 // fiche carries that word, but activity ACT-0021 does, in its name and
-// aliases. Plain functions over the data they are given, so the library (in
-// the browser), the search-engine pages and the bench (in node) share them.
+// aliases. Plain functions over the data they are given, plus the staff of
+// each trade (catalogue/personnel.json), so the library (in the browser), the
+// search-engine pages and the bench (in node) share them.
+import personnel from '../../../catalogue/personnel.json' with { type: 'json' };
 
 /**
  * Jobs every business has (office, accounting, HR, sales, purchasing,
@@ -84,26 +86,83 @@ function logicielsCommuns(fiches) {
   return communsPar.get(fiches);
 }
 
+// The staff of a real company of the trade, service by service, under the
+// titles the trade gives its jobs (catalogue/personnel.json, sourced from the
+// France Travail ROME fiches). max, 08/10, testing his own trade: Google lists
+// a print shop's whole staff, down to the prépresse operator who checks the
+// resolution and lays out the imposition, the CTP technician who drives the
+// RIP and the proofreader; we showed a web designer and no one to price a job.
+// A physical job (offset press operator, mason) is not an agent: it is listed
+// under `terrain` with the fiche that prepares its work. outils/verifier-personnel.ts
+// refuses an activity whose staff is incomplete.
+const ORDRE = ['commercial', 'production', 'direction', 'gestion'];
+const organigrammeDe = (activite) => personnel.organigrammes[personnel.activites[activite?.id]];
+
 /**
- * The jobs that serve an activity, in three rings: those whose title shares a
- * root with the trade's own words (« Graphiste de production » for « arts
- * graphiques »), those qualified on the activity's software, and the jobs
- * every business has. The last ring is never empty: there is always someone
- * to recruit.
+ * The staff of an activity's company: { nom, sources, services: [{ id,
+ * libelle, postes: [{ role, fiche }] }], terrain: [{ metier, fiche }] }, or
+ * null for an activity the file does not know. A fiche missing from `fiches`
+ * is skipped.
+ */
+export function personnelDeLActivite(activite, fiches) {
+  const o = organigrammeDe(activite);
+  if (!o) return null;
+  const parId = new Map(fiches.map((f) => [f.id, f]));
+  const libelle = (id) => (id === 'production' && o.libelleProduction) || (id === 'commercial' && o.libelleCommercial) || personnel.services[id];
+  return {
+    nom: o.nom,
+    sources: o.sources,
+    // Why a trade has no estimator (prices set by the health insurance), when it has none.
+    sansDevis: o.sansDevis ?? null,
+    services: ORDRE.map((id) => ({
+      id,
+      libelle: libelle(id),
+      postes: (o[id] ?? []).filter(([, f]) => parId.has(f)).map(([role, f]) => ({ role, fiche: parId.get(f) })),
+    })),
+    terrain: (o.terrain ?? []).filter(([, f]) => parId.has(f)).map(([metier, f]) => ({ metier, fiche: parId.get(f) })),
+  };
+}
+
+/**
+ * The jobs that make the trade: who prices the job, who makes it, who runs
+ * the company and who keeps its books, in that order: [{ role, fiche, service }].
+ */
+export function coeurDeLActivite(activite, fiches) {
+  const p = personnelDeLActivite(activite, fiches);
+  if (!p) return [];
+  const vus = new Set();
+  return p.services.flatMap((s) => s.postes.filter((x) => !vus.has(x.fiche.id) && vus.add(x.fiche.id)).map((x) => ({ ...x, service: s.libelle })));
+}
+/** Every id the organigrams name, for the bench. */
+export const IDS_DU_COEUR = [...new Set(Object.values(personnel.organigrammes).flatMap((o) => ORDRE.flatMap((s) => (o[s] ?? []).map(([, id]) => id))))];
+
+/**
+ * The jobs that serve an activity, in four rings: those whose title shares a
+ * root with the trade's own words, only for a trade whose staff is not known,
+ * the staff of the trade (estimator, workshop, production, office),
+ * those qualified on the activity's software, and the jobs every business
+ * has. The last ring is never empty: there is always someone to recruit.
  */
 export function cerclesDeLActivite(activite, fiches) {
   const sesRacines = racines(activite.alias ?? []);
   const communs = logicielsCommuns(fiches);
   const sesLogiciels = new Set((activite.pack?.logiciels ?? []).filter((id) => !communs.has(id)));
   const touches = (f) => mots(f.nom).filter((m) => sesRacines.has(racineDe(m))).length;
-  const proches = fiches.filter((f) => touches(f) > 0).sort((x, y) => touches(y) - touches(x));
-  const outilles = fiches.filter((f) => !proches.includes(f) && (f.qualifications?.logiciels ?? []).some((q) => sesLogiciels.has(q.logiciel)));
-  const pris = new Set([...proches, ...outilles]);
-  return { proches, outilles, transversaux: fiches.filter((f) => !pris.has(f) && estTransversal(f)) };
+  // When the trade's real staff is known, a title that merely shares a root
+  // with its words is not one of its jobs: « arts graphiques » brought the web
+  // designer to a print shop. The staff comes first, and the other rings keep
+  // only the branches that staff is drawn from.
+  const coeur = coeurDeLActivite(activite, fiches).map((c) => c.fiche);
+  const branches = coeur.length ? new Set(coeur.map((f) => f.secteur)) : null;
+  const deSaBranche = (f) => !branches || branches.has(f.secteur);
+  const proches = branches ? [] : fiches.filter((f) => touches(f) > 0).sort((x, y) => touches(y) - touches(x));
+  const outilles = fiches.filter((f) => !coeur.includes(f) && deSaBranche(f) && (f.qualifications?.logiciels ?? []).some((q) => sesLogiciels.has(q.logiciel)));
+  const pris = new Set([...proches, ...coeur, ...outilles]);
+  return { proches, coeur, outilles, transversaux: fiches.filter((f) => !pris.has(f) && estTransversal(f)) };
 }
 
-/** The same three rings as one list, closest first. */
+/** The same rings as one list, closest first. */
 export const metiersPourActivite = (activite, fiches) => {
   const c = cerclesDeLActivite(activite, fiches);
-  return [...c.proches, ...c.outilles, ...c.transversaux];
+  return [...c.proches, ...c.coeur, ...c.outilles, ...c.transversaux];
 };

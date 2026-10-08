@@ -6,7 +6,7 @@ import agents from './loader.js';
 import catalogue from '../../../catalogue/catalogue.json';
 import logicielsJson from '../../../catalogue/logiciels.json';
 import activitesJson from '../../../catalogue/activites.json';
-import { activitesReconnues, cerclesDeLActivite, estTransversal } from './activites-recherche.js';
+import { activitesReconnues, cerclesDeLActivite, coeurDeLActivite, estTransversal, personnelDeLActivite } from './activites-recherche.js';
 import { slugifier } from '../../seo/slug.mjs';
 
 const LOGICIELS = logicielsJson.logiciels;
@@ -79,6 +79,15 @@ export const urlActivite = (activite) => `/activites/${slugifier(activite.nom)}`
 /** The trades the query names (« imprimerie » → Imprimerie offset et numérique). */
 export const activitesDeLaRecherche = (requete) => activitesReconnues(requete, ACTIVITES);
 
+const LOGICIEL_PAR_ID = new Map(LOGICIELS.map((l) => [l.id, l]));
+/** The trade's own software, in the pack's order: management and quotes first, then the shop floor. */
+export const logicielsDeLActivite = (activite) => (activite?.pack?.logiciels ?? []).map((id) => LOGICIEL_PAR_ID.get(id)).filter(Boolean);
+/** The software of every activity the request names, each once. */
+export function logicielsPourDemande(idee, limite = 12) {
+  const vus = new Set();
+  return activitesDeLaRecherche(idee).flatMap(logicielsDeLActivite).filter((l) => !vus.has(l.id) && vus.add(l.id)).slice(0, limite);
+}
+
 // When the query names a trade, the jobs that serve it join the results even
 // if no word of the query is in their fiche: a printer who types « imprimerie »
 // must find someone to recruit. Closest jobs come before any word match, the
@@ -86,9 +95,10 @@ export const activitesDeLaRecherche = (requete) => activitesReconnues(requete, A
 function rangsParActivite(requete) {
   const rangs = new Map();
   for (const activite of activitesDeLaRecherche(requete)) {
-    const { proches, outilles, transversaux } = cerclesDeLActivite(activite, agents);
+    const { proches, coeur, outilles, transversaux } = cerclesDeLActivite(activite, agents);
     const poser = (fiches, base) => fiches.forEach((f, i) => { if (!rangs.has(f.id)) rangs.set(f.id, base - i / 10000); });
     poser(proches, 2000);
+    poser(coeur, 1000);
     poser(outilles, 300);
     poser(transversaux, 100);
   }
@@ -130,6 +140,29 @@ const racinesDesMetiers = new Set(ACTIVITES.flatMap((a) => racinesDe([a.nom, ...
  * the trade it names, and both first. What the home page's « Commencer »
  * proposes, before any ready-made cycle.
  */
+/**
+ * The staff of the trades a request names (estimator, production, management,
+ * office), each job under the name the trade gives its role and with its
+ * service, the first trade first. A print shop's staff alone is sixteen jobs.
+ */
+export function coeurPourDemande(idee, limite = 24) {
+  // Two recognized activities both bring an estimator: keep the first one,
+  // the role is what the visitor reads.
+  const vus = new Set();
+  const roles = new Set();
+  const cle = (role) => role.split(/ [—-] /)[0].toLowerCase();
+  return activitesDeLaRecherche(idee)
+    .flatMap((a) => coeurDeLActivite(a, agents))
+    .filter(({ fiche, role }) => !vus.has(fiche.id) && !roles.has(cle(role)) && vus.add(fiche.id) && roles.add(cle(role)))
+    .slice(0, limite);
+}
+
+/** The hands-on jobs of the first trade a request names, which stay people: [{ metier, fiche }]. */
+export function terrainPourDemande(idee) {
+  const [activite] = activitesDeLaRecherche(idee);
+  return activite ? personnelDeLActivite(activite, agents)?.terrain ?? [] : [];
+}
+
 export function agentsPourDemande(idee, limite = 8) {
   const texte = normaliser(idee);
   const voulu = new Set(INTENTIONS.filter(([motif]) => motif.test(texte)).flatMap(([, r]) => r));
@@ -142,7 +175,7 @@ export function agentsPourDemande(idee, limite = 8) {
   for (const activite of activites) {
     const c = cerclesDeLActivite(activite, agents);
     proches.push(...c.proches);
-    [...c.proches, ...c.outilles].forEach((f, i) => { if (!metier.has(f.id)) metier.set(f.id, 2 - i / 1000); });
+    [...c.proches, ...c.coeur, ...c.outilles].forEach((f, i) => { if (!metier.has(f.id)) metier.set(f.id, 2 - i / 1000); });
   }
   const classes = agents
     .map((a) => {
