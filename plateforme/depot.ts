@@ -35,14 +35,15 @@ export function indexer(parDossier: Record<string, string[]>): Map<string, strin
 function depotDisque(): Depot {
   // No static `node:fs` import: this file is bundled for Cloudflare too, where it is never called.
   const fs = process.getBuiltinModule('node:fs');
-  const racine = new URL('../', import.meta.url);
+  const { fileURLToPath } = process.getBuiltinModule('node:url');
+  const racine = fileURLToPath(new URL('../', import.meta.url).href);
   let index: Map<string, string> | null = null;
   return {
     fiches: () => (index ??= indexer(Object.fromEntries(DOSSIERS_FICHES.map((d) => {
-      const u = new URL(`${d}/`, racine);
+      const u = `${racine}${d}/`;
       return [d, fs.existsSync(u) ? fs.readdirSync(u) : []];
     })))),
-    lire: async (chemin) => new Uint8Array(fs.readFileSync(new URL(chemin, racine))),
+    lire: async (chemin) => new Uint8Array(fs.readFileSync(`${racine}${chemin}`)),
   };
 }
 

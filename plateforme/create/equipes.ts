@@ -71,13 +71,22 @@ export function fautesDesPhases(phases: Phase[] = PHASES): string[] {
   return fautes;
 }
 
-const FAUTES_AU_CHARGEMENT = fautesDesPhases();
-if (FAUTES_AU_CHARGEMENT.length) {
-  throw new Error(`iAgent Create ne démarre pas : equipes-phases.json est faux (${FAUTES_AU_CHARGEMENT.join(' ; ')}).`);
+let phasesVerifiees = false;
+/**
+ * Refuses a wrong phase file. Called by each door at start-up (the platform does
+ * not start with it) and before the first team; not at module load, because the
+ * sheets are only known once the door has set its depot (Cloudflare has no disk).
+ */
+export function verifierPhases(): void {
+  if (phasesVerifiees) return;
+  const fautes = fautesDesPhases();
+  if (fautes.length) throw new Error(`iAgent Create ne démarre pas : equipes-phases.json est faux (${fautes.join(' ; ')}).`);
+  phasesVerifiees = true;
 }
 
 /** The team of one phase for the given needs. Same needs, in any order, give the same team. */
 export function equipePour(phase: Phase, besoins: readonly string[]): MembreEquipe[] {
+  verifierPhases();
   const voulus = new Set(besoins);
   const vus = new Set<string>();
   const equipe: MembreEquipe[] = [];

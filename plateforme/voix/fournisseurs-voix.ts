@@ -388,7 +388,8 @@ class SessionGemini implements SessionVoix {
     await new Promise<void>((res, rej) => {
       const minuterie = setTimeout(() => { rej(new Error('Gemini Live ne répond pas à l’ouverture.')); try { ws.close(); } catch { /* closed */ } }, 10_000);
       let pret = false;
-      ws.onopen = () => ws.send(JSON.stringify({
+      // addEventListener, not on*: the Cloudflare runtime's WebSocket has no on* handlers.
+      ws.addEventListener('open', () => ws.send(JSON.stringify({
         setup: {
           model: `models/${MODELES.gemini}`,
           generationConfig: {
@@ -402,15 +403,15 @@ class SessionGemini implements SessionVoix {
           inputAudioTranscription: {},
           outputAudioTranscription: {},
         },
-      }));
-      ws.onmessage = (e) => {
+      })));
+      ws.addEventListener('message', (e: MessageEvent) => {
         const m = s.lire(e.data);
         if (!pret && m?.setupComplete !== undefined) { pret = true; clearTimeout(minuterie); res(); return; }
         if (m) s.traiter(m);
-      };
+      });
       // The URL carries the key: never echo the event or the URL.
-      ws.onerror = () => { clearTimeout(minuterie); if (!pret) rej(new Error('Gemini Live est injoignable ou refuse la clé.')); else s.file.pousser({ type: 'erreur', motif: 'La liaison avec Gemini Live a échoué.' }); };
-      ws.onclose = () => { clearTimeout(minuterie); if (!pret) rej(new Error('Gemini Live a fermé la session avant de l’ouvrir.')); s.file.fermer(); };
+      ws.addEventListener('error', () => { clearTimeout(minuterie); if (!pret) rej(new Error('Gemini Live est injoignable ou refuse la clé.')); else s.file.pousser({ type: 'erreur', motif: 'La liaison avec Gemini Live a échoué.' }); });
+      ws.addEventListener('close', () => { clearTimeout(minuterie); if (!pret) rej(new Error('Gemini Live a fermé la session avant de l’ouvrir.')); s.file.fermer(); });
     });
     return s;
   }

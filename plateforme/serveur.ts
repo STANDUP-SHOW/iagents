@@ -78,6 +78,8 @@ export function creerPlateforme(
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const { reglagesDeLEnvironnement } = await import('./http.ts');
+  const { verifierPhases } = await import('./create/equipes.ts');
+  verifierPhases();
   const { serveur } = creerPlateforme(reglagesDeLEnvironnement(process.env));
   const port = Number(process.env.PORT ?? 8787);
   serveur.listen(port, () => console.log(`plateforme iagent sur le port ${port}`));
