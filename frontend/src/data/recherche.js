@@ -36,19 +36,17 @@ export const logicielsDe = (agent) =>
 export const normaliser = (texte) =>
   String(texte ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-// Portraits: a bank of AI-generated professional portraits, the same one for a
-// fiche every time (its number picks it), so a profile keeps its face from one
-// visit to the next. The first name is not shown: the client gives it at the
-// hiring interview.
-export const PORTRAITS = [
-  '/accueil/julie.webp', '/accueil/thomas.webp', '/accueil/samir.webp', '/accueil/lea.webp',
-  '/accueil/marco.webp', '/accueil/elise.webp',
-  ...Array.from({ length: 13 }, (_, i) => `/portraits/p${String(i + 1).padStart(2, '0')}.webp`),
-];
+// Portraits: max's bank of AI-generated professional portraits, cut from his
+// sheets (428 faces, public/portraits/agents). The same one for a fiche every
+// time (its number picks it), so a profile keeps its face from one visit to the
+// next. The first name is not shown: the client gives it at the hiring
+// interview. The home page's named agents have their own portraits.
+export const NOMBRE_DE_PORTRAITS = 428;
+export const PORTRAITS = Array.from({ length: NOMBRE_DE_PORTRAITS }, (_, i) => `/portraits/agents/a${String(i + 1).padStart(3, '0')}.webp`);
 export const portraitDe = (agent) => {
   const n = parseInt(String(agent?.id ?? '').slice(3), 10) || 0;
-  // A stride prime to the bank's size spreads neighbours apart.
-  return PORTRAITS[(n * 7) % PORTRAITS.length];
+  // A stride prime to the bank's size (428 = 4 x 107) spreads neighbours apart.
+  return PORTRAITS[(n * 37) % PORTRAITS.length];
 };
 
 // One string per fiche holding every field the search looks into: the id, the

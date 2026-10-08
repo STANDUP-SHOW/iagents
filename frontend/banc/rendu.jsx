@@ -19,7 +19,8 @@ import IAgentBox, { CarteInstallation } from '../src/components/IAgentBox.jsx';
 import PacksEntreprise from '../src/components/PacksEntreprise.jsx';
 import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee, INSTALLATIONS, conseilPour, euros } from '../src/data/offres.js';
 import { FINANCEMENT, OFFRES } from '../../dimensionnement/offre-box.ts';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { PORTRAITS, portraitDe } from '../src/data/recherche.js';
 import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, euros as eurosTarif } from '../src/data/tarifs.js';
 import Page from '../src/pages/Page.jsx';
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
@@ -211,6 +212,13 @@ for (const page of PAGES) {
   const attendu = tarifs.box.find((b) => b.id === 'box-commander-36').mensuel + tarifs.agents.paliers.find((p) => p.id === 'essential').mensuel;
   if (starter.mensuel !== attendu || !tarifsHtml.includes(String(attendu))) echoue(`Starter à ${starter.mensuel} au lieu de ${attendu}`);
   else ok(`le Starter vaut la Box et un Essential : ${attendu} €`);
+  // Les portraits découpés des planches de max : chaque visage annoncé existe, et
+  // le catalogue en montre assez pour que deux fiches voisines ne se ressemblent pas.
+  const public_ = 'public'; // the bench runs from frontend/
+  const perdus = PORTRAITS.filter((f) => !existsSync(public_ + f));
+  const vus = new Set(agents.map(portraitDe));
+  if (perdus.length || vus.size < PORTRAITS.length * 0.9) echoue(`portraits : ${perdus.length} absents, ${vus.size} visages employés sur ${PORTRAITS.length}`);
+  else ok(`${vus.size} portraits différents dans la bibliothèque, tous présents`);
 }
 
 console.log(`\n${n} attentes tenues — boutique ok`);
