@@ -4,9 +4,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { suivre } from './analytique.js';
 
-// Stable asset name published by build-windows-msi.yml: /latest/download/
-// serves the installer itself (same link as the shop's Navbar).
-export const TELECHARGEMENT = 'https://github.com/STANDUP-SHOW/iagents/releases/latest/download/iAgent-Windows.msi';
+// Where every « recruit » button leads: the page that explains recruiting,
+// from the need to the interview. The site never offers the installer:
+// Desktop Commander comes preinstalled on the Box we provide (max, 08/10).
+export const RECRUTER = '/how-it-works';
 
 export const LIENS = {
   catalogue: '/catalogue',

@@ -5,7 +5,7 @@ import { libelleSecteur, libelleFamille, logicielsDe, nomDuLogiciel, portraitDe,
 import { PRIX_AGENT_MOIS, NOTE_ACHAT } from '../data/prix.js';
 import { passes3xTest, ratio3x } from '../data/loader.js';
 import { devisAgent, euros, installationDe } from '../data/offres.js';
-import { TELECHARGEMENT } from '../accueil/composants.jsx';
+import { RECRUTER } from '../accueil/composants.jsx';
 
 const Fleche = () => (
   <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" className="flex-none">
@@ -164,7 +164,7 @@ export function Apercu({ agent, installation, onFermer, onFicheComplete, focalis
       </div>
 
       <div className="bi-apercu-actions">
-        <a href={TELECHARGEMENT} className="bouton bouton-plein w-full">Recruter cet agent <Fleche /></a>
+        <a href={RECRUTER} className="bouton bouton-plein w-full">Recruter cet agent <Fleche /></a>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" className="bouton bouton-contour !text-sm" onClick={() => onFicheComplete(agent)}>Fiche complète</button>
           <a href={`/agents/${agent.slug}`} className="bouton bouton-contour !text-sm">Page du métier</a>
@@ -175,7 +175,7 @@ export function Apercu({ agent, installation, onFermer, onFicheComplete, focalis
   );
 }
 
-const EXEMPLES = ['commercial immobilier', 'Salesforce', 'assistant comptable', 'prospection', 'conformité bancaire'];
+const EXEMPLES = ['imprimerie', 'boulangerie', 'garage', 'assistant comptable', 'Salesforce', 'cabinet dentaire'];
 
 /** The library's main field, with suggestions from the jobs, sectors and software. */
 export function Recherche({ valeur, onChange }) {

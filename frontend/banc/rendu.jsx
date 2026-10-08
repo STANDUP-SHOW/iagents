@@ -19,7 +19,9 @@ import IAgentBox, { CarteInstallation } from '../src/components/IAgentBox.jsx';
 import PacksEntreprise from '../src/components/PacksEntreprise.jsx';
 import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee, INSTALLATIONS, conseilPour, euros } from '../src/data/offres.js';
 import { FINANCEMENT, OFFRES } from '../../dimensionnement/offre-box.ts';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE } from '../src/data/recherche.js';
 import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, euros as eurosTarif } from '../src/data/tarifs.js';
 import Page from '../src/pages/Page.jsx';
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
@@ -123,7 +125,7 @@ for (const page of PAGES) {
   for (const vue of page.id === 'catalogue' ? VUES : [{ id: 'metier' }]) {
     try {
       const html = renderToString(<App pageInitiale={page.id} vueInitiale={vue.id} />);
-      const attendu = { catalogue: vue.id === 'packs' ? 'PACK-01' : 'AG-0', entreprise: 'Cycle 1', box: 'Box Commandeur' }[page.id];
+      const attendu = { catalogue: { packs: 'PACK-01', activites: 'Imprimerie offset et numérique', secteurs: 'Comptabilité' }[vue.id] ?? 'AG-0', entreprise: 'Cycle 1', box: 'Box Commandeur' }[page.id];
       if (!html.includes(attendu)) echoue(`page « ${page.libelle} »${vue.libelle ? `, vue « ${vue.libelle} »` : ''} : « ${attendu} » absent`);
       else ok(`page « ${page.libelle} »${vue.libelle ? `, vue « ${vue.libelle} »` : ''} se rend`);
     } catch (e) {
@@ -138,8 +140,15 @@ for (const page of PAGES) {
   if (!reconnues.length) echoue('« boulangerie » ne reconnaît aucune activité');
   else ok(`« boulangerie » → ${reconnues[0].nom}`);
   const html = renderToString(<CreezEntreprise ideeInitiale="ouvrir une boulangerie bio" />);
-  if (!html.includes('Activité reconnue')) echoue("la page ne montre pas l'activité reconnue");
+  if (!html.includes('Votre activité') || !html.includes(reconnues[0].nom)) echoue("la page ne montre pas l'activité reconnue");
   else ok("la page montre l'activité reconnue");
+  // « J'ai une imprimerie et je veux trouver plus de clients » (max, 08/10) : la
+  // page propose d'abord des agents de l'imprimerie et de la prospection, pas
+  // un business plan à une entreprise qui existe.
+  const demande = renderToString(<CreezEntreprise ideeInitiale="J'ai une imprimerie et je veux trouver plus de clients" />);
+  if (!demande.includes('Pour votre demande') || !demande.includes('Graphiste de production') || !/prospection|Commercial/.test(demande)) echoue("une demande d'imprimeur n'appelle ni l'imprimerie ni la prospection");
+  else ok("une demande d'imprimeur propose ses métiers et la prospection");
+
   const avis = conseilPour([...CYCLE_1.flatMap((e) => e.agents), ...CYCLE_2]);
   if (!avis) echoue('le pack de création ne reçoit aucun conseil de machine');
   else ok(`le pack de création : ${avis.conseil.nom} conseillée`);
@@ -211,6 +220,31 @@ for (const page of PAGES) {
   const attendu = tarifs.box.find((b) => b.id === 'box-commander-36').mensuel + tarifs.agents.paliers.find((p) => p.id === 'essential').mensuel;
   if (starter.mensuel !== attendu || !tarifsHtml.includes(String(attendu))) echoue(`Starter à ${starter.mensuel} au lieu de ${attendu}`);
   else ok(`le Starter vaut la Box et un Essential : ${attendu} €`);
+  // Les portraits découpés des planches de max : chaque visage annoncé existe, et
+  // le catalogue en montre assez pour que deux fiches voisines ne se ressemblent pas.
+  const public_ = 'public'; // the bench runs from frontend/
+  const perdus = PORTRAITS.filter((f) => !existsSync(public_ + f));
+  const vus = new Set(agents.map(portraitDe));
+  if (perdus.length || vus.size < PORTRAITS.length * 0.9) echoue(`portraits : ${perdus.length} absents, ${vus.size} visages employés sur ${PORTRAITS.length}`);
+  else ok(`${vus.size} portraits différents dans la bibliothèque, tous présents`);
+  // Un imprimeur tape « imprimerie » (max, 08/10) : aucune fiche ne porte ce mot,
+  // l'activité ACT-0021 si. Chaque nom et chaque alias des activités doit rendre
+  // des métiers, jamais une liste vide.
+  {
+    const imprimerie = activitesDeLaRecherche('imprimerie');
+    const trouves = filtrer(agents, { requete: 'imprimerie' });
+    if (imprimerie[0]?.id !== 'ACT-0021' || !trouves.length) echoue(`« imprimerie » : activité ${imprimerie[0]?.id ?? 'aucune'}, ${trouves.length} métiers`);
+    else ok(`« imprimerie » reconnaît ${imprimerie[0].nom} et propose ${trouves.length} métiers, d'abord ${trouves[0].nom}`);
+    const muets = ACTIVITES_RECHERCHE.flatMap((a) => [a.nom, ...(a.alias ?? [])].map((mot) => [a, mot]))
+      .filter(([a, mot]) => !activitesDeLaRecherche(mot).includes(a) || !filtrer(agents, { requete: mot }).length);
+    if (muets.length) echoue(`${muets.length} mots d'activité sans réponse, dont ${muets.slice(0, 5).map(([a, m]) => `« ${m} » (${a.id})`).join(', ')}`);
+    else ok(`les ${ACTIVITES_RECHERCHE.length} activités se trouvent par leur nom et chacun de leurs alias`);
+  }
+  // Le site n'offre jamais l'installeur : Desktop Commander est livré sur la Box
+  // (max, 08/10). Un bouton « Télécharger » ramènerait le visiteur hors de l'offre.
+  const telechargeurs = execSync("grep -rlE 'releases/(latest/)?download|\\.msi|T[eé]l[eé]charger' src seo || true", { encoding: 'utf8' }).trim();
+  if (telechargeurs) echoue(`un bouton fait encore télécharger l'application : ${telechargeurs.split('\n').join(', ')}`);
+  else ok('aucun bouton du site ne fait télécharger l’application');
 }
 
 console.log(`\n${n} attentes tenues — boutique ok`);
