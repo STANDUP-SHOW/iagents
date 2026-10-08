@@ -74,12 +74,10 @@ pub fn chemin_fiche(id: &str) -> Result<PathBuf, String> {
     // décrit un agent qu'il a configuré et ne part nulle part.
     if mere_de(&id).is_some() {
         let chemin = crate::chemins::pour_lire(&format!("config/fiches/{}.json", id));
-        let contenu = std::fs::read_to_string(&chemin)
-            .map_err(|_| format!("la fiche {} composée sur ce poste est introuvable", id))?;
-        if let Some(raison) = version_insuffisante_pour(&contenu, version_app()) {
-            return Err(raison);
+        if !chemin.is_file() {
+            return Err(format!("la fiche {} composée sur ce poste est introuvable", id));
         }
-        return Ok(contenu);
+        return Ok(chemin);
     }
 
     let prefixe = format!("{}-", id);
