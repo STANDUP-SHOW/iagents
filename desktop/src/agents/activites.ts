@@ -31,6 +31,7 @@ const OU: Record<string, string[]> = {
   'e-commerce': ['commerce-detail', 'negoce-gros', 'artisanat', 'industrie', 'agriculture', 'numerique-audiovisuel'],
   'industrie-back-office': ['industrie', 'environnement-energie', 'agriculture', 'automobile-mobilite'],
   'btp-gestion': ['batiment'],
+  'imprimerie-arts-graphiques': ['industrie', 'numerique-audiovisuel'],
   'energie-environnement': ['environnement-energie', 'batiment', 'industrie'],
   'reparation-automobile': ['automobile-mobilite'],
   'hotellerie-restauration': ['hotellerie-tourisme'],
