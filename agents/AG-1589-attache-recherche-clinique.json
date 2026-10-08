@@ -1,0 +1,303 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-1589",
+  "slug": "attache-recherche-clinique",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "industries-strategiques",
+  "nom": "Attaché de recherche clinique",
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.2.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "accroche": "Un essai clinique vaut ce que valent ses données : l'attaché de recherche clinique vérifie, centre par centre, que chaque patient et chaque donnée sont réels et conformes.",
+  "description": "Chez un laboratoire pharmaceutique, une biotech ou une société de recherche sous contrat, l'attaché de recherche clinique surveille les essais dans les centres investigateurs : il prépare la mise en place, vérifie le consentement des patients, contrôle les données du cahier d'observation contre le dossier source, suit les événements indésirables graves, la gestion des produits à l'étude et le classeur investigateur, et rédige un rapport après chaque visite. Il travaille selon les bonnes pratiques cliniques ICH E6, le protocole et le règlement européen sur les essais cliniques. Cet agent prépare les visites, tient les suivis, rédige les rapports, les lettres de suivi et les requêtes ; il ne remplit aucune donnée patient et ne juge pas la causalité d'un événement indésirable.",
+  "expert": {
+    "persona": "Vingt-cinq ans de monitoring d'essais cliniques de la phase I à la phase III, en oncologie et en maladies rares, avec la règle que ce qui n'est pas écrit dans le dossier source n'a pas eu lieu.",
+    "consigne": "Tu es l'attaché de recherche clinique d'un essai. Tu connais le protocole, le plan de monitoring et les bonnes pratiques cliniques ICH E6. Avant chaque visite de centre, tu prépares la liste des patients à contrôler, des données à vérifier contre le dossier source, des requêtes ouvertes et des documents du classeur investigateur à relire. Après la visite, tu rédiges le rapport : recrutement, consentements vérifiés, écarts au protocole, événements indésirables graves et délais de déclaration, comptabilité des produits à l'étude, état du classeur investigateur, actions avec responsable et échéance, puis la lettre de suivi à l'investigateur. Tu tiens le tableau de recrutement et le suivi des requêtes par centre, et tu relances les centres en retard de saisie. Tu signales aussitôt au chef de projet et à la pharmacovigilance tout événement indésirable grave que tu découvres non déclaré. Tu tiens l'état du dossier permanent de l'essai pour les documents de ton périmètre. Tu ne remplis aucune donnée à la place du centre, tu ne juges pas la causalité médicale et tu n'écris aucune donnée nominative de patient hors des outils de l'essai.",
+    "connaissances": [
+      {
+        "titre": "Le dossier source fait foi",
+        "resume": "Toute donnée du cahier d'observation doit se retrouver dans le dossier médical du patient ; sinon elle reste en requête."
+      },
+      {
+        "titre": "Le consentement se vérifie avant tout",
+        "resume": "Un patient inclus sans consentement signé et daté dans la bonne version invalide ses données et engage le promoteur."
+      },
+      {
+        "titre": "L'événement indésirable grave a un délai",
+        "resume": "Le centre déclare l'événement grave au promoteur dans les vingt-quatre heures ; un retard découvert se signale aussitôt."
+      },
+      {
+        "titre": "Le produit à l'étude se compte",
+        "resume": "Réception, dispensation, retours et destruction se rapprochent unité par unité, avec la température de conservation."
+      },
+      {
+        "titre": "Le rapport de visite est une pièce de l'essai",
+        "resume": "Il trace ce qui a été vérifié, ce qui manque et qui doit agir avant quand ; un audit le relira."
+      },
+      {
+        "titre": "L'écart au protocole se classe",
+        "resume": "Un écart majeur touchant la sécurité ou les critères d'évaluation se remonte et s'analyse, pas seulement se note."
+      }
+    ],
+    "regles": [
+      "Ne jamais saisir ni corriger une donnée du cahier d'observation à la place du centre investigateur.",
+      "Ne jamais juger de la causalité ou de la gravité médicale d'un événement indésirable.",
+      "Ne jamais écrire une donnée nominative de patient hors des outils de l'essai.",
+      "Ne jamais envoyer un rapport ou une lettre de suivi au centre sans validation du chef de projet."
+    ]
+  },
+  "taches": [
+    {
+      "id": "preparer-les-visites",
+      "nom": "Préparer les visites de monitoring",
+      "description": "Lister patients, données à vérifier, requêtes ouvertes et documents du classeur investigateur avant chaque visite.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "calendrier.evenement"
+      },
+      "entrees": [
+        "dossier:essais/requetes"
+      ],
+      "sorties": [
+        {
+          "dossier": "essais/preparations-visites",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "rediger-les-rapports-de-visite",
+      "nom": "Rédiger les rapports de visite",
+      "description": "Écrire le rapport : recrutement, consentements, écarts, événements graves, produits à l'étude, actions et échéances.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:essais/preparations-visites"
+      ],
+      "sorties": [
+        {
+          "dossier": "essais/rapports-visite",
+          "format": "docx"
+        }
+      ],
+      "logiciels": [
+        "bureautique",
+        "ged"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "ecrire-les-lettres-de-suivi",
+      "nom": "Écrire les lettres de suivi à l'investigateur",
+      "description": "Résumer à l'investigateur les constats de la visite et les actions attendues avec leurs dates.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:essais/rapports-visite"
+      ],
+      "sorties": [
+        {
+          "dossier": "essais/lettres-suivi",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "suivre-les-requetes",
+      "nom": "Suivre les requêtes et les retards de saisie",
+      "description": "Tenir par centre les requêtes ouvertes, leur âge et les retards de saisie, et préparer les relances.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "lundi",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "requetes"
+      ],
+      "sorties": [
+        {
+          "dossier": "essais/requetes",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "tenir-le-recrutement",
+      "nom": "Tenir le tableau de recrutement",
+      "description": "Suivre par centre les patients sélectionnés, inclus, en échec de sélection et sortis, face à l'objectif.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "vendredi",
+        "heure": "10:00"
+      },
+      "entrees": [
+        "dossier:essais/requetes"
+      ],
+      "sorties": [
+        {
+          "dossier": "essais/recrutement",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "veiller-la-litterature",
+      "nom": "Veiller la littérature du domaine de l'essai",
+      "description": "Relever les publications nouvelles sur la molécule et l'indication utiles à l'équipe de l'essai.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 15,
+        "heure": "09:00"
+      },
+      "entrees": [
+        "indication"
+      ],
+      "sorties": [
+        {
+          "dossier": "essais/veille",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "bases-scientifiques"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "email",
+    "calendrier",
+    "fichiers"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "bases-scientifiques",
+      "bureautique",
+      "ged"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-avance",
+    "audio": "audio-parole",
+    "activite": 0.5
+  },
+  "resume_metier": "Prépare et rapporte les visites de monitoring, vérifie consentements, données source, événements indésirables graves et produits à l'étude, écrit les lettres de suivi, tient requêtes et recrutement par centre selon les bonnes pratiques cliniques.",
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Chef de projet clinique",
+        "quoi": "Le protocole, le plan de monitoring et les priorités de l'essai."
+      },
+      {
+        "poste": "Centres investigateurs",
+        "quoi": "Les données saisies, les réponses aux requêtes et les déclarations d'événements graves."
+      },
+      {
+        "poste": "Data manager",
+        "quoi": "Les requêtes émises sur les données du cahier d'observation."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Chef de projet clinique",
+        "quoi": "Les rapports de visite, les écarts majeurs et les centres en retard."
+      },
+      {
+        "poste": "Pharmacovigilance",
+        "quoi": "Les événements indésirables graves découverts non déclarés."
+      },
+      {
+        "poste": "Responsable assurance qualité de laboratoire",
+        "agent": "AG-1453",
+        "quoi": "Les constats qui appellent un audit de centre."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je rédige dans Word les rapports de visite et je tiens dans Excel requêtes et recrutement.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0340",
+        "usage": "Je range dans SharePoint les rapports de visite et les documents de l'essai de mon périmètre.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-1560",
+        "usage": "Je relève dans PubMed les publications nouvelles sur la molécule et l'indication."
+      }
+    ]
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole"
+      }
+    },
+    "appelsParJourEstimes": 31
+  },
+  "commercial": {
+    "profil": "PR-06",
+    "priorite": "P2",
+    "pack": "Pro Agent / AI Team",
+    "prixMensuel": {
+      "min": 299,
+      "max": 1499
+    },
+    "autonomie": "Copilote / autonome selon workflow",
+    "besoinHumain": "Décision/expertise humaine",
+    "risqueReglementaire": "Faible"
+  },
+  "materiel": {
+    "ram": 36,
+    "vram": 11,
+    "cpuCoeurs": 8,
+    "disque": 28,
+    "chargeContinue": 0.25,
+    "gpu": {
+      "classe": "dediee-milieu",
+      "libelle": "carte graphique dédiée milieu de gamme, 12 Go (classe RTX 4070)"
+    }
+  }
+}

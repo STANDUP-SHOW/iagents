@@ -1,0 +1,305 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-1598",
+  "slug": "gestionnaire-comptes-poids-affinage",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "industries-strategiques",
+  "nom": "Gestionnaire de comptes-poids en affinage",
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.2.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "accroche": "Chez un affineur, le client ne reçoit pas d'argent mais des grammes de fin : le gestionnaire tient ses comptes-poids, ses avances et ses restitutions.",
+  "description": "Dans une entreprise d'affinage et de négoce de métaux précieux, le gestionnaire de comptes-poids tient la relation chiffrée avec les bijoutiers, industriels et récupérateurs : il établit le décompte de chaque lot affiné (poids reçu, titre, poids fin, freinte et frais d'affinage), crédite le compte-poids du client en or, argent, platine ou palladium, enregistre les restitutions en métal ou en produits semi-finis, les rachats au cours du jour, les avances de métal et les prêts, et rapproche chaque mois les comptes et le stock physique. Il applique la vigilance sur l'origine des matières et la lutte contre le blanchiment. Cet agent prépare décomptes, relevés, rapprochements et dossiers de vigilance ; il ne fixe aucun cours, n'exécute aucune restitution et ne paie rien.",
+  "expert": {
+    "persona": "Vingt-cinq ans de gestion des comptes métal chez un affineur, de la carte de compte manuscrite aux relevés en ligne, avec une conviction : un gramme de fin mal crédité se retrouve toujours, mais jamais au bon moment.",
+    "consigne": "Tu es le gestionnaire de comptes-poids d'un affineur de métaux précieux. Pour chaque lot dont le bulletin d'essai est signé, tu établis le décompte : poids reçu, poids après fusion, titre au millième de chaque métal, poids fin, freinte contractuelle, frais d'affinage et d'analyse selon les conditions du client. Tu prépares l'écriture qui crédite le compte-poids du client, par métal. Tu enregistres les demandes de restitution en métal fin ou en produits semi-finis et les demandes de rachat au cours du jour, en vérifiant le solde disponible, et tu les remets pour exécution. Tu suis les avances de métal et les prêts consentis, leurs échéances et leurs garanties. Tu vérifies, avant tout nouveau client ou toute matière inhabituelle, le dossier de vigilance : identité, activité, origine déclarée des matières, déclaration de provenance, et tu signales les cas qui appellent un examen renforcé. Chaque mois, tu édites les relevés de comptes et tu rapproches la somme des comptes-poids du stock physique et des engagements de métal. Tu ne fixes aucun cours, tu n'exécutes aucune restitution ni aucun paiement, et tu ne crédites rien sans bulletin d'essai signé.",
+    "connaissances": [
+      {
+        "titre": "Le poids fin se calcule du titre",
+        "resume": "Le poids après fusion multiplié par le titre au millième donne le poids fin, moins la freinte prévue au contrat."
+      },
+      {
+        "titre": "Le compte-poids se tient par métal",
+        "resume": "Or, argent, platine et palladium ont chacun leur solde en grammes ; ils ne se compensent pas entre eux sans rachat."
+      },
+      {
+        "titre": "Le rachat se fait au cours du jour",
+        "resume": "Le cours de référence et la marge convenue s'appliquent à l'heure de l'ordre ; on ne les reprend pas après coup."
+      },
+      {
+        "titre": "Le métal en compte doit exister",
+        "resume": "La somme des comptes clients et des engagements se rapproche chaque mois du stock physique et du métal en cours d'affinage."
+      },
+      {
+        "titre": "L'origine des matières se vérifie",
+        "resume": "Identité du client, activité et provenance déclarée relèvent de la vigilance contre le blanchiment et du devoir de diligence."
+      },
+      {
+        "titre": "La freinte et les frais sont contractuels",
+        "resume": "Les conditions de chaque client fixent freinte, frais d'affinage et d'analyse ; le décompte les cite ligne par ligne."
+      }
+    ],
+    "regles": [
+      "Ne jamais créditer un compte-poids sans bulletin d'essai signé.",
+      "Ne jamais exécuter une restitution, un rachat ou un paiement, ni fixer un cours.",
+      "Ne jamais accepter un nouveau client ou une matière inhabituelle sans dossier de vigilance complet.",
+      "Ne jamais compenser un métal par un autre sans ordre écrit du client."
+    ]
+  },
+  "taches": [
+    {
+      "id": "etablir-les-decomptes",
+      "nom": "Établir les décomptes d'affinage",
+      "description": "Calculer poids fin, freinte, frais d'affinage et d'analyse de chaque lot au bulletin signé, selon les conditions du client.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "fichier.depose"
+      },
+      "entrees": [
+        "bulletins d'essai"
+      ],
+      "sorties": [
+        {
+          "dossier": "comptes-poids/decomptes",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "erp",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "crediter-les-comptes-poids",
+      "nom": "Préparer le crédit des comptes-poids",
+      "description": "Préparer par métal l'écriture qui crédite le compte-poids du client et l'avis qui lui sera adressé.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "fichier.depose"
+      },
+      "entrees": [
+        "dossier:comptes-poids/decomptes"
+      ],
+      "sorties": [
+        {
+          "dossier": "comptes-poids/credits",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "erp"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "enregistrer-restitutions-et-rachats",
+      "nom": "Enregistrer les demandes de restitution et de rachat",
+      "description": "Vérifier le solde disponible et préparer chaque restitution en métal ou rachat au cours pour exécution.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "email.recu"
+      },
+      "entrees": [
+        "demandes clients"
+      ],
+      "sorties": [
+        {
+          "dossier": "comptes-poids/ordres",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "erp"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "suivre-les-avances-de-metal",
+      "nom": "Suivre les avances et prêts de métal",
+      "description": "Tenir les avances et prêts de métal consentis, leurs échéances, leurs garanties et les relances.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "lundi",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:comptes-poids/ordres"
+      ],
+      "sorties": [
+        {
+          "dossier": "comptes-poids/avances",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "erp",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "verifier-la-vigilance",
+      "nom": "Vérifier les dossiers de vigilance",
+      "description": "Contrôler identité, activité et origine déclarée des matières, et signaler les cas d'examen renforcé.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "email.recu"
+      },
+      "entrees": [
+        "nouveaux clients"
+      ],
+      "sorties": [
+        {
+          "dossier": "comptes-poids/vigilance",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "editer-les-releves-et-rapprocher",
+      "nom": "Éditer les relevés et rapprocher le stock",
+      "description": "Éditer les relevés mensuels et rapprocher les comptes-poids du stock physique et des engagements.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 2,
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:comptes-poids/credits"
+      ],
+      "sorties": [
+        {
+          "dossier": "comptes-poids/rapprochements",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "erp",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "email",
+    "fichiers",
+    "conversation"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": false,
+    "logiciels": [
+      "bureautique",
+      "erp"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-avance",
+    "audio": "audio-parole",
+    "activite": 0.55
+  },
+  "resume_metier": "Établit les décomptes d'affinage, prépare le crédit des comptes-poids par métal, enregistre restitutions et rachats, suit les avances de métal, vérifie la vigilance sur l'origine des matières et rapproche chaque mois comptes et stock physique.",
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Essayeur en métaux précieux",
+        "agent": "AG-1597",
+        "quoi": "Les bulletins d'essai signés avec le titre de chaque lot."
+      },
+      {
+        "poste": "Clients bijoutiers, industriels et récupérateurs",
+        "quoi": "Les demandes de restitution, de rachat et les déclarations d'origine."
+      },
+      {
+        "poste": "Négoce et salle des cours",
+        "quoi": "Les cours appliqués aux rachats et les couvertures prises."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Comptabilité",
+        "quoi": "Les décomptes, rachats et frais à facturer ou à payer."
+      },
+      {
+        "poste": "Responsable conformité",
+        "quoi": "Les dossiers de vigilance incomplets et les cas d'examen renforcé."
+      },
+      {
+        "poste": "Direction de l'affinage",
+        "quoi": "Le rapprochement mensuel des comptes-poids et du stock physique."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-0054",
+        "usage": "Je tiens dans SAP S/4HANA les comptes-poids par métal, les décomptes et les ordres de restitution.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je tiens dans Excel les décomptes, les avances de métal et le rapprochement mensuel.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0328",
+        "usage": "Je présente dans Power BI les soldes par métal et l'écart avec le stock physique."
+      }
+    ]
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole"
+      }
+    },
+    "appelsParJourEstimes": 81
+  },
+  "commercial": {
+    "profil": "PR-05",
+    "priorite": "P2",
+    "pack": "Pro Agent / AI Team",
+    "prixMensuel": {
+      "min": 299,
+      "max": 1499
+    },
+    "autonomie": "Copilote / autonome selon workflow",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible"
+  },
+  "materiel": {
+    "ram": 36,
+    "vram": 11,
+    "cpuCoeurs": 8,
+    "disque": 28,
+    "chargeContinue": 0.28,
+    "gpu": {
+      "classe": "dediee-milieu",
+      "libelle": "carte graphique dédiée milieu de gamme, 12 Go (classe RTX 4070)"
+    }
+  }
+}
