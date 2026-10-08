@@ -21,23 +21,30 @@ import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesP
 import { FINANCEMENT, OFFRES } from '../../dimensionnement/offre-box.ts';
 import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE } from '../src/data/recherche.js';
+import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE, logicielsDeLActivite } from '../src/data/recherche.js';
+import { IDS_DU_COEUR, coeurDeLActivite, personnelDeLActivite } from '../src/data/activites-recherche.js';
 import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, euros as eurosTarif } from '../src/data/tarifs.js';
 import Page from '../src/pages/Page.jsx';
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
+
+import catalogueJson from '../../catalogue/catalogue.json';
+
 
 let n = 0;
 const ok = (m) => { n++; console.log('  ok  ' + m); };
 const echoue = (m) => { console.error('  ✗   ' + m); process.exitCode = 1; };
 
-if (agents.length !== 1251) echoue(`${agents.length} fiches chargees, 1251 attendues`);
+// The counts come from the catalogue and the table, never written here: the
+// catalogue grows (1 249 fiches until 08/10, the trades' missing jobs since).
+const attendues = catalogueJson.agents.length;
+if (agents.length !== attendues) echoue(`${agents.length} fiches chargees, ${attendues} attendues`);
 else ok(`${agents.length} fiches chargees`);
 
 // 1. La liste se rend : c'est la page d'accueil.
 try {
   const html = renderToString(<FicheList agents={agents} onSelectAgent={() => {}} selectedAgent={null} />);
   if (!html.includes('AG-0001')) echoue('la liste ne montre pas AG-0001');
-  else ok('la liste des 1 251 fiches se rend');
+  else ok(`la liste des ${agents.length} fiches se rend`);
 } catch (e) {
   echoue(`la liste ne se rend pas : ${e.message}`);
 }
@@ -64,7 +71,8 @@ for (const [quoi, agent] of [['qui tient la regle', tient], ['qui ne la tient pa
 
 // 3. Le badge des 3x dit le meme chiffre que docs/economie.md.
 const allumes = agents.filter((a) => passes3xTest(a)).length;
-if (allumes !== 136) echoue(`le badge s'allume sur ${allumes} fiches, la table en annonce 136`);
+const annonces = Number(readFileSync('../docs/economie.md', 'utf8').match(/\*\*(\d+) fiches sur \d+ tiennent la règle/)?.[1]);
+if (allumes !== annonces) echoue(`le badge s'allume sur ${allumes} fiches, la table en annonce ${annonces}`);
 else ok(`le badge « 3x » s'allume sur ${allumes} fiches, comme docs/economie.md`);
 
 // 4. Et il n'est pas mort : la version d'avant etait incapable de rendre vrai.
@@ -79,7 +87,7 @@ else ok('chaque badge allume porte un ratio affichable');
 //    « — » silencieux sur une partie du catalogue serait passe inapercu.
 const sansEco = agents.filter((a) => economieDe(a) === null);
 if (sansEco.length) echoue(`${sansEco.length} fiches sans calcul economique (ex. ${sansEco[0].id})`);
-else ok('les 1 251 fiches ont un detail economique calculable');
+else ok('les 1 249 fiches ont un detail economique calculable');
 
 if (getSectors().length < 20) echoue(`${getSectors().length} secteurs seulement`);
 else ok(`${getSectors().length} secteurs, ${getFamilles().length} familles`);
@@ -146,8 +154,58 @@ for (const page of PAGES) {
   // page propose d'abord des agents de l'imprimerie et de la prospection, pas
   // un business plan à une entreprise qui existe.
   const demande = renderToString(<CreezEntreprise ideeInitiale="J'ai une imprimerie et je veux trouver plus de clients" />);
-  if (!demande.includes('Pour votre demande') || !demande.includes('Graphiste de production') || !/prospection|Commercial/.test(demande)) echoue("une demande d'imprimeur n'appelle ni l'imprimerie ni la prospection");
-  else ok("une demande d'imprimeur propose ses métiers et la prospection");
+  if (!demande.includes('Pour votre demande') || !demande.includes('Opérateur prépresse') || !/prospection|Commercial/.test(demande)) echoue("une demande d'imprimeur n'appelle ni l'imprimerie ni la prospection");
+  // max, 08/10: « créer une imprimerie en ligne » offered no estimator, no
+  // workshop manager, no production manager. The heart of each trade comes
+  // with the request, under the names the trade uses.
+  const ids = new Set(agents.map((a) => a.id));
+  const perdus = IDS_DU_COEUR.filter((id) => !ids.has(id));
+  if (perdus.length) echoue(`le cœur des métiers nomme des fiches absentes du catalogue : ${perdus.join(', ')}`);
+  // max, 08/10 again: Google lists a print shop's whole staff, down to the
+  // prépresse operator, the CTP technician and the proofreader; « je ne veux
+  // pas qu'un électricien, un garagiste, un boulanger ne trouve personne ».
+  for (const [idee, attendus] of [
+    ['créer une imprimerie en ligne', ['Deviseur', 'Chef de fabrication', 'Opérateur prépresse', 'Technicien CTP', 'Correcteur-lecteur', "Chef d'atelier", 'Secrétaire comptable', "Direction de l'imprimerie"]],
+    ['ouvrir une menuiserie', ['Deviseur', 'Secrétaire comptable']],
+    ['entreprise de maçonnerie', ['Deviseur', 'Métreur', 'Conducteur de travaux', 'Économiste']],
+    ['ouvrir un restaurant', ['Devis groupes', 'Chef de cuisine', 'Hygiène HACCP']],
+    ['reprendre un garage', ['Deviseur', "Chef d'atelier", 'Réceptionnaire après-vente', 'Magasinier']],
+    ['je suis plombier', ['Deviseur', 'Planning des chantiers', "Bureau d'études fluides"]],
+    ['je suis électricien', ['Deviseur', "Bureau d'études électricité", 'Conducteur de travaux', 'Secrétaire comptable']],
+    ['je suis boulanger', ['Chef de fournil', 'Responsable de boutique', 'Qualité, hygiène et allergènes', 'Secrétaire comptable']],
+    // Asked in everyday words, these found no activity at all.
+    ['créer une entreprise de transport', ['Deviseur — cotation transport', 'Planification des tournées']],
+    ['ouvrir une ferme bio', ['Devis et contrats', 'Chef de culture']],
+    ['créer une agence de voyage', ['Devis et cotation des voyages', 'Conception des circuits']],
+  ]) {
+    const rendu = renderToString(<CreezEntreprise ideeInitiale={idee} />).replace(/&#x27;/g, "'");
+    const manque = ['Le cœur de votre métier', ...attendus].filter((m) => !rendu.includes(m));
+    if (manque.length) echoue(`« ${idee} » ne propose pas : ${manque.join(', ')}`);
+  }
+  // A print shop prints on paper: no web designer in its staff nor in its search.
+  const imprimeur = renderToString(<CreezEntreprise ideeInitiale="J'ai une imprimerie" />);
+  if (/Graphiste web|Web designer/i.test(imprimeur)) echoue("une imprimerie se voit proposer un graphiste web");
+  const bibliotheque = filtrer(agents, { requete: 'imprimerie' }).slice(0, 30).map((a) => a.nom);
+  if (bibliotheque.some((n) => /web/i.test(n))) echoue(`la recherche « imprimerie » montre un métier du web : ${bibliotheque.filter((n) => /web/i.test(n)).join(', ')}`);
+  else ok("ni la page de création ni la recherche « imprimerie » ne montrent de graphiste web");
+  // Every trade that sells a job to a customer has its estimator.
+  const sansDevis = ACTIVITES_RECHERCHE
+    .filter((a) => !['sante-social', 'finance-immobilier', 'public-associatif'].includes(a.famille))
+    .filter((a) => !personnelDeLActivite(a, agents)?.sansDevis)
+    .filter((a) => !coeurDeLActivite(a, agents).some((c) => /devis|deviseur|cotation|chiffrage|chiffreur/i.test(c.role)));
+  // Every trade shows its own software, not only office tools; and the print
+  // shop, which its owner checks first, shows the ones printers actually run.
+  const BUREAU = new Set(['bureautique']);
+  const sansLogiciels = ACTIVITES_RECHERCHE.filter((a) => logicielsDeLActivite(a).filter((l) => !BUREAU.has(l.categorie)).length < 2);
+  if (sansLogiciels.length) echoue(`activités sans leurs logiciels métier : ${sansLogiciels.map((a) => a.nom).join(', ')}`);
+  const imprimerie = renderToString(<CreezEntreprise ideeInitiale="créer une imprimerie en ligne" />);
+  const manquants = ['Les logiciels de votre métier', 'Cadratin', 'Masterprint', 'VitaSoft', 'Reprolys', 'Caldera', 'PrintFlux'].filter((m) => !imprimerie.includes(m));
+  if (manquants.length) echoue(`« créer une imprimerie en ligne » n'affiche pas : ${manquants.join(', ')}`);
+  else ok("chaque activité affiche au moins deux logiciels de son métier, et l'imprimerie ceux des imprimeurs");
+  const sansCoeur = ACTIVITES_RECHERCHE.filter((a) => !coeurDeLActivite(a, agents).length);
+  if (sansCoeur.length) echoue(`activités sans cœur de métier : ${sansCoeur.map((a) => a.nom).join(', ')}`);
+  if (sansDevis.length) echoue(`activités sans deviseur : ${sansDevis.map((a) => a.nom).join(', ')}`);
+  else ok('chaque activité qui vend un travail a son deviseur, et chaque demande de client voit le cœur de son métier');
 
   const avis = conseilPour([...CYCLE_1.flatMap((e) => e.agents), ...CYCLE_2]);
   if (!avis) echoue('le pack de création ne reçoit aucun conseil de machine');
@@ -247,4 +305,4 @@ for (const page of PAGES) {
   else ok('aucun bouton du site ne fait télécharger l’application');
 }
 
-console.log(`\n${n} attentes tenues — boutique ok`);
+console.log(process.exitCode ? `\n${n} attentes tenues, au moins une faute ci-dessus — boutique REFUSÉE` : `\n${n} attentes tenues — boutique ok`);

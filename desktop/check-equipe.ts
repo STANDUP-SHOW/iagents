@@ -212,7 +212,7 @@ if (lue) {
   const texte = c.map((x) => `${x.titre} ${x.resume}`).join(' ');
   verifier('le membre connaît la mission de l’équipe', c[0].resume === DEMANDE_MAX);
   verifier('le membre connaît son rôle et les mots qui l’ont fait venir', /Investisseurs privés : « .*business angels/.test(texte), texte.slice(0, 300));
-  verifier('le membre nomme ses collègues par leur prénom', /Hugo, Business plan analyst/.test(texte));
+  verifier('le membre nomme ses collègues par leur prénom', /Hugo, Analyste plans d'affaires/.test(texte));
   verifier('le relais de la fiche devient un prénom', /Je reçois de Hugo, le besoin de financement/.test(texte), texte);
   verifier('le membre sait où il lit', /plans\/besoins chez Hugo/.test(texte));
 }

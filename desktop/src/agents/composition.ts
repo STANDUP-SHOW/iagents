@@ -345,6 +345,11 @@ function indexer(postes: readonly Poste[]): Index {
  * « Caldera, Photoshop, Illustrator » désigne un prépresse mieux que n'importe quel mot. Le
  * reste de la fiche (accroche, tâches) départage.
  *
+ * Un mot du nom pèse aussi selon la part du nom qu'il couvre : « graphiste » dit la moitié de
+ * « Graphiste prépresse », « RIP » le quart de « Technicien CTP et flux RIP ». Sans ça, le client
+ * qui parlait de « l'accès au RIP Caldera » (un outil, pas un poste) se voyait demander s'il
+ * voulait un technicien de flux plutôt que le graphiste qu'il venait de nommer.
+ *
  * Chaque mot pèse selon sa rareté dans le catalogue : « graphiste » ne nomme que deux postes,
  * « support » en nomme des dizaines, et « mes supports d'impression » ne doit pas faire monter
  * l'agent de support RH. Même chose pour les logiciels : Microsoft 365, que presque tous les
@@ -369,7 +374,7 @@ export function classerPostes(
     const motsNom = index.nom.get(poste.id) ?? [];
     const nomTrouves = motsNom.filter((m) => entiersDemande.has(m));
     if (nomTrouves.length) {
-      score += 2 * nomTrouves.reduce((t, m) => t + index.poidsNom(m), 0);
+      score += 2 * Math.sqrt(nomTrouves.length / motsNom.length) * nomTrouves.reduce((t, m) => t + index.poidsNom(m), 0);
       if (nomTrouves.length === motsNom.length) score += 4;
       raisons.push(`vous avez dit « ${nomTrouves.join(' ')} »`);
     }
