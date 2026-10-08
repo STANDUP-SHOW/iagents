@@ -1,5 +1,5 @@
 import donnees from 'virtual:accueil';
-import { nombre, LIENS, TELECHARGEMENT } from '../accueil/composants.jsx';
+import { nombre, LIENS, RECRUTER } from '../accueil/composants.jsx';
 import tarifs, { euros, montant, STATUTS, BOX_PUBLIQUES, BOX_DES, prixAgentEnUneLigne } from '../data/tarifs.js';
 import { Tete, Bande, Cartes, Etapes, Coches, Voisines, Fin, Bouton, Demande } from './blocs.jsx';
 import { COMPOSANTS_BUSINESS } from './PagesBusiness.jsx';
@@ -441,8 +441,8 @@ function Contact() {
       <Bande>
         <Demande sujet="Demande de contact" champs={[['Objet', 'Votre demande', ['Une démonstration', 'Composer une équipe', 'Une infrastructure locale', 'iAgent Enterprise', 'Autre chose']]]} />
       </Bande>
-      <Fin titre="Ou essayez tout de suite">
-        <a href={TELECHARGEMENT} className="bouton bouton-contour">Télécharger l'app</a>
+      <Fin titre="Ou découvrez d'abord comment on recrute">
+        <a href={RECRUTER} className="bouton bouton-contour">Comment recruter un agent</a>
       </Fin>
     </>
   );

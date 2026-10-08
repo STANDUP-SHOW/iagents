@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Logo, LIENS, TELECHARGEMENT } from '../composants.jsx';
+import { Logo, LIENS, RECRUTER } from '../composants.jsx';
 import { suivre } from '../analytique.js';
 
 // The Business navigation of max's global document (07/10, §3).
@@ -19,7 +19,7 @@ const Loupe = () => (
 
 /**
  * The site's header, as on max's mockups: logo, the five entries, a search
- * field that opens the catalogue on the words typed, and the download.
+ * field that opens the catalogue on the words typed, and the way to recruit.
  */
 export default function GlobalNav({ page = 'accueil', seuil = 24 }) {
   const [opaque, setOpaque] = useState(false);
@@ -55,10 +55,7 @@ export default function GlobalNav({ page = 'accueil', seuil = 24 }) {
             <input id="recherche-entete" name="q" type="search" placeholder="Rechercher un agent, un métier…" autoComplete="off" />
           </form>
           <a href="/catalogue" className="lg:hidden xl:inline-flex 2xl:hidden inline-flex items-center justify-center w-11 h-11 rounded-xl text-[var(--texte-doux)] hover:text-white" aria-label="Rechercher un agent ou un métier"><Loupe /></a>
-          <a href={TELECHARGEMENT} className="bouton bouton-braise !min-h-[40px] !px-4 !text-sm hidden sm:inline-flex">
-            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v11H3z M8 20h8 M12 16v4" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinejoin="round" /></svg>
-            Télécharger l'app
-          </a>
+          <a href={RECRUTER} className="bouton bouton-braise !min-h-[40px] !px-4 !text-sm hidden sm:inline-flex">Recruter un agent</a>
           <button type="button" className="xl:hidden w-11 h-11 inline-flex items-center justify-center rounded-xl border border-[var(--trait-fort)]" aria-expanded={ouvert} aria-controls="menu-mobile" aria-label={ouvert ? 'Fermer le menu' : 'Ouvrir le menu'} onClick={() => setOuvert(!ouvert)}>
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
               {ouvert
@@ -82,7 +79,7 @@ export default function GlobalNav({ page = 'accueil', seuil = 24 }) {
               </li>
             ))}
           </ul>
-          <a href={TELECHARGEMENT} className="bouton bouton-braise w-full mt-6">Télécharger l'app</a>
+          <a href={RECRUTER} className="bouton bouton-braise w-full mt-6">Recruter un agent</a>
         </nav>
       )}
     </header>

@@ -72,13 +72,13 @@ const urlPosteActivite = (f, a) => `${urlActivite.get(a.id)}/${f.slug}`;
 // The same header, colours and type as the rest of iagent.agency (charte
 // e-agent: Montserrat, the eight-colour gradient), with the full menu and a
 // way back on every page: these pages are where a search engine lands people.
-const TELECHARGEMENT = 'https://github.com/STANDUP-SHOW/iagents/releases/latest/download/iAgent-Windows.msi';
+const RECRUTER = '/how-it-works';
 const MENU = [
   ['Produit', '/workforce'], ['Agents', '/catalogue'], ['Créer votre entreprise', '/create'], ['Voice', '/voice'],
   ['iAgent Box', '/box'], ['Entreprise', '/enterprise'], ['Ressources', '/how-it-works'],
 ];
 const PIED = [
-  ['Produit', [['iAgent Workforce', '/workforce'], ['iAgent Box', '/box'], ['Tarifs', '/pricing'], ['Pourquoi louer', '/why-rent'], ['Télécharger pour Windows', TELECHARGEMENT]]],
+  ['Produit', [['iAgent Workforce', '/workforce'], ['iAgent Box', '/box'], ['Tarifs', '/pricing'], ['Pourquoi louer', '/why-rent'], ['Recruter un agent', RECRUTER]]],
   ['Agents', [['Le catalogue des métiers', '/catalogue'], ['Skill Packs', '/skills'], ['Créer votre entreprise', '/create'], ['Opportunités', '/opportunities']]],
   ['Voice', [['iAgent Voice', '/voice'], ['Standard téléphonique', '/standard-telephonique'], ['Support Center', '/support-center'], ['Sales Center', '/sales-center']]],
   ['Entreprise', [['iAgent Enterprise', '/enterprise'], ['IA locale et hybride', '/local-ai'], ['Sécurité', '/security'], ['Questions fréquentes', '/faq'], ['Contact', '/contact']]],
@@ -159,9 +159,9 @@ function page({ url, titre, description, fil = [], corps, portrait = null, appel
 <header class="tete"><div class="cadre tete-ligne">
 <a class="logo" href="/" aria-label="iAgent, accueil"><img src="/accueil/logo-iagent-blanc.svg" alt="iAgent" width="91" height="26"></a>
 <nav class="menu" aria-label="Navigation principale">${liens(MENU)}</nav>
-<a class="bouton bouton-degrade" href="${TELECHARGEMENT}">Télécharger l'app</a>
+<a class="bouton bouton-degrade" href="${RECRUTER}">Recruter un agent</a>
 <details class="mobile"><summary aria-label="Ouvrir le menu"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16M4 16h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></summary>
-<nav aria-label="Menu">${liens(MENU)}<a href="${TELECHARGEMENT}">Télécharger l'app</a></nav></details>
+<nav aria-label="Menu">${liens(MENU)}<a href="${RECRUTER}">Recruter un agent</a></nav></details>
 </div></header>
 <div class="bandeau"><div class="cadre">
 <nav class="fil" aria-label="Fil d'Ariane">${filHtml}<a class="retour" href="/catalogue">← Retour au catalogue</a></nav>

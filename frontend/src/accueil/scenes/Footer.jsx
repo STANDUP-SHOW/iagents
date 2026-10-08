@@ -1,5 +1,5 @@
 import donnees from 'virtual:accueil';
-import { Logo, TELECHARGEMENT, LIENS } from '../composants.jsx';
+import { Logo, RECRUTER, LIENS } from '../composants.jsx';
 import { suivre } from '../analytique.js';
 
 /** Plain links a crawler can follow into the catalogue's static pages. */
@@ -17,7 +17,7 @@ export default function Footer() {
       { nom: 'Standard téléphonique', href: '/standard-telephonique' },
       { nom: 'Support Center', href: '/support-center' },
       { nom: 'Sales Center', href: '/sales-center' },
-      { nom: 'Télécharger pour Windows', href: TELECHARGEMENT },
+      { nom: 'Recruter un agent', href: RECRUTER },
     ] },
     { titre: 'Agents', liens: [
       { nom: `Les ${compteurs.fiches.toLocaleString('fr-FR')} métiers`, href: LIENS.catalogue },

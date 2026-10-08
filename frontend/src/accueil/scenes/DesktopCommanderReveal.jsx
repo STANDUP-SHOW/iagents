@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Bouton, TELECHARGEMENT } from '../composants.jsx';
+import { Bouton } from '../composants.jsx';
 import { useScene, BUREAU, MOBILE, gsap } from '../mouvement.js';
 
 // The eight menus of the application's centre, as they are named there.
@@ -58,7 +58,7 @@ export default function DesktopCommanderReveal() {
         </div>
         <div className="dc-conclusion cadre w-full mt-12 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <p className="titre-display titre-petit">Voyez. Parlez. <span className="corail">Décidez.</span></p>
-          <Bouton href={TELECHARGEMENT} evenement="desktop_commander_click">Découvrir Desktop Commander</Bouton>
+          <Bouton href="/workforce" evenement="desktop_commander_click">Découvrir Desktop Commander</Bouton>
         </div>
       </div>
     </section>

@@ -20,6 +20,7 @@ import PacksEntreprise from '../src/components/PacksEntreprise.jsx';
 import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee, INSTALLATIONS, conseilPour, euros } from '../src/data/offres.js';
 import { FINANCEMENT, OFFRES } from '../../dimensionnement/offre-box.ts';
 import { readFileSync, existsSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { PORTRAITS, portraitDe } from '../src/data/recherche.js';
 import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, euros as eurosTarif } from '../src/data/tarifs.js';
 import Page from '../src/pages/Page.jsx';
@@ -219,6 +220,11 @@ for (const page of PAGES) {
   const vus = new Set(agents.map(portraitDe));
   if (perdus.length || vus.size < PORTRAITS.length * 0.9) echoue(`portraits : ${perdus.length} absents, ${vus.size} visages employés sur ${PORTRAITS.length}`);
   else ok(`${vus.size} portraits différents dans la bibliothèque, tous présents`);
+  // Le site n'offre jamais l'installeur : Desktop Commander est livré sur la Box
+  // (max, 08/10). Un bouton « Télécharger » ramènerait le visiteur hors de l'offre.
+  const telechargeurs = execSync("grep -rlE 'releases/(latest/)?download|\\.msi|T[eé]l[eé]charger' src seo || true", { encoding: 'utf8' }).trim();
+  if (telechargeurs) echoue(`un bouton fait encore télécharger l'application : ${telechargeurs.split('\n').join(', ')}`);
+  else ok('aucun bouton du site ne fait télécharger l’application');
 }
 
 console.log(`\n${n} attentes tenues — boutique ok`);
