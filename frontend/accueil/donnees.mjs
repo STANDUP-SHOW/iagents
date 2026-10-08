@@ -8,7 +8,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { slugifier } from '../seo/slug.mjs';
-import { PRIX_AGENT } from '../src/data/prix.js';
+import { PRIX_AGENT_MOIS } from '../src/data/prix.js';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const lire = (chemin) => JSON.parse(readFileSync(join(RACINE, chemin), 'utf8'));
@@ -106,7 +106,7 @@ export function donneesAccueil() {
       categoriesLogiciels: new Set(logiciels.map((l) => l.categorie)).size,
       taches: fiches.reduce((n, f) => n + f.taches.length, 0),
     },
-    prixAgent: PRIX_AGENT,
+    prixAgent: PRIX_AGENT_MOIS,
     financement: { mois: offre.financement.mois },
     personnes: PERSONNES.map((p) => ({ ...p, ...resume(fiche(p.fiche)) })),
     vitrine: VITRINE.map((id) => resume(fiche(id), 3)),
@@ -131,6 +131,12 @@ export function donneesAccueil() {
     })),
     phases: PHASES.map((p) => ({ ...p, fiches: p.fiches.map((id) => resume(fiche(id), 2)) })),
     gamme: offre.offres.filter((o) => o.role !== 'aucune').map((o) => ({ id: o.id, nom: o.nom, phrase: o.phrase })),
+    // The way in for a visitor who knows their trade: the home page shows
+    // these and the 282 behind them (max, 08/10: « imprimerie » found nothing).
+    activitesEntree: ['Imprimerie offset et numérique', 'Boulangerie-pâtisserie artisanale', 'Garage indépendant et mécanique', 'Plomberie et chauffage',
+      'Restauration traditionnelle', 'Coiffure', 'Cabinet dentaire', 'Expertise comptable', 'Agence immobilière — transaction', 'Transport routier de marchandises',
+      'Pharmacie d\'officine', 'Hôtellerie', 'Électricité du bâtiment', 'Avocat', 'Fleuristerie', 'Nettoyage de locaux', 'Viticulture', 'Agence de communication']
+      .map(activite).map((a) => ({ nom: a.nom, url: `/activites/${slugifier(a.nom)}` })),
     activitesPopulaires: ['Imprimerie offset et numérique', 'Agence immobilière — transaction', 'Agence de communication', 'Boulangerie-pâtisserie artisanale', 'Agence web et digitale', 'Machines et équipements industriels']
       .map(activite).map((a) => ({ nom: a.nom, url: `/activites/${slugifier(a.nom)}` })),
   };

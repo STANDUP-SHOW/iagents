@@ -14,6 +14,7 @@ import {
   devisParBox,
   conseillerBox,
 } from '../../../dimensionnement/offre-box.ts';
+import { INSTALLATIONS_MASQUEES, BOX_DES, euros as eurosTarif } from './tarifs.js';
 
 const parId = new Map(agents.map((a) => [a.id, a]));
 export const ficheDe = (id) => parId.get(id);
@@ -86,22 +87,29 @@ export function activitesPourIdee(idee, limite = 3) {
     .map((r) => r.activite);
 }
 
-// The machine offer (dimensionnement/offre-box.ts): six installations, each with
-// its purchase price and its 24-month instalment. The shop reads, it never
-// recomputes; every price stays marked provisional until max sets it.
-export const INSTALLATIONS = OFFRES.map((o) => ({ ...o, cout: coutInstallation(o) }));
+// The machine offer (dimensionnement/offre-box.ts). Since max's site plan of
+// 07/10 the server and multibox installations stay in the file but are no
+// longer published (tarifs.json, archives): the shop offers « Sans machine »
+// and the Box, and strong local power is quoted on /local-ai.
+const publique = (id) => !INSTALLATIONS_MASQUEES.has(id);
+export const INSTALLATIONS = OFFRES.filter((o) => publique(o.id)).map((o) => ({ ...o, cout: coutInstallation(o) }));
+
+/** The Box is rented (max, 07/10): its line reads the rent from tarifs.json, not a purchase price. */
+export const LOCATION_BOX = { id: 'box-commandeur', phrase: `${eurosTarif(BOX_DES.mensuel)} HT par mois sur ${BOX_DES.engagementMois} mois, matériel mis à disposition` };
 export const installationDe = (id) => INSTALLATIONS.find((o) => o.id === id);
 
 /** A team -> the installation to advise, with every installation's quote beside it. */
 export function conseilPour(ids) {
   const fiches = ids.map(ficheDe).filter(Boolean);
   if (!fiches.length) return null;
-  const { conseil, devis } = conseillerBox(fiches);
+  const devis = conseillerBox(fiches).devis.filter((d) => publique(d.offre));
+  const horizon = (d) => d.totalPendant + d.totalApres;
+  const conseil = devis.reduce((best, d) => (horizon(d) < horizon(best) - 0.005 ? d : best));
   return { conseil, devis, fiches };
 }
 
 /** One line per installation for a single agent. */
-export const devisAgent = (fiche) => devisParBox(fiche);
+export const devisAgent = (fiche) => devisParBox(fiche).filter((l) => publique(l.offre));
 
 /** « 1 234 € », the way the shop writes money. */
 export const euros = (x) =>

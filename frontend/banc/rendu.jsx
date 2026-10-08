@@ -18,7 +18,13 @@ import CreezEntreprise from '../src/components/CreezEntreprise.jsx';
 import IAgentBox, { CarteInstallation } from '../src/components/IAgentBox.jsx';
 import PacksEntreprise from '../src/components/PacksEntreprise.jsx';
 import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee, INSTALLATIONS, conseilPour, euros } from '../src/data/offres.js';
-import { FINANCEMENT } from '../../dimensionnement/offre-box.ts';
+import { FINANCEMENT, OFFRES } from '../../dimensionnement/offre-box.ts';
+import { readFileSync, existsSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE } from '../src/data/recherche.js';
+import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, euros as eurosTarif } from '../src/data/tarifs.js';
+import Page from '../src/pages/Page.jsx';
+import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
 
 let n = 0;
 const ok = (m) => { n++; console.log('  ok  ' + m); };
@@ -119,7 +125,7 @@ for (const page of PAGES) {
   for (const vue of page.id === 'catalogue' ? VUES : [{ id: 'metier' }]) {
     try {
       const html = renderToString(<App pageInitiale={page.id} vueInitiale={vue.id} />);
-      const attendu = { catalogue: vue.id === 'packs' ? 'PACK-01' : 'AG-0', entreprise: 'Cycle 1', box: 'Box Commandeur' }[page.id];
+      const attendu = { catalogue: { packs: 'PACK-01', activites: 'Imprimerie offset et numérique', secteurs: 'Comptabilité' }[vue.id] ?? 'AG-0', entreprise: 'Cycle 1', box: 'Box Commandeur' }[page.id];
       if (!html.includes(attendu)) echoue(`page « ${page.libelle} »${vue.libelle ? `, vue « ${vue.libelle} »` : ''} : « ${attendu} » absent`);
       else ok(`page « ${page.libelle} »${vue.libelle ? `, vue « ${vue.libelle} »` : ''} se rend`);
     } catch (e) {
@@ -134,8 +140,15 @@ for (const page of PAGES) {
   if (!reconnues.length) echoue('« boulangerie » ne reconnaît aucune activité');
   else ok(`« boulangerie » → ${reconnues[0].nom}`);
   const html = renderToString(<CreezEntreprise ideeInitiale="ouvrir une boulangerie bio" />);
-  if (!html.includes('Activité reconnue')) echoue("la page ne montre pas l'activité reconnue");
+  if (!html.includes('Votre activité') || !html.includes(reconnues[0].nom)) echoue("la page ne montre pas l'activité reconnue");
   else ok("la page montre l'activité reconnue");
+  // « J'ai une imprimerie et je veux trouver plus de clients » (max, 08/10) : la
+  // page propose d'abord des agents de l'imprimerie et de la prospection, pas
+  // un business plan à une entreprise qui existe.
+  const demande = renderToString(<CreezEntreprise ideeInitiale="J'ai une imprimerie et je veux trouver plus de clients" />);
+  if (!demande.includes('Pour votre demande') || !demande.includes('Graphiste de production') || !/prospection|Commercial/.test(demande)) echoue("une demande d'imprimeur n'appelle ni l'imprimerie ni la prospection");
+  else ok("une demande d'imprimeur propose ses métiers et la prospection");
+
   const avis = conseilPour([...CYCLE_1.flatMap((e) => e.agents), ...CYCLE_2]);
   if (!avis) echoue('le pack de création ne reçoit aucun conseil de machine');
   else ok(`le pack de création : ${avis.conseil.nom} conseillée`);
@@ -146,49 +159,92 @@ for (const page of PAGES) {
   else ok('un pack ouvert conseille son installation');
 }
 
-// 11. L'offre machines se lit dans dimensionnement/offre-box.json : six
-//     installations, un prix provisoire dit comme tel, la durée du financement
-//     lue dans le fichier, aucune ligne interne du catalogue, et le choix passe
-//     avant le catalogue.
+// 11. L'offre machines (plan du site de max, 07/10) : le public ne voit que
+//     « Sans machine » et la Box, louée ; les offres serveur et multibox restent
+//     dans dimensionnement/offre-box.json sans être publiées ; aucun prix n'est
+//     écrit dans un composant, tous viennent de src/data/tarifs.json.
 {
   const html = renderToString(<IAgentBox />);
   const manquantes = INSTALLATIONS.filter((o) => !html.includes(o.nom.replace(/'/g, '&#x27;')));
-  if (INSTALLATIONS.length !== 6 || manquantes.length) echoue(`iAgent Box : ${INSTALLATIONS.length} installations, absentes ${manquantes.map((o) => o.id).join(', ')}`);
-  else ok('iAgent Box : les six installations');
-  const provisoires = INSTALLATIONS.filter((o) => o.cout.aConfirmer).length;
-  const dits = html.split('Prix provisoire').length - 1;
-  if (dits < provisoires) echoue(`${provisoires} prix provisoires, ${dits} dits comme tels`);
-  else ok(`${provisoires} prix provisoires, tous dits comme tels`);
-  // The term is read from the file: a hardcoded one would outlive max's choice.
-  const termes = [...html.matchAll(/sur (?:<!-- -->)?(\d+)(?:<!-- -->)? mois/g)].map((m) => Number(m[1]));
-  const fausses = termes.filter((t) => t !== FINANCEMENT.mois);
-  if (!termes.length || fausses.length) echoue(`durée de financement affichée ${[...new Set(termes)].join(', ')}, fichier ${FINANCEMENT.mois}`);
-  else ok(`financement dit sur ${FINANCEMENT.mois} mois, comme le fichier`);
+  if (manquantes.length) echoue(`iAgent Box : absentes ${manquantes.map((o) => o.id).join(', ')}`);
+  else ok(`iAgent Box : les ${INSTALLATIONS.length} installations publiques`);
+  const archivees = OFFRES.filter((o) => INSTALLATIONS_MASQUEES.has(o.id));
+  if (archivees.length !== INSTALLATIONS_MASQUEES.size) echoue('une installation masquée n’existe plus dans offre-box.json : ne rien supprimer');
+  const vues = archivees.filter((o) => html.includes(o.nom) || INSTALLATIONS.some((i) => i.id === o.id));
+  if (vues.length) echoue(`offres archivées encore publiées : ${vues.map((o) => o.nom).join(', ')}`);
+  else ok(`${archivees.length} offres serveur et multibox gardées, non publiées`);
   const internes = INSTALLATIONS.flatMap((o) => o.autresLignesDuCatalogue ?? []).filter((l) => html.includes(l));
   if (internes.length) echoue(`iAgent Box affiche des lignes internes du catalogue : ${internes.slice(0, 3).join(' ; ')}`);
   else ok('aucune ligne interne du catalogue affichée');
-  // Prices stay apart (max, 25/09): each box its own line with its own subscription,
-  // the lease column of the catalogue (36 months) never shown.
-  for (const o of INSTALLATIONS.filter((x) => x.cout.lignes.length)) {
-    const carte = renderToString(<CarteInstallation o={o} />);
-    const manque = o.cout.lignes.filter((l) => !carte.includes(euros(l.mensualite)) || !carte.includes(euros(l.abonnement)));
-    if (manque.length) echoue(`${o.nom} : ligne sans sa mensualité ou son abonnement (${manque.map((l) => l.nom).join(', ')})`);
-    if (o.avecCommandeur && o.cout.lignes.length !== 2) echoue(`${o.nom} : la Box Commandeur n'a pas sa ligne à part`);
-    const bail = o.leasingMensuelHT && euros(o.leasingMensuelHT);
-    if (bail && carte.includes(bail) && !o.cout.lignes.some((l) => [euros(l.mensualite), euros(l.abonnement)].includes(bail))) echoue(`${o.nom} affiche la mensualité du catalogue sur 36 mois`);
-    if (o.cout.mensualiteAConfirmer && !carte.includes('Taux du financement à confirmer')) echoue(`${o.nom} : taux à confirmer non dit`);
-  }
-  ok('chaque box a sa ligne, sa mensualité et son abonnement');
+  const box = INSTALLATIONS.find((o) => o.id === 'box-commandeur');
+  const carte = renderToString(<CarteInstallation o={box} />);
+  if (!carte.includes(eurosTarif(BOX_DES.mensuel).replace(/\u00a0/g, '&nbsp;')) && !carte.includes(eurosTarif(BOX_DES.mensuel))) echoue('la Box ne montre pas son loyer de tarifs.json');
+  else if (carte.includes(euros(box.cout.lignes[0].prixAchat))) echoue('la Box, louée, affiche encore un prix d’achat');
+  else ok('la Box se loue, au prix de tarifs.json');
   const sans = renderToString(<App installationInitiale={null} />);
   if (!sans.includes("D&#x27;abord, votre installation")) echoue("le catalogue ne demande pas l'installation d'abord");
   else ok("le catalogue demande l'installation d'abord");
-  const avec = renderToString(<App installationInitiale="box-max" />);
+  const avec = renderToString(<App installationInitiale="box-commandeur" />);
   if (avec.includes("D&#x27;abord, votre installation") || !avec.includes('Votre installation')) echoue("l'installation choisie n'est pas gardée");
   else ok("l'installation choisie est gardée");
-  const fiche = renderToString(<FicheDetail agent={ficheDe('AG-0001')} onClose={() => {}} ongletInitial="economie" installation="box-max" />);
+  const fiche = renderToString(<FicheDetail agent={ficheDe('AG-0001')} onClose={() => {}} ongletInitial="economie" installation="box-commandeur" />);
   const lignes = INSTALLATIONS.filter((o) => fiche.includes(o.nom.replace(/'/g, '&#x27;'))).length;
-  if (lignes !== 6 || !fiche.includes('(la vôtre)')) echoue(`fiche : ${lignes} installations au devis`);
-  else ok('la fiche donne son coût sur les six installations');
+  if (lignes !== INSTALLATIONS.length || !fiche.includes('(la vôtre)') || archivees.some((o) => fiche.includes(o.nom))) echoue(`fiche : ${lignes} installations au devis`);
+  else ok('la fiche donne son coût sur les installations publiques, et seulement elles');
+}
+
+// 12. Les pages de l'offre (plan du site de max, 07/10) se rendent toutes, avec
+//     un titre, et aucun montant n'y est écrit en dur : tout vient de tarifs.json.
+{
+  for (const { nom } of PAGES_OFFRE) {
+    const html = renderToString(<Page nom={nom} />);
+    if (!html.includes('<h1')) echoue(`page ${nom} : pas de titre principal`);
+  }
+  ok(`les ${PAGES_OFFRE.length} pages de l'offre se rendent`);
+  const sources = ['src/pages/Pages.jsx', 'src/pages/PagesBusiness.jsx', 'src/pages/blocs.jsx', 'src/accueil/Accueil.jsx'];
+  const enDur = sources.flatMap((f) => [...readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8').matchAll(/\d[\d\s,.]*\s?€/g)].map((m) => `${f} : ${m[0]}`));
+  if (enDur.length) echoue(`montants écrits en dur : ${enDur.join(' ; ')}`);
+  else ok('aucun montant écrit en dur dans les pages');
+  const tarifsHtml = renderToString(<Page nom="pricing" />);
+  const absents = [...BOX_PUBLIQUES.map((b) => b.mensuel), ...tarifs.agents.paliers.map((p) => p.mensuel)].filter((x) => tarifs.agents.affichage === 'paliers' || x < 100).filter((x) => !tarifsHtml.includes(String(x)));
+  if (absents.length) echoue(`la page Tarifs ne montre pas ${absents.join(', ')}`);
+  else ok('la page Tarifs montre la grille de tarifs.json');
+  // Le téléphone n'est pas construit : aucune offre Voice ne se vend comme disponible.
+  const voixHtml = renderToString(<Page nom="voice" />);
+  const vendues = tarifs.voice.offres.filter((o) => !['bientot', 'sur-devis'].includes(o.statut));
+  const manquants = tarifs.voice.offres.filter((o) => o.mensuel ?? o.aPartirDe).filter((o) => !voixHtml.includes(String(o.mensuel ?? o.aPartirDe)));
+  if (vendues.length || manquants.length || !voixHtml.includes('Bientôt')) echoue(`page Voice : ${vendues.map((o) => o.id).join(', ')} vendues, ${manquants.map((o) => o.id).join(', ')} absentes`);
+  else ok('la page Voice montre ses prix, tous marqués « bientôt »');
+  // Starter = Box 36 mois + 1 Essential (max, 07/10) : le prix est la somme, jamais recopié.
+  const starter = tarifs.packs.find((p) => p.id === 'starter');
+  const attendu = tarifs.box.find((b) => b.id === 'box-commander-36').mensuel + tarifs.agents.paliers.find((p) => p.id === 'essential').mensuel;
+  if (starter.mensuel !== attendu || !tarifsHtml.includes(String(attendu))) echoue(`Starter à ${starter.mensuel} au lieu de ${attendu}`);
+  else ok(`le Starter vaut la Box et un Essential : ${attendu} €`);
+  // Les portraits découpés des planches de max : chaque visage annoncé existe, et
+  // le catalogue en montre assez pour que deux fiches voisines ne se ressemblent pas.
+  const public_ = 'public'; // the bench runs from frontend/
+  const perdus = PORTRAITS.filter((f) => !existsSync(public_ + f));
+  const vus = new Set(agents.map(portraitDe));
+  if (perdus.length || vus.size < PORTRAITS.length * 0.9) echoue(`portraits : ${perdus.length} absents, ${vus.size} visages employés sur ${PORTRAITS.length}`);
+  else ok(`${vus.size} portraits différents dans la bibliothèque, tous présents`);
+  // Un imprimeur tape « imprimerie » (max, 08/10) : aucune fiche ne porte ce mot,
+  // l'activité ACT-0021 si. Chaque nom et chaque alias des activités doit rendre
+  // des métiers, jamais une liste vide.
+  {
+    const imprimerie = activitesDeLaRecherche('imprimerie');
+    const trouves = filtrer(agents, { requete: 'imprimerie' });
+    if (imprimerie[0]?.id !== 'ACT-0021' || !trouves.length) echoue(`« imprimerie » : activité ${imprimerie[0]?.id ?? 'aucune'}, ${trouves.length} métiers`);
+    else ok(`« imprimerie » reconnaît ${imprimerie[0].nom} et propose ${trouves.length} métiers, d'abord ${trouves[0].nom}`);
+    const muets = ACTIVITES_RECHERCHE.flatMap((a) => [a.nom, ...(a.alias ?? [])].map((mot) => [a, mot]))
+      .filter(([a, mot]) => !activitesDeLaRecherche(mot).includes(a) || !filtrer(agents, { requete: mot }).length);
+    if (muets.length) echoue(`${muets.length} mots d'activité sans réponse, dont ${muets.slice(0, 5).map(([a, m]) => `« ${m} » (${a.id})`).join(', ')}`);
+    else ok(`les ${ACTIVITES_RECHERCHE.length} activités se trouvent par leur nom et chacun de leurs alias`);
+  }
+  // Le site n'offre jamais l'installeur : Desktop Commander est livré sur la Box
+  // (max, 08/10). Un bouton « Télécharger » ramènerait le visiteur hors de l'offre.
+  const telechargeurs = execSync("grep -rlE 'releases/(latest/)?download|\\.msi|T[eé]l[eé]charger' src seo || true", { encoding: 'utf8' }).trim();
+  if (telechargeurs) echoue(`un bouton fait encore télécharger l'application : ${telechargeurs.split('\n').join(', ')}`);
+  else ok('aucun bouton du site ne fait télécharger l’application');
 }
 
 console.log(`\n${n} attentes tenues — boutique ok`);

@@ -1,13 +1,7 @@
-@import '@fontsource/sora/300.css';
-@import '@fontsource/sora/400.css';
-@import '@fontsource/sora/600.css';
-@import '@fontsource/sora/700.css';
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/500.css';
-@import '@fontsource/inter/600.css';
-@import '@fontsource/orbitron/500.css';
-@import '@fontsource/orbitron/600.css';
-@import '@fontsource/orbitron/700.css';
+@import '@fontsource/montserrat/400.css';
+@import '@fontsource/montserrat/500.css';
+@import '@fontsource/montserrat/600.css';
+@import '@fontsource/montserrat/700.css';
 @import './maquette.css';
 
 @tailwind base;
@@ -33,6 +27,10 @@
   --cyan-halo: 0 0 24px rgba(3, 243, 255, 0.35);
   --corail: #e65090;
   --braise: #f28e44;
+  /* max's charte e-agent (CHARTE-IAGENT.svg, 07/10): the exact stops of the
+     gradient of the logo and of the main buttons, and the navy of the icons. */
+  --degrade-charte: linear-gradient(90deg, #e5007e 0%, #e6216d 22.63%, #de6970 29.33%, #bcce00 37.71%, #76cae9 57.26%, #b61180 71.23%, #ed744b 84.08%, #fdc802 97.49%);
+  --marine: #150041;
   --texte: #eaf2ff;
   --texte-doux: #97a8c2;
   --texte-pale: #6b7d98;
@@ -52,7 +50,7 @@ body {
   margin: 0;
   background: var(--fond);
   color: var(--texte);
-  font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: Montserrat, system-ui, sans-serif;
   font-size: 17px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -78,7 +76,7 @@ a { color: inherit; text-decoration: none; }
 /* ---- type ------------------------------------------------------------- */
 
 .titre-display {
-  font-family: Sora, Inter, sans-serif;
+  font-family: Montserrat, system-ui, sans-serif;
   font-weight: 600;
   letter-spacing: -0.035em;
   line-height: 0.98;
@@ -95,7 +93,7 @@ a { color: inherit; text-decoration: none; }
 .corail { color: var(--corail); }
 
 .surtitre {
-  font-family: Orbitron, Inter, sans-serif;
+  font-family: Montserrat, system-ui, sans-serif;
   font-size: 0.72rem;
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -184,8 +182,19 @@ a { color: inherit; text-decoration: none; }
   border: 1px solid transparent;
   white-space: nowrap;
 }
-.bouton-plein { background: var(--cyan); color: #01121a; box-shadow: 0 10px 40px -12px rgba(3, 243, 255, 0.7); }
-.bouton-plein:hover { transform: translateY(-1px); box-shadow: 0 14px 50px -10px rgba(3, 243, 255, 0.9); }
+/* The main button, as on the charte: the logo's gradient, white Montserrat
+   bold in capitals, two opposite corners rounded to half the height (bottom
+   left, top right) and two square. */
+.bouton-plein, .bouton-braise {
+  background: var(--degrade-charte); color: #fff;
+  border-radius: 0 999px 0 999px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+  text-shadow: 0 1px 2px rgba(21, 0, 65, 0.35);
+  box-shadow: 0 10px 34px -12px rgba(229, 0, 126, 0.7);
+}
+.bouton-plein:hover, .bouton-braise:hover { transform: translateY(-1px); box-shadow: 0 14px 40px -10px rgba(229, 0, 126, 0.9); }
+/* A long label in capitals wraps on a phone rather than pushing the page sideways. */
+@media (max-width: 480px) { .bouton-plein, .bouton-braise { white-space: normal; text-align: center; padding-top: 10px; padding-bottom: 10px; } }
 .bouton-contour { border-color: var(--trait-fort); color: var(--texte); background: rgba(8, 20, 40, 0.4); }
 .bouton-contour:hover { border-color: rgba(3, 243, 255, 0.55); color: var(--cyan); }
 .bouton-lien { color: var(--cyan); padding: 0; min-height: 44px; }
@@ -209,7 +218,7 @@ a { color: inherit; text-decoration: none; }
   border-bottom-color: var(--trait);
 }
 .entete-ligne { max-width: var(--largeur); margin: 0 auto; height: 72px; display: flex; align-items: center; gap: 16px; }
-.entete-nav a { color: var(--texte-doux); font-size: 0.92rem; transition: color 0.3s; }
+.entete-nav a { color: var(--texte-doux); font-size: 0.92rem; transition: color 0.3s; white-space: nowrap; }
 .entete-nav a:hover { color: var(--texte); }
 
 .progression {
@@ -319,3 +328,9 @@ a { color: inherit; text-decoration: none; }
 
 /* Utilities last, so a class written on an element wins over the charter classes above. */
 @tailwind utilities;
+
+/* Activity chips on the home page: links, so they light up like one. */
+.puce-lien { display: inline-block; padding: 7px 13px; font-size: 0.86rem; color: var(--texte); text-decoration: none; transition: border-color .2s, color .2s; }
+.puce-lien:hover, .puce-lien:focus-visible { color: var(--cyan); border-color: rgba(3, 243, 255, 0.5); }
+.pi-entree .entete-recherche { width: 100%; height: auto; min-height: 52px; padding: 6px 6px 6px 18px; }
+.pi-entree .entete-recherche input { font-size: 1rem; }
