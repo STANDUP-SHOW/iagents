@@ -205,7 +205,7 @@ export async function lancer(): Promise<number> {
     const ex = await get('/tarifs/export-site?date=2026-10-07');
     const temoin = lireJson('./temoin-site-tarifs.json');
     const forme = ecartsDeForme(ex.corps, temoin);
-    verifier('GET /tarifs/export-site a la forme de frontend/src/data/tarifs.json (témoin de plan-site 0dc1b13)', ex.statut === 200 && forme.length === 0, forme);
+    verifier('GET /tarifs/export-site a la forme de frontend/src/data/tarifs.json (témoin de plan-site 704e722)', ex.statut === 200 && forme.length === 0, forme);
     const nEx = nombres(ex.corps), nTe = nombres(temoin);
     const prixDiff = Object.keys(nTe).filter((k) => nEx[k] !== nTe[k]).map((k) => `${k}: ${nEx[k]} au lieu de ${nTe[k]}`);
     verifier('les montants exportés sont ceux du site', prixDiff.length === 0, prixDiff);

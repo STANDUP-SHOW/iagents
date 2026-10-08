@@ -27,6 +27,13 @@
 //    NOT VERIFIED line by line: updating a live call by POST …/Calls/{Sid}.json with `Twiml` or
 //    `Status=completed`, and HTTP Basic auth AccountSid:AuthToken (the page shows SDK samples).
 //    Inbound webhook parameters CallSid, From, To, CallStatus: standard TwiML request, NOT re-read.
+//  - Media streams, read 08/10/2026: Twilio https://www.twilio.com/docs/voice/twiml/stream
+//    (`<Connect><Stream url>` is bidirectional; the url takes NO query string; the rest of the
+//    TwiML runs only once our server closes the socket) and …/media-streams/websocket-messages;
+//    Telnyx https://developers.telnyx.com/api/call-control/start-call-streaming (POST
+//    /v2/calls/:id/actions/streaming_start {stream_url, stream_track, stream_bidirectional_mode
+//    "rtp", stream_bidirectional_codec "PCMU"}) and …/docs/voice/programmable-voice/media-streaming.
+//    The messages themselves are read and written in `pont.ts`.
 //  - Generic SIP: no vendor. Our own contract with the gateway that fronts the SIP trunk:
 //    webhook header `x-iagent-horodatage` (ISO) and `x-iagent-signature: sha256=<hex HMAC-SHA256
 //    of "{horodatage}.{raw body}">`, body {type, id, de, vers}; commands POST {base}/appels,
@@ -75,6 +82,10 @@ export interface PhoneProvider {
   raccrocher(id: string): Promise<void>;
   /** true when the answer to the webhook itself carries instructions (TwiML). */
   readonly repondParWebhook: boolean;
+  /** true when the operator can stream the line's audio to us (`pont.ts`). */
+  readonly fluxPossible: boolean;
+  /** Asks the operator to open the media stream of a live call towards `url` (wss://…). */
+  brancherFlux(id: string, url: string): Promise<void>;
 }
 
 async function commande(qui: string, url: string, init: RequestInit): Promise<unknown> {
@@ -146,6 +157,8 @@ export function telnyx(env: Env, bases: Bases): PhoneProvider {
       return { id_operateur: id };
     },
     decrocher: (id) => action(id, 'answer', {}),
+    fluxPossible: true,
+    brancherFlux: (id, url) => action(id, 'streaming_start', { stream_url: url, stream_track: 'inbound_track', stream_bidirectional_mode: 'rtp', stream_bidirectional_codec: 'PCMU' }),
     transferer: (id, vers) => action(id, 'transfer', { to: vers }),
     raccrocher: (id) => action(id, 'hangup', {}),
   };
@@ -207,9 +220,16 @@ export function twilio(env: Env, bases: Bases): PhoneProvider {
     },
     // Twilio picks up through the TwiML answered to its webhook: nothing to send.
     decrocher: async () => {},
+    fluxPossible: true,
+    brancherFlux: (id, url) => modifier(id, { Twiml: `<Response>${twimlFlux(url)}</Response>` }),
     transferer: (id, vers) => modifier(id, { Twiml: `<Response><Dial>${echapperXml(vers)}</Dial></Response>` }),
     raccrocher: (id) => modifier(id, { Status: 'completed' }),
   };
+}
+
+/** The TwiML verb that opens a bidirectional stream; the address carries its own one-time token. */
+export function twimlFlux(url: string): string {
+  return `<Connect><Stream url="${echapperXml(url)}"/></Connect>`;
 }
 
 export function echapperXml(s: string): string {
@@ -254,6 +274,9 @@ export function sip(env: Env): PhoneProvider {
       return { id_operateur: v.id };
     },
     decrocher: async (id) => { await envoyer(`/appels/${encodeURIComponent(id)}/decrocher`, {}); },
+    // Our gateway contract has no media stream yet: calls on SIP go to a human.
+    fluxPossible: false,
+    brancherFlux: async () => { throw new Error('La passerelle SIP ne sait pas encore envoyer le son de l’appel : un humain prend l’appel.'); },
     transferer: async (id, vers) => { await envoyer(`/appels/${encodeURIComponent(id)}/transfert`, { vers }); },
     raccrocher: async (id) => { await envoyer(`/appels/${encodeURIComponent(id)}/raccrocher`, {}); },
   };

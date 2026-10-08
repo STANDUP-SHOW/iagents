@@ -13,6 +13,7 @@ import type { Box, VoiceProfile } from '../modele.ts';
 import { creerPlateforme, messageASigner } from '../serveur.ts';
 import { Stockage } from '../stockage.ts';
 import { ecouter, fauxGemini, fauxMoteurs, fauxOperateur } from './banc-faux.ts';
+import { lancerPont } from './banc-pont.ts';
 import { verifierContact } from './campagnes.ts';
 import { manque } from './cles.ts';
 import { coutAppel } from './cout.ts';
@@ -398,6 +399,11 @@ const a=process.argv;require('fs').writeFileSync(a[a.indexOf('-of')+1]+'.txt','J
   const sttM = mot.recus.find((r) => r.chemin === '/v1/audio/transcriptions');
   verifier('Mistral : Bearer, modèles relevés, WAV demandé', ttsM?.entetes.authorization === 'Bearer cle-mistral-banc' && JSON.parse(ttsM.corps).response_format === 'wav' && JSON.parse(ttsM.corps).voice_id === 'fr_marie_neutral' && !!sttM?.corps.includes('voxtral-mini-latest'));
   configurerVoix({ pont_media: false });
+
+  await lancerPont({
+    verifier, base, s, env, basesVoix, admin, box, twilioEntrant, telnyxEntrant, operateur: op.recus, std,
+    horloge: { lire: () => horloge, poser: (d) => { horloge = d; } },
+  });
 
   // -------------------------------------------------------------------------
   console.log(' Campagnes sortantes par la plateforme');

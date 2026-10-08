@@ -90,6 +90,8 @@ export interface SessionVoix {
   interrupt(): Promise<void>;
   setVoice(voix: string): Promise<void>;
   sendContext(c: ContexteSession): Promise<void>;
+  /** Says this exact sentence (the switchboard's own words: greeting, "please hold"…), then ends a turn. */
+  say(texte: string): Promise<void>;
   executeTool(appel: AppelOutil, executeur: Executeur): Promise<void>;
   closeSession(): Promise<Metriques>;
 }
@@ -315,6 +317,24 @@ class SessionTourParTour implements SessionVoix {
   async interrupt(): Promise<void> { this.interrompu = true; this.file.pousser({ type: 'interrompu' }); }
   async setVoice(voix: string): Promise<void> { this.voix = voix; }
   async sendContext(c: ContexteSession): Promise<void> { this.systeme = consigneDe(c); }
+  async say(texte: string): Promise<void> {
+    // Not pushed into the history (the brain's first message must be the caller's);
+    // the instruction remembers it instead, so the agent does not greet twice.
+    this.systeme += `\nTu as déjà dit à l’appelant : « ${texte} »`;
+    this.enCours = this.enCours.then(async () => {
+      this.interrompu = false;
+      const { pcm, taux } = await this.bouche(texte, this.voix, this.langue);
+      this.m.caracteres_synthetises += texte.length;
+      this.m.secondes_audio_sortie += pcm.length / (2 * taux);
+      if (!this.interrompu) {
+        this.file.pousser({ type: 'audio', pcm, taux });
+        this.file.pousser({ type: 'transcription', qui: 'agent', texte });
+      }
+      this.file.pousser({ type: 'fin-de-tour' });
+    }).catch((e) => {
+      this.file.pousser({ type: 'erreur', motif: e instanceof Error ? e.message : 'La phrase n’a pas pu être dite.' });
+    });
+  }
   async executeTool(appel: AppelOutil, executeur: Executeur): Promise<void> {
     this.m.appels_outils++;
     let r: unknown;
@@ -368,7 +388,8 @@ class SessionGemini implements SessionVoix {
     await new Promise<void>((res, rej) => {
       const minuterie = setTimeout(() => { rej(new Error('Gemini Live ne répond pas à l’ouverture.')); try { ws.close(); } catch { /* closed */ } }, 10_000);
       let pret = false;
-      ws.onopen = () => ws.send(JSON.stringify({
+      // addEventListener, not on*: the Cloudflare runtime's WebSocket has no on* handlers.
+      ws.addEventListener('open', () => ws.send(JSON.stringify({
         setup: {
           model: `models/${MODELES.gemini}`,
           generationConfig: {
@@ -382,15 +403,15 @@ class SessionGemini implements SessionVoix {
           inputAudioTranscription: {},
           outputAudioTranscription: {},
         },
-      }));
-      ws.onmessage = (e) => {
+      })));
+      ws.addEventListener('message', (e: MessageEvent) => {
         const m = s.lire(e.data);
         if (!pret && m?.setupComplete !== undefined) { pret = true; clearTimeout(minuterie); res(); return; }
         if (m) s.traiter(m);
-      };
+      });
       // The URL carries the key: never echo the event or the URL.
-      ws.onerror = () => { clearTimeout(minuterie); if (!pret) rej(new Error('Gemini Live est injoignable ou refuse la clé.')); else s.file.pousser({ type: 'erreur', motif: 'La liaison avec Gemini Live a échoué.' }); };
-      ws.onclose = () => { clearTimeout(minuterie); if (!pret) rej(new Error('Gemini Live a fermé la session avant de l’ouvrir.')); s.file.fermer(); };
+      ws.addEventListener('error', () => { clearTimeout(minuterie); if (!pret) rej(new Error('Gemini Live est injoignable ou refuse la clé.')); else s.file.pousser({ type: 'erreur', motif: 'La liaison avec Gemini Live a échoué.' }); });
+      ws.addEventListener('close', () => { clearTimeout(minuterie); if (!pret) rej(new Error('Gemini Live a fermé la session avant de l’ouvrir.')); s.file.fermer(); });
     });
     return s;
   }
@@ -440,6 +461,10 @@ class SessionGemini implements SessionVoix {
   }
   async sendContext(c: ContexteSession): Promise<void> {
     this.envoyer({ clientContent: { turns: [{ role: 'user', parts: [{ text: `Contexte : ${consigneDe(c)}` }] }], turnComplete: false } });
+  }
+  async say(texte: string): Promise<void> {
+    // Gemini Live speaks only what it generates: it is asked to repeat the sentence word for word.
+    this.envoyer({ clientContent: { turns: [{ role: 'user', parts: [{ text: `Dis mot pour mot à l’appelant, sans rien ajouter : « ${texte} »` }] }], turnComplete: true } });
   }
   async executeTool(appel: AppelOutil, executeur: Executeur): Promise<void> {
     this.m.appels_outils++;

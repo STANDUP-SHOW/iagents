@@ -1,37 +1,34 @@
 // Le stockage de la plateforme : des collections de documents gardées en
-// mémoire et écrites sur disque à chaque changement (écriture en `.partiel`
-// puis renommage, comme `telechargement.rs`, pour qu'un arrêt brutal ne laisse
-// jamais un fichier à moitié écrit).
+// mémoire, et chaque changement remis à un `Support` qui le rend durable. Deux
+// supports : un fichier JSON sous Node (`stockage-fichier.ts`, écriture en
+// `.partiel` puis renommage, comme `telechargement.rs`) et le stockage d'un
+// Durable Object chez Cloudflare (`cloudflare/worker.ts`, une clé par
+// document). Sans support (`new Stockage(null)`), tout reste en mémoire : les bancs.
 //
-// Volontairement sans base de données ni dépendance : la plateforme démarre
-// avec `node --experimental-strip-types plateforme/serveur.ts`, comme le relais.
-// Le jour où le volume l'exige, c'est ce fichier seul qui change.
+// Volontairement sans base de données ni dépendance. Le jour où le volume
+// l'exige, c'est un support de plus, pas un changement des modules.
 //
 // Isolation par tenant (§18) : `pourTenant()` rend une vue qui ne lit et
 // n'écrit que les documents de CE tenant, et refuse d'en écrire un qui en
 // porte un autre.
 
-import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
+export type Doc = Record<string, unknown>;
+export type Donnees = Record<string, Record<string, Doc>>;
 
-type Doc = Record<string, unknown>;
+/** Ce qui rend un changement durable. `doc` null : le document est retiré. Appelé après chaque changement, dans l'ordre. */
+export type Support = { initial: Donnees; changer(collection: string, id: string, doc: Doc | null): void };
 
 export class Stockage {
-  private donnees: Record<string, Record<string, Doc>> = {};
-  private readonly fichier: string | null;
-  constructor(fichier: string | null) {
-    this.fichier = fichier;
-    if (fichier && existsSync(fichier)) {
-      this.donnees = JSON.parse(readFileSync(fichier, 'utf8'));
-    }
+  private donnees: Donnees = {};
+  private readonly support: Support | null;
+  constructor(support: Support | null) {
+    this.support = support;
+    if (support) this.donnees = support.initial;
   }
 
-  private ecrire(): void {
-    if (!this.fichier) return;
-    mkdirSync(dirname(this.fichier), { recursive: true });
-    const partiel = `${this.fichier}.partiel`;
-    writeFileSync(partiel, JSON.stringify(this.donnees));
-    renameSync(partiel, this.fichier);
+  /** Tout, tel qu'en mémoire : pour le support fichier, qui réécrit le fichier entier. */
+  toutes(): Donnees {
+    return this.donnees;
   }
 
   lire<T>(collection: string, id: string): T | null {
@@ -45,7 +42,7 @@ export class Stockage {
 
   poser<T extends object>(collection: string, id: string, doc: T): T {
     (this.donnees[collection] ??= {})[id] = doc as Doc;
-    this.ecrire();
+    this.support?.changer(collection, id, doc as Doc);
     return doc;
   }
 
@@ -53,7 +50,7 @@ export class Stockage {
     const c = this.donnees[collection];
     if (!c || !(id in c)) return false;
     delete c[id];
-    this.ecrire();
+    this.support?.changer(collection, id, null);
     return true;
   }
 

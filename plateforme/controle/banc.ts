@@ -145,15 +145,15 @@ export async function lancer(): Promise<number> {
   {
     const dossier = mkdtempSync(join(tmpdir(), 'fiche-'));
     try {
-      const origine = cheminFiche('AG-0001')!;
+      const origine = fileURLToPath(new URL(`../../${cheminFiche('AG-0001')!}`, import.meta.url));
       const octets = readFileSync(origine);
       const copie = join(dossier, 'AG-0001.json');
       writeFileSync(copie, octets);
-      const meme = empreinteFiche(copie) === empreinteFiche(origine);
+      const meme = empreinteFiche(readFileSync(copie)) === empreinteFiche(readFileSync(origine));
       const change = Buffer.from(octets);
       change[Math.floor(change.length / 2)] ^= 0x01;
       writeFileSync(copie, change);
-      verifier("une fiche modifiée d'un octet change son empreinte", meme && empreinteFiche(copie) !== empreinteFiche(origine));
+      verifier("une fiche modifiée d'un octet change son empreinte", meme && empreinteFiche(readFileSync(copie)) !== empreinteFiche(readFileSync(origine)));
     } finally { rmSync(dossier, { recursive: true, force: true }); }
   }
 
@@ -290,7 +290,7 @@ export async function lancer(): Promise<number> {
     const plusTard = verifierJetonLicence(jeton, cle.cle_publique, b1.device_id, new Date(horloge + 2 * 3600_000));
     verifier("un droit dont la fin est passée tombe du jeton avant l'expiration du jeton", plusTard.valide && plusTard.droits.length === 2 && !plusTard.droits.some((d) => d.id === eCourt.id));
     verifier('jeton v2 : chaque droit porte l’empreinte des octets exacts de sa fiche',
-      v.valide && v.contenu.v === 2 && v.contenu.droits.every((d) => d.empreinte_fiche === empreinteFiche(cheminFiche(d.agent_template_id)!)));
+      v.valide && v.contenu.v === 2 && v.contenu.droits.every((d) => d.empreinte_fiche === empreinteFiche(readFileSync(new URL(`../../${cheminFiche(d.agent_template_id)!}`, import.meta.url)))));
     verifier('grâce hors ligne : émission + 72 h, signée dans la charge', v.valide && Date.parse(v.contenu.grace_jusqu_au) - horloge === 72 * H && r.corps?.grace_jusqu_au === v.contenu.grace_jusqu_au);
     verifier('grâce : valide à 30 h si la plateforme est injoignable', verifierJetonLicence(jeton, cle.cle_publique, b1.device_id, new Date(horloge + 30 * H), true).valide);
     verifier('grâce : refusé à 30 h si la plateforme est joignable', !verifierJetonLicence(jeton, cle.cle_publique, b1.device_id, new Date(horloge + 30 * H), false).valide);

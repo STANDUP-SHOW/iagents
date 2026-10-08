@@ -1,13 +1,20 @@
-// Reads the pricing files from the repository (Node only). The engine itself
-// (moteur.ts) never touches a file, so the sites can import it in a browser.
-import { readFileSync } from 'node:fs';
+// Loads the pricing files of the repository. They are imported as JSON, so they
+// travel inside the code (Node and Cloudflare alike) and no file is read at run
+// time. The engine itself (moteur.ts) imports nothing, so the sites can use it
+// in a browser.
+import plansJson from './plans.json' with { type: 'json' };
+import fiscaliteJson from './fiscalite.json' with { type: 'json' };
+import coutsJson from './couts-fournisseurs.json' with { type: 'json' };
+import tarifsApiJson from '../../dimensionnement/tarifs-api.json' with { type: 'json' };
+import offreBoxJson from '../../dimensionnement/offre-box.json' with { type: 'json' };
 import type { Stockage } from '../stockage.ts';
 import {
   avecPrix, fautesDuPlan, planALaDate, plansDeDepart,
   type CoutsFournisseurs, type FichierPlans, type Fiscalite, type PlanTarif, type TarifsApi,
 } from './moteur.ts';
 
-const lire = <T>(chemin: string): T => JSON.parse(readFileSync(new URL(chemin, import.meta.url), 'utf8')) as T;
+// A fresh copy at each load, as a file read gave: nothing downstream can alter the imported module.
+const copie = <T>(v: unknown): T => structuredClone(v) as T;
 
 export type Tarifs = {
   fichier: FichierPlans;
@@ -41,14 +48,14 @@ export function prixDuPlan(stockage: Stockage | null, plan_id: string, date: str
 
 /** Loads and checks every file; a seed plan that fails a rule stops the platform instead of being served. */
 export function chargerTarifs(): Tarifs {
-  const fichier = lire<FichierPlans>('./plans.json');
-  const fiscalite = lire<Fiscalite>('./fiscalite.json');
-  const depart = plansDeDepart(fichier, lire('../../dimensionnement/offre-box.json'));
+  const fichier = copie<FichierPlans>(plansJson);
+  const fiscalite = copie<Fiscalite>(fiscaliteJson);
+  const depart = plansDeDepart(fichier, copie(offreBoxJson));
   const fautes = depart.flatMap((p) => fautesDuPlan(p, fiscalite).map((f) => `${p.plan_id} : ${f}`));
   if (fautes.length) throw new Error(`plans.json refusé :\n${fautes.join('\n')}`);
   return {
     fichier, depart, fiscalite,
-    couts: lire<CoutsFournisseurs>('./couts-fournisseurs.json'),
-    tarifsApi: lire<TarifsApi>('../../dimensionnement/tarifs-api.json'),
+    couts: copie<CoutsFournisseurs>(coutsJson),
+    tarifsApi: copie<TarifsApi>(tarifsApiJson),
   };
 }
