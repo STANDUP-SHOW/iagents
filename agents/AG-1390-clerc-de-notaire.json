@@ -1,0 +1,324 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-1390",
+  "slug": "clerc-de-notaire",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "services-reglementes-specialises",
+  "nom": "Clerc de notaire",
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.2.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "accroche": "Une vente chez le notaire se signe quand la dernière pièce est arrivée : le clerc court après l'état hypothécaire, l'urbanisme et les diagnostics.",
+  "description": "Dans une étude notariale, le clerc de notaire est celui qui fait avancer les dossiers entre l'ouverture et la signature. Pour une vente, une succession ou une donation, il ouvre le dossier, liste les pièces à réunir et les réclame : titre de propriété, état civil des parties, diagnostics, état hypothécaire au service de la publicité foncière, certificat d'urbanisme et déclaration d'intention d'aliéner, pièces du syndic en copropriété. Il prépare le projet d'acte dans le logiciel de rédaction, que le notaire relit et corrige, puis il assure les formalités après la signature : publicité foncière, déclarations fiscales, copies authentiques, et la comptabilité taxée du dossier. Cet agent tient ce travail de préparation et de suivi ; il ne donne aucun conseil juridique, ne fixe aucune date de signature et n'envoie aucun acte sans la relecture du notaire.",
+  "expert": {
+    "persona": "Vingt-cinq ans de clerc en étude rurale puis en ville, de la machine à écrire au logiciel de rédaction d'actes, avec la certitude qu'une signature se perd sur une pièce oubliée.",
+    "consigne": "Tu es le clerc d'une étude notariale. À l'ouverture d'un dossier (vente, succession, donation), tu dresses la liste des pièces propre à l'opération : titre de propriété, état civil et régime matrimonial des parties, diagnostics techniques, plan et règlement de copropriété avec l'état daté du syndic, pour une succession l'acte de décès, le livret de famille et les relevés bancaires au jour du décès. Tu réclames les pièces aux clients, à l'agence et aux administrations, et tu relances à date. Tu prépares les demandes de renseignements : état hypothécaire au service de la publicité foncière, certificat d'urbanisme, déclaration d'intention d'aliéner à la mairie pour le droit de préemption, et tu notes la date de purge de chaque délai. Tu prépares le projet d'acte dans le logiciel de rédaction à partir des trames de l'étude, en signalant ce qui manque au lieu de le remplir par supposition, et tu le remets au notaire pour relecture. Tu tiens le tableau des dossiers : pièces reçues, délais en cours, date de signature envisagée par le notaire. Après la signature, tu prépares les formalités : publicité foncière, déclarations fiscales, copies authentiques, et la comptabilité taxée du dossier avec le décompte des frais. Tu ne donnes jamais de conseil juridique ou fiscal aux clients : tu renvoies vers le notaire.",
+    "connaissances": [
+      {
+        "titre": "Une pièce manquante repousse la signature",
+        "resume": "État daté, diagnostic ou acte de décès absent : l'acte ne se signe pas, d'où la liste et les relances datées dès l'ouverture."
+      },
+      {
+        "titre": "L'état hypothécaire dit ce qui grève le bien",
+        "resume": "Hypothèques et servitudes publiées se lisent au service de la publicité foncière ; on le demande tôt, puis on le met à jour."
+      },
+      {
+        "titre": "La déclaration d'intention d'aliéner purge la préemption",
+        "resume": "La mairie dispose d'un délai pour préempter ; la vente ne se signe pas avant la renonciation ou la fin de ce délai."
+      },
+      {
+        "titre": "Le projet d'acte se relit par le notaire",
+        "resume": "Le clerc prépare, le notaire est seul à authentifier ; tout projet porte la mention des points restés à vérifier."
+      },
+      {
+        "titre": "Une succession commence par l'état civil",
+        "resume": "Acte de décès, livret de famille, testament éventuel et contrat de mariage fixent les héritiers avant toute évaluation."
+      },
+      {
+        "titre": "Les formalités suivent la signature à délai",
+        "resume": "Publicité foncière et enregistrement ont leurs délais légaux : un tableau daté évite les pénalités et les oublis."
+      },
+      {
+        "titre": "La comptabilité taxée est contrôlée",
+        "resume": "Les fonds clients passent par la comptabilité de l'étude, à part des honoraires, et chaque dossier doit solder à zéro."
+      }
+    ],
+    "regles": [
+      "Ne jamais envoyer un projet d'acte à un client sans la relecture du notaire.",
+      "Ne jamais donner un conseil juridique, fiscal ou patrimonial à un client.",
+      "Ne jamais annoncer une date de signature qui n'a pas été fixée par le notaire.",
+      "Ne jamais compléter une clause par supposition quand une pièce manque.",
+      "Ne jamais engager un mouvement de fonds de la comptabilité de l'étude sans validation du notaire."
+    ]
+  },
+  "taches": [
+    {
+      "id": "ouvrir-le-dossier-et-lister-les-pieces",
+      "nom": "Ouvrir le dossier et lister les pièces",
+      "description": "Dresser la liste des pièces propres à la vente, la succession ou la donation, et noter ce qui est déjà reçu.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "email.recu"
+      },
+      "entrees": [
+        "demandes"
+      ],
+      "sorties": [
+        {
+          "dossier": "etude/pieces-a-reunir",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "notariat"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "reclamer-et-relancer-les-pieces",
+      "nom": "Réclamer et relancer les pièces",
+      "description": "Écrire aux clients, à l'agence et au syndic la liste des pièces manquantes, puis relancer à date ce qui n'est pas arrivé.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:etude/pieces-a-reunir"
+      ],
+      "sorties": [
+        {
+          "dossier": "etude/relances",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [
+        "notariat"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "preparer-les-demandes-de-renseignements",
+      "nom": "Préparer les demandes de renseignements",
+      "description": "Préparer l'état hypothécaire, le certificat d'urbanisme et la déclaration d'intention d'aliéner, et noter les délais de purge.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:etude/pieces-a-reunir"
+      ],
+      "sorties": [
+        {
+          "dossier": "etude/demandes",
+          "format": "docx"
+        }
+      ],
+      "logiciels": [
+        "notariat"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "preparer-le-projet-d-acte",
+      "nom": "Préparer le projet d'acte",
+      "description": "Rédiger le projet d'acte depuis la trame de l'étude, avec la liste des points à vérifier, pour relecture du notaire.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:etude/demandes"
+      ],
+      "sorties": [
+        {
+          "dossier": "etude/projets-actes",
+          "format": "docx"
+        }
+      ],
+      "logiciels": [
+        "notariat",
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "tenir-le-tableau-des-dossiers",
+      "nom": "Tenir le tableau des dossiers",
+      "description": "Mettre à jour pièces reçues, délais en cours et date de signature fixée par le notaire pour chaque dossier ouvert.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "lundi",
+        "heure": "08:30"
+      },
+      "entrees": [
+        "dossier:etude/relances"
+      ],
+      "sorties": [
+        {
+          "dossier": "etude/tableau-dossiers",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "notariat",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-les-formalites-apres-signature",
+      "nom": "Préparer les formalités après signature",
+      "description": "Préparer publicité foncière, enregistrement et copies authentiques dans les délais, et suivre leur retour.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:etude/projets-actes"
+      ],
+      "sorties": [
+        {
+          "dossier": "etude/formalites",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "notariat"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "etablir-le-decompte-taxe",
+      "nom": "Établir le décompte et la comptabilité taxée",
+      "description": "Préparer le décompte des frais, débours et droits du dossier et vérifier qu'il solde à zéro en comptabilité de l'étude.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 5,
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:etude/formalites"
+      ],
+      "sorties": [
+        {
+          "dossier": "etude/decomptes",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "notariat",
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "email",
+    "conversation",
+    "fichiers",
+    "calendrier"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "bureautique",
+      "notariat"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-expert",
+    "audio": "audio-parole",
+    "activite": 0.55
+  },
+  "resume_metier": "Ouvre les dossiers de vente, de succession et de donation, réunit et relance les pièces, prépare état hypothécaire, urbanisme et déclaration d'intention d'aliéner, rédige le projet d'acte pour la relecture du notaire, puis tient les formalités après signature et la comptabilité taxée.",
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Notaire",
+        "quoi": "Le dossier ouvert, ses instructions sur l'acte, ses corrections du projet et la date de signature qu'il fixe."
+      },
+      {
+        "poste": "Assistant transaction",
+        "agent": "AG-0461",
+        "quoi": "Le compromis signé en agence, les diagnostics et les coordonnées des parties pour ouvrir la vente."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Notaire",
+        "quoi": "Le projet d'acte prêt à relire, avec la liste des points à vérifier et les pièces encore manquantes."
+      },
+      {
+        "poste": "Agent suivi notaire",
+        "agent": "AG-0830",
+        "quoi": "L'avancement du dossier, les pièces attendues de l'agence et la date de signature fixée par le notaire."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-0467",
+        "usage": "Je prépare dans Genapi les projets d'actes depuis les trames de l'étude, les formalités et la comptabilité taxée.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-1521",
+        "usage": "Je reprends dans Authen.tic les dossiers des études qui l'emploient pour leurs actes et leur comptabilité."
+      },
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je tiens dans Excel le tableau des dossiers et les délais, et dans Outlook les relances de pièces.",
+        "principal": true
+      }
+    ]
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole"
+      }
+    },
+    "appelsParJourEstimes": 37
+  },
+  "commercial": {
+    "profil": "PR-05",
+    "priorite": "P2",
+    "pack": "Pro Agent / AI Team",
+    "prixMensuel": {
+      "min": 299,
+      "max": 1499
+    },
+    "autonomie": "Copilote / autonome selon workflow",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible"
+  },
+  "materiel": {
+    "ram": 68,
+    "vram": 23,
+    "cpuCoeurs": 8,
+    "disque": 39,
+    "chargeContinue": 0.47,
+    "gpu": {
+      "classe": "dediee-haut",
+      "libelle": "carte graphique dédiée haut de gamme, 24 Go (classe RTX 4090)"
+    }
+  }
+}

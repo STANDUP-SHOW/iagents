@@ -10,7 +10,7 @@ import { AGENTS_RESEAUX, PACKS_ENTREPRISE, INSTALLATIONS, ficheDe, installationD
 import agents from './data/loader.js';
 import {
   filtrer, decompte, FILTRES_VIDES, libelleSecteur, libelleFamille, logicielsDe, portraitDe, COMPTEURS,
-  activitesDeLaRecherche, urlActivite, ACTIVITES,
+  activitesDeLaRecherche, urlActivite, ACTIVITES, logicielsDeLActivite,
 } from './data/recherche.js';
 import { estTransversal, FAMILLES_ACTIVITE } from './data/activites-recherche.js';
 import { LIENS } from './accueil/composants.jsx';
@@ -294,6 +294,12 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
                     {activitesVues[0].trait} Chaque métier ci-dessous reçoit le savoir de votre activité en plus du sien
                     {activitesVues[0].pack?.vocabulaire?.length ? <> : {activitesVues[0].pack.vocabulaire.slice(0, 4).map((v) => (v.terme === v.terme.toUpperCase() ? v.terme : v.terme.toLowerCase())).join(', ')}, ses documents et ses logiciels.</> : '.'}
                   </p>
+                  {logicielsDeLActivite(activitesVues[0]).length > 0 && (
+                    <p className="mt-3 text-sm">
+                      <span className="text-[var(--texte-doux)]">Ses logiciels : </span>
+                      {logicielsDeLActivite(activitesVues[0]).map((l) => l.nom).join(', ')}.
+                    </p>
+                  )}
                   <div className="mt-4 flex flex-wrap gap-3">
                     <a href={urlActivite(activitesVues[0])} className="bouton bouton-contour">Tout sur votre activité</a>
                     {activitesVues.slice(1).map((a) => <a key={a.id} href={urlActivite(a)} className="bouton bouton-contour">{a.nom}</a>)}

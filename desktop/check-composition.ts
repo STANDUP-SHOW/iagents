@@ -105,19 +105,20 @@ const DEMANDE_GRAPHISTE =
     verifier('prépresse : le résumé ne dit jamais « connecté »', !/connect[ée]/i.test(dit.replace(/Vos connexions/g, '')), dit);
   } else verifier('prépresse : la composition existe', false);
 
-  // Sans cette fiche, le moteur doit retomber sur une question : Graphiste de production,
-  // Designer print et Designer packaging se valent, il ne choisit pas à la place du client.
+  // Sans cette fiche, le moteur doit retomber sur une question : plusieurs postes d'atelier
+  // graphique se valent (depuis le 08/10, ceux du secteur imprimerie aussi), il ne choisit pas
+  // à la place du client.
   const sans = lireDemande(DEMANDE_GRAPHISTE, refs, ['AG-1257']);
   const q = questionSuivante(sans);
   verifier('sans la fiche prépresse : le poste se demande', q?.sujet === 'poste', `question : ${q?.sujet}`);
   const proposes = q?.sujet === 'poste' ? q.options.map((o) => o.id) : [];
-  for (const id of ['AG-0276', 'AG-0296']) {
+  for (const id of ['AG-0276', 'AG-1302']) {
     verifier(`sans la fiche prépresse : ${id} est proposé`, proposes.includes(id), `proposés : ${proposes.join(', ')}`);
   }
   verifier('sans la fiche prépresse : « aucun de ceux-là » est proposé', proposes.includes(AUCUN_DE_CEUX_LA));
 
-  // Le client choisit le Designer print : l'activité est connue, plus rien à demander.
-  const { lecture } = repondre(sans, q!, 'AG-0296', refs);
+  // Le client choisit le Graphiste de production : l'activité est connue, plus rien à demander.
+  const { lecture } = repondre(sans, q!, 'AG-0276', refs);
   verifier('graphiste : plus de question une fois le poste choisi', questionSuivante(lecture) === null);
   const c = composer(lecture);
   verifier('graphiste : la composition existe', c !== null);
@@ -235,7 +236,7 @@ const DEMANDE_GRAPHISTE =
   const ecran = readFileSync(join(racine, 'desktop/src/components/Embauche.tsx'), 'utf8');
   verifier("l'écran d'embauche appelle lire_postes", ecran.includes("invoke<string>('lire_postes')"));
   verifier("l'écran d'embauche écrit la composition", ecran.includes('competencesDepuisComposition('));
-  verifier('toutes les fiches se réduisent', postes.length === 1250 && postes.every((p) => p.id && p.nom), `${postes.length}`);
+  verifier('toutes les fiches se réduisent', postes.length === lireJson('catalogue/catalogue.json').agents.length && postes.every((p) => p.id && p.nom), `${postes.length}`);
 }
 
 // --- L'agent configuré devient sa propre fiche ------------------------------

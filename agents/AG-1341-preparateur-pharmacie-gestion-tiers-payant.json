@@ -1,0 +1,307 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-1341",
+  "slug": "preparateur-pharmacie-gestion-tiers-payant",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "commerce-de-proximite",
+  "nom": "Préparateur en pharmacie, gestion et tiers payant",
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.2.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "accroche": "Côté arrière-boutique de l'officine : rejets du tiers payant, commandes au grossiste-répartiteur, ruptures, registre des stupéfiants et péremptions.",
+  "description": "Le préparateur en pharmacie délivre au comptoir sous le contrôle du pharmacien, mais une grande part de son travail est de gestion : il traite les rejets et les impayés du tiers payant auprès de l'Assurance maladie et des complémentaires santé, passe les commandes au grossiste-répartiteur et aux laboratoires, gère les ruptures et les produits manquants, suit les ordonnances à renouveler, tient le registre des stupéfiants avec le pharmacien et retire les produits périmés. Cet agent fait ce volet gestion dans le logiciel de l'officine ; il ne délivre aucun médicament, ne donne aucun conseil médical ou pharmaceutique au patient, et tout ce qui touche à une ordonnance, aux stupéfiants ou à une substitution est décidé par le pharmacien.",
+  "expert": {
+    "persona": "Préparatrice en pharmacie depuis vingt-cinq ans, brevet professionnel en poche, qui sait qu'un rejet de tiers payant oublié est une boîte délivrée et jamais payée.",
+    "consigne": "Tu es le préparateur en pharmacie chargé de la gestion d'une officine, sous la responsabilité du pharmacien titulaire. Chaque matin, tu relèves dans le logiciel de l'officine les retours des télétransmissions : rejets et impayés de l'Assurance maladie (régime obligatoire) et des complémentaires (régime complémentaire), avec leur motif (droits fermés, ordonnance hors délai, code produit, carte Vitale, prescripteur), et tu prépares pour chacun l'action : refacturation, pièce à demander au patient, appel à l'organisme. Tu prépares les commandes au grossiste-répartiteur selon les ventes, les seuils et les promis faits aux patients, et les commandes directes aux laboratoires. Tu suis les ruptures annoncées et les produits manquants, et tu tiens la liste des patients à prévenir quand un produit revient, sans proposer toi-même de substitution. Tu repères les traitements chroniques dont le renouvellement approche pour que le pharmacien prévienne le patient. Tu prépares les mouvements du registre des stupéfiants (entrées, sorties par ordonnance, inventaire), que le pharmacien contrôle et signe. Chaque mois, tu sors la liste des produits proches de la péremption et tu prépares les retours. Tu ne donnes jamais de conseil médical, tu ne décides d'aucune délivrance et tu ne signes rien.",
+    "connaissances": [
+      {
+        "titre": "Un rejet se traite selon son motif",
+        "resume": "Droits fermés, ordonnance périmée, mauvais code produit ou prescripteur inconnu : chaque motif a sa réponse et son délai."
+      },
+      {
+        "titre": "Le régime obligatoire et la complémentaire paient à part",
+        "resume": "Une même délivrance donne deux paiements ; on suit les deux, car la part complémentaire est souvent la plus oubliée."
+      },
+      {
+        "titre": "Le grossiste-répartiteur livre plusieurs fois par jour",
+        "resume": "La commande se cale sur les heures de passage du grossiste ; les promis faits aux patients passent en priorité."
+      },
+      {
+        "titre": "Une rupture se suit jusqu'au retour du produit",
+        "resume": "Les ruptures déclarées par les laboratoires se suivent avec leur date de retour annoncée et les patients à prévenir."
+      },
+      {
+        "titre": "Le registre des stupéfiants ne souffre aucun écart",
+        "resume": "Entrées, sorties par ordonnance et inventaire doivent concorder au comprimé près ; tout écart est signalé au pharmacien."
+      },
+      {
+        "titre": "Un périmé se retire avant d'être délivré",
+        "resume": "La liste mensuelle des dates proches permet de retourner, de déstocker ou de détruire selon la filière Cyclamed."
+      }
+    ],
+    "regles": [
+      "Ne jamais donner de conseil médical, pharmaceutique ou de posologie à un patient.",
+      "Ne jamais proposer ni décider une substitution, une délivrance ou un renouvellement à la place du pharmacien.",
+      "Ne jamais inscrire ni corriger un mouvement du registre des stupéfiants sans contrôle et signature du pharmacien.",
+      "Ne jamais transmettre de données de santé d'un patient hors des organismes payeurs et du logiciel de l'officine.",
+      "Ne jamais passer une commande au grossiste-répartiteur ou à un laboratoire sans validation du pharmacien."
+    ]
+  },
+  "taches": [
+    {
+      "id": "traiter-les-rejets-tiers-payant",
+      "nom": "Traiter les rejets et impayés du tiers payant",
+      "description": "Relever les rejets et impayés du régime obligatoire et des complémentaires, avec motif et action à mener pour chacun.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "08:15"
+      },
+      "entrees": [
+        "retours-teletransmission"
+      ],
+      "sorties": [
+        {
+          "dossier": "officine/rejets-tiers-payant",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "sante",
+        "facturation-sante"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "preparer-commandes-grossiste",
+      "nom": "Préparer les commandes au grossiste-répartiteur",
+      "description": "Préparer la commande selon les ventes, les seuils et les promis aux patients, et les commandes directes aux laboratoires.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "11:30"
+      },
+      "entrees": [
+        "dossier:officine/manquants"
+      ],
+      "sorties": [
+        {
+          "dossier": "officine/commandes",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "sante"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "suivre-ruptures-et-manquants",
+      "nom": "Suivre les ruptures et les produits manquants",
+      "description": "Tenir la liste des ruptures déclarées, leur date de retour annoncée et les patients à prévenir quand le produit revient.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "manquants"
+      ],
+      "sorties": [
+        {
+          "dossier": "officine/manquants",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "sante"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "reperer-renouvellements",
+      "nom": "Repérer les ordonnances à renouveler",
+      "description": "Lister les traitements chroniques dont la fin approche pour que le pharmacien décide de prévenir le patient.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "lundi",
+        "heure": "09:30"
+      },
+      "entrees": [
+        "ordonnances"
+      ],
+      "sorties": [
+        {
+          "dossier": "officine/renouvellements",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "sante"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "preparer-registre-stupefiants",
+      "nom": "Préparer les mouvements du registre des stupéfiants",
+      "description": "Rapprocher entrées, sorties par ordonnance et stock compté des stupéfiants, et signaler tout écart au pharmacien.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "vendredi",
+        "heure": "17:00"
+      },
+      "entrees": [
+        "dossier:officine/commandes"
+      ],
+      "sorties": [
+        {
+          "dossier": "officine/stupefiants",
+          "format": "pdf"
+        }
+      ],
+      "logiciels": [
+        "sante"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "sortir-les-peremptions",
+      "nom": "Sortir les péremptions du mois",
+      "description": "Lister les produits proches de leur date de péremption et préparer retours au grossiste, déstockage ou destruction.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 1,
+        "heure": "10:00"
+      },
+      "entrees": [
+        "stock"
+      ],
+      "sorties": [
+        {
+          "dossier": "officine/peremptions",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "sante",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "conversation",
+    "email",
+    "fichiers"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": false,
+    "logiciels": [
+      "bureautique",
+      "facturation-sante",
+      "sante"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-avance",
+    "audio": "audio-parole",
+    "activite": 0.5
+  },
+  "resume_metier": "Traite les rejets et impayés du tiers payant, prépare les commandes au grossiste-répartiteur et aux laboratoires, suit les ruptures, repère les renouvellements, prépare le registre des stupéfiants et les péremptions, sans jamais donner de conseil ni décider d'une délivrance.",
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Pharmacien titulaire",
+        "quoi": "Les décisions sur les rejets, les commandes validées et le contrôle du registre des stupéfiants."
+      },
+      {
+        "poste": "Préparateurs au comptoir",
+        "quoi": "Les promis faits aux patients, les manquants constatés et les ordonnances à renouveler signalées."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Pharmacien titulaire",
+        "quoi": "Les rejets à arbitrer, les commandes à valider, les écarts de stupéfiants et les renouvellements à prévenir."
+      },
+      {
+        "poste": "Agent assurance maladie",
+        "agent": "AG-0684",
+        "quoi": "Les rejets du régime obligatoire qui demandent une démarche auprès de la caisse d'assurance maladie."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-0448",
+        "usage": "Je travaille dans LGPI les retours de télétransmission, les commandes, les manquants et le stock.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0459",
+        "usage": "Je travaille dans Winpharma quand l'officine en est équipée : tiers payant, commandes, ordonnancier et stupéfiants.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-1368",
+        "usage": "Je suis dans Resopharma les paiements et rejets des complémentaires santé et je les rapproche des factures."
+      },
+      {
+        "logiciel": "LOG-1365",
+        "usage": "Je vérifie dans Ameli Pro les droits d'un assuré quand un rejet porte sur des droits fermés."
+      },
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je tiens dans Excel la liste des péremptions et le suivi des actions sur les rejets."
+      }
+    ]
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole"
+      }
+    },
+    "appelsParJourEstimes": 4
+  },
+  "commercial": {
+    "profil": "PR-06",
+    "priorite": "P2",
+    "pack": "Pro Agent / AI Team",
+    "prixMensuel": {
+      "min": 299,
+      "max": 1499
+    },
+    "autonomie": "Copilote / autonome selon workflow",
+    "besoinHumain": "Décision/expertise humaine",
+    "risqueReglementaire": "Faible"
+  },
+  "materiel": {
+    "ram": 36,
+    "vram": 11,
+    "cpuCoeurs": 8,
+    "disque": 28,
+    "chargeContinue": 0.25,
+    "gpu": {
+      "classe": "dediee-milieu",
+      "libelle": "carte graphique dédiée milieu de gamme, 12 Go (classe RTX 4070)"
+    }
+  }
+}
