@@ -10,14 +10,12 @@ export default function Footer() {
       { nom: 'iAgent Workforce', href: '/workforce' },
       { nom: 'iAgent Box', href: '/box' },
       { nom: 'Desktop Commander', href: '/#desktop-commander' },
-      { nom: 'Comment ça marche', href: '/how-it-works' },
       { nom: 'Tarifs', href: '/pricing' },
       { nom: 'Pourquoi louer', href: '/why-rent' },
       { nom: 'iAgent Voice', href: '/voice' },
       { nom: 'Standard téléphonique', href: '/standard-telephonique' },
       { nom: 'Support Center', href: '/support-center' },
       { nom: 'Sales Center', href: '/sales-center' },
-      { nom: 'Recruter un agent', href: RECRUTER },
     ] },
     { titre: 'Agents', liens: [
       { nom: `Les ${compteurs.fiches.toLocaleString('fr-FR')} métiers`, href: LIENS.catalogue },
@@ -30,8 +28,11 @@ export default function Footer() {
       { nom: 'iAgent Enterprise', href: '/enterprise' },
       { nom: 'IA locale et hybride', href: '/local-ai' },
       { nom: 'Sécurité et contrôle', href: '/security' },
-      { nom: 'Évolution des agents', href: '/skills' },
       { nom: 'iAgent inside iAgent', href: '/iagent-inside-iagent' },
+    ] },
+    { titre: 'Ressources', liens: [
+      { nom: 'Comment ça marche', href: RECRUTER },
+      { nom: 'Évolution des agents', href: '/skills' },
       { nom: 'Questions fréquentes', href: '/faq' },
       { nom: 'Contact', href: '/contact' },
     ] },
@@ -39,7 +40,7 @@ export default function Footer() {
 
   return (
     <footer className="border-t border-[var(--trait)] mt-10">
-      <div className="px-[var(--gouttiere)]"><div className="cadre py-16 grid gap-12 lg:grid-cols-[1.2fr_repeat(4,1fr)]">
+      <div className="px-[var(--gouttiere)]"><div className="cadre py-16 grid gap-12 sm:grid-cols-2 lg:grid-cols-[1.2fr_repeat(5,1fr)]">
         <div>
           <Logo variante="blanc" className="h-7 w-auto" />
           <p className="mt-5 text-sm text-[var(--texte-doux)] max-w-xs">Des collaborateurs IA par métier, qui connaissent vos logiciels et travaillent chez vous ou dans le cloud.</p>
@@ -49,7 +50,7 @@ export default function Footer() {
             <p className="font-[Montserrat] text-[0.7rem] tracking-[0.2em] uppercase text-[var(--texte-pale)]">{c.titre}</p>
             <ul className="mt-4 flex flex-col gap-2.5">
               {c.liens.filter((l) => l.href).map((l) => (
-                <li key={l.href}>
+                <li key={l.nom}>
                   <a href={l.href} className="text-sm text-[var(--texte-doux)] hover:text-[var(--cyan)] transition-colors" onClick={() => l.href.startsWith('/agents/') && suivre('catalog_click')}>{l.nom}</a>
                 </li>
               ))}
@@ -58,7 +59,7 @@ export default function Footer() {
         ))}
       </div></div>
       <div className="px-[var(--gouttiere)]"><div className="cadre pb-10 text-xs text-[var(--texte-pale)] flex flex-wrap gap-4 justify-between">
-        <p>© {new Date().getFullYear()} iAgent · e-Agent Agency</p>
+        <p>© {new Date().getFullYear()} iAgent</p>
         <p>Human ambition. Agentic execution.</p>
       </div></div>
     </footer>

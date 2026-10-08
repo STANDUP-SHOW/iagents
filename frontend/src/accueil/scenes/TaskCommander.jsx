@@ -65,11 +65,11 @@ export default function TaskCommander() {
         <div className="cadre w-full grid lg:grid-cols-[1.2fr_0.8fr] gap-10 items-center">
           <div className="relative">
             <div className="tc-compteur absolute left-0 top-0 font-[Montserrat] text-xl md:text-2xl font-semibold" aria-hidden="true">
-              <span className="tc-c1 absolute whitespace-nowrap opacity-0">1 agent</span>
-              <span className="tc-c5 absolute whitespace-nowrap opacity-0">5 agents</span>
-              <span className="tc-c20 absolute whitespace-nowrap opacity-0">20 agents</span>
+              <span className="tc-c1 absolute whitespace-nowrap opacity-0">1 expert</span>
+              <span className="tc-c5 absolute whitespace-nowrap opacity-0">5 experts</span>
+              <span className="tc-c20 absolute whitespace-nowrap opacity-0">20 experts</span>
             </div>
-            <svg viewBox={`0 0 ${L} ${H}`} className="w-full h-auto" role="img" aria-label="Vingt agents reliés à Victor, qui coordonne l'équipe">
+            <svg viewBox={`0 0 ${L} ${H}`} className="w-full h-auto" role="img" aria-label="Vingt experts reliés à Victor, qui coordonne l'équipe">
               <defs>
                 <clipPath id="tc-clip"><circle cx={C[0]} cy={C[1]} r="46" /></clipPath>
                 <radialGradient id="tc-halo"><stop offset="0" stopColor="rgba(3,243,255,0.25)" /><stop offset="1" stopColor="rgba(3,243,255,0)" /></radialGradient>
@@ -100,17 +100,17 @@ export default function TaskCommander() {
               {NOEUDS.map((_, i) => <circle key={i} className="tc-tache" cx={C[0]} cy={C[1]} r="3.5" fill="#03f3ff" opacity="0" />)}
               <g className="tc-victor">
                 <circle cx={C[0]} cy={C[1]} r="52" fill="#020817" stroke="#03f3ff" strokeWidth="1.5" />
-                <image href="/accueil/victor.webp" x={C[0] - 46} y={C[1] - 46} width="92" height="92" clipPath="url(#tc-clip)" preserveAspectRatio="xMidYMid slice" />
-                <text x={C[0]} y={C[1] + 76} textAnchor="middle" fill="#eaf2ff" style={{ font: '600 16px Sora, sans-serif' }}>VICTOR</text>
-                <text x={C[0]} y={C[1] + 94} textAnchor="middle" fill="#03f3ff" style={{ font: '500 10px Orbitron, sans-serif', letterSpacing: '0.2em' }}>TASK COMMANDER</text>
+                <image href="/accueil/victor-grand.webp" x={C[0] - 46} y={C[1] - 46} width="92" height="92" clipPath="url(#tc-clip)" preserveAspectRatio="xMidYMid slice" />
+                <text x={C[0]} y={C[1] + 76} textAnchor="middle" fill="#eaf2ff" style={{ font: '700 16px Montserrat, sans-serif' }}>VICTOR</text>
+                <text x={C[0]} y={C[1] + 94} textAnchor="middle" fill="#03f3ff" style={{ font: '600 10px Montserrat, sans-serif', letterSpacing: '0.2em' }}>TASK COMMANDER</text>
               </g>
             </svg>
           </div>
 
           <div>
             <h2 id="titre-commander" className="tc-titre titre-display titre-moyen">
-              Vous n'avez pas besoin de manager trente agents.<br />
-              <span className="lumiere">Parlez à votre bras droit.</span>
+              Vous n'avez pas besoin de manager trente collaborateurs.<br />
+              <span className="degrade">Parlez à votre bras droit.</span>
             </h2>
             <div className="mt-8 flex flex-col gap-3">
               <div className="tc-bulle-1 bulle bulle-humain">
@@ -134,7 +134,7 @@ export default function TaskCommander() {
           </div>
         </div>
         <p className="tc-conclusion cadre w-full mt-14 titre-display titre-grand text-center">
-          Une conversation.<br /><span className="lumiere">Toute une organisation se met en mouvement.</span>
+          Une conversation.<br /><span className="degrade">Toute une organisation se met en mouvement.</span>
         </p>
       </div>
     </section>
