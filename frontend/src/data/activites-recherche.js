@@ -84,12 +84,73 @@ function logicielsCommuns(fiches) {
   return communsPar.get(fiches);
 }
 
+// The heart of a trade, in the words its owner uses: who prices the job
+// (every branch has an estimator), who plans the shop floor, who runs the
+// production, who buys and who checks. No fiche title says « deviseur » or
+// « chef d'atelier », so neither the title nor the software rings find them:
+// a printer was offered graphic designers and no one to price his jobs.
+// [role as the trade says it, fiche id]; a fiche missing from the catalogue
+// is skipped, and the bench checks every id still exists.
+const DEVIS = ['Deviseur', 'AG-0187'];
+const COEUR_PAR_FAMILLE = {
+  industrie: [['Deviseur', 'AG-1020'], ['Responsable de fabrication', 'AG-1025'], ["Chef d'atelier — planning de production", 'AG-1003'], ['Ordonnancement', 'AG-1004'], ['Assistant de production', 'AG-1001'], ['Approvisionnement matières', 'AG-1012'], ['Qualité', 'AG-1007']],
+  batiment: [['Deviseur', 'AG-0703'], ['Métreur', 'AG-0704'], ['Conducteur de travaux', 'AG-0701'], ['Planning de chantier', 'AG-0706'], ['Achats chantier', 'AG-0707'], ['Appels d\'offres', 'AG-0705'], ['Qualité chantier', 'AG-0714']],
+  artisanat: [['Deviseur', 'AG-0741'], ["Chef d'atelier — planning", 'AG-0742'], ['Assistant de production', 'AG-1001'], ['Approvisionnement', 'AG-1012'], ['Suivi des interventions', 'AG-0747']],
+  'automobile-mobilite': [['Deviseur', 'AG-0805'], ['Chiffrage des réparations', 'AG-0822'], ["Chef d'atelier — planning", 'AG-0806'], ["Support de l'atelier", 'AG-0821'], ['Commande de pièces', 'AG-0807'], ['Suivi des réparations', 'AG-0808']],
+  'environnement-energie': [['Deviseur', 'AG-0980'], ['Planification des interventions', 'AG-0981'], ['Maintenance', 'AG-0982'], ['Qualification des travaux', 'AG-0984']],
+  'transport-logistique': [['Deviseur — cotation transport', 'AG-0542'], ['Planification des tournées', 'AG-0553'], ['Exploitation — dispatching', 'AG-0551'], ['Planning entrepôt', 'AG-0533'], ['Affrètement', 'AG-0571']],
+  'negoce-gros': [DEVIS, ['Prise de commande', 'AG-1021'], ['Approvisionnement', 'AG-1012'], ['Prévision des stocks', 'AG-0534'], ['Livraisons', 'AG-0537']],
+  'commerce-detail': [DEVIS, ['Approvisionnement', 'AG-1012'], ['Stocks', 'AG-0545'], ['Achats', 'AG-0505']],
+  agriculture: [DEVIS, ['Planning de production', 'AG-1003'], ['Traçabilité', 'AG-1008'], ['Approvisionnement', 'AG-1012'], ['Qualité', 'AG-1007']],
+  'hotellerie-tourisme': [['Devis groupes et séminaires', 'AG-0911'], ['Planning des équipes', 'AG-0609'], ['Achats', 'AG-0610'], ['Stocks', 'AG-0611']],
+  'services-entreprises': [DEVIS, ['Propositions commerciales', 'AG-0187']],
+  'sante-social': [['Planning des rendez-vous et des soins', 'AG-0695'], ['Devis et prises en charge', 'AG-0684']],
+  'numerique-audiovisuel': [DEVIS, ['Planning de production', 'AG-1003'], ['Assistant de production', 'AG-1001']],
+};
+// Within a family, some trades have their own heart: a restaurant is a
+// kitchen before it is a hotel, a print shop is a factory, a plumber works
+// on small jobs rather than building sites. [name pattern, table, family the
+// pattern is limited to]: « peinture » is a painter in building, a body shop
+// in automotive.
+const COEUR_PAR_ACTIVITE = [
+  [/plomb|chauff|[ée]lectric|peintur|carrel|couvert|couvreur|serrur|vitr|pl[aâ]tr|plaqu|climati|isolation|menuiserie de pose|fa[çc]ade|ramonage|cl[ôo]ture|piscine/i, [['Deviseur', 'AG-0741'], ['Métreur', 'AG-0704'], ['Planning des chantiers', 'AG-0742'], ['Suivi des interventions', 'AG-0747'], ['Achats chantier', 'AG-0707'], ['Service après-vente', 'AG-0743']], 'batiment'],
+  [/boulang|p[âa]tiss|boucher|charcut|chocolat|confiser|fromag|glaci|biscuit/i, [['Devis commandes (événements, entreprises)', 'AG-0741'], ['Planning de production du laboratoire', 'AG-1003'], ['Assistant de production', 'AG-1001'], ['Approvisionnement matières', 'AG-1012'], ['Traçabilité et hygiène', 'AG-1008'], ['Stocks', 'AG-0545']]],
+  [/immobili|syndic|lotissement|foncier|marchand de biens/i, [['Estimation — avis de valeur', 'AG-0464'], ['Gestion locative', 'AG-0458'], ['Syndic', 'AG-0460']]],
+  [/assurance|mutuelle|pr[ée]voyance/i, [['Devis et tarification', 'AG-1150'], ['Souscription', 'AG-0081'], ["Appels d'offres", 'AG-1158']]],
+  [/coiffure|barbier|esth[ée]ti|onglerie|tatou/i, [['Devis prestations (mariages, événements)', 'AG-0741'], ['Planning des rendez-vous', 'AG-0742'], ['Stocks de produits', 'AG-0545']]],
+  [/restaura|traiteur|bar, caf|brasserie/i, [['Devis groupes et traiteur', 'AG-0622'], ['Chef de cuisine — menus et fiches techniques', 'AG-0612'], ['Planning de la brigade', 'AG-0609'], ['Achats cuisine', 'AG-0610'], ['Stocks et inventaire', 'AG-0611'], ['Commandes et vente à emporter', 'AG-0607']]],
+  [/imprim|reprograph/i, [['Deviseur', 'AG-1020'], ['Responsable de fabrication', 'AG-1025'], ["Chef d'atelier — planning de production", 'AG-1003'], ['Ordonnancement des machines', 'AG-1004'], ['Assistant de production', 'AG-1001'], ['Achats papier et consommables', 'AG-1005'], ['Qualité', 'AG-1007']]],
+  [/nettoyage|propret/i, [['Deviseur', 'AG-0777'], ['Planning des équipes', 'AG-0778'], ['Affectation des intervenants', 'AG-0780'], ['Contrôle qualité', 'AG-0789']]],
+  [/paysag|jardin|espaces verts/i, [['Deviseur', 'AG-0753'], ['Planning des chantiers', 'AG-0754'], ['Suivi de chantier', 'AG-0756'], ['Calcul du matériel', 'AG-0762']]],
+  [/voyage|r[ée]ceptif|touristi/i, [['Devis et cotation des voyages', 'AG-0593'], ['Conception des circuits', 'AG-0585'], ['Réservations', 'AG-0578'], ['Opérations voyage', 'AG-0599']], 'hotellerie-tourisme'],
+  [/sport|fitness/i, [['Devis entreprises et comités', 'AG-0187'], ['Abonnements', 'AG-0865'], ['Planning des cours et des coachs', 'AG-0609'], ['Réservations', 'AG-0578']], 'hotellerie-tourisme'],
+  [/communication|publicit|relations presse/i, [['Deviseur', 'AG-0187'], ['Propositions commerciales', 'AG-0188'], ['Chef de projet — planning de production', 'AG-0015'], ['Planning médias', 'AG-0249'], ['Trafic des campagnes', 'AG-0237']]],
+  [/architect|g[ée]om[èe]tre|ing[ée]nierie/i, [["Devis d'honoraires", 'AG-0703'], ['Métreur', 'AG-0704'], ["Appels d'offres", 'AG-0705'], ['Planning des projets', 'AG-0706']]],
+  [/comptab|commissariat aux comptes/i, [['Devis et lettres de mission', 'AG-0187'], ['Production — saisie', 'AG-0027'], ['Révision et clôture', 'AG-0035'], ['Paie des clients', 'AG-0037']]],
+  [/formation/i, [['Devis de formation', 'AG-0187'], ['Conception des formations', 'AG-0627'], ['Planning des sessions', 'AG-0639'], ['Inscriptions', 'AG-0644']]],
+  [/traduction/i, [['Deviseur', 'AG-0187'], ['Coordination des traductions', 'AG-0346'], ['Post-édition', 'AG-0338']]],
+  [/[ée]v[ée]nement|salon|congr/i, [['Deviseur', 'AG-0911'], ['Planning événement', 'AG-0909'], ['Budget', 'AG-0910'], ['Fournisseurs', 'AG-0908']]],
+];
+
 /**
- * The jobs that serve an activity, in three rings: those whose title shares a
+ * The jobs at the heart of a trade, each under the name the trade gives the
+ * role: [{ role, fiche }]. Every trade that sells a job gets its estimator.
+ */
+export function coeurDeLActivite(activite, fiches) {
+  const parId = new Map(fiches.map((f) => [f.id, f]));
+  const table = COEUR_PAR_ACTIVITE.find(([motif, , famille]) => motif.test(activite.nom) && (!famille || famille === activite.famille))?.[1] ?? COEUR_PAR_FAMILLE[activite.famille] ?? [];
+  const vus = new Set();
+  return table.flatMap(([role, id]) => (parId.has(id) && !vus.has(id) && vus.add(id) ? [{ role, fiche: parId.get(id) }] : []));
+}
+/** Every id the tables name, for the bench. */
+export const IDS_DU_COEUR = [...new Set([...Object.values(COEUR_PAR_FAMILLE), ...COEUR_PAR_ACTIVITE.map(([, t]) => t)].flat().map(([, id]) => id))];
+
+/**
+ * The jobs that serve an activity, in four rings: those whose title shares a
  * root with the trade's own words (« Graphiste de production » for « arts
- * graphiques »), those qualified on the activity's software, and the jobs
- * every business has. The last ring is never empty: there is always someone
- * to recruit.
+ * graphiques »), the heart of the trade (estimator, workshop, production),
+ * those qualified on the activity's software, and the jobs every business
+ * has. The last ring is never empty: there is always someone to recruit.
  */
 export function cerclesDeLActivite(activite, fiches) {
   const sesRacines = racines(activite.alias ?? []);
@@ -97,13 +158,14 @@ export function cerclesDeLActivite(activite, fiches) {
   const sesLogiciels = new Set((activite.pack?.logiciels ?? []).filter((id) => !communs.has(id)));
   const touches = (f) => mots(f.nom).filter((m) => sesRacines.has(racineDe(m))).length;
   const proches = fiches.filter((f) => touches(f) > 0).sort((x, y) => touches(y) - touches(x));
-  const outilles = fiches.filter((f) => !proches.includes(f) && (f.qualifications?.logiciels ?? []).some((q) => sesLogiciels.has(q.logiciel)));
-  const pris = new Set([...proches, ...outilles]);
-  return { proches, outilles, transversaux: fiches.filter((f) => !pris.has(f) && estTransversal(f)) };
+  const coeur = coeurDeLActivite(activite, fiches).map((c) => c.fiche).filter((f) => !proches.includes(f));
+  const outilles = fiches.filter((f) => !proches.includes(f) && !coeur.includes(f) && (f.qualifications?.logiciels ?? []).some((q) => sesLogiciels.has(q.logiciel)));
+  const pris = new Set([...proches, ...coeur, ...outilles]);
+  return { proches, coeur, outilles, transversaux: fiches.filter((f) => !pris.has(f) && estTransversal(f)) };
 }
 
-/** The same three rings as one list, closest first. */
+/** The same rings as one list, closest first. */
 export const metiersPourActivite = (activite, fiches) => {
   const c = cerclesDeLActivite(activite, fiches);
-  return [...c.proches, ...c.outilles, ...c.transversaux];
+  return [...c.proches, ...c.coeur, ...c.outilles, ...c.transversaux];
 };

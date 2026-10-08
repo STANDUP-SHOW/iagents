@@ -28,7 +28,7 @@ const secteurs = new Map(lire('catalogue/catalogue.json').secteurs.map((s) => [s
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
 import { slugifier } from './slug.mjs';
 import { portraitDe } from '../src/data/portraits.js';
-import { estTransversal, cerclesDeLActivite, FAMILLES_ACTIVITE } from '../src/data/activites-recherche.js';
+import { estTransversal, cerclesDeLActivite, coeurDeLActivite, FAMILLES_ACTIVITE } from '../src/data/activites-recherche.js';
 export { slugifier };
 
 const echapper = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -310,6 +310,7 @@ for (const a of activites) {
   const url = urlActivite.get(a.id);
   const p = a.pack ?? {};
   const { proches, outilles } = cerclesDeLActivite(a, fiches);
+  const coeur = coeurDeLActivite(a, fiches);
   pages.set(url, page({
     url,
     titre: `Agents IA pour ${a.nom.toLowerCase()}`,
@@ -318,6 +319,7 @@ for (const a of activites) {
     corps: `<h1>Des agents IA pour votre activité : ${echapper(a.nom.toLowerCase())}</h1>
 <p class="accroche">${echapper(a.trait)}</p>
 <p>Chaque agent iAgent reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p>
+${coeur.length ? `<h2>Le cœur de votre métier : devis, atelier, fabrication</h2>${liste(coeur.map(({ role, fiche }) => `<li><strong>${echapper(role)}</strong> : ${lien(fiche.nom, urlFiche.get(fiche.id))}</li>`))}` : ''}
 ${proches.length + outilles.length ? `<h2>Les métiers les plus proches de votre activité</h2>${puces([...proches, ...outilles].map((f) => lien(f.nom, urlFiche.get(f.id))))}` : ''}
 ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
 ${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}

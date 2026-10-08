@@ -22,6 +22,7 @@ import { FINANCEMENT, OFFRES } from '../../dimensionnement/offre-box.ts';
 import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE } from '../src/data/recherche.js';
+import { IDS_DU_COEUR, coeurDeLActivite } from '../src/data/activites-recherche.js';
 import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, euros as eurosTarif } from '../src/data/tarifs.js';
 import Page from '../src/pages/Page.jsx';
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
@@ -147,7 +148,34 @@ for (const page of PAGES) {
   // un business plan à une entreprise qui existe.
   const demande = renderToString(<CreezEntreprise ideeInitiale="J'ai une imprimerie et je veux trouver plus de clients" />);
   if (!demande.includes('Pour votre demande') || !demande.includes('Graphiste de production') || !/prospection|Commercial/.test(demande)) echoue("une demande d'imprimeur n'appelle ni l'imprimerie ni la prospection");
-  else ok("une demande d'imprimeur propose ses métiers et la prospection");
+  // max, 08/10: « créer une imprimerie en ligne » offered no estimator, no
+  // workshop manager, no production manager. The heart of each trade comes
+  // with the request, under the names the trade uses.
+  const ids = new Set(agents.map((a) => a.id));
+  const perdus = IDS_DU_COEUR.filter((id) => !ids.has(id));
+  if (perdus.length) echoue(`le cœur des métiers nomme des fiches absentes du catalogue : ${perdus.join(', ')}`);
+  for (const [idee, attendus] of [
+    ['créer une imprimerie en ligne', ['Deviseur', 'Responsable de fabrication', "Chef d'atelier"]],
+    ['ouvrir une menuiserie', ['Deviseur', 'Responsable de fabrication']],
+    ['entreprise de maçonnerie', ['Deviseur', 'Métreur', 'Conducteur de travaux']],
+    ['ouvrir un restaurant', ['Devis groupes', 'Chef de cuisine']],
+    ['reprendre un garage', ['Deviseur', "Chef d'atelier"]],
+    ['je suis plombier', ['Deviseur', 'Planning des chantiers']],
+    // Asked in everyday words, these found no activity at all.
+    ['créer une entreprise de transport', ['Deviseur — cotation transport', 'Planification des tournées']],
+    ['ouvrir une ferme bio', ['Deviseur', 'Planning de production']],
+    ['créer une agence de voyage', ['Devis et cotation des voyages', 'Conception des circuits']],
+  ]) {
+    const rendu = renderToString(<CreezEntreprise ideeInitiale={idee} />).replace(/&#x27;/g, "'");
+    const manque = ['Le cœur de votre métier', ...attendus].filter((m) => !rendu.includes(m));
+    if (manque.length) echoue(`« ${idee} » ne propose pas : ${manque.join(', ')}`);
+  }
+  // Every trade that sells a job to a customer has its estimator.
+  const sansDevis = ACTIVITES_RECHERCHE
+    .filter((a) => !['sante-social', 'finance-immobilier', 'public-associatif'].includes(a.famille))
+    .filter((a) => !coeurDeLActivite(a, agents).some((c) => /devis|deviseur|cotation/i.test(c.role)));
+  if (sansDevis.length) echoue(`activités sans deviseur : ${sansDevis.map((a) => a.nom).join(', ')}`);
+  else ok('chaque activité qui vend un travail a son deviseur, et chaque demande de client voit le cœur de son métier');
 
   const avis = conseilPour([...CYCLE_1.flatMap((e) => e.agents), ...CYCLE_2]);
   if (!avis) echoue('le pack de création ne reçoit aucun conseil de machine');

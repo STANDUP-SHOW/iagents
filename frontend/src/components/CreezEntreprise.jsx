@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react';
 import agents from '../data/loader.js';
 import { CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee } from '../data/offres.js';
-import { agentsPourDemande } from '../data/recherche.js';
+import { agentsPourDemande, coeurPourDemande } from '../data/recherche.js';
 import ConseilMachine from './ConseilMachine.jsx';
 
-function LigneAgent({ id, coche, onBasculer }) {
+function LigneAgent({ id, coche, onBasculer, role }) {
   const fiche = ficheDe(id);
   if (!fiche) return null;
   return (
     <label className="flex items-start gap-3 py-2 cursor-pointer">
       <input type="checkbox" checked={coche} onChange={() => onBasculer(id)} className="mt-1 accent-neon-400 w-5 h-5 flex-none" />
       <span>
+        {role && <span className="block text-xs font-semibold text-rose-300">{role}</span>}
         <span className="text-white text-sm font-semibold">{fiche.nom}</span>
         <span className="block text-xs text-nuit-300 line-clamp-2">{fiche.accroche}</span>
       </span>
@@ -43,9 +44,13 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
     });
 
   const activites = useMemo(() => activitesPourIdee(idee), [idee]);
-  const pourLaDemande = useMemo(() => agentsPourDemande(idee), [idee]);
+  const coeur = useMemo(() => coeurPourDemande(idee), [idee]);
+  const pourLaDemande = useMemo(() => {
+    const deja = new Set(coeur.map((c) => c.fiche.id));
+    return agentsPourDemande(idee).filter((id) => !deja.has(id));
+  }, [idee, coeur]);
   const cycle1 = CYCLE_1.flatMap((e) => e.agents);
-  const pack = [...new Set([...pourLaDemande, ...cycle1, ...CYCLE_2, ...ajoutes])].filter((id) => !retires.has(id));
+  const pack = [...new Set([...coeur.map((c) => c.fiche.id), ...pourLaDemande, ...cycle1, ...CYCLE_2, ...ajoutes])].filter((id) => !retires.has(id));
 
   const trouves = useMemo(() => {
     const q = recherche.trim().toLowerCase();
@@ -79,6 +84,17 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
           </p>
         )}
       </div>
+
+      {coeur.length > 0 && (
+        <div className="card border-2 border-rose-500/50">
+          <p className="text-xs font-mono text-rose-300">Le cœur de votre métier</p>
+          <h3 className="font-display text-lg text-white mb-1">Devis, atelier, fabrication : ceux qui font tourner l'activité</h3>
+          <p className="text-xs text-nuit-400 mb-3">Le deviseur qui chiffre chaque demande de client, ceux qui planifient l'atelier et suivent la production. Décochez ceux que vous avez déjà.</p>
+          <div className="grid md:grid-cols-2 gap-x-6">
+            {coeur.map(({ role, fiche }) => <LigneAgent key={fiche.id} id={fiche.id} role={role} coche={!retires.has(fiche.id)} onBasculer={basculer} />)}
+          </div>
+        </div>
+      )}
 
       {pourLaDemande.length > 0 && (
         <div className="card border-2 border-neon-400/50">
