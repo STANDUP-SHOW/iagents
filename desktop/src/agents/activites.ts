@@ -63,6 +63,7 @@ const OU: Record<string, string[]> = {
   'aerospatial-essais-recherche': ['industrie', 'numerique-audiovisuel', 'services-entreprises', 'public-associatif'],
   'industries-de-procede': ['industrie'],
   'expertises-et-formations-reglementees': ['sante-social', 'services-entreprises', 'finance-immobilier', 'transport-logistique'],
+  'eau-mer-territoire': ['environnement-energie', 'services-entreprises', 'transport-logistique'],
   'energie-environnement': ['environnement-energie', 'batiment', 'industrie'],
   'reparation-automobile': ['automobile-mobilite'],
   'hotellerie-restauration': ['hotellerie-tourisme'],
