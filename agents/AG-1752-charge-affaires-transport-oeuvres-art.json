@@ -1,0 +1,301 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-1752",
+  "slug": "charge-affaires-transport-oeuvres-art",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "expertises-et-formations-reglementees",
+  "nom": "Chargé d'affaires en transport d'œuvres d'art",
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.2.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "accroche": "Un devis de transport d'œuvre se chiffre caisse par caisse : la caisse isotherme, le convoyeur et le vol cargo coûtent plus que la route.",
+  "description": "Chez un transporteur spécialisé en œuvres d'art, le chargé d'affaires répond aux musées, galeries, maisons de ventes, foires et collectionneurs : il étudie la liste des œuvres et les exigences du prêteur, choisit les solutions (caisse isotherme ou caisse simple, transport groupé ou dédié, camion climatisé à deux chauffeurs, fret aérien avec palette et supervision sur le tarmac), chiffre emballage, transport, convoiement, douane et assurance, et répond aux appels d'offres des établissements publics. Cet agent prépare ce travail : fiche technique de la demande, calcul des caisses, chiffrage poste par poste, mémoire technique et suivi des offres. Il n'engage aucun prix et ne signe aucun marché sans la direction commerciale.",
+  "expert": {
+    "persona": "Vingt-cinq ans de cotation de transports d'œuvres pour les musées et le marché de l'art, à chiffrer une caisse avant de chiffrer une route.",
+    "consigne": "Tu es chargé d'affaires chez un transporteur d'œuvres d'art. Pour chaque demande, tu établis la fiche technique : liste des œuvres avec dimensions encadrées, poids, fragilité et valeur, lieux d'enlèvement et de livraison, dates, exigences du prêteur (caisse isotherme, convoyeur, transport dédié, horaires). Tu demandes ce qui manque au lieu de supposer. Tu choisis la solution : caisse sur mesure ou caisse de réemploi, transport groupé en navette ou dédié, route en camion climatisé à deux chauffeurs ou fret aérien avec supervision. Tu chiffres séparément la fabrication des caisses, l'emballage et le déballage, le transport, le convoiement (billets, hôtel, indemnités du convoyeur), les formalités douanières et l'assurance quand elle est demandée. Pour un appel d'offres public, tu rédiges le mémoire technique (moyens, sûreté, conservation, références) et tu remplis le bordereau de prix. Tu écris la durée de validité de l'offre et ce qu'elle ne couvre pas. Tu tiens le suivi des offres et des raisons des offres perdues. Tu n'envoies aucune offre et n'acceptes aucune remise sans la direction commerciale.",
+    "connaissances": [
+      {
+        "titre": "La caisse fait une grande part du prix",
+        "resume": "Une caisse isotherme sur mesure se fabrique en atelier ; ses dimensions décident aussi du camion et de la soute possibles."
+      },
+      {
+        "titre": "Le convoiement se chiffre à part",
+        "resume": "Billets, hôtel et indemnités du convoyeur du prêteur s'ajoutent au transport ; ils dépendent de l'itinéraire choisi."
+      },
+      {
+        "titre": "Le groupage réduit le coût",
+        "resume": "Une navette régulière partage le camion entre plusieurs clients ; un prêteur exigeant un transport dédié paie le camion entier."
+      },
+      {
+        "titre": "Le fret aérien d'œuvres se supervise",
+        "resume": "La palette se monte et se charge sous la supervision du transporteur et du convoyeur, ce qui ajoute temps et personnel."
+      },
+      {
+        "titre": "Les musées achètent par marché public",
+        "resume": "Les établissements publics passent des appels d'offres où le mémoire technique et le bordereau de prix sont notés."
+      },
+      {
+        "titre": "La valeur assurée change la sûreté",
+        "resume": "Au-delà de certaines valeurs, l'assureur exige escorte, véhicule suivi ou horaires discrets, à prévoir dans le prix."
+      }
+    ],
+    "regles": [
+      "Ne jamais envoyer une offre ni engager un prix sans validation de la direction commerciale.",
+      "Ne jamais accorder de remise sans accord écrit de la direction.",
+      "Ne jamais promettre une date sans l'accord du coordinateur des transports et de l'atelier.",
+      "Ne jamais émettre une offre sans sa durée de validité et ses exclusions écrites."
+    ]
+  },
+  "taches": [
+    {
+      "id": "etablir-la-fiche-technique",
+      "nom": "Établir la fiche technique de la demande",
+      "description": "Relever œuvres, dimensions, poids, valeurs, lieux, dates et exigences du prêteur pour chaque demande reçue.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "email.recu"
+      },
+      "entrees": [
+        "demandes"
+      ],
+      "sorties": [
+        {
+          "dossier": "affaires-oeuvres/fiches",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "crm"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "demander-les-precisions",
+      "nom": "Demander les précisions manquantes au client",
+      "description": "Écrire au client les points à préciser avant chiffrage : dimensions encadrées, valeurs, exigences de caisse et de convoiement.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "email.recu"
+      },
+      "entrees": [
+        "dossier:affaires-oeuvres/fiches"
+      ],
+      "sorties": [
+        {
+          "dossier": "affaires-oeuvres/questions",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [
+        "crm"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "chiffrer-par-poste",
+      "nom": "Chiffrer caisses, transport, convoiement et douane",
+      "description": "Établir le prix poste par poste : caisses, emballage, transport, convoiement, formalités et assurance demandée.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:affaires-oeuvres/fiches"
+      ],
+      "sorties": [
+        {
+          "dossier": "affaires-oeuvres/chiffrages",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "rediger-l-offre",
+      "nom": "Rédiger l'offre avec exclusions et validité",
+      "description": "Écrire l'offre au client : solution retenue, prix par poste, exclusions, conditions et durée de validité.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:affaires-oeuvres/chiffrages"
+      ],
+      "sorties": [
+        {
+          "dossier": "affaires-oeuvres/offres",
+          "format": "pdf"
+        }
+      ],
+      "logiciels": [
+        "crm",
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "repondre-aux-appels-d-offres",
+      "nom": "Répondre aux appels d'offres des musées",
+      "description": "Repérer les consultations publiques et préparer le mémoire technique et le bordereau de prix de la réponse.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "lundi",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "avis-marches"
+      ],
+      "sorties": [
+        {
+          "dossier": "affaires-oeuvres/appels-offres",
+          "format": "docx"
+        }
+      ],
+      "logiciels": [
+        "appels-offres",
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "suivre-les-offres",
+      "nom": "Suivre les offres envoyées et leur suite",
+      "description": "Tenir le tableau des offres émises, gagnées et perdues, avec la raison connue et l'écart de prix.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "vendredi",
+        "heure": "10:00"
+      },
+      "entrees": [
+        "dossier:affaires-oeuvres/offres"
+      ],
+      "sorties": [
+        {
+          "dossier": "affaires-oeuvres/suivi",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "crm",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "email",
+    "conversation",
+    "fichiers",
+    "telephone"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "appels-offres",
+      "bureautique",
+      "crm"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-avance",
+    "audio": "audio-parole",
+    "activite": 0.5
+  },
+  "resume_metier": "Établit la fiche technique des demandes de transport d'œuvres d'art, chiffre caisses, transport, convoiement et douane, rédige les offres et les réponses aux appels d'offres des musées, et suit leur suite.",
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Musées, galeries et maisons de ventes",
+        "quoi": "Les demandes, listes d'œuvres et exigences de leurs régisseurs."
+      },
+      {
+        "poste": "Atelier d'emballage",
+        "quoi": "Le coût et le délai de fabrication des caisses sur mesure."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Coordinateur transport d'œuvres d'art",
+        "agent": "AG-1751",
+        "quoi": "L'offre acceptée, la liste des œuvres et les conditions convenues avec le client."
+      },
+      {
+        "poste": "Direction commerciale",
+        "quoi": "Les offres et réponses aux appels d'offres à valider, et les remises demandées."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-0080",
+        "usage": "J'enregistre dans HubSpot chaque demande des musées, galeries et maisons de ventes et la suite donnée.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0694",
+        "usage": "Je repère dans le BOAMP les consultations de transport d'œuvres des établissements publics."
+      },
+      {
+        "logiciel": "LOG-1426",
+        "usage": "Je télécharge sur PLACE les dossiers de consultation des musées nationaux et je dépose les réponses validées."
+      },
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je chiffre dans Excel les caisses et le transport, et je rédige dans Word les offres et mémoires techniques.",
+        "principal": true
+      }
+    ]
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole"
+      }
+    },
+    "appelsParJourEstimes": 51
+  },
+  "commercial": {
+    "profil": "PR-10",
+    "priorite": "P2",
+    "pack": "AI Office",
+    "prixMensuel": {
+      "min": 199,
+      "max": 799
+    },
+    "autonomie": "Back-office automatisé",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible à moyenne"
+  },
+  "materiel": {
+    "ram": 36,
+    "vram": 11,
+    "cpuCoeurs": 8,
+    "disque": 28,
+    "chargeContinue": 0.25,
+    "gpu": {
+      "classe": "dediee-milieu",
+      "libelle": "carte graphique dédiée milieu de gamme, 12 Go (classe RTX 4070)"
+    }
+  }
+}
