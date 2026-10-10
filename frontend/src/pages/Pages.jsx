@@ -3,6 +3,7 @@ import { nombre, LIENS, RECRUTER } from '../accueil/composants.jsx';
 import tarifs, { euros, montant, STATUTS, BOX_PUBLIQUES, BOX_DES, prixAgentEnUneLigne } from '../data/tarifs.js';
 import { Tete, Bande, Cartes, Etapes, Coches, Voisines, Fin, Bouton, Demande } from './blocs.jsx';
 import { COMPOSANTS_BUSINESS } from './PagesBusiness.jsx';
+import { ENTREPRISE, HEBERGEUR, adresseEnUneLigne, dirigeantEnClair } from '../data/entreprise.js';
 
 // The offer pages of max's site plan (07/10). Every claim here is one the
 // product keeps today, or is said as a plan; every price comes from tarifs.json.
@@ -449,6 +450,47 @@ function Contact() {
   );
 }
 
+/* --------------------------------------------------------- mentions légales */
+
+function MentionsLegales() {
+  const e = ENTREPRISE;
+  const editeur = [
+    ['Raison sociale', e.nom],
+    ['Forme juridique', e.formeJuridique && (e.capital ? `${e.formeJuridique} au capital de ${e.capital}` : e.formeJuridique)],
+    ['Siège', adresseEnUneLigne()],
+    ['SIRET', e.siret],
+    ['RCS', e.rcs],
+    ['TVA intracommunautaire', e.tva],
+    ['Téléphone', <a href={`tel:${e.telephoneInternational}`}>{e.telephone}</a>],
+    ['E-mail', e.email && <a href={`mailto:${e.email}`}>{e.email}</a>],
+  ].filter(([, v]) => v);
+  const Liste = ({ lignes }) => (
+    <dl className="pg-mentions">
+      {lignes.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+    </dl>
+  );
+  return (
+    <>
+      <Tete surtitre="Mentions légales" titre={<>Qui édite<br /><span className="mq-cyan">iagent.agency.</span></>} />
+      <Bande titre="Éditeur du site">
+        <Liste lignes={editeur} />
+      </Bande>
+      <Bande titre="Directeur de la publication">
+        <Liste lignes={[['Nom', dirigeantEnClair()], ['Fonction', `${e.dirigeant.fonction} de ${e.nom}`]]} />
+      </Bande>
+      <Bande titre="Hébergeur">
+        <Liste lignes={[['Société', HEBERGEUR.nom], ['Adresse', HEBERGEUR.adresse], ['Site', <a href={HEBERGEUR.site}>{HEBERGEUR.site.replace('https://', '')}</a>]]} />
+      </Bande>
+      <Bande titre="Vos données">
+        <p className="pg-texte">Ce que vous écrivez dans un formulaire du site sert uniquement à vous répondre. Rien n'est vendu ni cédé. Vous pouvez demander à consulter, corriger ou effacer ces informations en écrivant à {e.nom}, {adresseEnUneLigne()}{e.email ? `, ou à ${e.email}` : ''}, et saisir la CNIL si la réponse ne vous convient pas.</p>
+      </Bande>
+      <Bande titre="Propriété intellectuelle">
+        <p className="pg-texte">Les textes, images, fiches métier et la marque {e.marque} appartiennent à {e.nom}. Toute reproduction demande notre accord écrit.</p>
+      </Bande>
+    </>
+  );
+}
+
 export const COMPOSANTS = {
   workforce: Workforce,
   box: Box,
@@ -461,5 +503,6 @@ export const COMPOSANTS = {
   enterprise: Enterprise,
   faq: Faq,
   contact: Contact,
+  'mentions-legales': MentionsLegales,
   ...COMPOSANTS_BUSINESS,
 };
