@@ -1,16 +1,7 @@
 import { useRef } from 'react';
 import donnees from 'virtual:accueil';
-import { IntentInput, Bouton, Avatar, nombre } from '../composants.jsx';
-import Globe from '../Globe.jsx';
+import { IntentInput, nombre } from '../composants.jsx';
 import { useScene, BUREAU, gsap } from '../mouvement.js';
-
-const VERBES = [
-  { mot: 'Créer', x: '8%', y: '14%' },
-  { mot: 'Développer', x: '62%', y: '6%' },
-  { mot: 'Transformer', x: '2%', y: '58%' },
-  { mot: 'Inventer', x: '64%', y: '46%' },
-  { mot: 'Conquérir', x: '34%', y: '88%' },
-];
 
 const EXEMPLES = [
   'Je veux développer mon entreprise sur trois nouveaux marchés.',
@@ -19,89 +10,69 @@ const EXEMPLES = [
   'Je dois trouver des financements pour mon projet.',
 ];
 
-// Where the first agents appear around the globe, as the intention starts
-// to become a team.
-const ORBITE = [
-  { i: 0, x: '18%', y: '30%' },
-  { i: 2, x: '78%', y: '26%' },
-  { i: 1, x: '84%', y: '74%' },
-  { i: 4, x: '22%', y: '78%' },
-];
+/** A full-bleed picture behind a scene, light first, big screens second. */
+export function Decor({ nom, className = '', voile, priorite = false }) {
+  return (
+    <div className={`decor ${className}`} style={voile ? { '--voile': voile } : undefined} aria-hidden="true">
+      <img
+        src={`/accueil/decor-${nom}-1280.webp`}
+        srcSet={`/accueil/decor-${nom}-1280.webp 1280w, /accueil/decor-${nom}.webp 2560w`}
+        sizes="100vw" alt="" width="2560" height="1440"
+        loading={priorite ? 'eager' : 'lazy'} fetchpriority={priorite ? 'high' : undefined} decoding="async"
+      />
+    </div>
+  );
+}
 
+/**
+ * Scene 01 — one question over the Earth seen from space (audit of 08/10):
+ * the title, one sentence, the field, nothing else above the fold. The field
+ * comes last; the counters wait below it.
+ */
 export default function HeroAccomplish() {
   const ref = useRef(null);
-  const { compteurs, personnes } = donnees;
+  const { compteurs } = donnees;
 
   useScene(ref, (ajouter, q) => {
     window.__accueilPret = true;
     document.documentElement.classList.remove('anime');
     ajouter('(prefers-reduced-motion: no-preference)', () => {
-      const entree = gsap.timeline({ defaults: { ease: 'power3.out' } });
-      entree
-        .from(q('.h-titre .ligne'), { yPercent: 105, duration: 1.4, stagger: 0.14 })
-        .from(q('.h-accomplir'), { letterSpacing: '0.04em', opacity: 0.4, duration: 2.2, ease: 'power2.out' }, '<0.3')
-        .from(q('[data-entree]'), { opacity: 0, y: 18, duration: 1.1, stagger: 0.12 }, '-=1.6')
-        .from(q('.h-globe'), { opacity: 0, scale: 0.92, duration: 2.4, ease: 'power2.out' }, 0.2)
-        .from(q('.h-verbe'), { opacity: 0, y: 14, filter: 'blur(6px)', duration: 1.6, stagger: 0.35 }, 0.9)
-        .from(q('.h-agent'), { opacity: 0, scale: 0.6, duration: 1, stagger: 0.25, ease: 'back.out(1.4)' }, 1.8);
-      // The words breathe slowly while the visitor reads.
-      gsap.to(q('.h-verbe'), { y: '-=8', duration: 4, ease: 'sine.inOut', yoyo: true, repeat: -1, stagger: { each: 0.7, from: 'random' } });
+      gsap.timeline({ defaults: { ease: 'power3.out' } })
+        .from(q('.decor img'), { scale: 1.08, opacity: 0, duration: 2.6, ease: 'power2.out' }, 0)
+        .from(q('.h-titre .ligne'), { yPercent: 105, duration: 1.3, stagger: 0.16 }, 0.35)
+        .from(q('.h-sous'), { opacity: 0, y: 20, duration: 0.9 }, 1.1)
+        .from(q('.h-champ'), { opacity: 0, y: 26, scale: 0.98, duration: 1 }, 1.45)
+        .from(q('.h-bas'), { opacity: 0, duration: 1.2 }, 2);
     });
     ajouter(BUREAU, () => {
-      // Scrolling away, the horizon comes closer and the words leave:
-      // the intention is about to become a team.
+      // Parallax kept small (≈5 %): the Earth drifts, the words stay put.
       gsap.timeline({ scrollTrigger: { trigger: ref.current, start: 'top top', end: 'bottom top', scrub: 1 } })
-        .to(q('.h-globe'), { scale: 1.25, yPercent: 12, opacity: 0.35, ease: 'none' }, 0)
-        .to(q('.h-verbe'), { opacity: 0, y: -40, stagger: 0.04, ease: 'none' }, 0)
-        .to(q('.h-agent'), { y: -30, opacity: 0, ease: 'none' }, 0.1)
-        .to(q('.h-texte'), { y: -60, opacity: 0.2, ease: 'none' }, 0.2);
+        .to(q('.decor img'), { yPercent: 5, scale: 1.04, ease: 'none' }, 0)
+        .to(q('.h-texte'), { y: -50, opacity: 0.15, ease: 'none' }, 0);
     });
   });
 
   return (
-    <section ref={ref} className="scene scene-pleine !pt-28 md:!pt-32 overflow-hidden" aria-labelledby="titre-accueil">
-      <div className="cadre grid lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-6 items-center">
-        <div className="h-texte relative z-10">
-          <h1 id="titre-accueil" className="h-titre titre-display titre-geant">
-            <span className="block overflow-hidden pb-[0.06em]"><span className="ligne block">Que voulez-vous</span></span>
-            <span className="block overflow-hidden pb-[0.12em]"><span className="ligne block h-accomplir lumiere">accomplir&nbsp;?</span></span>
-          </h1>
-          <p className="chapeau mt-7" data-entree>
-            Vous n'avez plus besoin de savoir comment utiliser l'IA.<br className="hidden md:block" />
-            {' '}Vous devez simplement savoir ce que vous voulez accomplir.
-          </p>
-          <div className="mt-9 max-w-[38rem]" data-entree>
-            <p className="text-sm text-[var(--texte-doux)] mb-3">Dites-le simplement.</p>
-            <IntentInput id="intention-hero" exemples={EXEMPLES} />
-          </div>
-          <div className="mt-6 flex flex-wrap items-center gap-3" data-entree>
-            <Bouton href="#comment" variante="contour" evenement="hero_start">Découvrir iAgent</Bouton>
-            <span className="note ml-1">Commencer avec une idée, un besoin ou un objectif.</span>
-          </div>
-          <dl className="mt-12 grid grid-cols-3 gap-4 max-w-[34rem] border-t border-[var(--trait)] pt-6" data-entree>
-            <div className="flex flex-col-reverse"><dt className="note">métiers prêts</dt><dd className="font-[Montserrat] text-2xl md:text-3xl font-semibold text-white">{nombre(compteurs.fiches)}</dd></div>
-            <div className="flex flex-col-reverse"><dt className="note">secteurs</dt><dd className="font-[Montserrat] text-2xl md:text-3xl font-semibold text-white">{nombre(compteurs.secteurs)}</dd></div>
-            <div className="flex flex-col-reverse"><dt className="note">logiciels connus</dt><dd className="font-[Montserrat] text-2xl md:text-3xl font-semibold text-white">{nombre(compteurs.logiciels)}</dd></div>
-          </dl>
-        </div>
-
-        <div className="relative aspect-square w-full max-w-[640px] mx-auto lg:mr-[-6%]" aria-hidden="true">
-          <Globe className="h-globe absolute inset-0 w-full h-full" />
-          {VERBES.map((v) => (
-            <span key={v.mot} className="h-verbe absolute verre !rounded-xl px-4 py-2 font-[Montserrat] text-[0.95rem] md:text-lg text-[var(--texte)]" style={{ left: v.x, top: v.y }}>
-              {v.mot}
-            </span>
-          ))}
-          {ORBITE.map(({ i, x, y }) => (
-            <span key={i} className="h-agent absolute -translate-x-1/2 -translate-y-1/2" style={{ left: x, top: y }}>
-              <Avatar personne={personnes[i]} taille={52} />
-            </span>
-          ))}
-          <p className="hidden sm:block absolute right-2 bottom-2 text-right font-[Montserrat] text-sm text-[var(--texte-doux)] leading-snug">
-            Human ambition.<br /><span className="text-[var(--cyan)]">Agentic execution.</span>
-          </p>
+    <section ref={ref} className="relative min-h-[100svh] flex flex-col overflow-hidden" aria-labelledby="titre-accueil">
+      <Decor nom="orbite" priorite voile="linear-gradient(180deg, rgba(2,8,23,.7) 0%, rgba(2,8,23,.25) 30%, rgba(2,8,23,.15) 60%, rgba(2,8,23,.85) 92%, var(--fond) 100%)" />
+      <div className="h-texte au-dessus cadre flex-1 flex flex-col items-center justify-center text-center pt-28 pb-10">
+        <p className="marge !border-0 !pl-0 mb-6" data-entree>Votre équipe d'experts · métier par métier</p>
+        <h1 id="titre-accueil" className="h-titre titre-display titre-geant">
+          <span className="block overflow-hidden pb-[0.06em]"><span className="ligne block">Que voulez-vous</span></span>
+          <span className="block overflow-hidden pb-[0.14em]"><span className="ligne block degrade">accomplir&nbsp;?</span></span>
+        </h1>
+        <p className="h-sous chapeau mt-6 mx-auto max-w-[40rem]">
+          Dites-le simplement. iAgent réunit les experts qu'il faut et ils se mettent au travail.
+        </p>
+        <div className="h-champ mt-9 w-full max-w-[44rem] intention-heros-cadre">
+          <IntentInput id="intention-hero" exemples={EXEMPLES} grand />
         </div>
       </div>
+      <dl className="h-bas au-dessus cadre w-full grid grid-cols-3 gap-4 pb-10 text-center">
+        <div className="flex flex-col-reverse"><dt className="note">métiers prêts</dt><dd className="font-[Montserrat] text-2xl md:text-4xl font-bold text-white">{nombre(compteurs.fiches)}</dd></div>
+        <div className="flex flex-col-reverse"><dt className="note">activités reconnues</dt><dd className="font-[Montserrat] text-2xl md:text-4xl font-bold text-white">{nombre(compteurs.activites)}</dd></div>
+        <div className="flex flex-col-reverse"><dt className="note">logiciels métier</dt><dd className="font-[Montserrat] text-2xl md:text-4xl font-bold text-white">{nombre(compteurs.logiciels)}</dd></div>
+      </dl>
     </section>
   );
 }

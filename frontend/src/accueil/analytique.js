@@ -12,6 +12,11 @@ export const EVENEMENTS = [
   'create_company_click',
   'enterprise_click',
   'final_cta_click',
+  // max's art-direction audit (08/10): the header's demo, the home page's prices and trust.
+  'demo_click',
+  'pricing_click',
+  'security_click',
+  'local_ai_click',
   // max's site plan (07/10), §19.
   'pricing_view',
   'local_ai_quote_start',

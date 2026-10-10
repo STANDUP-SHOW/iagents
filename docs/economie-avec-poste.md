@@ -1,6 +1,6 @@
 # Coût par agent et par mois — API seule contre Local-Agent
 
-Généré par `outils/economie.ts` le 2026-10-08 sur 1308 fiches. Hypothèses dans `dimensionnement/tarifs-api.json` (version 2026-09-19) : 12 000 jetons d'entrée par tour dont 70 % en cache, 800 en sortie, 6 tours par exécution (+4 avec navigateur, +3 pour un document lourd), 20 % des exécutions restent par l'API chez Local-Agent, matériel amorti sur 12 mois, électricité 0.25 €/kWh, un poste N150 par agent. **Ce sont des hypothèses, pas des mesures** : à remplacer par les moyennes relevées dès que des agents tournent.
+Généré par `outils/economie.ts` le 2026-10-10 sur 1405 fiches. Hypothèses dans `dimensionnement/tarifs-api.json` (version 2026-09-19) : 12 000 jetons d'entrée par tour dont 70 % en cache, 800 en sortie, 6 tours par exécution (+4 avec navigateur, +3 pour un document lourd), 20 % des exécutions restent par l'API chez Local-Agent, matériel amorti sur 12 mois, électricité 0.25 €/kWh, un poste N150 par agent. **Ce sont des hypothèses, pas des mesures** : à remplacer par les moyennes relevées dès que des agents tournent.
 
 Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que l'API seule. « Partagé » = le bundle d'un petit client porte un mélange d'agents et celui-ci paie sa part de charge (5 % au minimum) ; « seul » = un seul agent sur son bundle, le pire cas ; « en flotte » = sa part sur le bundle au meilleur prix par unité de puissance (gros client).
 
@@ -1314,7 +1314,104 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1393 Secrétaire général de mairie | 2105 | 266 € | 666 € | 100 € | 53 € | 47 € | 2.7× ✗ | 1.0× ✗ | 45 € | L (6/bundle) | 2 800 € |
 | AG-1394 Assistant de programme immobilier | 1389 | 194 € | 485 € | 86 € | 39 € | 47 € | 2.3× ✗ | 0.7× ✗ | 45 € | L (6/bundle) | 2 800 € |
 | AG-1395 Secrétaire commercial automobile | 1084 | 117 € | 292 € | 70 € | 23 € | 47 € | 1.7× ✗ | 0.5× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1400 Chargé de conception raccordement | 1830 | 193 € | 482 € | 125 € | 39 € | 86 € | 1.6× ✗ | 0.4× ✗ | 86 € | XL (5/bundle) | 2 800 € |
+| AG-1401 Chargé d'affaires raccordement électricité | 1655 | 196 € | 491 € | 90 € | 39 € | 51 € | 2.2× ✗ | 0.8× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1402 Programmateur des interventions électriques | 514 | 58 € | 145 € | 52 € | 12 € | 40 € | 1.1× ✗ | 0.5× ✗ | 40 € | M (4/bundle) | 2 800 € |
+| AG-1403 Chargé d'exploitation réseau électrique | 1534 | 186 € | 466 € | 117 € | 37 € | 79 € | 1.6× ✗ | 0.4× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1404 Technicien de conduite réseau électrique | 812 | 105 € | 263 € | 68 € | 21 € | 47 € | 1.5× ✗ | 0.4× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1405 Conseiller clientèle gestion des contrats d'accès au réseau | 1082 | 116 € | 291 € | 76 € | 23 € | 53 € | 1.5× ✗ | 0.5× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1406 Chargé d'études réseau électrique haute tension | 1204 | 140 € | 351 € | 88 € | 28 € | 60 € | 1.6× ✗ | 0.3× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1407 Chargé de préparation en centrale nucléaire | 1204 | 140 € | 351 € | 94 € | 28 € | 66 € | 1.5× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1408 Chargé de consignation en centrale nucléaire | 1110 | 127 € | 318 € | 105 € | 25 € | 79 € | 1.2× ✗ | 0.3× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1409 Chargé de conduite hydraulique | 2371 | 317 € | 794 € | 111 € | 63 € | 47 € | 2.9× ✗ | 1.1× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1410 Géomaticien réseaux d'eau et d'assainissement | 1356 | 190 € | 474 € | 98 € | 38 € | 60 € | 1.9× ✗ | 0.4× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1411 Gestionnaire relève et facturation de l'eau | 1353 | 182 € | 455 € | 87 € | 36 € | 51 € | 2.1× ✗ | 0.7× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1412 Conseiller clientèle eau | 2405 | 252 € | 631 € | 93 € | 50 € | 43 € | 2.7× ✗ | 1.5× ✗ | 43 € | M (3/bundle) | 2 800 € |
+| AG-1413 Chargé de qualité et conformité de l'eau potable | 932 | 122 € | 305 € | 90 € | 24 € | 66 € | 1.4× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1414 Hydraulicien modélisateur des réseaux d'eau | 751 | 98 € | 245 € | 93 € | 20 € | 74 € | 1.1× ✗ | 0.2× ✗ | 74 € | XL (7/bundle) | 2 800 € |
+| AG-1415 Responsable d'usine de production d'eau potable | 220 | 29 € | 73 € | 57 € | 6 € | 51 € | 0.5× ✗ | 0.1× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1416 Technicien performance réseau et recherche de fuites | 790 | 110 € | 275 € | 69 € | 22 € | 47 € | 1.6× ✗ | 0.5× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1417 Technicien suivi contractuel et reporting eau et assainissement | 307 | 43 € | 107 € | 53 € | 9 € | 45 € | 0.8× ✗ | 0.2× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1418 Chargé du suivi des contrats de délégation eau et assainissement | 1052 | 147 € | 368 € | 85 € | 29 € | 56 € | 1.7× ✗ | 0.3× ✗ | 56 € | XL (10/bundle) | 2 800 € |
+| AG-1419 Chargé d'affaires travaux eau et assainissement | 1204 | 140 € | 351 € | 92 € | 28 € | 63 € | 1.5× ✗ | 0.3× ✗ | 63 € | XL (8/bundle) | 2 800 € |
+| AG-1420 Chef de projet éolien | 1205 | 168 € | 421 € | 113 € | 34 € | 79 € | 1.5× ✗ | 0.4× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1421 Chef de projet développement photovoltaïque | 754 | 91 € | 229 € | 98 € | 18 € | 79 € | 0.9× ✗ | 0.2× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1422 Ingénieur d'études de gisement éolien et solaire | 1204 | 168 € | 421 € | 94 € | 34 € | 60 € | 1.8× ✗ | 0.4× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1423 Prospecteur foncier en énergies renouvelables | 1055 | 120 € | 299 € | 65 € | 24 € | 41 € | 1.8× ✗ | 1.8× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1424 Ingénieur raccordement en énergies renouvelables | 1055 | 147 € | 369 € | 85 € | 29 € | 56 € | 1.7× ✗ | 0.3× ✗ | 56 € | XL (10/bundle) | 2 800 € |
+| AG-1425 Gestionnaire d'actifs en énergies renouvelables | 608 | 57 € | 143 € | 77 € | 11 € | 66 € | 0.7× ✗ | 0.1× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1426 Chef de projet méthanisation | 1204 | 168 € | 421 € | 81 € | 34 € | 47 € | 2.1× ✗ | 0.7× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1427 Gestionnaire d'appels d'offres en énergies renouvelables | 1654 | 196 € | 491 € | 99 € | 39 € | 60 € | 2.0× ✗ | 0.4× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1428 Développeur territorial en énergies renouvelables | 2104 | 287 € | 718 € | 104 € | 57 € | 47 € | 2.8× ✗ | 1.0× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1430 Négociant en matières premières de recyclage | 964 | 107 € | 267 € | 96 € | 21 € | 75 € | 1.1× ✗ | 0.3× ✗ | 75 € | XL (6/bundle) | 2 800 € |
+| AG-1431 Chargé d'affaires déchets d'entreprises | 606 | 78 € | 194 € | 66 € | 16 € | 51 € | 1.2× ✗ | 0.3× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1432 Responsable des déchets en entreprise industrielle | 188 | 25 € | 62 € | 52 € | 5 € | 47 € | 0.5× ✗ | 0.1× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1433 Responsable de centre de tri | 78 | 11 € | 26 € | 53 € | 2 € | 51 € | 0.2× ✗ | 0.1× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1434 Chargé de comptes collectivités en éco-organisme | 1651 | 196 € | 490 € | 84 € | 39 € | 45 € | 2.3× ✗ | 0.8× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1435 Chargé de comptes opérateurs en éco-organisme | 304 | 42 € | 106 € | 53 € | 9 € | 45 € | 0.8× ✗ | 0.2× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1436 Chargé de mission REP chez un opérateur de déchets | 158 | 22 € | 55 € | 51 € | 4 € | 47 € | 0.4× ✗ | 0.1× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1437 Chargé de conformité REP des produits mis sur le marché | 907 | 99 € | 247 € | 64 € | 20 € | 45 € | 1.5× ✗ | 0.4× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1438 Chef de projet économie circulaire | 1052 | 147 € | 368 € | 80 € | 29 € | 51 € | 1.8× ✗ | 1.8× ✗ | 40 € | S (1/bundle) | 2 800 € |
+| AG-1439 Responsable de ressourcerie | 191 | 25 € | 63 € | 44 € | 5 € | 39 € | 0.6× ✗ | 0.5× ✗ | 35 € | S (1/bundle) | 2 800 € |
+| AG-1440 Responsable RSE | 911 | 127 € | 318 € | 91 € | 25 € | 66 € | 1.4× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1441 Chargé de mission décarbonation | 602 | 77 € | 193 € | 75 € | 15 € | 60 € | 1.0× ✗ | 0.2× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1442 Contrôleur de gestion RSE | 1055 | 147 € | 369 € | 80 € | 30 € | 51 € | 1.8× ✗ | 0.6× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1443 Acheteur responsable | 606 | 85 € | 211 € | 64 € | 17 € | 47 € | 1.3× ✗ | 0.3× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1444 Chargé de mission biodiversité | 602 | 84 € | 210 € | 68 € | 17 € | 51 € | 1.2× ✗ | 0.2× ✗ | 51 € | XL (11/bundle) | 2 800 € |
+| AG-1445 Gestionnaire de l'énergie des bâtiments | 307 | 36 € | 89 € | 52 € | 7 € | 45 € | 0.7× ✗ | 0.2× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1446 Chef de projet mobilité durable | 602 | 77 € | 193 € | 51 € | 15 € | 36 € | 1.5× ✗ | 1.3× ✗ | 33 € | S (1/bundle) | 2 800 € |
+| AG-1447 Chargé de mission devoir de vigilance | 906 | 126 € | 316 € | 81 € | 25 € | 56 € | 1.6× ✗ | 0.3× ✗ | 56 € | XL (10/bundle) | 2 800 € |
+| AG-1448 Analyste ISR en gestion d'actifs | 485 | 66 € | 166 € | 79 € | 13 € | 66 € | 0.8× ✗ | 0.2× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1450 Responsable qualité, sécurité, environnement | 1506 | 211 € | 526 € | 89 € | 42 € | 47 € | 2.4× ✗ | 0.8× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1451 Ingénieur qualité fournisseurs | 1801 | 217 € | 542 € | 90 € | 43 € | 47 € | 2.4× ✗ | 0.8× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1452 Technicien en métrologie | 1060 | 148 € | 370 € | 95 € | 30 € | 65 € | 1.6× ✗ | 1.0× ✗ | 48 € | M (2/bundle) | 2 800 € |
+| AG-1453 Responsable assurance qualité de laboratoire | 1655 | 231 € | 578 € | 93 € | 46 € | 47 € | 2.5× ✗ | 0.9× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1454 Technicien de laboratoire d'analyse industrielle | 1440 | 200 € | 500 € | 83 € | 40 € | 43 € | 2.4× ✗ | 2.4× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1455 Auditeur de certification de systèmes de management | 1800 | 189 € | 472 € | 85 € | 38 € | 47 € | 2.2× ✗ | 0.7× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1456 Chargé de clientèle en certification | 1655 | 168 € | 421 € | 76 € | 34 € | 43 € | 2.2× ✗ | 2.2× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1457 Technicien chargé d'inspection en vérifications réglementaires | 761 | 99 € | 247 € | 96 € | 20 € | 76 € | 1.0× ✗ | 0.7× ✗ | 54 € | M (1/bundle) | 2 800 € |
+| AG-1458 Ingénieur contrôle technique construction | 1654 | 231 € | 578 € | 126 € | 46 € | 79 € | 1.8× ✗ | 0.5× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1459 Chargé de relation clients en laboratoire d'essais | 2280 | 249 € | 622 € | 90 € | 50 € | 40 € | 2.8× ✗ | 1.5× ✗ | 40 € | M (4/bundle) | 2 800 € |
+| AG-1460 Contrôleur de gestion industriel | 308 | 43 € | 108 € | 79 € | 9 € | 70 € | 0.6× ✗ | 0.1× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1461 Architecte des systèmes d'information | 911 | 127 € | 317 € | 91 € | 25 € | 66 € | 1.4× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1462 Administrateur systèmes et réseaux | 667 | 64 € | 159 € | 53 € | 13 € | 40 € | 1.2× ✗ | 0.5× ✗ | 40 € | M (4/bundle) | 2 800 € |
+| AG-1463 Chef de projet maîtrise d'ouvrage des systèmes d'information | 1085 | 124 € | 309 € | 75 € | 25 € | 51 € | 1.6× ✗ | 0.5× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1464 Chef de projet R&D | 315 | 44 € | 109 € | 74 € | 9 € | 66 € | 0.6× ✗ | 0.1× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1465 Ingénieur d'essais | 1205 | 168 € | 421 € | 84 € | 34 € | 51 € | 2.0× ✗ | 0.7× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1466 Ingénieur brevets | 1205 | 134 € | 334 € | 87 € | 27 € | 60 € | 1.5× ✗ | 0.3× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1467 Chargé de mission crédit d'impôt recherche | 606 | 85 € | 212 € | 77 € | 17 € | 60 € | 1.1× ✗ | 0.2× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1468 Gestionnaire de l'administration des ventes export | 1655 | 196 € | 491 € | 92 € | 39 € | 53 € | 2.1× ✗ | 0.8× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1470 Contrôleur des opérations aériennes | 3694 | 347 € | 868 € | 149 € | 69 € | 79 € | 2.3× ✗ | 0.7× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1471 Planificateur des équipages aériens | 642 | 60 € | 150 € | 63 € | 12 € | 51 € | 1.0× ✗ | 0.3× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1472 Technicien de gestion de navigabilité (CAMO) | 1415 | 170 € | 425 € | 100 € | 34 € | 66 € | 1.7× ✗ | 0.4× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1473 Agent maritime consignataire | 1294 | 152 € | 379 € | 83 € | 30 € | 53 € | 1.8× ✗ | 0.6× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1474 Coordinateur d'opérations navires | 844 | 82 € | 204 € | 67 € | 16 € | 51 € | 1.2× ✗ | 0.3× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1475 Planificateur de navires | 1204 | 126 € | 316 € | 76 € | 25 € | 51 € | 1.7× ✗ | 0.5× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1476 Chargé d'exploitation de terminal portuaire | 1414 | 163 € | 407 € | 86 € | 33 € | 53 € | 1.9× ✗ | 0.6× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1477 Horairiste ferroviaire | 1654 | 203 € | 508 € | 106 € | 41 € | 66 € | 1.9× ✗ | 0.5× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1478 Technicien méthodes de maintenance du matériel roulant | 340 | 47 € | 119 € | 57 € | 9 € | 47 € | 0.8× ✗ | 0.2× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1479 Gestionnaire de moyens en transport ferroviaire | 786 | 75 € | 187 € | 68 € | 15 € | 53 € | 1.1× ✗ | 0.3× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1480 Chargé d'études FTTH | 1354 | 182 € | 456 € | 100 € | 36 € | 63 € | 1.8× ✗ | 0.4× ✗ | 63 € | XL (8/bundle) | 2 800 € |
+| AG-1481 Conducteur de travaux FTTH | 1085 | 138 € | 344 € | 96 € | 28 € | 68 € | 1.4× ✗ | 0.3× ✗ | 68 € | XL (7/bundle) | 2 800 € |
+| AG-1482 Négociateur site radio | 755 | 99 € | 246 € | 80 € | 20 € | 60 € | 1.2× ✗ | 0.2× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1483 Ingénieur planification radio | 1804 | 189 € | 473 € | 117 € | 38 € | 79 € | 1.6× ✗ | 0.4× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1484 Chargé de production audiovisuelle | 639 | 82 € | 206 € | 67 € | 16 € | 51 € | 1.2× ✗ | 0.3× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1485 Directeur de production cinéma et audiovisuel | 610 | 85 € | 213 € | 83 € | 17 € | 66 € | 1.0× ✗ | 0.2× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1486 Gestionnaire d'antenne | 721 | 98 € | 245 € | 73 € | 20 € | 53 € | 1.4× ✗ | 0.4× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1487 Administrateur de production du spectacle vivant | 1202 | 168 € | 420 € | 84 € | 34 € | 51 € | 2.0× ✗ | 0.7× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1488 Régisseur général | 1056 | 120 € | 299 € | 87 € | 24 € | 63 € | 1.4× ✗ | 0.3× ✗ | 63 € | XL (8/bundle) | 2 800 € |
+| AG-1489 Chargé de diffusion de spectacles | 610 | 78 € | 196 € | 63 € | 16 € | 47 € | 1.3× ✗ | 0.3× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1490 Chef de carrière | 791 | 83 € | 206 € | 67 € | 17 € | 51 € | 1.2× ✗ | 0.3× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1491 Responsable foncier et environnement de carrières | 907 | 127 € | 317 € | 99 € | 25 € | 74 € | 1.3× ✗ | 0.3× ✗ | 74 € | XL (7/bundle) | 2 800 € |
+| AG-1492 Géologue d'exploitation en carrière | 1356 | 162 € | 404 € | 99 € | 32 € | 67 € | 1.6× ✗ | 0.4× ✗ | 67 € | XL (7/bundle) | 2 800 € |
+| AG-1493 Agent de bascule de carrière | 1539 | 154 € | 384 € | 71 € | 31 € | 40 € | 2.2× ✗ | 1.0× ✗ | 40 € | M (4/bundle) | 2 800 € |
+| AG-1494 Technicien d'exploitation et de surveillance de réseau de gaz | 1390 | 166 € | 416 € | 97 € | 33 € | 63 € | 1.7× ✗ | 0.4× ✗ | 63 € | XL (8/bundle) | 2 800 € |
+| AG-1495 Dispatcheur commercial gaz | 1441 | 140 € | 350 € | 85 € | 28 € | 57 € | 1.6× ✗ | 0.6× ✗ | 54 € | L (5/bundle) | 2 800 € |
+| AG-1496 Chef de dépôt pétrolier | 97 | 14 € | 34 € | 56 € | 3 € | 53 € | 0.2× ✗ | 0.1× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1497 Conseiller funéraire | 1204 | 140 € | 351 € | 75 € | 28 € | 47 € | 1.9× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1498 Assistant funéraire | 1414 | 170 € | 424 € | 77 € | 34 € | 43 € | 2.2× ✗ | 2.2× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1499 Secrétaire d'auto-école | 823 | 86 € | 214 € | 99 € | 17 € | 82 € | 0.9× ✗ | 0.6× ✗ | 58 € | M (1/bundle) | 2 800 € |
 
-**57 fiches sur 1308 tiennent la règle des 3× en bundle partagé, 21 avec un agent seul sur son bundle.** Un agent seul sur un bundle à carte dédiée (image, vidéo) ne la tient pas : le bundle doit être partagé ou l'agent vendu en mode API.
+**57 fiches sur 1405 tiennent la règle des 3× en bundle partagé, 21 avec un agent seul sur son bundle.** Un agent seul sur un bundle à carte dédiée (image, vidéo) ne la tient pas : le bundle doit être partagé ou l'agent vendu en mode API.
 
 Lecture : un employé au coût employeur médian revient à 2 800 € par mois, un SMIC chargé à 2 100 €. L'abonnement à l'agent (prix cible du catalogue) s'ajoute aux colonnes Local-Agent et n'entre pas dans la règle des 3×.
