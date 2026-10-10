@@ -9,6 +9,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { slugifier } from '../seo/slug.mjs';
 import { PRIX_AGENT_MOIS } from '../src/data/prix.js';
+import { statistiquesCatalogue } from '../src/data/statistiques.js';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const lire = (chemin) => JSON.parse(readFileSync(join(RACINE, chemin), 'utf8'));
@@ -61,6 +62,7 @@ const VITRINE = ['AG-0020', 'AG-0070', 'AG-0427', 'AG-0201', 'AG-0026', 'AG-0003
 
 export function donneesAccueil() {
   const fiches = readdirSync(join(RACINE, 'agents')).filter((n) => n.endsWith('.json')).map((n) => lire(join('agents', n)));
+  const stats = statistiquesCatalogue(fiches);
   const socle = readdirSync(join(RACINE, 'socle')).filter((n) => n.endsWith('.json')).map((n) => lire(join('socle', n)));
   const catalogue = lire('catalogue/catalogue.json');
   const activites = lire('catalogue/activites.json').activites;
@@ -98,13 +100,14 @@ export function donneesAccueil() {
   const urlLogiciel = (l) => `/logiciels/${slugifier(l.nom)}`;
 
   return {
+    // One source for every total on the site (src/data/statistiques.js).
     compteurs: {
-      fiches: fiches.length,
-      secteurs: catalogue.secteurs.length,
-      activites: activites.length,
-      logiciels: logiciels.length,
+      fiches: stats.metiers,
+      secteurs: stats.secteurs,
+      activites: stats.activites,
+      logiciels: stats.logiciels,
       categoriesLogiciels: new Set(logiciels.map((l) => l.categorie)).size,
-      taches: fiches.reduce((n, f) => n + f.taches.length, 0),
+      taches: stats.taches,
     },
     prixAgent: PRIX_AGENT_MOIS,
     financement: { mois: offre.financement.mois },

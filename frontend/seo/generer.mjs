@@ -33,12 +33,15 @@ const cheminFiche = new Map(fiches.map((f, i) => [f.id, `agents/${fichiersFiches
 const activites = lire('catalogue/activites.json').activites;
 const logiciels = lire('catalogue/logiciels.json').logiciels;
 const secteursListe = lire('catalogue/catalogue.json').secteurs;
+// Every total a page writes comes from here, the site's one source.
+const STATS = statistiquesCatalogue(fiches);
 const secteurs = new Map(secteursListe.map((s) => [s.id, s.nom]));
 
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
 import { ENTREPRISE } from '../src/data/entreprise.js';
 import { urlRecruter } from '../src/data/recrutement.js';
 import { slugifier } from './slug.mjs';
+import { statistiquesCatalogue } from '../src/data/statistiques.js';
 import { portraitDe } from '../src/data/portraits.js';
 import { estTransversal, cerclesDeLActivite, personnelDeLActivite, FAMILLES_ACTIVITE } from '../src/data/activites-recherche.js';
 export { slugifier };
@@ -203,7 +206,7 @@ function page({ url, titre, description, fil = [], corps, portrait = null, appel
   const reste = (m ? corps.slice(m[0].length) : corps)
     .replace(/<\/strong> : /g, '</strong>').replace(/(<li><a [^>]*>[^<]*<\/a>) : /g, '$1<br>');
   const filHtml = [['Accueil', '/'], ...fil].map(([t, u]) => (u ? `<a href="${u}">${echapper(t)}</a>` : `<span>${echapper(t)}</span>`)).join('<span aria-hidden="true">›</span>');
-  const [appelTitre, appelTexte] = appel ?? ['Trouvez le collaborateur IA de votre métier', `${fiches.length.toLocaleString('fr-FR')} métiers, réglés sur votre secteur et votre activité.`];
+  const [appelTitre, appelTexte] = appel ?? ['Trouvez le collaborateur IA de votre métier', `${STATS.metiers.toLocaleString('fr-FR')} métiers, réglés sur votre secteur et votre activité.`];
   return `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${echapper(titre)} | iAgent</title>
@@ -349,10 +352,10 @@ for (const l of [...logParId.values()].sort((x, y) => x.nom.localeCompare(y.nom,
 const nomLogiciel = (l) => (urlLogiciel.has(l.id) ? lien(l.nom, urlLogiciel.get(l.id)) : echapper(l.nom)) + (l.editeur ? ` <small>${echapper(l.editeur)}</small>` : '');
 poser('/logiciels', 'core', plusRecente(...logiciels.map((l) => dLogiciel(l.id))), page({
   url: '/logiciels',
-  titre: `Logiciels métier : les ${logParId.size.toLocaleString('fr-FR')} outils que connaissent les agents iAgent`,
-  description: `ERP, CRM, comptabilité, paie, logiciels de production, de santé, d'industrie… Les ${logParId.size.toLocaleString('fr-FR')} logiciels métier du référentiel iAgent, de A à Z.`,
+  titre: `Logiciels métier : les ${STATS.logiciels.toLocaleString('fr-FR')} outils que connaissent les agents iAgent`,
+  description: `ERP, CRM, comptabilité, paie, logiciels de production, de santé, d'industrie… Les ${STATS.logiciels.toLocaleString('fr-FR')} logiciels métier du référentiel iAgent, de A à Z.`,
   fil: [['Logiciels', null]],
-  corps: `<h1>Les ${logParId.size.toLocaleString('fr-FR')} logiciels métier du référentiel</h1>
+  corps: `<h1>Les ${STATS.logiciels.toLocaleString('fr-FR')} logiciels métier du référentiel</h1>
 <p class="accroche">Les outils que vos agents savent tenir, de A à Z, avec leur éditeur. Vous connaissez votre activité ? <a href="/activites">Voyez les logiciels de votre branche</a>.</p>
 <p class="puces">${[...parLettre.keys()].map((k) => `<a href="#lettre-${k}">${k}</a>`).join('')}</p>
 ${[...parLettre].map(([k, ls]) => `<h2 id="lettre-${k}">${k}</h2>${liste(ls.map((l) => `<li>${nomLogiciel(l)}</li>`))}`).join('\n')}`,
@@ -362,11 +365,11 @@ ${[...parLettre].map(([k, ls]) => `<h2 id="lettre-${k}">${k}</h2>${liste(ls.map(
 // jobs: the other way in, for a visitor who knows the field and not the title.
 poser('/secteurs', 'core', plusRecente(...[...secteurs.keys()].map(dSecteur), ...fiches.map(dFiche)), page({
   url: '/secteurs',
-  titre: `Agents IA par secteur : ${secteurs.size} familles de métiers`,
-  description: `Comptabilité, commerce, santé, juridique, logistique… Les ${fiches.length} métiers iAgent rangés en ${secteurs.size} secteurs.`,
+  titre: `Agents IA par secteur : ${STATS.secteurs} familles de métiers`,
+  description: `Comptabilité, commerce, santé, juridique, logistique… Les ${STATS.metiers} métiers iAgent rangés en ${STATS.secteurs} secteurs.`,
   fil: [['Secteurs', null]],
   corps: `<h1>Les métiers, secteur par secteur</h1>
-<p class="accroche">${secteurs.size} familles de métiers, ${fiches.length} métiers. Vous connaissez votre activité plutôt que le métier ? <a href="/activites">Cherchez par activité</a>.</p>
+<p class="accroche">${STATS.secteurs} familles de métiers, ${STATS.metiers} métiers. Vous connaissez votre activité plutôt que le métier ? <a href="/activites">Cherchez par activité</a>.</p>
 ${liste([...secteurs].map(([id, nom]) => `<li>${lien(nom, urlSecteur.get(id))}<br>${fiches.filter((f) => f.secteur === id).length} métiers</li>`))}`,
 }));
 for (const [id, nom] of secteurs) {
@@ -385,11 +388,11 @@ ${liste(leurs.map((f) => `<li>${lien(f.nom, urlFiche.get(f.id))} : ${echapper(f.
 
 poser('/activites', 'core', plusRecente(...activites.map(dActivite)), page({
   url: '/activites',
-  titre: `Agents IA par activité : ${activites.length} activités`,
-  description: `Imprimerie, boulangerie, cabinet comptable, transport… Trouvez les agents IA de votre activité parmi ${activites.length} activités.`,
+  titre: `Agents IA par activité : ${STATS.activites} activités`,
+  description: `Imprimerie, boulangerie, cabinet comptable, transport… Trouvez les agents IA de votre activité parmi ${STATS.activites} activités.`,
   fil: [['Activités', null]],
   corps: `<h1>Votre activité, vos agents</h1>
-<p class="accroche">Choisissez votre activité parmi ${activites.length} : chaque agent que vous recrutez reçoit son vocabulaire, ses documents, ses règles et ses logiciels. Vous préférez chercher par famille de métiers ? <a href="/secteurs">Les secteurs</a>.</p>
+<p class="accroche">Choisissez votre activité parmi ${STATS.activites} : chaque agent que vous recrutez reçoit son vocabulaire, ses documents, ses règles et ses logiciels. Vous préférez chercher par famille de métiers ? <a href="/secteurs">Les secteurs</a>.</p>
 ${Object.entries(FAMILLES_ACTIVITE).map(([id, nom]) => {
     const siennes = activites.filter((a) => a.famille === id);
     return siennes.length ? `<h2>${echapper(nom)}</h2>${puces(siennes.map((a) => lien(a.nom, urlActivite.get(a.id))))}` : '';
@@ -566,7 +569,7 @@ const nombreLu = (t) => Number(t.replace(/[\s  ]/g, ''));
 // from an old build, 1 403 / 63 / 303 / 1 973 from a later one), and the
 // phrases that announce a total, whatever the number.
 const ANCIENS_TOTAUX = { métiers: [1249, 1403], secteurs: [43, 63, 64], activités: [303], logiciels: [1693, 1973] };
-const ATTENDU = { métiers: fiches.length, secteurs: secteurs.size, activités: activites.length, logiciels: logParId.size };
+const ATTENDU = { métiers: STATS.metiers, secteurs: STATS.secteurs, activités: STATS.activites, logiciels: STATS.logiciels };
 const PHRASES_TOTAUX = /(\d{1,3}(?:[\s\u00a0\u202f]\d{3})*)\s*(?:<\/?(?:strong|span|b|em|a)[^>]*>\s*)*(métiers prêts|métiers iAgent, à|métiers rangés|familles de métiers|métiers, réglés|métiers\.|activités reconnues|activités\b(?=[^<]{0,3}<)|logiciels métier du référentiel|logiciels au référentiel|secteurs\b)/g;
 const QUOI = (phrase) => phrase.match(/métiers|secteurs|activités|logiciels/)[0];
 const anomalies = { absentes: [], sansTitre: [], sansH1: [], sansCanonical: [], canonicalAilleurs: [], noindexIncoherent: [], compteursFaux: [] };
@@ -594,7 +597,7 @@ for (const [url, m] of meta) {
 const familleDe = (prefixe) => [...meta.values()].filter((m) => m.famille === prefixe);
 const rapport = {
   genere: AUJOURDHUI,
-  compteurs: { metiers: fiches.length, secteurs: secteurs.size, activites: activites.length, logiciels: logParId.size },
+  compteurs: { metiers: STATS.metiers, secteurs: STATS.secteurs, activites: STATS.activites, logiciels: STATS.logiciels, taches: STATS.taches },
   adresses: {
     generees: meta.size,
     indexables: sitemaps.reduce((n, x) => n + x.urls.length, 0),

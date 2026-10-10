@@ -8,6 +8,7 @@ import logicielsJson from '../../../catalogue/logiciels.json';
 import activitesJson from '../../../catalogue/activites.json';
 import { activitesReconnues, cerclesDeLActivite, coeurDeLActivite, estTransversal, personnelDeLActivite, SECTEURS_TRANSVERSAUX } from './activites-recherche.js';
 import { slugifier } from '../../seo/slug.mjs';
+import { statistiquesCatalogue } from './statistiques.js';
 
 const LOGICIELS = logicielsJson.logiciels;
 const nomLogiciel = new Map(LOGICIELS.map((l) => [l.id, l.nom]));
@@ -308,11 +309,7 @@ export function suggestions(requete, limite = 6) {
   return sortie.sort((x, y) => Number(y.debut) - Number(x.debut) || x.texte.length - y.texte.length).slice(0, limite);
 }
 
-export const COMPTEURS = {
-  agents: agents.length,
-  // The catalogue's sector list, the number the home page shows too.
-  secteurs: catalogue.secteurs.length,
-  activites: activitesJson.activites.length,
-  logiciels: LOGICIELS.length,
-  taches: agents.reduce((n, a) => n + (a.taches?.length ?? 0), 0),
-};
+// One source for every total on the site (statistiques.js); `agents` is the
+// name the catalogue's screens use for the number of jobs.
+const stats = statistiquesCatalogue(agents);
+export const COMPTEURS = { agents: stats.metiers, ...stats };
