@@ -39,6 +39,15 @@ jobs:
         with:
           workspaces: desktop/src-tauri
 
+      # The cache brings back whisper-rs-sys already compiled, and its build
+      # script never reruns on a CMake setting: the 06/10 fix (portable ggml,
+      # .cargo/config.toml) did not reach the binary and the installer still
+      # crashed on an i5-4460 (AVX-512 instruction, C000001D). Rebuild it every
+      # time; the check after the build proves what was compiled.
+      - name: Rebuild whisper for the client's processor
+        run: cargo clean -p whisper-rs-sys --release
+        working-directory: desktop/src-tauri
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -74,6 +83,19 @@ jobs:
             npm run build
           fi
         working-directory: desktop
+
+      - name: Check whisper is not built for the build machine
+        shell: bash
+        working-directory: desktop/src-tauri
+        run: |
+          cache=$(ls target/release/build/whisper-rs-sys-*/out/build/CMakeCache.txt | head -1)
+          echo "$cache"
+          grep -E "^GGML_(NATIVE|AVX2|AVX512):" "$cache"
+          grep -q "^GGML_NATIVE:BOOL=OFF" "$cache" || { echo "ggml compiled for the build machine (GGML_NATIVE)"; exit 1; }
+          grep -q "^GGML_AVX512:BOOL=OFF" "$cache" || { echo "ggml compiled with AVX-512"; exit 1; }
+          if grep -rlE "arch:AVX512|AdvancedVectorExtensions512" --include=*.vcxproj "$(dirname "$cache")"; then
+            echo "an AVX-512 compile flag is still present"; exit 1
+          fi
 
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4

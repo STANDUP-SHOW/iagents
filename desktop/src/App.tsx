@@ -15,6 +15,7 @@ import ConnectorSetup from './components/ConnectorSetup'
 import Navigateur from './components/Navigateur'
 import Courriel from './components/Courriel'
 import CleApi from './components/CleApi'
+import VoixApi from './components/VoixApi'
 import WhatsApp from './components/WhatsApp'
 import Telegram from './components/Telegram'
 import InstallerVoix from './components/InstallerVoix'
@@ -460,7 +461,7 @@ function App() {
       // disait encore « vérifier que piper et sa voix sont présents » alors que
       // la voix, elle, se télécharge depuis le 24/09 et qu'il ne manque plus
       // que le moteur. Le client lisait donc un conseil faux.
-      await invoke('text_to_speech', { text: reponse.texte }).catch((err) => {
+      await invoke('text_to_speech', { text: reponse.texte, prenom: agent.prenom }).catch((err) => {
         setError(String(err))
       })
     } catch (err) {
@@ -710,6 +711,7 @@ function App() {
           cadre(
             <>
               <CleApi />
+              <VoixApi />
               <WhatsApp />
               <Telegram />
               <InstallerVoix apresInstallation={demarrerEcoute} />

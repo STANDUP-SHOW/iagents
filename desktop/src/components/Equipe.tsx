@@ -8,6 +8,7 @@ import {
   type Changement,
   type Proposition,
 } from '../agents/team-holder'
+import MissionEquipe from './Mission'
 
 /**
  * Votre équipe : ce que tient le Team Holder. Ce qu'il propose de changer
@@ -59,6 +60,8 @@ export default function Equipe({ installes, proposition, onAccepter, onRefuser, 
           ? `${chef.prenom} tient vos agents pour vous : dites « Voice, ${chef.prenom} » et demandez-lui ce que fait l'équipe, ou ce qu'il faut changer.`
           : "Aucun Team Holder n'est embauché sur ce poste : chaque agent se règle à part, dans « Vos agents »."}
       </p>
+
+      <MissionEquipe chef={chef?.prenom ?? null} />
 
       {proposition && (
         <section className="panneau proposition" aria-live="polite">
