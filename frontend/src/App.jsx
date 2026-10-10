@@ -15,6 +15,7 @@ import {
 import { estTransversal, FAMILLES_ACTIVITE } from './data/activites-recherche.js';
 import { LIENS } from './accueil/composants.jsx';
 import { suivre } from './accueil/analytique.js';
+import { urlRecruter } from './data/recrutement.js';
 
 // What the library offers when nothing matches: the jobs every business has.
 const POUR_TOUS = agents.filter(estTransversal).slice(0, 12);
@@ -109,6 +110,10 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
   const ficheVenue = (ficheInitiale && agents.find((a) => a.slug === ficheInitiale)) || null;
   const [apercu, setApercu] = useState(ficheVenue);
   const [ficheOuverte, setFicheOuverte] = useState(ficheVenue);
+  // The trade the open fiche is read in: what the visitor picked in its header
+  // menu, or, until he picks, the activity of his search. `null` is a choice
+  // too (« sans activité particulière »), so the state starts undefined.
+  const [activiteChoisie, setActiviteChoisie] = useState(undefined);
   const [tiroir, setTiroir] = useState(false);
   const [combien, setCombien] = useState(PAR_PAGE);
 
@@ -427,7 +432,19 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
       )}
 
       {ficheOuverte && (
-        <FicheDetail agent={ficheOuverte} installation={installation} activite={activiteEnCours} onClose={() => setFicheOuverte(null)} />
+        <FicheDetail
+          agent={ficheOuverte}
+          installation={installation}
+          activite={activiteChoisie === undefined ? activiteEnCours : activiteChoisie}
+          onChoisirActivite={(a) => {
+            setActiviteChoisie(a);
+            suivre('specialise_fiche', { fiche: ficheOuverte.id, activite: a?.nom ?? null });
+            // The address says which fiche in which trade, so the page can be
+            // shared or reopened as it was read (same shape as « Recruter cet agent »).
+            if (typeof window !== 'undefined') window.history.replaceState({ catalogue: true }, '', urlRecruter({ slug: ficheOuverte.slug, activite: a?.nom ?? null }));
+          }}
+          onClose={() => { setFicheOuverte(null); setActiviteChoisie(undefined); }}
+        />
       )}
     </div>
   );

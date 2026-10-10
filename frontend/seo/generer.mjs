@@ -42,7 +42,7 @@ import { ENTREPRISE } from '../src/data/entreprise.js';
 import { urlRecruter } from '../src/data/recrutement.js';
 import { slugifier } from './slug.mjs';
 import { statistiquesCatalogue } from '../src/data/statistiques.js';
-import { DEVIS } from '../../outils/poste-de-devis.ts';
+import { specialiser } from '../src/data/specialisation.js';
 import { portraitDe } from '../src/data/portraits.js';
 import { estTransversal, cerclesDeLActivite, personnelDeLActivite, FAMILLES_ACTIVITE } from '../src/data/activites-recherche.js';
 export { slugifier };
@@ -470,20 +470,14 @@ for (const a of activites) {
   // The trade's own staff (catalogue/personnel.json): the name this job bears
   // in the branch, and the branch's own expert when it has one for the same
   // function. max (10/10): « agent de devis × optique » must read as the
-  // optician's quoting post, as the printer's deviseur already does.
-  const per = personnelDeLActivite(a, fiches);
-  const postes = per ? per.services.flatMap((s) => s.postes.map((x) => ({ ...x, service: s.libelle }))) : [];
-  const placeDe = new Map(postes.map((x) => [x.fiche.id, x]));
-  const expertDevis = postes.find((x) => !estTransversal(x.fiche) && (DEVIS.test(x.role) || DEVIS.test(x.fiche.nom))) ?? null;
+  // optician's quoting post, as the printer's deviseur already does. The
+  // composition is `specialiser()`, the one the fiche uses when the visitor
+  // picks his activity on it: one page, one fiche, the same matter.
   for (const f of transversaux) {
     const url = reserver(urlPosteActivite(f, a), `${f.id}×${a.id}`);
-    const familles = new Set(f.taches.flatMap((t) => t.logiciels ?? []));
-    const outils = (p.logiciels ?? []).map((id) => logParId.get(id)).filter((l) => familles.has(l.categorie));
-    const outilsDe = (t) => outils.filter((l) => (t.logiciels ?? []).includes(l.categorie));
+    const { place, expert, outils, outilsDe, autresLogiciels } = specialiser(f, a, fiches);
     const sur = outils.length ? `, sur ${outils.map((l) => l.nom).join(' ou ')}` : '';
     const activite = a.nom.toLowerCase();
-    const place = placeDe.get(f.id) ?? null;
-    const expert = DEVIS.test(f.nom) && expertDevis && expertDevis.fiche.id !== f.id ? expertDevis : null;
     const raison = sansMatiere(f, a);
     poser(url, 'combinaisons', plusRecente(dFiche(f), dActivite(a)), page({
       noindex: Boolean(raison),
@@ -500,7 +494,7 @@ ${expert ? `<div class="carte"><p>Votre branche a son propre expert du devis : $
 <h2>Ce qu'il fait chaque jour</h2>
 ${liste(f.taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}${outilsDe(t).length ? ` Dans ${outilsDe(t).map((l) => echapper(l.nom)).join(' ou ')}.` : ''}</li>`))}
 ${outils.length ? `<h2>Les logiciels de votre activité qu'il tient</h2>${liste(outils.map((l) => `<li>${lien(l.nom, urlLogiciel.get(l.id))}${l.editeur ? `, de ${echapper(l.editeur)}` : ''}</li>`))}` : ''}
-${(p.logiciels ?? []).length > outils.length ? `<h2>Les autres logiciels de votre activité</h2><p>Il vous demande à l'entretien lesquels vous employez.</p>${puces((p.logiciels ?? []).map((id) => logParId.get(id)).filter((l) => !outils.includes(l)).map((l) => lien(l.nom, urlLogiciel.get(l.id))))}` : ''}
+${autresLogiciels.length ? `<h2>Les autres logiciels de votre activité</h2><p>Il vous demande à l'entretien lesquels vous employez.</p>${puces(autresLogiciels.map((l) => lien(l.nom, urlLogiciel.get(l.id))))}` : ''}
 ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
 ${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
 ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}

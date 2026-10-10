@@ -27,6 +27,8 @@ export const EVENEMENTS = [
   'box_quote',
   'recruit_agent',
   'recruit_list',
+  // The fiche read in one trade (max, 10/10): the activity picked in its header.
+  'specialise_fiche',
   'personalize_agent',
   'create_idea_submit',
   'opportunity_view',
