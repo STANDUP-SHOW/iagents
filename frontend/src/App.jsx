@@ -10,7 +10,7 @@ import { AGENTS_RESEAUX, PACKS_ENTREPRISE, INSTALLATIONS, ficheDe, installationD
 import agents from './data/loader.js';
 import {
   filtrer, decompte, FILTRES_VIDES, libelleSecteur, libelleFamille, logicielsDe, portraitDe, COMPTEURS,
-  activitesDeLaRecherche, urlActivite, urlFiche, urlSecteur, ACTIVITES, logicielsDeLActivite,
+  activitesDeLaRecherche, urlActivite, urlFiche, urlSecteur, ACTIVITES, logicielsDeLActivite, optionsActivites, activiteDe,
 } from './data/recherche.js';
 import { estTransversal, FAMILLES_ACTIVITE } from './data/activites-recherche.js';
 import { LIENS } from './accueil/composants.jsx';
@@ -149,6 +149,9 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
     logiciels: decompte(base, logicielsDe),
     ou: ouParAgent ? decompte(base, (a) => [ouParAgent.get(a.id)]) : [],
   }), [base, ouParAgent]);
+  // The activities follow the chosen sector (max, 10/10): a print-shop sector
+  // offers print trades, not bakeries.
+  const optionsActivite = useMemo(() => optionsActivites(base, filtres.secteurs), [base, filtres.secteurs]);
 
   useEffect(() => { setCombien(PAR_PAGE); }, [requete, filtres, tri, vue, packOuvert]);
 
@@ -165,6 +168,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
   const changer = (cle) => (valeurs) => setFiltres((f) => ({ ...f, [cle]: valeurs }));
   const choisis = [
     ...filtres.secteurs.map((v) => ['secteurs', v, libelleSecteur(v)]),
+    ...filtres.activites.map((v) => ['activites', v, activiteDe(v)?.nom ?? v]),
     ...filtres.familles.map((v) => ['familles', v, libelleFamille(v)]),
     ...filtres.logiciels.map((v) => ['logiciels', v, v]),
     ...(ouParAgent ? filtres.ou.map((v) => ['ou', v, OU[v]]) : []),
@@ -178,6 +182,16 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
   // picked (max, 10/10): the same page the sitemap lists, so a copied link
   // or a reload lands on it.
   const adresse = (url) => { if (typeof window !== 'undefined' && window.location.pathname !== url) window.history.pushState({ catalogue: true }, '', url); };
+  // A filter on one activity or one sector shows that page's address; none
+  // brings the catalogue's back. A search keeps the address it opened.
+  const filtresVus = useRef(filtres);
+  useEffect(() => {
+    if (filtresVus.current === filtres) return;
+    filtresVus.current = filtres;
+    if (filtres.activites.length === 1) adresse(urlActivite(activiteDe(filtres.activites[0])));
+    else if (filtres.secteurs.length === 1 && !filtres.activites.length) adresse(urlSecteur(filtres.secteurs[0]));
+    else if (!requete && /^\/(activites|secteurs)\//.test(window.location.pathname)) adresse('/catalogue');
+  }, [filtres]); // eslint-disable-line react-hooks/exhaustive-deps
   const ouvrirActivite = (a) => { setVue('metier'); setFiltres(FILTRES_VIDES); setRequete(a.nom); suivre('catalog_click', { activite: a.nom }); adresse(urlActivite(a)); auxResultats(); };
   const ouvrirSecteur = (id) => { setVue('metier'); setRequete(''); setFiltres({ ...FILTRES_VIDES, secteurs: [id] }); adresse(urlSecteur(id)); auxResultats(); };
   const voirFiche = useCallback((a, choisi) => { setApercu(a); if (choisi) adresse(urlFiche(a)); }, []);
@@ -225,6 +239,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
         {choisis.length > 0 && <button type="button" className="bi-reinit" onClick={() => setFiltres(FILTRES_VIDES)}>Réinitialiser</button>}
       </div>
       <GroupeFiltre titre="Secteur" options={options.secteurs} choisis={filtres.secteurs} onChange={changer('secteurs')} libelle={libelleSecteur} cherchable ouvertParDefaut />
+      <GroupeFiltre titre="Activité" options={optionsActivite} choisis={filtres.activites} onChange={changer('activites')} libelle={(v) => activiteDe(v)?.nom ?? v} cherchable ouvertParDefaut={filtres.secteurs.length > 0} />
       <GroupeFiltre titre="Type de profil" options={options.familles} choisis={filtres.familles} onChange={changer('familles')} libelle={libelleFamille} />
       <GroupeFiltre titre="Logiciels maîtrisés" options={options.logiciels} choisis={filtres.logiciels} onChange={changer('logiciels')} cherchable />
       {ouParAgent && (

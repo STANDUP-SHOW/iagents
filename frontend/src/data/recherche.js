@@ -6,7 +6,7 @@ import agents from './loader.js';
 import catalogue from '../../../catalogue/catalogue.json';
 import logicielsJson from '../../../catalogue/logiciels.json';
 import activitesJson from '../../../catalogue/activites.json';
-import { activitesReconnues, cerclesDeLActivite, coeurDeLActivite, estTransversal, personnelDeLActivite } from './activites-recherche.js';
+import { activitesReconnues, cerclesDeLActivite, coeurDeLActivite, estTransversal, personnelDeLActivite, SECTEURS_TRANSVERSAUX } from './activites-recherche.js';
 import { slugifier } from '../../seo/slug.mjs';
 
 const LOGICIELS = logicielsJson.logiciels;
@@ -208,19 +208,61 @@ export function agentsPourDemande(idee, limite = 8) {
 }
 
 /** The filters the library offers, each one a set of chosen values. */
-export const FILTRES_VIDES = { secteurs: [], familles: [], logiciels: [], ou: [] };
+export const FILTRES_VIDES = { secteurs: [], activites: [], familles: [], logiciels: [], ou: [] };
+
+/**
+ * Who works in each activity, in the order the search ranks them (its own
+ * staff, the jobs on its software, then the jobs every business has), and the
+ * sectors its own staff comes from. Computed once, on first use (~0.2 s).
+ */
+let membres = null;
+export function membresDesActivites() {
+  if (!membres) {
+    membres = new Map(ACTIVITES.map((activite) => {
+      const { proches, coeur, outilles, transversaux } = cerclesDeLActivite(activite, agents);
+      const propres = [...proches, ...coeur, ...outilles];
+      return [activite.id, {
+        rang: new Map([...propres, ...transversaux].map((f, i) => [f.id, i])),
+        secteurs: new Set(propres.map((f) => f.secteur).filter((s) => !SECTEURS_TRANSVERSAUX.has(s))),
+      }];
+    }));
+  }
+  return membres;
+}
+const ACTIVITE_PAR_ID = new Map(ACTIVITES.map((a) => [a.id, a]));
+export const activiteDe = (id) => ACTIVITE_PAR_ID.get(id);
+
+/**
+ * The activities the filter offers, with how many of `liste` serve each. A
+ * trade's own sector narrows them; the sectors every business has (office,
+ * accounting…) serve every trade, so they narrow nothing.
+ */
+export function optionsActivites(liste, secteurs = []) {
+  const m = membresDesActivites();
+  const propres = secteurs.filter((s) => !SECTEURS_TRANSVERSAUX.has(s));
+  const ids = liste.map((a) => a.id);
+  return ACTIVITES
+    .filter((a) => !propres.length || propres.some((s) => m.get(a.id).secteurs.has(s)))
+    .map((a) => [a.id, ids.filter((id) => m.get(a.id).rang.has(id)).length])
+    .filter(([, n]) => n > 0)
+    .sort((x, y) => activiteDe(x[0]).nom.localeCompare(activiteDe(y[0]).nom, 'fr'));
+}
 
 /**
  * `ou` is where the agent works on the visitor's installation: « chez-vous »
  * or « api ». It needs the installation's quote, passed as a function.
  */
-export function filtrer(liste, { requete = '', secteurs = [], familles = [], logiciels = [], ou = [] } = {}, ouTravaille) {
+export function filtrer(liste, { requete = '', secteurs = [], activites = [], familles = [], logiciels = [], ou = [] } = {}, ouTravaille) {
   const parActivite = rangsParActivite(requete);
+  const choisies = activites.map((id) => membresDesActivites().get(id)).filter(Boolean);
+  // In a chosen activity, its own staff comes first, as on its page.
+  const rangChoisi = (a) => Math.max(0, ...choisies.map((c) => (c.rang.has(a.id) ? 3000 - c.rang.get(a.id) : 0)));
   return liste
-    .map((a) => ({ a, score: (pertinence(a, requete) && 500 + pertinence(a, requete)) + (parActivite.get(a.id) ?? 0) }))
+    .map((a) => ({ a, score: (pertinence(a, requete) && 500 + pertinence(a, requete)) + (parActivite.get(a.id) ?? 0) + rangChoisi(a) }))
     .filter(({ a, score }) =>
       score > 0 &&
       (!secteurs.length || secteurs.includes(a.secteur)) &&
+      (!choisies.length || choisies.some((c) => c.rang.has(a.id))) &&
       (!familles.length || familles.includes(a.famille)) &&
       (!logiciels.length || logicielsDe(a).some((l) => logiciels.includes(l))) &&
       (!ou.length || !ouTravaille || ou.includes(ouTravaille(a))))

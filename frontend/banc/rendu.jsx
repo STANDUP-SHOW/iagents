@@ -22,8 +22,8 @@ import { FINANCEMENT, OFFRES } from '../../dimensionnement/offre-box.ts';
 import { DEVIS } from '../../outils/poste-de-devis.ts';
 import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE, logicielsDeLActivite } from '../src/data/recherche.js';
-import { IDS_DU_COEUR, coeurDeLActivite, personnelDeLActivite } from '../src/data/activites-recherche.js';
+import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE, logicielsDeLActivite, optionsActivites } from '../src/data/recherche.js';
+import { IDS_DU_COEUR, coeurDeLActivite, personnelDeLActivite, SECTEURS_TRANSVERSAUX } from '../src/data/activites-recherche.js';
 import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, euros as eurosTarif } from '../src/data/tarifs.js';
 import Page from '../src/pages/Page.jsx';
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
@@ -298,7 +298,22 @@ for (const page of PAGES) {
       .filter(([a, mot]) => !activitesDeLaRecherche(mot).includes(a) || !filtrer(agents, { requete: mot }).length);
     if (muets.length) echoue(`${muets.length} mots d'activité sans réponse, dont ${muets.slice(0, 5).map(([a, m]) => `« ${m} » (${a.id})`).join(', ')}`);
     else ok(`les ${ACTIVITES_RECHERCHE.length} activités se trouvent par leur nom et chacun de leurs alias`);
+  }  // Le filtre « Activité » (max, 10/10) : les 422 activités sans secteur
+  // choisi, seulement celles du secteur quand il l'est, et le personnel de
+  // l'imprimerie d'abord quand on la choisit.
+  {
+    const toutes = optionsActivites(agents);
+    const fiche = (id) => agents.find((a) => a.id === id);
+    const coeur = coeurDeLActivite(ACTIVITES_RECHERCHE.find((a) => a.id === 'ACT-0021'), agents).map((c) => c.fiche.id);
+    const secteurImprimeur = coeur.map((id) => fiche(id)?.secteur).find((s) => s && !SECTEURS_TRANSVERSAUX.has(s));
+    const duSecteur = optionsActivites(agents, [secteurImprimeur]);
+    const choisis = filtrer(agents, { activites: ['ACT-0021'] });
+    if (toutes.length !== ACTIVITES_RECHERCHE.length) echoue(`filtre Activité : ${toutes.length} activités proposées sur ${ACTIVITES_RECHERCHE.length}`);
+    else if (!duSecteur.some(([id]) => id === 'ACT-0021') || duSecteur.length >= toutes.length) echoue(`filtre Activité : le secteur ${secteurImprimeur} propose ${duSecteur.length} activités`);
+    else if (!coeur.includes(choisis[0]?.id)) echoue(`filtre Activité : l'imprimerie commence par ${choisis[0]?.nom}`);
+    else ok(`filtre Activité : ${toutes.length} activités, ${duSecteur.length} dans le secteur ${secteurImprimeur}, l'imprimerie montre ${choisis.length} métiers, d'abord ${choisis[0].nom}`);
   }
+
   // Le site n'offre jamais l'installeur : Desktop Commander est livré sur la Box
   // (max, 08/10). Un bouton « Télécharger » ramènerait le visiteur hors de l'offre.
   const telechargeurs = execSync("grep -rlE 'releases/(latest/)?download|\\.msi|T[eé]l[eé]charger' src seo || true", { encoding: 'utf8' }).trim();
