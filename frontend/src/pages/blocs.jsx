@@ -100,7 +100,7 @@ export { Bouton };
  * A request: what the visitor wants, in the plan's fields. It writes an email
  * to CONTACT; while no address is set it says so, and sends nothing.
  */
-export function Demande({ sujet, champs = [], evenement }) {
+export function Demande({ sujet, champs = [], evenement, message = '' }) {
   const [envoye, setEnvoye] = useState(false);
   const soumettre = (e) => {
     e.preventDefault();
@@ -115,13 +115,13 @@ export function Demande({ sujet, champs = [], evenement }) {
       <label><span>Votre nom</span><input name="Nom" autoComplete="name" required /></label>
       <label><span>Votre entreprise</span><input name="Entreprise" autoComplete="organization" required /></label>
       <label><span>Votre adresse e-mail</span><input name="E-mail" type="email" autoComplete="email" required /></label>
-      {champs.map(([nom, libelle, options]) => (
+      {champs.map(([nom, libelle, options, valeur = '', aide]) => (
         <label key={nom}>
           <span>{libelle}</span>
-          {options ? <select name={nom} defaultValue="">{['', ...options].map((o) => <option key={o} value={o}>{o || 'Choisir'}</option>)}</select> : <input name={nom} />}
+          {options ? <select name={nom} defaultValue={valeur}>{['', ...options].map((o) => <option key={o} value={o}>{o || 'Choisir'}</option>)}</select> : <input name={nom} defaultValue={valeur} placeholder={aide} />}
         </label>
       ))}
-      <label className="pg-large"><span>Ce que vous voulez accomplir</span><textarea name="Message" rows="4" /></label>
+      <label className="pg-large"><span>Ce que vous voulez accomplir</span><textarea name="Message" rows="4" defaultValue={message} /></label>
       <button type="submit" className="bouton bouton-plein">Envoyer la demande <Fleche /></button>
       {envoye && !CONTACT && <p className="pg-note" role="status">La réception des demandes n'est pas encore branchée : rien n'est parti. Revenez très bientôt, ou téléchargez l'application pour essayer un agent dès maintenant.</p>}
     </form>

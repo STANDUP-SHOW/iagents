@@ -229,6 +229,18 @@ export function membresDesActivites() {
   }
   return membres;
 }
+let postes = null;
+/** The trades whose staff include this job (its organigrams), by name. */
+export function activitesDuPoste(agent) {
+  if (!postes) {
+    postes = new Map();
+    for (const a of ACTIVITES) for (const { fiche } of coeurDeLActivite(a, agents)) {
+      if (!postes.has(fiche.id)) postes.set(fiche.id, []);
+      if (!postes.get(fiche.id).includes(a.nom)) postes.get(fiche.id).push(a.nom);
+    }
+  }
+  return postes.get(agent.id) ?? [];
+}
 const ACTIVITE_PAR_ID = new Map(ACTIVITES.map((a) => [a.id, a]));
 export const activiteDe = (id) => ACTIVITE_PAR_ID.get(id);
 
