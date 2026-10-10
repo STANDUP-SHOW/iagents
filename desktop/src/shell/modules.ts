@@ -32,6 +32,10 @@ export const SOUS_PAGES: Partial<Record<Module, { id: Onglet; titre: string }[]>
     { id: 'embauche', titre: 'Catalogue et entretien' },
     { id: 'create', titre: 'Créer sur mesure' },
   ],
+  connectors: [
+    { id: 'connectors', titre: 'Vos connexions' },
+    { id: 'catalogue-connecteurs', titre: 'Catalogue des connecteurs' },
+  ],
   voice: [
     { id: 'voice', titre: 'Voice Hub' },
     { id: 'standard', titre: 'Standard et appels' },

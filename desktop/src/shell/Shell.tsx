@@ -47,6 +47,7 @@ export const MODULE_ICONE: Record<Module, Exclude<Onglet, 'dashboard'> | 'centre
   travail: 'travail',
   embauche: 'embauche',
   connectors: 'connectors',
+  'catalogue-connecteurs': 'catalogue-connecteurs',
   navigateur: 'navigateur',
   courriel: 'courriel',
   voice: 'voice',

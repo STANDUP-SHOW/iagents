@@ -355,6 +355,114 @@ pub async fn repondre_en_local(
         .ok_or_else(|| format!("{} n'a rien répondu", modele))
 }
 
+/// La conversation avec le moteur local, et les outils de l'agent.
+///
+/// Même portier que la voie de l'API (`llm::call_agent_llm_outille`) : chaque
+/// appel passe par `executeur`. Le format a été relevé dans la bibliothèque
+/// cliente que publie Ollama (`npm pack ollama`, 0.6.4, le 10/10/2026) :
+/// `tools: [{ type: "function", function: { name, description, parameters } }]`
+/// à la demande, `message.tool_calls[].function.{name, arguments}` à la
+/// réponse — `arguments` est un objet, pas une chaîne comme chez d'autres —, et
+/// le résultat repart en message `{ role: "tool", content, tool_name }`.
+///
+/// Un modèle local qui ne sait pas appeler d'outil répond simplement sans en
+/// demander : la conversation ne casse pas, elle n'est juste pas outillée.
+pub async fn repondre_en_local_outille(
+    adresse: &str,
+    modele: &str,
+    prompt_systeme: &str,
+    enonce: &str,
+    executeur: &mut dyn crate::mcp::Executeur,
+) -> Result<crate::llm::ReponseOutillee, String> {
+    let offerts = executeur.offerts();
+    if offerts.is_empty() {
+        let texte = repondre_en_local(adresse, modele, prompt_systeme, enonce).await?;
+        return Ok(crate::llm::ReponseOutillee { texte, outils: Vec::new() });
+    }
+    let outils: Vec<serde_json::Value> = offerts
+        .iter()
+        .map(|o| {
+            serde_json::json!({
+                "type": "function",
+                "function": {
+                    "name": o.nom_pour_le_modele,
+                    "description": o.description,
+                    "parameters": if o.schema.is_object() { o.schema.clone() } else { serde_json::json!({ "type": "object" }) },
+                },
+            })
+        })
+        .collect();
+    let client = reqwest::Client::builder()
+        .timeout(DELAI)
+        .build()
+        .map_err(|_| "le réseau local n'est pas disponible".to_string())?;
+    let mut messages = vec![
+        serde_json::json!({ "role": "system", "content": prompt_systeme }),
+        serde_json::json!({ "role": "user", "content": enonce }),
+    ];
+
+    for _ in 0..crate::llm::TOURS_MAX {
+        let demande = serde_json::json!({
+            "model": modele,
+            "stream": false,
+            "messages": messages,
+            "tools": outils,
+        });
+        let reponse = client
+            .post(format!("{}/api/chat", adresse))
+            .json(&demande)
+            .send()
+            .await
+            .map_err(|e| {
+                if e.is_timeout() {
+                    format!("{} n'a pas répondu en {} secondes.", modele, DELAI.as_secs())
+                } else {
+                    "le moteur de modèles locaux s'est interrompu".to_string()
+                }
+            })?;
+        if !reponse.status().is_success() {
+            return Err(format!(
+                "le moteur de modèles locaux a refusé de faire travailler {}",
+                modele
+            ));
+        }
+        let corps: serde_json::Value = reponse
+            .json()
+            .await
+            .map_err(|_| "le moteur de modèles locaux a répondu quelque chose d'illisible".to_string())?;
+        let message = corps.get("message").cloned().unwrap_or(serde_json::json!({}));
+        let appels: Vec<serde_json::Value> = message
+            .get("tool_calls")
+            .and_then(serde_json::Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        if appels.is_empty() {
+            let texte = message
+                .get("content")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("")
+                .to_string();
+            if texte.trim().is_empty() {
+                return Err(format!("{} n'a rien répondu", modele));
+            }
+            return Ok(crate::llm::ReponseOutillee { texte, outils: executeur.resume() });
+        }
+        messages.push(message.clone());
+        for appel in appels {
+            let fonction = appel.get("function").cloned().unwrap_or(serde_json::json!({}));
+            let nom = fonction.get("name").and_then(serde_json::Value::as_str).unwrap_or("").to_string();
+            let arguments = fonction.get("arguments").cloned().unwrap_or(serde_json::json!({}));
+            let (sortie, _erreur) = tokio::task::block_in_place(|| executeur.executer(&nom, arguments));
+            messages.push(serde_json::json!({ "role": "tool", "content": sortie, "tool_name": nom }));
+        }
+    }
+    Err(format!(
+        "{} a enchaîné {} tours d'outils sans conclure : la conversation est arrêtée.",
+        modele,
+        crate::llm::TOURS_MAX
+    ))
+}
+
 // ---------------------------------------------------------------------------
 // Ce que l'application lit dans le dépôt
 // ---------------------------------------------------------------------------

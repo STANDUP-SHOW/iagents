@@ -28,6 +28,8 @@ export type Onglet =
   | 'validations'
   | 'consommation'
   | 'securite'
+  // Sub-page of « Vos connexions »: max's referential of connectors (10/10/2026).
+  | 'catalogue-connecteurs'
   // Hidden unless an admin key is in the keyring (admin_present).
   | 'admin'
 
@@ -53,6 +55,14 @@ export const ICONES: Record<Exclude<Onglet, 'dashboard'>, ReactNode> = {
   connectors: (
     <>
       <path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0V7zM12 16v5" />
+    </>
+  ),
+  'catalogue-connecteurs': (
+    <>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+      <path d="M17 13.5v7M13.5 17h7" />
     </>
   ),
   navigateur: (
@@ -139,6 +149,7 @@ export const TITRES: Record<Exclude<Onglet, 'dashboard'>, string> = {
   travail: 'Le travail du jour',
   embauche: 'Embaucher',
   connectors: 'Vos connexions',
+  'catalogue-connecteurs': 'Catalogue des connecteurs',
   navigateur: 'Vos comptes',
   courriel: 'Courrier',
   voice: 'Votre voix',

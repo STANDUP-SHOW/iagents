@@ -885,6 +885,8 @@ pub struct Resultat {
     pub motif: String,
     /// Vrai quand le résultat attend un accord avant d'être utilisé.
     pub validation_humaine: bool,
+    /// Ce que l'agent a fait de ses outils pour cette tâche, une ligne par appel.
+    pub outils: Vec<String>,
 }
 
 /// Où cet agent travaille, dit au client.
@@ -901,6 +903,18 @@ pub fn dossier_de_travail(prenom: String, fiche_id: String) -> Result<String, St
         Some(r) if !r.is_empty() => Ok(r.to_string()),
         _ => Ok(dossier_par_defaut(&prenom)?.display().to_string()),
     }
+}
+
+/// Les dossiers d'un agent embauché, lus dans `installation.json`.
+///
+/// Le serveur de fichiers les reçoit au lancement (`mcp::Atelier`) : c'est la
+/// même liste que celle où `montrer_resultat` accepte d'ouvrir, pour qu'un
+/// agent ne puisse pas lire par un outil ce que l'écran refuserait de montrer.
+pub fn dossiers_de_l_agent(installation: &str, prenom: &str, fiche_id: &str) -> Result<Vec<PathBuf>, String> {
+    let installation: serde_json::Value =
+        serde_json::from_str(installation).map_err(|e| format!("installation illisible : {}", e))?;
+    let agent = agent_installe(&installation, prenom, fiche_id)?;
+    dossiers_permis(&agent, prenom)
 }
 
 /// Les dossiers où un agent a le droit d'écrire : le sien, et ceux que le

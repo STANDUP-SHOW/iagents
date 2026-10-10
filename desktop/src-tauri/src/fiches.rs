@@ -255,11 +255,14 @@ pub fn installation_ecrire(contenu: String) -> Result<String, String> {
 /// Sans cette liste, le nom viendrait de la vue et servirait à lire n'importe
 /// quel fichier du poste. On ne « nettoie » pas un chemin reçu de l'extérieur :
 /// on refuse tout ce qui n'est pas dans cette liste.
-const CATALOGUES: [(&str, &str); 4] = [
+const CATALOGUES: [(&str, &str); 5] = [
     ("logiciels", "catalogue/logiciels.json"),
     ("activites", "catalogue/activites.json"),
     ("catalogue", "catalogue/catalogue.json"),
     ("connecteurs", "connecteurs/catalogue.json"),
+    // Le référentiel MCP, API et moteurs d'IA de max, que l'écran « Catalogue des
+    // connecteurs » parcourt (`outils/referentiel.ts`).
+    ("referentiel", "connecteurs/referentiel.json"),
 ];
 
 /// Lit un des catalogues livrés avec l'application.
