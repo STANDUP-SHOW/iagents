@@ -10,7 +10,7 @@ import { AGENTS_RESEAUX, PACKS_ENTREPRISE, INSTALLATIONS, ficheDe, installationD
 import agents from './data/loader.js';
 import {
   filtrer, decompte, FILTRES_VIDES, libelleSecteur, libelleFamille, logicielsDe, portraitDe, COMPTEURS,
-  activitesDeLaRecherche, urlActivite, ACTIVITES, logicielsDeLActivite,
+  activitesDeLaRecherche, urlActivite, urlFiche, urlSecteur, ACTIVITES, logicielsDeLActivite,
 } from './data/recherche.js';
 import { estTransversal, FAMILLES_ACTIVITE } from './data/activites-recherche.js';
 import { LIENS } from './accueil/composants.jsx';
@@ -174,9 +174,23 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
   // The two other ways in: pick your trade or your family of jobs, and the
   // list opens on it.
   const auxResultats = () => document.getElementById('resultats')?.scrollIntoView({ block: 'start' });
-  const ouvrirActivite = (a) => { setVue('metier'); setFiltres(FILTRES_VIDES); setRequete(a.nom); suivre('catalog_click', { activite: a.nom }); auxResultats(); };
-  const ouvrirSecteur = (id) => { setVue('metier'); setRequete(''); setFiltres({ ...FILTRES_VIDES, secteurs: [id] }); auxResultats(); };
-  const fermerApercu = useCallback(() => setApercu(null), []);
+  // Every choice a visitor makes shows the dedicated address of what they
+  // picked (max, 10/10): the same page the sitemap lists, so a copied link
+  // or a reload lands on it.
+  const adresse = (url) => { if (typeof window !== 'undefined' && window.location.pathname !== url) window.history.pushState({ catalogue: true }, '', url); };
+  const ouvrirActivite = (a) => { setVue('metier'); setFiltres(FILTRES_VIDES); setRequete(a.nom); suivre('catalog_click', { activite: a.nom }); adresse(urlActivite(a)); auxResultats(); };
+  const ouvrirSecteur = (id) => { setVue('metier'); setRequete(''); setFiltres({ ...FILTRES_VIDES, secteurs: [id] }); adresse(urlSecteur(id)); auxResultats(); };
+  const voirFiche = useCallback((a, choisi) => { setApercu(a); if (choisi) adresse(urlFiche(a)); }, []);
+  const fermerApercu = useCallback(() => {
+    setApercu(null);
+    if (window.location.pathname.startsWith('/agents/')) window.history.replaceState(null, '', '/catalogue');
+  }, []);
+  // Back from a job's address closes its preview.
+  useEffect(() => {
+    const retour = () => { if (!window.location.pathname.startsWith('/agents/')) setApercu(null); };
+    window.addEventListener('popstate', retour);
+    return () => window.removeEventListener('popstate', retour);
+  }, []);
 
   // On a wide screen the preview is always there, as on the mockup: the
   // first profile of the list until the visitor picks another.
@@ -339,7 +353,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
                 <>
                   <div className={compact ? 'bi-liste-compacte' : 'bi-grille'}>
                     {resultats.slice(0, combien).map((a, i) => (
-                      <CarteAgent key={a.id} agent={a} compact={compact} choisi={apercu?.id === a.id} onVoir={setApercu} prioritaire={i < 6} />
+                      <CarteAgent key={a.id} agent={a} compact={compact} choisi={apercu?.id === a.id} onVoir={voirFiche} prioritaire={i < 6} />
                     ))}
                   </div>
                   {combien < resultats.length && (
@@ -363,7 +377,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
                   </div>
                   <p className="surtitre mt-10 mb-4">Les métiers que toute entreprise emploie</p>
                   <div className={compact ? 'bi-liste-compacte' : 'bi-grille'}>
-                    {POUR_TOUS.map((a) => <CarteAgent key={a.id} agent={a} compact={compact} choisi={apercu?.id === a.id} onVoir={setApercu} />)}
+                    {POUR_TOUS.map((a) => <CarteAgent key={a.id} agent={a} compact={compact} choisi={apercu?.id === a.id} onVoir={voirFiche} />)}
                   </div>
                 </>
               ))}

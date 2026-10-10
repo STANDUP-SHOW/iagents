@@ -22,7 +22,7 @@ export default function Footer() {
       { nom: `Les ${compteurs.fiches.toLocaleString('fr-FR')} métiers`, href: LIENS.catalogue },
       ...vitrine.slice(0, 5).map((f) => ({ nom: f.metier, href: f.url })),
     ] },
-    { titre: 'Par activité', liens: [...activitesPopulaires.map((a) => ({ nom: a.nom, href: a.url })), { nom: 'Toutes les activités', href: '/activites' }, { nom: 'Tous les secteurs', href: '/secteurs' }] },
+    { titre: 'Par activité', liens: [...activitesPopulaires.map((a) => ({ nom: a.nom, href: a.url })), { nom: 'Toutes les activités', href: '/activites' }, { nom: 'Tous les secteurs', href: '/secteurs' }, { nom: 'Tous les logiciels', href: '/logiciels' }] },
     { titre: 'Entreprise', liens: [
       { nom: 'Créer votre entreprise', href: '/create' },
       { nom: 'Opportunités', href: '/opportunities' },

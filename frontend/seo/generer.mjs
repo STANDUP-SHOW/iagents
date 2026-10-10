@@ -84,7 +84,7 @@ const PIED = [
   ['Agents', [['Le catalogue des métiers', '/catalogue'], ['Par activité', '/activites'], ['Par secteur', '/secteurs'], ['Skill Packs', '/skills'], ['Créer votre entreprise', '/create'], ['Opportunités', '/opportunities']]],
   ['Voice', [['iAgent Voice', '/voice'], ['Standard téléphonique', '/standard-telephonique'], ['Support Center', '/support-center'], ['Sales Center', '/sales-center']]],
   ['Entreprise', [['iAgent Enterprise', '/enterprise'], ['IA locale et hybride', '/local-ai'], ['Sécurité', '/security'], ['Questions fréquentes', '/faq'], ['Contact', '/contact']]],
-  ['Ressources', [['Comment ça marche', '/how-it-works'], ['Activités', '/activites'], ['Secteurs', '/secteurs']]],
+  ['Ressources', [['Comment ça marche', '/how-it-works'], ['Activités', '/activites'], ['Secteurs', '/secteurs'], ['Logiciels métier', '/logiciels']]],
 ];
 const POLICES = [400, 600, 800].map((g) => `@font-face{font-family:Montserrat;font-style:normal;font-weight:${g};font-display:swap;src:url(/polices/montserrat-latin-${g}-normal.woff2) format("woff2")}`).join('');
 const STYLE = `${POLICES}
@@ -155,7 +155,7 @@ function page({ url, titre, description, fil = [], corps, portrait = null, appel
 <title>${echapper(titre)} | iAgent</title>
 <meta name="description" content="${echapper(description.slice(0, 300))}">
 <meta name="theme-color" content="#020817">
-<link rel="canonical" href="${SITE}${url}"><link rel="icon" type="image/png" href="/puce-cerveau.png">
+<link rel="canonical" href="${SITE}${url}"><link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest">
 <link rel="preload" href="/polices/montserrat-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/seo.css"></head>
 <body>
@@ -190,6 +190,12 @@ const puces = (items) => items.length <= 24
   ? `<p class="puces">${items.join('')}</p>`
   : `<p class="puces">${items.slice(0, 24).join('')}</p><details class="suite"><summary>Voir les ${items.length - 24} autres</summary><p class="puces">${items.slice(24).join('')}</p></details>`;
 const lien = (texte, url) => `<a href="${url}">${echapper(texte)}</a>`;
+// Two fiches of different sectors can share a title (« Assistant paie » in
+// accounting and in HR): in a list, the sector tells them apart.
+const titres = new Map();
+for (const f of fiches) titres.set(f.nom, (titres.get(f.nom) ?? 0) + 1);
+const homonymes = new Set([...titres].filter(([, k]) => k > 1).map(([nom]) => nom));
+const nomDistinct = (f) => homonymes.has(f.nom) ? `${f.nom} (${(secteurs.get(f.secteur) ?? f.secteur).toLowerCase()})` : f.nom;
 
 // --- pages ----------------------------------------------------------------
 const pages = new Map(); // url -> html
@@ -269,6 +275,28 @@ ${acts.length ? `<h2>Les activités qui l'emploient</h2>${liste(acts.map((a) => 
 
 // Every activity, by family: the way in for a visitor who knows their trade
 // (« imprimerie ») and not the name of the job they need.
+// Every software of the reference list, A to Z: max wants the whole list on
+// show (10/10). A tool that no job or activity cites has no page of its own
+// (see `cites`), so it is listed with its publisher, without a link.
+const parLettre = new Map();
+for (const l of [...logParId.values()].sort((x, y) => x.nom.localeCompare(y.nom, 'fr', { sensitivity: 'base' }))) {
+  const c = l.nom.normalize('NFD').charAt(0).toUpperCase();
+  const lettre = /[A-Z]/.test(c) ? c : '0-9';
+  if (!parLettre.has(lettre)) parLettre.set(lettre, []);
+  parLettre.get(lettre).push(l);
+}
+const nomLogiciel = (l) => (urlLogiciel.has(l.id) ? lien(l.nom, urlLogiciel.get(l.id)) : echapper(l.nom)) + (l.editeur ? ` <small>${echapper(l.editeur)}</small>` : '');
+pages.set('/logiciels', page({
+  url: '/logiciels',
+  titre: `Logiciels métier : les ${logParId.size.toLocaleString('fr-FR')} outils que connaissent les agents iAgent`,
+  description: `ERP, CRM, comptabilité, paie, logiciels de production, de santé, d'industrie… Les ${logParId.size.toLocaleString('fr-FR')} logiciels métier du référentiel iAgent, de A à Z.`,
+  fil: [['Logiciels', null]],
+  corps: `<h1>Les ${logParId.size.toLocaleString('fr-FR')} logiciels métier du référentiel</h1>
+<p class="accroche">Les outils que vos agents savent tenir, de A à Z, avec leur éditeur. Vous connaissez votre activité ? <a href="/activites">Voyez les logiciels de votre branche</a>.</p>
+<p class="puces">${[...parLettre.keys()].map((k) => `<a href="#lettre-${k}">${k}</a>`).join('')}</p>
+${[...parLettre].map(([k, ls]) => `<h2 id="lettre-${k}">${k}</h2>${liste(ls.map((l) => `<li>${nomLogiciel(l)}</li>`))}`).join('\n')}`,
+}));
+
 // Every family of jobs (the 43 sectors), each with its own page listing its
 // jobs: the other way in, for a visitor who knows the field and not the title.
 pages.set('/secteurs', page({
@@ -327,11 +355,11 @@ ${personnel.services.filter((s) => s.postes.length).map((s) => `<h3>${echapper(s
 ${personnel.terrain.length ? `<h3>Sur le terrain</h3><p>Ces métiers restent les vôtres : vos agents préparent leur travail, ils ne prennent pas leur place.</p>${liste(personnel.terrain.map(({ metier, fiche }) => `<li><strong>${echapper(metier)}</strong> : préparé par ${lien(fiche.nom, urlFiche.get(fiche.id))}</li>`))}` : ''}
 <p class="sources">Postes relevés dans ${echapper(personnel.sources.join(' ; '))}.</p>` : ''}
 ${p.logiciels?.length ? `<h2>Les logiciels de votre métier</h2><p>Vos agents y travaillent : à l'entretien d'embauche, chacun vous demande lesquels tournent dans votre entreprise.</p>${liste(p.logiciels.map((id) => logParId.get(id)).map((l) => `<li>${lien(l.nom, urlLogiciel.get(l.id))}${l.editeur ? `, de ${echapper(l.editeur)}` : ''}</li>`))}` : ''}
-${proches.length + outilles.length ? `<h2>Les métiers les plus proches de votre activité</h2>${puces([...proches, ...outilles].map((f) => lien(f.nom, urlFiche.get(f.id))))}` : ''}
+${proches.length + outilles.length ? `<h2>Les métiers les plus proches de votre activité</h2>${puces([...proches, ...outilles].map((f) => lien(nomDistinct(f), urlFiche.get(f.id))))}` : ''}
 ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
 ${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
 ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}
-<h2>Les postes que toute entreprise emploie, réglés sur votre activité</h2>${puces(transversaux.map((f) => lien(f.nom, urlPosteActivite(f, a))))}`,
+<h2>Les postes que toute entreprise emploie, réglés sur votre activité</h2>${puces(transversaux.map((f) => lien(nomDistinct(f), urlPosteActivite(f, a))))}`,
   }));
 }
 
@@ -369,7 +397,7 @@ ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r
 
 // --- checks, then write ---------------------------------------------------
 const cibles = new Set(pages.keys());
-const HORS_SEO = new Set(['/', '/catalogue', '/puce-cerveau.png', '/seo.css', ...PAGES_OFFRE.map((p) => `/${p.nom}`)]);
+const HORS_SEO = new Set(['/', '/catalogue', '/favicon.ico', '/favicon.svg', '/apple-touch-icon.png', '/site.webmanifest', '/seo.css', ...PAGES_OFFRE.map((p) => `/${p.nom}`)]);
 for (const [url, html] of pages) {
   for (const [, href] of html.matchAll(/href="(\/[^"]*)"/g)) {
     if (HORS_SEO.has(href) || href.startsWith('/polices/')) continue;

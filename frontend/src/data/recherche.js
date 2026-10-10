@@ -75,6 +75,10 @@ export const ACTIVITES = activitesJson.activites;
 
 /** The activity pages the search-engine pages publish, one per activity. */
 export const urlActivite = (activite) => `/activites/${slugifier(activite.nom)}`;
+// The dedicated page of a job and of a sector, as seo/generer.mjs writes them:
+// a click in the catalogue shows this address, the sitemap lists it.
+export const urlFiche = (agent) => `/agents/${agent.slug}`;
+export const urlSecteur = (id) => `/secteurs/${slugifier(libelleSecteur(id))}`;
 
 /** The trades the query names (« imprimerie » → Imprimerie offset et numérique). */
 export const activitesDeLaRecherche = (requete) => activitesReconnues(requete, ACTIVITES);
