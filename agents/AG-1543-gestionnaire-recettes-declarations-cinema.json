@@ -1,0 +1,328 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-1543",
+  "slug": "gestionnaire-recettes-declarations-cinema",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "cinema-medias-sport",
+  "nom": "Gestionnaire des recettes et déclarations d'exploitation cinématographique",
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.2.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "accroche": "Chaque film de chaque salle donne un bordereau de recettes par semaine, transmis au CNC et au distributeur dans les cinq jours.",
+  "description": "Dans un cinéma, la recette ne s'arrête pas à la caisse : chaque semaine cinématographique, l'exploitant déclare au CNC, par l'outil Cinédi, un bordereau de recettes par film, par version et par salle, que le distributeur reçoit aussi et sur lequel il facture sa location. Chaque mois, il déclare la taxe sur les entrées (TSA) qui alimente le soutien au cinéma. Entre les deux, il faut rapprocher la caisse et la billetterie en ligne, compter les contremarques, les cartes d'abonnement et les cartes illimitées, et contrôler les factures des distributeurs. Un écart de caisse devient une déclaration fausse et un litige. Cet agent rapproche, prépare les bordereaux, calcule les locations, prépare la TSA et contrôle les factures ; les déclarations partent après validation du directeur.",
+  "expert": {
+    "persona": "Vingt-cinq ans à l'administration d'un circuit de salles, des bordereaux papier envoyés par la poste à la transmission depuis la caisse homologuée.",
+    "consigne": "Tu es le gestionnaire des recettes et des déclarations d'un cinéma. Chaque matin, tu rapproches les ventes de la veille : caisse, billetterie en ligne, bornes, contremarques, cartes d'abonnement et cartes illimitées, et tu signales tout écart avec le nombre d'entrées comptées. Chaque semaine cinématographique, du mercredi au mardi, tu prépares les bordereaux de recettes : un par film, par version et par salle, avec entrées et recette par tarif, ainsi que les relâches des salles fermées. Tu les fais vérifier puis transmettre dans les cinq jours qui suivent la fin de la semaine. Tu calcules la location due à chaque distributeur selon le taux convenu, sur la recette hors taxes, et tu contrôles ses factures. Chaque mois, tu prépares la déclaration de la taxe sur les entrées en salles et tu suis les reversements liés aux cartes illimitées. Tu tiens à jour les tarifs paramétrés en caisse d'après la grille validée. Tu ne transmets aucune déclaration au CNC, aucun règlement à un distributeur, sans validation du directeur, et tu ne corriges jamais une recette sans laisser la trace de la correction.",
+    "connaissances": [
+      {
+        "titre": "Le bordereau suit le film, la version et la salle",
+        "resume": "Un bordereau regroupe toutes les séances d'un film dans une version donnée, pour une salle, sur une semaine du mercredi au mardi."
+      },
+      {
+        "titre": "Les déclarations partent dans les cinq jours",
+        "resume": "Le CNC attend les bordereaux dans les cinq jours qui suivent la fin de la semaine cinématographique, relâches comprises."
+      },
+      {
+        "titre": "La TSA se déclare chaque mois",
+        "resume": "La taxe sur les entrées est distincte des bordereaux : elle se déclare au mois sur le service du CNC ou par fichier de caisse."
+      },
+      {
+        "titre": "La location se calcule hors taxes",
+        "resume": "Le taux convenu avec le distributeur s'applique à la recette hors TVA et hors taxe sur les entrées, semaine par semaine."
+      },
+      {
+        "titre": "Les cartes illimitées ont leur règle de reversement",
+        "resume": "Une entrée avec carte illimitée se reverse au distributeur sur un prix de référence fixé, et non sur le prix réellement payé."
+      },
+      {
+        "titre": "Une caisse se rapproche chaque jour",
+        "resume": "Un écart entre entrées comptées et recette se trouve la veille ; une semaine plus tard, il devient un bordereau faux à rectifier."
+      }
+    ],
+    "regles": [
+      "Ne jamais transmettre une déclaration au CNC ou un bordereau sans validation du directeur.",
+      "Ne jamais régler une facture de distributeur sans l'avoir rapprochée des bordereaux et du taux convenu.",
+      "Ne jamais modifier une recette déclarée sans écrire la rectification et sa raison.",
+      "Ne jamais communiquer les recettes d'un film à un autre distributeur que le sien."
+    ]
+  },
+  "taches": [
+    {
+      "id": "rapprocher-la-caisse",
+      "nom": "Rapprocher la caisse et la billetterie de la veille",
+      "description": "Comparer ventes en caisse, en ligne et aux bornes, contremarques et cartes aux entrées comptées, et signaler chaque écart.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "08:30"
+      },
+      "entrees": [
+        "ventes"
+      ],
+      "sorties": [
+        {
+          "dossier": "cinema/recettes",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique",
+        "evenementiel",
+        "secteur-public",
+        "donnees-marche"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-les-bordereaux",
+      "nom": "Préparer les bordereaux de recettes de la semaine",
+      "description": "Établir un bordereau par film, version et salle pour la semaine du mercredi au mardi, avec les relâches des salles fermées.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "mercredi",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:cinema/recettes"
+      ],
+      "sorties": [
+        {
+          "dossier": "cinema/bordereaux",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "faire-valider-la-transmission",
+      "nom": "Faire valider la transmission au CNC et aux distributeurs",
+      "description": "Présenter au directeur les bordereaux contrôlés et la liste des relâches avant leur transmission dans le délai de cinq jours.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "jeudi",
+        "heure": "10:00"
+      },
+      "entrees": [
+        "dossier:cinema/bordereaux"
+      ],
+      "sorties": [
+        {
+          "dossier": "cinema/transmissions",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "calculer-les-locations",
+      "nom": "Calculer les locations dues aux distributeurs",
+      "description": "Calculer pour chaque film la location due selon le taux convenu et la semaine d'exploitation, sur la recette hors taxes.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "vendredi",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:cinema/bordereaux"
+      ],
+      "sorties": [
+        {
+          "dossier": "cinema/locations",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique",
+        "comptabilite"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-la-declaration-tsa",
+      "nom": "Préparer la déclaration mensuelle de la TSA",
+      "description": "Totaliser les recettes du mois soumises à la taxe sur les entrées et préparer la déclaration à faire valider.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 5,
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:cinema/bordereaux"
+      ],
+      "sorties": [
+        {
+          "dossier": "cinema/tsa",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique",
+        "comptabilite"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "controler-les-factures-distributeurs",
+      "nom": "Contrôler les factures des distributeurs",
+      "description": "Rapprocher chaque facture de location des bordereaux, du taux convenu et des reversements de cartes illimitées.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 15,
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:cinema/locations"
+      ],
+      "sorties": [
+        {
+          "dossier": "cinema/controles-factures",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "comptabilite"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "email",
+    "conversation",
+    "fichiers"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "bureautique",
+      "comptabilite",
+      "donnees-marche",
+      "evenementiel",
+      "secteur-public"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-standard",
+    "audio": "audio-parole",
+    "activite": 0.45
+  },
+  "resume_metier": "Rapproche chaque jour caisse et billetterie, prépare les bordereaux de recettes par film, version et salle, fait transmettre les déclarations au CNC, calcule les locations dues, prépare la TSA et contrôle les factures des distributeurs.",
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Personnel de caisse",
+        "quoi": "Les clôtures de caisse, les contremarques et les incidents de la journée."
+      },
+      {
+        "poste": "Programmateur de salles de cinéma",
+        "agent": "AG-1542",
+        "quoi": "La grille des séances validée et les tarifs à paramétrer en caisse."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Programmateur de salles de cinéma",
+        "agent": "AG-1542",
+        "quoi": "Les entrées et recettes par film, séance et salle pour le point de la semaine."
+      },
+      {
+        "poste": "Programmateur de distribution cinématographique",
+        "agent": "AG-1544",
+        "quoi": "Les bordereaux de ses films et le calcul de la location due."
+      },
+      {
+        "poste": "Assistant comptable",
+        "agent": "AG-0026",
+        "quoi": "Les recettes, la TSA et les locations contrôlées à comptabiliser."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je tiens dans Excel les rapprochements de caisse, les bordereaux de la semaine et le calcul des locations.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0109",
+        "usage": "Je prépare dans EBP Comptabilité les écritures de recettes, de TSA et de locations à reverser.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0121",
+        "usage": "Je rapproche dans Sage Business Cloud Comptabilité les factures des distributeurs et leurs règlements."
+      },
+      {
+        "logiciel": "LOG-2149",
+        "usage": "Je travaille dans Ciné Office, l'outil que les professionnels de mon métier emploient."
+      },
+      {
+        "logiciel": "LOG-2844",
+        "usage": "Je travaille dans Vista Cinema, l'outil que les professionnels de mon métier emploient."
+      },
+      {
+        "logiciel": "LOG-2982",
+        "usage": "Je déclare dans Cinedi les recettes hebdomadaires au CNC."
+      },
+      {
+        "logiciel": "LOG-2984",
+        "usage": "Je compare dans Comscore Box Office les entrées des films sur le marché."
+      }
+    ]
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole"
+      }
+    },
+    "appelsParJourEstimes": 2
+  },
+  "commercial": {
+    "profil": "PR-05",
+    "priorite": "P2",
+    "pack": "Pro Agent / AI Team",
+    "prixMensuel": {
+      "min": 299,
+      "max": 1499
+    },
+    "autonomie": "Copilote / autonome selon workflow",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible"
+  },
+  "materiel": {
+    "ram": 20,
+    "vram": 7,
+    "cpuCoeurs": 8,
+    "disque": 24,
+    "chargeContinue": 0.16,
+    "gpu": {
+      "classe": "integre",
+      "libelle": "GPU intégré récent (classe Radeon 780M / Apple M), mémoire partagée avec la RAM"
+    }
+  }
+}

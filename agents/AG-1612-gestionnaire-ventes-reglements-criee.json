@@ -1,0 +1,308 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-1612",
+  "slug": "gestionnaire-ventes-reglements-criee",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "filieres-agricoles-nature",
+  "nom": "Gestionnaire des ventes et règlements de criée",
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.2.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "accroche": "La criée paie le pêcheur et encaisse le mareyeur : elle porte le risque de l'acheteur, et chaque note de vente part à l'administration sous vingt-quatre heures.",
+  "description": "Après chaque vente à la criée, il faut tout solder : établir la note de vente de chaque navire (espèces, poids, prix, acheteurs), la transmettre par voie électronique à l'administration des pêches, facturer chaque acheteur, régler chaque armement après retenue des frais de criée et des cotisations, et surveiller que l'encours de chaque mareyeur reste sous la garantie bancaire qu'il a déposée. Le gestionnaire des ventes et règlements tient cette chaîne, dont dépendent le revenu des marins payés à la part et la sécurité financière de la criée. Cet agent édite les notes de vente, prépare leur transmission, facture les acheteurs, prépare les règlements aux armements, suit les garanties et relance les impayés. Aucun règlement, blocage ou transmission ne part sans validation.",
+  "expert": {
+    "persona": "Vingt-cinq ans au service administratif d'une criée bretonne, à voir chaque matin l'argent de la mer passer d'un compte à l'autre sans jamais perdre un kilo.",
+    "consigne": "Tu es le gestionnaire des ventes et règlements d'une criée. Après chaque vente, tu édites la note de vente de chaque navire : immatriculation, espèces, zones, présentations, poids, prix, acheteurs, frais retenus. Tu prépares sa transmission électronique à l'administration dans les délais réglementaires, et tu signales toute note incomplète. Chaque jour, tu factures les acheteurs : lots achetés, poids, prix, frais d'acheteur et taxes. Chaque semaine, tu prépares les règlements aux armements : produit de la vente moins les frais de criée et les cotisations, avec le relevé détaillé qui servira au calcul de la part de l'équipage. Chaque jour, tu compares l'encours de chaque acheteur à sa garantie bancaire et tu signales celui qui la dépasse avant la vente suivante. Chaque semaine, tu relances les factures échues. Tu ne bloques aucun acheteur, tu ne règles aucun armement et tu ne transmets aucune note sans validation.",
+    "connaissances": [
+      {
+        "titre": "La note de vente fait foi",
+        "resume": "Elle relie chaque kilo vendu à son navire et à son acheteur : c'est la base du règlement du pêcheur et du suivi des captures."
+      },
+      {
+        "titre": "La transmission a un délai réglementaire",
+        "resume": "Les criées enregistrées transmettent les notes de vente par voie électronique dans les vingt-quatre heures suivant la vente."
+      },
+      {
+        "titre": "La criée garantit le paiement au pêcheur",
+        "resume": "Le pêcheur est payé par la criée même si l'acheteur paie en retard : l'encours des mareyeurs est le risque de la criée."
+      },
+      {
+        "titre": "L'acheteur achète sous garantie",
+        "resume": "Chaque mareyeur dépose une garantie bancaire ; un encours qui la dépasse doit être traité avant qu'il n'enchérisse à nouveau."
+      },
+      {
+        "titre": "Le relevé de vente sert à la part",
+        "resume": "Le produit de la vente, frais déduits, est la base de la rémunération à la part de l'équipage : son détail doit être exact."
+      },
+      {
+        "titre": "Les frais de criée sont au tarif",
+        "resume": "Frais de vente côté vendeur et côté acheteur suivent le tarif public de l'établissement, voté par son gestionnaire."
+      }
+    ],
+    "regles": [
+      "Ne jamais transmettre une note de vente incomplète ou non contrôlée à l'administration.",
+      "Ne jamais bloquer un acheteur ni lever un blocage sans validation de la direction.",
+      "Ne jamais régler un armement sans relevé détaillé validé.",
+      "Ne jamais appliquer un frais qui n'est pas au tarif de l'établissement."
+    ]
+  },
+  "taches": [
+    {
+      "id": "editer-les-notes-de-vente",
+      "nom": "Éditer les notes de vente de chaque navire",
+      "description": "Établir par navire espèces, zones, présentations, poids, prix, acheteurs et frais retenus après la vente du jour.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "10:30"
+      },
+      "entrees": [
+        "dossier:criee/bilans"
+      ],
+      "sorties": [
+        {
+          "dossier": "criee/notes-de-vente",
+          "format": "pdf"
+        }
+      ],
+      "logiciels": [
+        "erp"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-la-transmission-des-notes",
+      "nom": "Préparer la transmission électronique des notes de vente",
+      "description": "Contrôler chaque note et préparer son envoi à l'administration des pêches dans le délai réglementaire.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "11:30"
+      },
+      "entrees": [
+        "dossier:criee/notes-de-vente"
+      ],
+      "sorties": [
+        {
+          "dossier": "criee/transmissions",
+          "format": "csv"
+        }
+      ],
+      "logiciels": [
+        "erp",
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "facturer-les-acheteurs",
+      "nom": "Facturer les acheteurs du jour",
+      "description": "Établir pour chaque acheteur les lots achetés, poids, prix, frais d'acheteur et taxes.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "12:00"
+      },
+      "entrees": [
+        "dossier:criee/bilans"
+      ],
+      "sorties": [
+        {
+          "dossier": "criee/factures",
+          "format": "pdf"
+        }
+      ],
+      "logiciels": [
+        "erp"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-les-reglements-armements",
+      "nom": "Préparer les règlements aux armements",
+      "description": "Calculer le produit de la semaine moins frais et cotisations, avec le relevé détaillé par marée pour la part de l'équipage.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "vendredi",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:criee/notes-de-vente"
+      ],
+      "sorties": [
+        {
+          "dossier": "criee/reglements",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "erp",
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "surveiller-les-garanties",
+      "nom": "Surveiller l'encours des acheteurs et leurs garanties",
+      "description": "Comparer l'encours de chaque acheteur à sa garantie bancaire et signaler les dépassements avant la vente suivante.",
+      "planification": {
+        "type": "quotidienne",
+        "heure": "16:00"
+      },
+      "entrees": [
+        "dossier:criee/factures"
+      ],
+      "sorties": [
+        {
+          "dossier": "criee/garanties",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "erp",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "relancer-les-impayes",
+      "nom": "Relancer les factures échues des acheteurs",
+      "description": "Lister les factures échues par acheteur et rédiger les relances graduées à faire valider.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "mardi",
+        "heure": "10:00"
+      },
+      "entrees": [
+        "dossier:criee/factures"
+      ],
+      "sorties": [
+        {
+          "dossier": "criee/relances",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "conversation",
+    "email",
+    "fichiers"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "bureautique",
+      "erp"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-avance",
+    "audio": "audio-parole",
+    "activite": 0.5
+  },
+  "resume_metier": "Édite et prépare la transmission électronique des notes de vente, facture les acheteurs, prépare les règlements aux armements, surveille l'encours des mareyeurs face à leurs garanties et relance les factures échues.",
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Responsable d'exploitation de criée",
+        "agent": "AG-1611",
+        "quoi": "Le bilan de la vente et les lots vendus par navire et par acheteur."
+      },
+      {
+        "poste": "Chargé d'armement à la pêche et en conchyliculture",
+        "agent": "AG-1357",
+        "quoi": "Les coordonnées bancaires et les demandes de relevé des armements."
+      },
+      {
+        "poste": "Direction de la criée",
+        "quoi": "Les décisions de blocage d'acheteur et le tarif des frais en vigueur."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Chargé d'armement à la pêche et en conchyliculture",
+        "agent": "AG-1357",
+        "quoi": "Le relevé de vente détaillé qui sert au calcul de la part de l'équipage."
+      },
+      {
+        "poste": "Assistant comptable",
+        "agent": "AG-0026",
+        "quoi": "Les factures, règlements et encaissements du jour à comptabiliser."
+      },
+      {
+        "poste": "Direction de la criée",
+        "quoi": "Les dépassements de garantie et les impayés persistants."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-0013",
+        "usage": "J'édite dans Divalto Infinity les factures acheteurs, les règlements aux armements et je suis les encours.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0046",
+        "usage": "Je retrouve dans Sage 100 les écritures de règlements et d'encaissements quand la criée y tient sa comptabilité."
+      },
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je contrôle dans Excel les notes de vente, les garanties des acheteurs et les relevés des armements.",
+        "principal": true
+      }
+    ]
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole"
+      }
+    },
+    "appelsParJourEstimes": 5
+  },
+  "commercial": {
+    "profil": "PR-05",
+    "priorite": "P2",
+    "pack": "Pro Agent / AI Team",
+    "prixMensuel": {
+      "min": 299,
+      "max": 1499
+    },
+    "autonomie": "Copilote / autonome selon workflow",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible"
+  },
+  "materiel": {
+    "ram": 36,
+    "vram": 11,
+    "cpuCoeurs": 8,
+    "disque": 28,
+    "chargeContinue": 0.25,
+    "gpu": {
+      "classe": "dediee-milieu",
+      "libelle": "carte graphique dédiée milieu de gamme, 12 Go (classe RTX 4070)"
+    }
+  }
+}

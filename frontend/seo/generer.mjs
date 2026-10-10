@@ -149,7 +149,7 @@ function page({ url, titre, description, fil = [], corps, portrait = null, appel
   const reste = (m ? corps.slice(m[0].length) : corps)
     .replace(/<\/strong> : /g, '</strong>').replace(/(<li><a [^>]*>[^<]*<\/a>) : /g, '$1<br>');
   const filHtml = [['Accueil', '/'], ...fil].map(([t, u]) => (u ? `<a href="${u}">${echapper(t)}</a>` : `<span>${echapper(t)}</span>`)).join('<span aria-hidden="true">›</span>');
-  const [appelTitre, appelTexte] = appel ?? ['Trouvez le collaborateur IA de votre métier', '1 249 métiers, réglés sur votre secteur et votre activité.'];
+  const [appelTitre, appelTexte] = appel ?? ['Trouvez le collaborateur IA de votre métier', `${fiches.length.toLocaleString('fr-FR')} métiers, réglés sur votre secteur et votre activité.`];
   return `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${echapper(titre)} | iAgent</title>
@@ -256,7 +256,9 @@ for (const [id, url] of urlLogiciel) {
   pages.set(url, page({
     url,
     titre: `Agents IA qui savent tenir ${l.nom}`,
-    description: `${postes.length} agents IA iAgent savent travailler sur ${l.nom}${l.editeur ? ` (${l.editeur})` : ''}.`,
+    description: postes.length
+      ? `${postes.length} métiers iAgent savent travailler sur ${l.nom}${l.editeur ? ` (${l.editeur})` : ''}.`
+      : `${l.nom}${l.editeur ? `, édité par ${l.editeur}` : ''} : les activités qui l'emploient et les métiers iAgent qui travaillent avec.`,
     fil: [['Logiciels', null], [l.nom, null]],
     corps: `<h1>Des agents IA qui savent tenir ${echapper(l.nom)}</h1>
 <p class="accroche">${echapper(l.nom)}${l.editeur ? `, édité par ${echapper(l.editeur)}` : ''}.</p>
@@ -275,7 +277,7 @@ pages.set('/secteurs', page({
   description: `Comptabilité, commerce, santé, juridique, logistique… Les ${fiches.length} métiers iAgent rangés en ${secteurs.size} secteurs.`,
   fil: [['Secteurs', null]],
   corps: `<h1>Les métiers, secteur par secteur</h1>
-<p class="accroche">${secteurs.size} familles de métiers, ${fiches.length} agents. Vous connaissez votre activité plutôt que le métier ? <a href="/activites">Cherchez par activité</a>.</p>
+<p class="accroche">${secteurs.size} familles de métiers, ${fiches.length} métiers. Vous connaissez votre activité plutôt que le métier ? <a href="/activites">Cherchez par activité</a>.</p>
 ${liste([...secteurs].map(([id, nom]) => `<li>${lien(nom, urlSecteur.get(id))}<br>${fiches.filter((f) => f.secteur === id).length} métiers</li>`))}`,
 }));
 for (const [id, nom] of secteurs) {

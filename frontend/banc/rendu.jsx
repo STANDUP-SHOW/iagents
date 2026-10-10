@@ -19,6 +19,7 @@ import IAgentBox, { CarteInstallation } from '../src/components/IAgentBox.jsx';
 import PacksEntreprise from '../src/components/PacksEntreprise.jsx';
 import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee, INSTALLATIONS, conseilPour, euros } from '../src/data/offres.js';
 import { FINANCEMENT, OFFRES } from '../../dimensionnement/offre-box.ts';
+import { DEVIS } from '../../outils/poste-de-devis.ts';
 import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE, logicielsDeLActivite } from '../src/data/recherche.js';
@@ -192,7 +193,7 @@ for (const page of PAGES) {
   const sansDevis = ACTIVITES_RECHERCHE
     .filter((a) => !['sante-social', 'finance-immobilier', 'public-associatif'].includes(a.famille))
     .filter((a) => !personnelDeLActivite(a, agents)?.sansDevis)
-    .filter((a) => !coeurDeLActivite(a, agents).some((c) => /devis|deviseur|cotation|chiffrage|chiffreur/i.test(c.role)));
+    .filter((a) => !coeurDeLActivite(a, agents).some((c) => DEVIS.test(c.role)));
   // Every trade shows its own software, not only office tools; and the print
   // shop, which its owner checks first, shows the ones printers actually run.
   const BUREAU = new Set(['bureautique']);

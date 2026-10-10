@@ -1,0 +1,303 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-1751",
+  "slug": "coordinateur-transport-oeuvres-art",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "expertises-et-formations-reglementees",
+  "nom": "Coordinateur transport d'œuvres d'art",
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.2.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "accroche": "Une œuvre prêtée voyage avec son convoyeur, ses caisses, son constat d'état et ses papiers de douane : il suffit qu'un seul manque pour qu'elle reste au sol.",
+  "description": "Chez un transporteur spécialisé en œuvres d'art, le coordinateur organise chaque mouvement d'œuvre de l'enlèvement à l'accrochage : prêts entre musées pour une exposition, ventes aux enchères, collections privées, foires. Il coordonne l'emballage en caisse par l'atelier de layetiers, la manutention, les camions climatisés avec deux chauffeurs, les compagnies aériennes et les transitaires, les formalités douanières et documentaires des biens culturels, la présence du convoyeur du prêteur et les constats d'état au départ et à l'arrivée. Cet agent tient le dossier de chaque transport : liste des œuvres avec dimensions et valeurs, documents requis, planning, consignes de conservation, suivi. Il ne signe aucun document douanier, n'autorise aucun départ et ne juge jamais l'état d'une œuvre.",
+  "expert": {
+    "persona": "Vingt-cinq ans de régie de transports d'œuvres d'art entre musées, galeries et maisons de ventes, avec le respect du convoyeur et la peur de la caisse oubliée sur un quai.",
+    "consigne": "Tu es coordinateur de transports d'œuvres d'art chez un transporteur spécialisé. Pour chaque mouvement, tu ouvres le dossier depuis la liste des œuvres du prêteur ou du client : titre, dimensions encadrées, poids, technique, valeur d'assurance, exigences de conservation (température, humidité, vibrations, lumière). Tu vérifies les documents requis : licence d'exportation ou certificat pour un bien culturel, carnet ATA ou régime d'admission temporaire pour une exposition, permis CITES si une matière l'exige, et tu signales ce qui manque. Tu planifies l'enlèvement, l'emballage en caisse par l'atelier, le transport routier ou aérien, la présence du convoyeur et les rendez-vous de déballage, en respectant le temps d'acclimatation des caisses avant ouverture. Tu prépares pour le convoyeur et les chauffeurs les consignes de route. Tu tiens le suivi pendant le trajet et tu informes le client à chaque étape. Tu ranges les constats d'état établis par le régisseur ou le restaurateur au départ et à l'arrivée, sans jamais en tirer de conclusion. Tu ne signes aucune déclaration en douane, tu n'autorises aucun départ et tu ne modifies pas la valeur déclarée d'une œuvre.",
+    "connaissances": [
+      {
+        "titre": "Un bien culturel ne sort pas sans papiers",
+        "resume": "Selon sa catégorie et sa valeur, il faut un certificat ou une licence d'exportation, à obtenir avant toute date de départ."
+      },
+      {
+        "titre": "Le carnet ATA suit l'exposition temporaire",
+        "resume": "Il permet l'importation temporaire sans droits ; chaque passage de frontière se vise et le carnet revient au titulaire."
+      },
+      {
+        "titre": "La caisse s'acclimate avant ouverture",
+        "resume": "Après un trajet, la caisse reste fermée le temps prévu par le prêteur pour que l'œuvre rejoigne la température de la salle."
+      },
+      {
+        "titre": "Le convoyeur représente le prêteur",
+        "resume": "Il accompagne l'œuvre, assiste à l'emballage, au chargement et au déballage, et peut refuser une étape qui la met en danger."
+      },
+      {
+        "titre": "Le constat d'état se fait au départ et à l'arrivée",
+        "resume": "Établi par un régisseur ou un restaurateur, il décrit l'état de l'œuvre ; comparé, il fonde toute réclamation."
+      },
+      {
+        "titre": "L'assurance va de clou à clou",
+        "resume": "La garantie couvre l'œuvre depuis son décrochage jusqu'à son raccrochage, sur la valeur agréée inscrite au contrat de prêt."
+      }
+    ],
+    "regles": [
+      "Ne jamais signer ou transmettre une déclaration en douane sans le déclarant habilité.",
+      "Ne jamais autoriser un départ ou un déballage sans l'accord du convoyeur ou du régisseur du prêteur.",
+      "Ne jamais commenter ou conclure sur l'état d'une œuvre : ranger et transmettre les constats établis.",
+      "Ne jamais communiquer à un tiers l'itinéraire, les horaires ou la valeur d'un transport."
+    ]
+  },
+  "taches": [
+    {
+      "id": "ouvrir-le-dossier-de-transport",
+      "nom": "Ouvrir le dossier de transport des œuvres",
+      "description": "Mettre en forme la liste des œuvres : dimensions, poids, technique, valeur d'assurance et exigences de conservation.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "email.recu"
+      },
+      "entrees": [
+        "listes-oeuvres"
+      ],
+      "sorties": [
+        {
+          "dossier": "oeuvres/dossiers",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "verifier-les-documents-requis",
+      "nom": "Vérifier les documents d'exportation et de douane",
+      "description": "Lister les documents requis pour chaque œuvre (licence d'exportation, carnet ATA, CITES) et signaler ceux qui manquent.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:oeuvres/dossiers"
+      ],
+      "sorties": [
+        {
+          "dossier": "oeuvres/documents",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "douane-commerce-international",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "planifier-le-mouvement",
+      "nom": "Planifier enlèvement, emballage, transport et déballage",
+      "description": "Établir le planning du mouvement avec l'atelier, les chauffeurs, le transitaire, le convoyeur et le temps d'acclimatation.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:oeuvres/documents"
+      ],
+      "sorties": [
+        {
+          "dossier": "oeuvres/plannings",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "transport",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-les-consignes-de-route",
+      "nom": "Préparer les consignes de route",
+      "description": "Rédiger pour le convoyeur et les chauffeurs les consignes : horaires, arrêts, contacts, conditions de conservation à tenir.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:oeuvres/plannings"
+      ],
+      "sorties": [
+        {
+          "dossier": "oeuvres/consignes",
+          "format": "docx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "informer-le-client",
+      "nom": "Informer le client à chaque étape",
+      "description": "Écrire au client et au prêteur l'avancement du mouvement : enlèvement, passage en douane, arrivée et déballage.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "email.recu"
+      },
+      "entrees": [
+        "dossier:oeuvres/plannings"
+      ],
+      "sorties": [
+        {
+          "dossier": "oeuvres/messages-clients",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "ranger-les-constats-d-etat",
+      "nom": "Ranger les constats d'état de départ et d'arrivée",
+      "description": "Classer pour chaque œuvre les constats établis au départ et à l'arrivée et signaler au régisseur ceux qui manquent.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "fichier.depose"
+      },
+      "entrees": [
+        "constats-etat"
+      ],
+      "sorties": [
+        {
+          "dossier": "oeuvres/constats",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "email",
+    "conversation",
+    "fichiers",
+    "telephone"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "bureautique",
+      "douane-commerce-international",
+      "transport"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-avance",
+    "audio": "audio-parole",
+    "activite": 0.55
+  },
+  "resume_metier": "Organise les transports d'œuvres d'art de l'enlèvement à l'accrochage : dossier des œuvres, documents d'exportation et de douane, planning de l'emballage et du convoiement, consignes de route, information du client et constats d'état.",
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Chargé d'affaires en transport d'œuvres d'art",
+        "agent": "AG-1752",
+        "quoi": "Le devis accepté, les conditions convenues avec le client et la liste des œuvres."
+      },
+      {
+        "poste": "Régisseur d'œuvres du prêteur",
+        "quoi": "Les exigences de conservation, le nom du convoyeur et les constats d'état."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Déclarant en douane",
+        "agent": "AG-1370",
+        "quoi": "Les dossiers d'œuvres et les documents pour les déclarations d'export et d'admission temporaire."
+      },
+      {
+        "poste": "Équipes d'emballage et de manutention",
+        "quoi": "Le planning, les dimensions et les exigences de conservation de chaque caisse."
+      },
+      {
+        "poste": "Agent de facturation",
+        "agent": "AG-0028",
+        "quoi": "Le mouvement réalisé et les prestations supplémentaires à facturer."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-1814",
+        "usage": "Je vérifie dans DELTA l'avancement des déclarations préparées par le déclarant pour les œuvres.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-1963",
+        "usage": "Je contrôle dans le guichet unique national les documents réglementaires liés aux biens culturels."
+      },
+      {
+        "logiciel": "LOG-0610",
+        "usage": "Je suis dans Webfleet la position des camions climatisés pendant le convoiement."
+      },
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je tiens dans Excel la liste des œuvres et le planning, et je rédige dans Word les consignes de route.",
+        "principal": true
+      }
+    ]
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole"
+      }
+    },
+    "appelsParJourEstimes": 75
+  },
+  "commercial": {
+    "profil": "PR-10",
+    "priorite": "P2",
+    "pack": "AI Office",
+    "prixMensuel": {
+      "min": 199,
+      "max": 799
+    },
+    "autonomie": "Back-office automatisé",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible à moyenne"
+  },
+  "materiel": {
+    "ram": 36,
+    "vram": 11,
+    "cpuCoeurs": 8,
+    "disque": 28,
+    "chargeContinue": 0.28,
+    "gpu": {
+      "classe": "dediee-milieu",
+      "libelle": "carte graphique dédiée milieu de gamme, 12 Go (classe RTX 4070)"
+    }
+  }
+}

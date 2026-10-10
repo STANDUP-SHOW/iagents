@@ -1,6 +1,6 @@
 # Coût par agent et par mois — API seule contre Local-Agent
 
-Généré par `outils/economie.ts` le 2026-10-08 sur 1403 fiches. Hypothèses dans `dimensionnement/tarifs-api.json` (version 2026-09-19) : 12 000 jetons d'entrée par tour dont 70 % en cache, 800 en sortie, 6 tours par exécution (+4 avec navigateur, +3 pour un document lourd), 20 % des exécutions restent par l'API chez Local-Agent, matériel amorti sur 12 mois, électricité 0.25 €/kWh, un poste N150 par agent. **Ce sont des hypothèses, pas des mesures** : à remplacer par les moyennes relevées dès que des agents tournent.
+Généré par `outils/economie.ts` le 2026-10-09 sur 1644 fiches. Hypothèses dans `dimensionnement/tarifs-api.json` (version 2026-09-19) : 12 000 jetons d'entrée par tour dont 70 % en cache, 800 en sortie, 6 tours par exécution (+4 avec navigateur, +3 pour un document lourd), 20 % des exécutions restent par l'API chez Local-Agent, matériel amorti sur 12 mois, électricité 0.25 €/kWh, un poste N150 par agent. **Ce sont des hypothèses, pas des mesures** : à remplacer par les moyennes relevées dès que des agents tournent.
 
 Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que l'API seule. « Partagé » = le bundle d'un petit client porte un mélange d'agents et celui-ci paie sa part de charge (5 % au minimum) ; « seul » = un seul agent sur son bundle, le pire cas ; « en flotte » = sa part sur le bundle au meilleur prix par unité de puissance (gros client).
 
@@ -1409,7 +1409,248 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1497 Conseiller funéraire | 1204 | 140 € | 351 € | 75 € | 28 € | 47 € | 1.9× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
 | AG-1498 Assistant funéraire | 1414 | 170 € | 424 € | 77 € | 34 € | 43 € | 2.2× ✗ | 2.2× ✗ | 38 € | S (1/bundle) | 2 800 € |
 | AG-1499 Secrétaire d'auto-école | 823 | 86 € | 214 € | 99 € | 17 € | 82 € | 0.9× ✗ | 0.6× ✗ | 58 € | M (1/bundle) | 2 800 € |
+| AG-1500 Régisseur des collections | 1505 | 203 € | 509 € | 101 € | 41 € | 60 € | 2.0× ✗ | 0.5× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1501 Chargé de l'inventaire et du récolement des collections | 1055 | 147 € | 369 € | 85 € | 30 € | 56 € | 1.7× ✗ | 0.3× ✗ | 56 € | XL (10/bundle) | 2 800 € |
+| AG-1502 Chargé de production d'expositions | 764 | 107 € | 266 € | 72 € | 21 € | 51 € | 1.5× ✗ | 0.4× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1503 Chargé des publics et de la médiation culturelle | 932 | 95 € | 238 € | 59 € | 19 € | 40 € | 1.6× ✗ | 0.7× ✗ | 40 € | M (4/bundle) | 2 800 € |
+| AG-1504 Assistant de galerie d'art | 1055 | 147 € | 368 € | 76 € | 29 € | 47 € | 1.9× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1505 Clerc de commissaire-priseur | 1414 | 196 € | 491 € | 92 € | 39 € | 53 € | 2.1× ✗ | 0.8× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1506 Catalogueur en maison de ventes | 1650 | 196 € | 489 € | 118 € | 39 € | 79 € | 1.6× ✗ | 0.4× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1507 Assistant d'atelier de conservation-restauration | 1204 | 168 € | 421 € | 89 € | 34 € | 56 € | 1.9× ✗ | 0.4× ✗ | 56 € | XL (10/bundle) | 2 800 € |
+| AG-1508 Assistant du responsable d'opération archéologique | 910 | 127 € | 317 € | 105 € | 25 € | 79 € | 1.2× ✗ | 0.3× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1509 Adjoint au responsable de l'activité archéologique | 1055 | 147 € | 369 € | 77 € | 30 € | 47 € | 1.9× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1510 Gestionnaire des archives de fouilles | 1230 | 165 € | 412 € | 69 € | 33 € | 36 € | 2.4× ✗ | 2.1× ✗ | 33 € | S (1/bundle) | 2 800 € |
+| AG-1511 Régisseur général d'orchestre | 485 | 61 € | 152 € | 65 € | 12 € | 53 € | 0.9× ✗ | 0.3× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1512 Bibliothécaire d'orchestre | 906 | 92 € | 229 € | 84 € | 18 € | 65 € | 1.1× ✗ | 0.7× ✗ | 48 € | M (2/bundle) | 2 800 € |
+| AG-1513 Chargé de l'administration artistique d'opéra | 1055 | 113 € | 281 € | 73 € | 23 € | 51 € | 1.5× ✗ | 0.5× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1514 Conseiller aux études en conservatoire et école d'arts | 1505 | 182 € | 456 € | 77 € | 36 € | 40 € | 2.4× ✗ | 1.2× ✗ | 40 € | M (4/bundle) | 2 800 € |
+| AG-1515 Gestionnaire de copyright en édition musicale | 1352 | 189 € | 472 € | 82 € | 38 € | 45 € | 2.3× ✗ | 0.7× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1516 Chargé de cession de droits et de synchronisation | 1204 | 126 € | 316 € | 72 € | 25 € | 47 € | 1.8× ✗ | 0.5× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1517 Chargé du matériel d'orchestre | 932 | 102 € | 256 € | 59 € | 20 € | 39 € | 1.7× ✗ | 1.6× ✗ | 35 € | S (1/bundle) | 2 800 € |
+| AG-1520 Membre du comité de direction de casino | 365 | 51 € | 128 € | 57 € | 10 € | 47 € | 0.9× ✗ | 0.2× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1521 Caissier central de casino | 271 | 38 € | 95 € | 49 € | 8 € | 41 € | 0.8× ✗ | 0.7× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1522 Responsable conformité et jeu responsable en casino | 311 | 43 € | 109 € | 69 € | 9 € | 60 € | 0.6× ✗ | 0.1× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1523 Responsable de centre de loisirs indoor | 1240 | 173 € | 433 € | 77 € | 35 € | 43 € | 2.2× ✗ | 2.2× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1524 Concepteur de jeux d'évasion | 1204 | 168 € | 420 € | 78 € | 34 € | 45 € | 2.1× ✗ | 0.7× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1525 Régisseur des collections animales | 157 | 22 € | 55 € | 55 € | 4 € | 51 € | 0.4× ✗ | 0.4× ✗ | 40 € | S (1/bundle) | 2 800 € |
+| AG-1526 Responsable de la médiation en parc zoologique | 760 | 106 € | 265 € | 66 € | 21 € | 45 € | 1.6× ✗ | 0.4× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1527 Chef du service des pistes | 100 | 13 € | 31 € | 53 € | 3 € | 51 € | 0.2× ✗ | 0.1× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1528 Chef d'exploitation des remontées mécaniques | 220 | 31 € | 77 € | 53 € | 6 € | 47 € | 0.6× ✗ | 0.1× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1529 Maître de port de plaisance | 637 | 61 € | 153 € | 55 € | 12 € | 43 € | 1.1× ✗ | 1.1× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1530 Chef de base nautique | 669 | 92 € | 230 € | 61 € | 18 € | 43 € | 1.5× ✗ | 1.5× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1531 Responsable de centre de plongée | 1265 | 149 € | 372 € | 72 € | 30 € | 43 € | 2.1× ✗ | 2.0× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1532 Responsable des admissions et du planning des curistes | 1294 | 180 € | 449 € | 76 € | 36 € | 40 € | 2.4× ✗ | 1.2× ✗ | 40 € | M (4/bundle) | 2 800 € |
+| AG-1533 Responsable qualité des eaux thermales | 782 | 109 € | 273 € | 66 € | 22 € | 45 € | 1.6× ✗ | 0.5× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1534 Directeur hôtelier de bateau de croisière fluviale | 489 | 67 € | 167 € | 54 € | 13 € | 40 € | 1.2× ✗ | 0.5× ✗ | 40 € | M (4/bundle) | 2 800 € |
+| AG-1535 Chargé des opérations de croisière fluviale | 634 | 73 € | 183 € | 65 € | 15 € | 51 € | 1.1× ✗ | 0.3× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1536 Chef de bassin | 641 | 88 € | 220 € | 60 € | 18 € | 43 € | 1.5× ✗ | 1.4× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1537 Responsable technique de centre aquatique | 662 | 91 € | 228 € | 57 € | 18 € | 39 € | 1.6× ✗ | 1.5× ✗ | 35 € | S (1/bundle) | 2 800 € |
+| AG-1540 Chargé de production effets visuels et animation | 1684 | 200 € | 501 € | 87 € | 40 € | 47 € | 2.3× ✗ | 0.8× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1541 Technicien contrôle qualité et livraisons de postproduction | 1534 | 180 € | 449 € | 81 € | 36 € | 45 € | 2.2× ✗ | 0.7× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1542 Programmateur de salles de cinéma | 764 | 72 € | 179 € | 59 € | 14 € | 45 € | 1.2× ✗ | 0.3× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1543 Gestionnaire des recettes et déclarations d'exploitation cinématographique | 45 | 6 € | 15 € | 40 € | 1 € | 39 € | 0.1× ✗ | 0.1× ✗ | 35 € | S (1/bundle) | 2 800 € |
+| AG-1544 Programmateur de distribution cinématographique | 639 | 68 € | 170 € | 61 € | 14 € | 47 € | 1.1× ✗ | 0.3× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1545 Gestionnaire de droits audiovisuels | 1056 | 134 € | 334 € | 87 € | 27 € | 60 € | 1.5× ✗ | 0.3× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1546 Programmateur musical de radio | 790 | 109 € | 272 € | 69 € | 22 € | 47 € | 1.6× ✗ | 0.5× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1547 Chargé de trafic publicitaire radio | 1265 | 147 € | 369 € | 71 € | 30 € | 41 € | 2.1× ✗ | 2.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1548 Contrôleur de facturation média | 762 | 106 € | 266 € | 68 € | 21 € | 47 € | 1.6× ✗ | 0.4× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1549 Chef de projet événement en parc des expositions et centre de congrès | 1234 | 137 € | 343 € | 78 € | 27 € | 51 € | 1.8× ✗ | 0.6× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1550 Chargé de sécurité des salons et manifestations | 1084 | 143 € | 357 € | 84 € | 29 € | 56 € | 1.7× ✗ | 0.3× ✗ | 56 € | XL (10/bundle) | 2 800 € |
+| AG-1551 Responsable billetterie de stade et d'aréna | 1260 | 141 € | 353 € | 79 € | 28 € | 51 € | 1.8× ✗ | 0.6× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1552 Chargé des hospitalités et des loges | 1204 | 161 € | 403 € | 74 € | 32 € | 41 € | 2.2× ✗ | 2.1× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1553 Responsable sûreté et sécurité de stade | 755 | 92 € | 229 € | 65 € | 18 € | 47 € | 1.4× ✗ | 0.4× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1554 Coordinateur d'écurie de course | 1056 | 113 € | 282 € | 64 € | 23 € | 41 € | 1.8× ✗ | 1.7× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1555 Ingénieur d'exploitation en sport automobile | 1500 | 196 € | 489 € | 109 € | 39 € | 70 € | 1.8× ✗ | 0.4× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1556 Gestionnaire des pièces et du kilométrage de course | 935 | 122 € | 306 € | 63 € | 24 € | 39 € | 1.9× ✗ | 1.8× ✗ | 35 € | S (1/bundle) | 2 800 € |
+| AG-1557 Agent sportif | 1056 | 113 € | 282 € | 83 € | 23 € | 60 € | 1.4× ✗ | 0.3× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1558 Chargé de détection et de recrutement de joueurs | 759 | 85 € | 213 € | 64 € | 17 € | 47 € | 1.3× ✗ | 0.4× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1559 Directeur d'exploitation cinématographique | 761 | 78 € | 196 € | 63 € | 16 € | 47 € | 1.3× ✗ | 0.3× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1560 Coordinateur des ressources aéroportuaires | 844 | 87 € | 218 € | 68 € | 17 € | 51 € | 1.3× ✗ | 0.4× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1561 Chargé de mission sûreté aéroportuaire | 906 | 127 € | 317 € | 70 € | 25 € | 45 € | 1.8× ✗ | 0.5× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1562 Responsable du développement des lignes aériennes | 460 | 64 € | 160 € | 79 € | 13 € | 66 € | 0.8× ✗ | 0.1× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1563 Gestionnaire de l'information aéronautique | 1081 | 137 € | 343 € | 74 € | 27 € | 47 € | 1.8× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1564 Concepteur de procédures de vol aux instruments | 1051 | 119 € | 297 € | 91 € | 24 € | 67 € | 1.3× ✗ | 0.3× ✗ | 67 € | XL (7/bundle) | 2 800 € |
+| AG-1565 Planificateur des vols d'instruction | 673 | 65 € | 162 € | 56 € | 13 € | 43 € | 1.2× ✗ | 1.1× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1566 Coordinateur de la formation en école de pilotage | 764 | 79 € | 197 € | 57 € | 16 € | 41 € | 1.4× ✗ | 1.3× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1567 Agent de méthodes en transport urbain | 1201 | 168 € | 420 € | 81 € | 34 € | 47 € | 2.1× ✗ | 0.7× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1568 Régulateur de réseau bus et tramway | 4144 | 550 € | 1 374 € | 153 € | 110 € | 43 € | **3.6×** | 2.4× ✗ | 43 € | M (3/bundle) | 2 800 € |
+| AG-1569 Chargé d'études offre et performance en transport urbain | 906 | 126 € | 316 € | 72 € | 25 € | 47 € | 1.8× ✗ | 0.5× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1570 Programmateur des navigants | 641 | 62 € | 154 € | 63 € | 12 € | 51 € | 1.0× ✗ | 0.3× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1571 Affréteur fluvial | 1230 | 137 € | 342 € | 78 € | 27 € | 51 € | 1.8× ✗ | 0.6× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1572 Opérateur PC sécurité et trafic autoroutier | 4985 | 667 € | 1 669 € | 176 € | 133 € | 43 € | **3.8×** | 2.7× ✗ | 43 € | M (3/bundle) | 2 800 € |
+| AG-1573 Technicien patrimoine ouvrages d'art | 1503 | 203 € | 508 € | 96 € | 41 € | 56 € | 2.1× ✗ | 0.5× ✗ | 56 € | XL (10/bundle) | 2 800 € |
+| AG-1574 Gestionnaire du recouvrement des péages en flux libre | 695 | 68 € | 170 € | 54 € | 14 € | 40 € | 1.3× ✗ | 0.5× ✗ | 40 € | M (4/bundle) | 2 800 € |
+| AG-1575 Chargé d'exploitation de réseau de bornes de recharge | 2225 | 209 € | 522 € | 82 € | 42 € | 40 € | 2.5× ✗ | 1.3× ✗ | 40 € | M (4/bundle) | 2 800 € |
+| AG-1576 Responsable d'exploitation de stationnement | 191 | 27 € | 67 € | 47 € | 5 € | 41 € | 0.6× ✗ | 0.5× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1577 Responsable des opérations d'exploitant de drones | 1654 | 196 € | 491 € | 84 € | 39 € | 45 € | 2.3× ✗ | 0.8× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1578 Chargé d'organisation et des process en distribution du courrier | 460 | 64 € | 161 € | 60 € | 13 € | 47 € | 1.1× ✗ | 0.3× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1580 Responsable du contrôle des exportations de défense | 1535 | 159 € | 397 € | 97 € | 32 € | 66 € | 1.6× ✗ | 0.4× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1581 Officier de sécurité en entreprise de défense | 1386 | 138 € | 345 € | 72 € | 28 € | 45 € | 1.9× ✗ | 0.6× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1582 Ingénieur soutien logistique intégré | 1063 | 148 € | 371 € | 95 € | 30 € | 66 € | 1.6× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1583 Ingénieur homologation véhicule | 913 | 99 € | 249 € | 86 € | 20 € | 66 € | 1.2× ✗ | 0.2× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1584 Chargé de programmation de production automobile | 249 | 33 € | 83 € | 60 € | 7 € | 53 € | 0.6× ✗ | 0.1× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1585 Ingénieur RAMS ferroviaire | 910 | 127 € | 317 € | 91 € | 25 € | 66 € | 1.4× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1586 Ingénieur certification et autorisation ferroviaire | 1363 | 163 € | 406 € | 98 € | 33 € | 66 € | 1.6× ✗ | 0.4× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1587 Ingénieur procédés en microélectronique | 935 | 103 € | 257 € | 95 € | 21 € | 75 € | 1.1× ✗ | 0.2× ✗ | 75 € | XL (6/bundle) | 2 800 € |
+| AG-1588 Ingénieur rendement en fabrication de semi-conducteurs | 932 | 95 € | 238 € | 94 € | 19 € | 75 € | 1.0× ✗ | 0.2× ✗ | 75 € | XL (6/bundle) | 2 800 € |
+| AG-1589 Attaché de recherche clinique | 910 | 92 € | 230 € | 65 € | 18 € | 47 € | 1.4× ✗ | 0.4× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1590 Technicien de bioproduction | 815 | 86 € | 215 € | 68 € | 17 € | 51 € | 1.3× ✗ | 0.4× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1591 Ingénieur programmation et optimisation de raffinerie | 333 | 47 € | 116 € | 75 € | 9 € | 66 € | 0.6× ✗ | 0.1× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1592 Inspecteur d'équipements en raffinerie | 1509 | 183 € | 457 € | 102 € | 37 € | 66 € | 1.8× ✗ | 0.4× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1593 Chef de projet démantèlement nucléaire | 764 | 107 € | 266 € | 87 € | 21 € | 66 € | 1.2× ✗ | 0.2× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1594 Ingénieur filière déchets radioactifs | 1055 | 147 € | 369 € | 95 € | 30 € | 66 € | 1.6× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1595 Géologue d'exploration minière | 1801 | 224 € | 559 € | 110 € | 45 € | 66 € | 2.0× ✗ | 0.5× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1596 Ingénieur planification minière | 187 | 26 € | 65 € | 76 € | 5 € | 70 € | 0.3× ✗ | 0.1× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1597 Essayeur en métaux précieux | 1411 | 197 € | 493 € | 86 € | 39 € | 47 € | 2.3× ✗ | 0.8× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1598 Gestionnaire de comptes-poids en affinage | 2405 | 308 € | 771 € | 112 € | 62 € | 51 € | 2.7× ✗ | 1.1× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1600 Technico-commercial en productions végétales | 460 | 64 € | 160 € | 60 € | 13 € | 47 € | 1.1× ✗ | 0.3× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1601 Chef de silo | 935 | 131 € | 327 € | 77 € | 26 € | 51 € | 1.7× ✗ | 0.5× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1602 Chargé de la vie coopérative et des adhérents | 1052 | 147 € | 368 € | 80 € | 29 € | 51 € | 1.8× ✗ | 1.8× ✗ | 40 € | S (1/bundle) | 2 800 € |
+| AG-1603 Analyste marché céréales | 71 | 8 € | 21 € | 72 € | 2 € | 70 € | 0.1× ✗ | 0.0× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1604 Chef meunier | 394 | 55 € | 138 € | 58 € | 11 € | 47 € | 0.9× ✗ | 0.2× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1605 Formulateur en nutrition animale | 911 | 127 € | 318 € | 91 € | 25 € | 66 € | 1.4× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1606 Technico-commercial en nutrition animale | 910 | 99 € | 248 € | 67 € | 20 € | 47 € | 1.5× ✗ | 0.4× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1607 Responsable de fabrication en usine d'aliments | 695 | 97 € | 242 € | 66 € | 19 € | 47 € | 1.5× ✗ | 0.4× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1608 Responsable de production en microbrasserie | 220 | 31 € | 77 € | 51 € | 6 € | 45 € | 0.6× ✗ | 0.1× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1609 Maître distillateur | 336 | 47 € | 118 € | 60 € | 9 € | 51 € | 0.8× ✗ | 0.8× ✗ | 40 € | S (1/bundle) | 2 800 € |
+| AG-1610 Gestionnaire douane et accises | 215 | 30 € | 75 € | 51 € | 6 € | 45 € | 0.6× ✗ | 0.1× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1611 Responsable d'exploitation de criée | 279 | 32 € | 80 € | 57 € | 6 € | 51 € | 0.6× ✗ | 0.1× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1612 Gestionnaire des ventes et règlements de criée | 129 | 16 € | 41 € | 50 € | 3 € | 47 € | 0.3× ✗ | 0.1× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1613 Conservateur de réserve naturelle | 761 | 106 € | 266 € | 72 € | 21 € | 51 € | 1.5× ✗ | 1.5× ✗ | 40 € | S (1/bundle) | 2 800 € |
+| AG-1614 Animateur de site Natura 2000 | 1201 | 140 € | 350 € | 79 € | 28 € | 51 € | 1.8× ✗ | 1.8× ✗ | 40 € | S (1/bundle) | 2 800 € |
+| AG-1615 Technicien de fédération départementale des chasseurs | 906 | 127 € | 317 € | 70 € | 25 € | 45 € | 1.8× ✗ | 0.5× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1616 Gestionnaire des dégâts de grand gibier | 1081 | 151 € | 378 € | 75 € | 30 € | 45 € | 2.0× ✗ | 0.6× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1617 Gestionnaire de domaine de chasse | 1505 | 210 € | 526 € | 78 € | 42 € | 36 € | 2.7× ✗ | 2.5× ✗ | 33 € | S (1/bundle) | 2 800 € |
+| AG-1620 Responsable de site multitechnique | 786 | 103 € | 257 € | 74 € | 21 € | 53 € | 1.4× ✗ | 0.4× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1621 Chargé d'affaires en maintenance multitechnique | 911 | 99 € | 248 € | 90 € | 20 € | 70 € | 1.1× ✗ | 0.2× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1622 Chargé d'études acoustiques | 1204 | 140 € | 351 € | 107 € | 28 € | 79 € | 1.3× ✗ | 0.3× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1623 Technicien de mesures acoustiques et vibratoires | 1055 | 141 € | 351 € | 75 € | 28 € | 47 € | 1.9× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1624 Ingénieur géotechnicien | 1654 | 203 € | 508 € | 120 € | 41 € | 79 € | 1.7× ✗ | 0.5× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1625 Technicien géotechnicien | 910 | 120 € | 300 € | 71 € | 24 € | 47 € | 1.7× ✗ | 0.5× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1626 Ingénieur en sécurité incendie | 1800 | 189 € | 472 € | 117 € | 38 € | 79 € | 1.6× ✗ | 0.4× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1627 Coordonnateur SSI | 1354 | 161 € | 403 € | 112 € | 32 € | 79 € | 1.4× ✗ | 0.4× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1628 Chargé d'affaires en travaux sur cordes | 1060 | 120 € | 300 € | 87 € | 24 € | 63 € | 1.4× ✗ | 0.3× ✗ | 63 € | XL (8/bundle) | 2 800 € |
+| AG-1629 Ingénieur études et méthodes en travaux souterrains | 780 | 102 € | 255 € | 100 € | 20 € | 79 € | 1.0× ✗ | 0.2× ✗ | 79 € | XL (6/bundle) | 2 800 € |
+| AG-1630 Ingénieur instrumentation et auscultation | 939 | 103 € | 258 € | 113 € | 21 € | 92 € | 0.9× ✗ | 0.2× ✗ | 92 € | XL (5/bundle) | 2 800 € |
+| AG-1631 Chargé d'études en urbanisme | 1804 | 245 € | 613 € | 123 € | 49 € | 74 € | 2.0× ✗ | 0.5× ✗ | 74 € | XL (7/bundle) | 2 800 € |
+| AG-1632 Paysagiste concepteur | 754 | 98 € | 246 € | 75 € | 20 € | 56 € | 1.3× ✗ | 0.2× ✗ | 56 € | XL (10/bundle) | 2 800 € |
+| AG-1633 Architecte naval | 1204 | 161 € | 403 € | 106 € | 32 € | 74 € | 1.5× ✗ | 0.4× ✗ | 74 € | XL (7/bundle) | 2 800 € |
+| AG-1634 Technicien d'études en éclairage public | 900 | 126 € | 314 € | 85 € | 25 € | 60 € | 1.5× ✗ | 0.3× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1635 Responsable d'affaires en éclairage public et signalisation lumineuse | 783 | 81 € | 204 € | 91 € | 16 € | 75 € | 0.9× ✗ | 0.2× ✗ | 75 € | XL (6/bundle) | 2 800 € |
+| AG-1640 Analyste en financement de projets | 1055 | 120 € | 299 € | 90 € | 24 € | 66 € | 1.3× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1641 Gestionnaire d'agence de crédits syndiqués | 1531 | 186 € | 465 € | 84 € | 37 € | 47 € | 2.2× ✗ | 0.7× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1642 Gestionnaire middle office des marchés de capitaux | 125 | 16 € | 40 € | 56 € | 3 € | 53 € | 0.3× ✗ | 0.1× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1643 Analyste crédit en financement participatif | 1350 | 147 € | 367 € | 95 € | 29 € | 66 € | 1.5× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1644 Gestionnaire des investisseurs et des remboursements | 336 | 33 € | 83 € | 57 € | 7 € | 51 € | 0.6× ✗ | 0.1× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1645 Programmateur gaz et électricité | 812 | 79 € | 196 € | 72 € | 16 € | 57 € | 1.1× ✗ | 0.3× ✗ | 54 € | L (5/bundle) | 2 800 € |
+| AG-1646 Analyste risques de marché en négoce d'énergie | 844 | 90 € | 225 € | 93 € | 18 € | 75 € | 1.0× ✗ | 0.2× ✗ | 75 € | XL (6/bundle) | 2 800 € |
+| AG-1647 Opérateur de négoce de matières premières | 1800 | 189 € | 472 € | 88 € | 38 € | 51 € | 2.1× ✗ | 0.7× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1648 Chasseur de têtes | 1059 | 120 € | 300 € | 90 € | 24 € | 66 € | 1.3× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1649 Généalogiste successoral | 1054 | 119 € | 299 € | 69 € | 24 € | 45 € | 1.7× ✗ | 0.5× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1650 Généalogiste régleur | 1059 | 148 € | 369 € | 77 € | 30 € | 47 € | 1.9× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1651 Commissaire d'avaries | 1800 | 189 € | 472 € | 85 € | 38 € | 47 € | 2.2× ✗ | 0.7× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1652 Expert en sinistres aéronautiques | 1204 | 133 € | 333 € | 87 € | 27 € | 60 € | 1.5× ✗ | 0.3× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1653 Dispacheur | 1230 | 144 € | 360 € | 89 € | 29 € | 60 € | 1.6× ✗ | 0.3× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1654 Ergonome consultant | 1651 | 203 € | 507 € | 101 € | 41 € | 60 € | 2.0× ✗ | 0.5× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1655 Intervenant en prévention des risques professionnels | 1052 | 147 € | 368 € | 74 € | 29 € | 45 € | 2.0× ✗ | 0.6× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1656 Opérateur de télésurveillance | 9450 | 882 € | 2 205 € | 220 € | 176 € | 44 € | **4.0×** | **3.0×** | 44 € | M (3/bundle) | 2 800 € |
+| AG-1657 Chef de poste de télésurveillance | 1211 | 169 € | 423 € | 81 € | 34 € | 47 € | 2.1× ✗ | 0.7× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1658 Responsable qualité RABC en blanchisserie industrielle | 1389 | 138 € | 345 € | 75 € | 28 € | 47 € | 1.9× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1659 Gestionnaire de clientèle en location-entretien de linge | 1356 | 162 € | 404 € | 75 € | 32 € | 43 € | 2.2× ✗ | 2.1× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1660 Chargé de relation donneurs en établissement de transfusion sanguine | 1415 | 134 € | 334 € | 67 € | 27 € | 40 € | 2.0× ✗ | 0.9× ✗ | 40 € | M (4/bundle) | 2 800 € |
+| AG-1661 Chargé de promotion du don et de développement territorial | 1060 | 106 € | 265 € | 62 € | 21 € | 41 € | 1.7× ✗ | 1.6× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1662 Coordinateur patient en chirurgie et médecine esthétique | 1414 | 140 € | 351 € | 75 € | 28 € | 47 € | 1.9× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1663 Conseiller pédagogique en soutien scolaire | 940 | 96 € | 240 € | 62 € | 19 € | 43 € | 1.6× ✗ | 1.5× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1664 Coordinateur pédagogique d'école de langues | 910 | 127 € | 318 € | 67 € | 25 € | 41 € | 1.9× ✗ | 1.8× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1665 Chargé de relations entreprises en centre de formation d'apprentis | 940 | 89 € | 223 € | 60 € | 18 € | 43 € | 1.5× ✗ | 1.4× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1666 Gestionnaire administratif des contrats d'apprentissage | 1236 | 117 € | 292 € | 65 € | 23 € | 41 € | 1.8× ✗ | 1.7× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1667 Coordinateur de programme humanitaire | 311 | 43 € | 108 € | 74 € | 9 € | 66 € | 0.6× ✗ | 0.1× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1668 Logisticien de l'action humanitaire | 761 | 78 € | 196 € | 58 € | 16 € | 43 € | 1.3× ✗ | 1.3× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1669 Économe diocésain | 907 | 127 € | 317 € | 70 € | 25 € | 45 € | 1.8× ✗ | 0.5× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1670 Secrétaire de paroisse | 1814 | 226 € | 564 € | 86 € | 45 € | 41 € | 2.6× ✗ | 2.5× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1671 Agent de greffe pénitentiaire | 1414 | 142 € | 354 € | 94 € | 28 € | 66 € | 1.5× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1672 Responsable de site en gestion déléguée pénitentiaire | 762 | 106 € | 266 € | 72 € | 21 € | 51 € | 1.5× ✗ | 0.4× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1673 Gestionnaire indemnisation et carrière des sapeurs-pompiers volontaires | 612 | 57 € | 143 € | 53 € | 11 € | 41 € | 1.1× ✗ | 1.0× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1674 Assistant prévision et défense extérieure contre l'incendie | 1356 | 161 € | 404 € | 98 € | 32 € | 65 € | 1.6× ✗ | 1.1× ✗ | 48 € | M (2/bundle) | 2 800 € |
+| AG-1675 Conservateur de cimetière | 1385 | 194 € | 484 € | 77 € | 39 € | 39 € | 2.5× ✗ | 2.3× ✗ | 35 € | S (1/bundle) | 2 800 € |
+| AG-1676 Responsable de crématorium | 667 | 92 € | 230 € | 60 € | 18 € | 41 € | 1.5× ✗ | 1.5× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1677 Conseiller funéraire animalier | 1262 | 120 € | 301 € | 65 € | 24 € | 41 € | 1.8× ✗ | 1.8× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1678 Première d'atelier en haute couture | 1509 | 183 € | 457 € | 102 € | 37 € | 65 € | 1.8× ✗ | 1.2× ✗ | 48 € | M (2/bundle) | 2 800 € |
+| AG-1679 Secrétaire du service prévention en SDIS | 935 | 129 € | 323 € | 67 € | 26 € | 41 € | 1.9× ✗ | 1.9× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1680 Ingénieur procédé fusion verrière | 816 | 113 € | 282 € | 93 € | 23 € | 70 € | 1.2× ✗ | 0.3× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1681 Responsable qualité bout froid en verrerie | 1411 | 196 € | 490 € | 114 € | 39 € | 75 € | 1.7× ✗ | 0.4× ✗ | 75 € | XL (6/bundle) | 2 800 € |
+| AG-1682 Ingénieur procédés en cimenterie | 365 | 50 € | 124 € | 80 € | 10 € | 70 € | 0.6× ✗ | 0.1× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1683 Responsable des combustibles de substitution en cimenterie | 670 | 93 € | 233 € | 84 € | 19 € | 66 € | 1.1× ✗ | 0.2× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1684 Chargé d'homologation des produits phytopharmaceutiques | 1955 | 273 € | 683 € | 120 € | 55 € | 66 € | 2.3× ✗ | 0.6× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1685 Responsable d'expérimentation agronomique sous BPE | 1084 | 124 € | 309 € | 90 € | 25 € | 66 € | 1.4× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1686 Acheteur de graines oléagineuses | 819 | 107 € | 269 € | 92 € | 21 € | 70 € | 1.2× ✗ | 0.3× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1687 Ingénieur procédés en huilerie | 812 | 112 € | 280 € | 88 € | 22 € | 66 € | 1.3× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1688 Chargé de conformité réglementaire des produits du tabac | 1385 | 194 € | 484 € | 99 € | 39 € | 60 € | 2.0× ✗ | 0.4× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1689 Responsable des mélanges de tabacs | 1385 | 166 € | 414 € | 93 € | 33 € | 60 € | 1.8× ✗ | 0.4× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1691 Responsable de production en distillerie | 695 | 96 € | 239 € | 85 € | 19 € | 66 € | 1.1× ✗ | 0.2× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1692 Évaluateur en parfumerie | 1654 | 224 € | 561 € | 111 € | 45 € | 66 € | 2.0× ✗ | 0.5× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1693 Chargé d'affaires réglementaires en parfumerie et arômes | 1955 | 273 € | 683 € | 125 € | 55 € | 70 € | 2.2× ✗ | 0.6× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1694 Ingénieur d'offres en câbles d'énergie | 1230 | 172 € | 430 € | 105 € | 34 € | 70 € | 1.6× ✗ | 0.4× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1695 Contrôleur de gestion métal en câblerie | 125 | 16 € | 40 € | 69 € | 3 € | 66 € | 0.2× ✗ | 0.0× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1696 Conseiller technique en laboratoire de prescription de verres | 1981 | 220 € | 549 € | 114 € | 44 € | 70 € | 1.9× ✗ | 0.5× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1697 Responsable de la comptabilité matières en impression fiduciaire | 1265 | 149 € | 372 € | 96 € | 30 € | 66 € | 1.6× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1698 Chef de projet documents sécurisés | 1984 | 277 € | 693 € | 121 € | 55 € | 66 € | 2.3× ✗ | 0.6× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1699 Responsable moulerie en verrerie | 220 | 29 € | 73 € | 72 € | 6 € | 66 € | 0.4× ✗ | 0.1× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1700 Gestionnaire de configuration aéronautique | 940 | 103 € | 258 € | 86 € | 21 € | 66 € | 1.2× ✗ | 0.2× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1701 Ingénieur certification et navigabilité | 1360 | 134 € | 335 € | 87 € | 27 € | 60 € | 1.5× ✗ | 0.3× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1702 Ingénieur assurance produit spatial | 1059 | 120 € | 300 € | 84 € | 24 € | 60 € | 1.4× ✗ | 0.3× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1703 Ingénieur AIT de satellites | 1085 | 124 € | 309 € | 72 € | 25 € | 47 € | 1.7× ✗ | 0.5× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1704 Contrôleur satellites | 2281 | 214 € | 535 € | 96 € | 43 € | 53 € | 2.2× ✗ | 0.8× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1705 Ingénieur dynamique du vol | 790 | 81 € | 202 € | 82 € | 16 € | 66 € | 1.0× ✗ | 0.2× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1706 Ingénieur coordination des fréquences satellitaires | 1056 | 113 € | 282 € | 83 € | 23 € | 60 € | 1.4× ✗ | 0.3× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1707 Technicien méthodes composites | 1110 | 127 € | 318 € | 76 € | 25 € | 51 € | 1.7× ✗ | 0.5× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1708 Technicien en contrôle non destructif des composites | 1356 | 162 € | 404 € | 79 € | 32 € | 47 € | 2.0× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1709 Ingénieur d'essais en soufflerie | 1055 | 120 € | 299 € | 90 € | 24 € | 66 € | 1.3× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1710 Ingénieur essais de choc et sécurité passive | 935 | 103 € | 257 € | 86 € | 21 € | 66 € | 1.2× ✗ | 0.2× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1711 Chargé du bureau des utilisateurs d'une grande infrastructure de recherche | 1655 | 196 € | 491 € | 90 € | 39 € | 51 € | 2.2× ✗ | 0.8× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1712 Conseiller en radioprotection | 907 | 99 € | 247 € | 80 € | 20 € | 60 € | 1.2× ✗ | 0.2× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1713 Gestionnaire de biobanque | 1382 | 186 € | 465 € | 84 € | 37 € | 47 € | 2.2× ✗ | 0.7× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1714 Chargé de conservation des ressources génétiques végétales | 1357 | 190 € | 474 € | 83 € | 38 € | 45 € | 2.3× ✗ | 0.7× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1715 Gestionnaire des saisines et des scellés en police scientifique | 1560 | 183 € | 458 € | 84 € | 37 € | 47 € | 2.2× ✗ | 0.7× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1716 Ingénieur de police technique et scientifique | 1201 | 126 € | 315 € | 85 € | 25 € | 60 € | 1.5× ✗ | 0.3× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1720 Secrétaire-gestionnaire d'association syndicale d'irrigation | 2254 | 287 € | 718 € | 96 € | 57 € | 39 € | 3.0× ✗ | 2.8× ✗ | 35 € | S (1/bundle) | 2 800 € |
+| AG-1721 Chargé de mission gestion quantitative de l'eau | 1532 | 185 € | 462 € | 84 € | 37 € | 47 € | 2.2× ✗ | 0.7× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1722 Chargé d'études risque inondation | 1354 | 154 € | 386 € | 101 € | 31 € | 70 € | 1.5× ✗ | 0.3× ✗ | 70 € | XL (7/bundle) | 2 800 € |
+| AG-1723 Hydrogéologue | 1350 | 189 € | 472 € | 103 € | 38 € | 66 € | 1.8× ✗ | 0.4× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1724 Ingénieur risques naturels | 901 | 119 € | 297 € | 84 € | 24 € | 60 € | 1.4× ✗ | 0.3× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1725 Hydrographe | 1500 | 203 € | 507 € | 88 € | 41 € | 47 € | 2.3× ✗ | 0.8× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1726 Chef de projet SIG | 610 | 85 € | 213 € | 64 € | 17 € | 47 € | 1.3× ✗ | 0.4× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1727 Chargé de gestion hydraulique des voies navigables | 696 | 74 € | 184 € | 62 € | 15 € | 47 € | 1.2× ✗ | 0.3× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1728 Chargé de gestion du domaine public fluvial | 1956 | 218 € | 544 € | 82 € | 44 € | 39 € | 2.6× ✗ | 2.5× ✗ | 35 € | S (1/bundle) | 2 800 € |
+| AG-1729 Gestionnaire de station de pilotage | 671 | 94 € | 234 € | 60 € | 19 € | 41 € | 1.6× ✗ | 1.5× ✗ | 37 € | S (1/bundle) | 2 800 € |
+| AG-1730 Capitaine d'exploitation en remorquage portuaire | 820 | 115 € | 286 € | 66 € | 23 € | 43 € | 1.8× ✗ | 1.7× ✗ | 38 € | S (1/bundle) | 2 800 € |
+| AG-1731 Courtier d'affrètement maritime | 635 | 82 € | 205 € | 91 € | 16 € | 75 € | 0.9× ✗ | 0.2× ✗ | 75 € | XL (6/bundle) | 2 800 € |
+| AG-1732 Analyste surestaries | 1535 | 180 € | 449 € | 83 € | 36 € | 47 € | 2.2× ✗ | 0.7× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1733 Gestionnaire back-office péage et télépéage | 700 | 68 € | 171 € | 64 € | 14 € | 51 € | 1.1× ✗ | 0.3× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1734 Ingénieur réservoirs | 632 | 81 € | 203 € | 82 € | 16 € | 66 € | 1.0× ✗ | 0.2× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1735 Ingénieur forage | 664 | 93 € | 232 € | 84 € | 19 € | 66 € | 1.1× ✗ | 0.2× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1736 Responsable de conduite d'unité de valorisation énergétique | 2341 | 323 € | 808 € | 118 € | 65 € | 53 € | 2.8× ✗ | 1.1× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1737 Ingénieur unité de valorisation énergétique | 305 | 43 € | 107 € | 74 € | 9 € | 66 € | 0.6× ✗ | 0.1× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1740 Secrétaire médicale en anatomie et cytologie pathologiques | 1273 | 150 € | 374 € | 81 € | 30 € | 51 € | 1.9× ✗ | 0.6× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1741 Qualiticien en anatomie et cytologie pathologiques | 758 | 106 € | 265 € | 66 € | 21 € | 45 € | 1.6× ✗ | 0.4× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1742 Dosimétriste | 1415 | 142 € | 355 € | 75 € | 28 € | 47 € | 1.9× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1743 Physicien médical | 1412 | 197 € | 493 € | 100 € | 39 € | 60 € | 2.0× ✗ | 0.4× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1744 Secrétaire médicale en radiothérapie | 844 | 117 € | 292 € | 76 € | 23 € | 53 € | 1.5× ✗ | 0.5× ✗ | 51 € | L (5/bundle) | 2 800 € |
+| AG-1745 Juriste en droit des marques | 784 | 109 € | 274 € | 88 € | 22 € | 66 € | 1.3× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1746 Ingénieur patrimonial en banque privée | 755 | 91 € | 228 € | 84 € | 18 € | 66 € | 1.1× ✗ | 0.2× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1747 Family officer | 758 | 106 € | 265 € | 87 € | 21 € | 66 € | 1.2× ✗ | 0.2× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1748 Juriste contentieux d'entreprise | 932 | 130 € | 326 € | 92 € | 26 € | 66 € | 1.4× ✗ | 0.3× ✗ | 66 € | XL (8/bundle) | 2 800 € |
+| AG-1749 Chef de projet élections | 2370 | 296 € | 741 € | 106 € | 59 € | 47 € | 2.8× ✗ | 1.1× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1750 Chargé de projet élections professionnelles | 751 | 105 € | 262 € | 66 € | 21 € | 45 € | 1.6× ✗ | 0.4× ✗ | 43 € | L (7/bundle) | 2 800 € |
+| AG-1751 Coordinateur transport d'œuvres d'art | 2250 | 252 € | 629 € | 101 € | 50 € | 51 € | 2.5× ✗ | 0.9× ✗ | 49 € | L (6/bundle) | 2 800 € |
+| AG-1752 Chargé d'affaires en transport d'œuvres d'art | 1509 | 155 € | 387 € | 78 € | 31 € | 47 € | 2.0× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1753 Responsable des études et des formations en école maritime | 461 | 64 € | 161 € | 60 € | 13 € | 47 € | 1.1× ✗ | 0.3× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1754 Chargé de formation continue maritime | 1055 | 147 € | 369 € | 77 € | 29 € | 47 € | 1.9× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1755 Responsable pédagogique de formation à la conduite des trains | 757 | 106 € | 265 € | 81 € | 21 € | 60 € | 1.3× ✗ | 0.2× ✗ | 60 € | XL (9/bundle) | 2 800 € |
+| AG-1756 Gestionnaire des parcours de formation des conducteurs de train | 1059 | 141 € | 352 € | 75 € | 28 € | 47 € | 1.9× ✗ | 0.6× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1757 Responsable de centre de formation sécurité incendie et secourisme | 757 | 106 € | 265 € | 68 € | 21 € | 47 € | 1.6× ✗ | 0.4× ✗ | 45 € | L (6/bundle) | 2 800 € |
+| AG-1758 Assistant de formation en sécurité et secourisme | 932 | 130 € | 326 € | 69 € | 26 € | 43 € | 1.9× ✗ | 1.9× ✗ | 38 € | S (1/bundle) | 2 800 € |
 
-**57 fiches sur 1403 tiennent la règle des 3× en bundle partagé, 21 avec un agent seul sur son bundle.** Un agent seul sur un bundle à carte dédiée (image, vidéo) ne la tient pas : le bundle doit être partagé ou l'agent vendu en mode API.
+**60 fiches sur 1644 tiennent la règle des 3× en bundle partagé, 22 avec un agent seul sur son bundle.** Un agent seul sur un bundle à carte dédiée (image, vidéo) ne la tient pas : le bundle doit être partagé ou l'agent vendu en mode API.
 
 Lecture : un employé au coût employeur médian revient à 2 800 € par mois, un SMIC chargé à 2 100 €. L'abonnement à l'agent (prix cible du catalogue) s'ajoute aux colonnes Local-Agent et n'entre pas dans la règle des 3×.
