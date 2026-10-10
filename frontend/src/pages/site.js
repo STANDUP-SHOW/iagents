@@ -29,7 +29,6 @@ export const page = (nom) => {
   return p;
 };
 
-// Where requests from the contact and quote forms go. Not set yet: max has to
-// name the address that receives them; until then the form says so instead of
-// pretending to send.
-export const CONTACT = null;
+// Where requests from the contact and quote forms go: the contact address
+// max gave on 10/10/2026, the same one the legal notice shows.
+export { CONTACT } from '../data/entreprise.js';

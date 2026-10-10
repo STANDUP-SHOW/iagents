@@ -1,22 +1,26 @@
 // Who publishes the site, written once: the legal notice, the footers and the
 // structured data the home page gives search engines all read it here.
-// Given by max on 10/10/2026. A field left null is one he has not given yet;
+// Given by max on 10/10/2026 (identity, then legal form, capital and e-mail). A field left null is one he has not given yet;
 // the pages leave it out rather than print a guess.
 export const ENTREPRISE = {
   nom: 'iAgent Tech',
   marque: 'iAgent',
-  formeJuridique: null,
-  capital: null,
+  formeJuridique: 'SASU',
+  capital: '10 000 €',
+  // Registration under way (max, 10/10/2026): the notice says so until the number exists.
   siret: null,
+  immatriculation: 'en cours',
   rcs: null,
   tva: null,
   dirigeant: { prenom: 'Maxime', nom: 'Martinel', fonction: 'CEO' },
   adresse: { rue: '2 rue Julien Imbert', codePostal: '34500', ville: 'Béziers', pays: 'France', codePays: 'FR' },
   telephone: '07 46 47 69 68',
   telephoneInternational: '+33746476968',
-  email: null,
+  email: 'contact@iagent.agency',
   site: 'https://iagent.agency/',
 };
+
+export const CONTACT = ENTREPRISE.email;
 
 // The site is served by Vercel (vercel.json). Address read on
 // https://vercel.com/legal/privacy-policy on 10/10/2026.
