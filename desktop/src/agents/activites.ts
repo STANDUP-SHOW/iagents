@@ -70,6 +70,7 @@ const OU: Record<string, string[]> = {
   'devis-services': ['environnement-energie', 'sante-social', 'hotellerie-tourisme', 'services-entreprises'],
   'devis-formation-ingenierie': ['services-entreprises', 'environnement-energie', 'transport-logistique', 'agriculture'],
   'devis-numerique-conseil': ['numerique-audiovisuel', 'finance-immobilier', 'services-entreprises'],
+  'devis-infrastructures-culture': ['transport-logistique', 'industrie', 'environnement-energie', 'services-entreprises', 'hotellerie-tourisme', 'sante-social'],
   'energie-environnement': ['environnement-energie', 'batiment', 'industrie'],
   'reparation-automobile': ['automobile-mobilite'],
   'hotellerie-restauration': ['hotellerie-tourisme'],
