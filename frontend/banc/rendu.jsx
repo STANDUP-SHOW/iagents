@@ -22,8 +22,9 @@ import { FINANCEMENT, OFFRES } from '../../dimensionnement/offre-box.ts';
 import { DEVIS } from '../../outils/poste-de-devis.ts';
 import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE, logicielsDeLActivite } from '../src/data/recherche.js';
-import { IDS_DU_COEUR, coeurDeLActivite, personnelDeLActivite } from '../src/data/activites-recherche.js';
+import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE, logicielsDeLActivite, optionsActivites } from '../src/data/recherche.js';
+import { IDS_DU_COEUR, coeurDeLActivite, personnelDeLActivite, SECTEURS_TRANSVERSAUX, estTransversal } from '../src/data/activites-recherche.js';
+import { specialiser, nomSpecialise } from '../src/data/specialisation.js';
 import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, euros as eurosTarif } from '../src/data/tarifs.js';
 import Page from '../src/pages/Page.jsx';
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
@@ -176,7 +177,7 @@ for (const page of PAGES) {
     ['je suis boulanger', ['Chef de fournil', 'Responsable de boutique', 'Qualité, hygiène et allergènes', 'Secrétaire comptable']],
     // Asked in everyday words, these found no activity at all.
     ['créer une entreprise de transport', ['Deviseur — cotation transport', 'Planification des tournées']],
-    ['ouvrir une ferme bio', ['Devis et contrats', 'Chef de culture']],
+    ['ouvrir une ferme bio', ['offres et devis aux restaurateurs', 'Chef de culture']],
     ['créer une agence de voyage', ['Devis et cotation des voyages', 'Conception des circuits']],
   ]) {
     const rendu = renderToString(<CreezEntreprise ideeInitiale={idee} />).replace(/&#x27;/g, "'");
@@ -298,7 +299,71 @@ for (const page of PAGES) {
       .filter(([a, mot]) => !activitesDeLaRecherche(mot).includes(a) || !filtrer(agents, { requete: mot }).length);
     if (muets.length) echoue(`${muets.length} mots d'activité sans réponse, dont ${muets.slice(0, 5).map(([a, m]) => `« ${m} » (${a.id})`).join(', ')}`);
     else ok(`les ${ACTIVITES_RECHERCHE.length} activités se trouvent par leur nom et chacun de leurs alias`);
+  }  // Le filtre « Activité » (max, 10/10) : les 422 activités sans secteur
+  // choisi, seulement celles du secteur quand il l'est, et le personnel de
+  // l'imprimerie d'abord quand on la choisit.
+  {
+    const toutes = optionsActivites(agents);
+    const fiche = (id) => agents.find((a) => a.id === id);
+    const coeur = coeurDeLActivite(ACTIVITES_RECHERCHE.find((a) => a.id === 'ACT-0021'), agents).map((c) => c.fiche.id);
+    const secteurImprimeur = coeur.map((id) => fiche(id)?.secteur).find((s) => s && !SECTEURS_TRANSVERSAUX.has(s));
+    const duSecteur = optionsActivites(agents, [secteurImprimeur]);
+    const choisis = filtrer(agents, { activites: ['ACT-0021'] });
+    if (toutes.length !== ACTIVITES_RECHERCHE.length) echoue(`filtre Activité : ${toutes.length} activités proposées sur ${ACTIVITES_RECHERCHE.length}`);
+    else if (!duSecteur.some(([id]) => id === 'ACT-0021') || duSecteur.length >= toutes.length) echoue(`filtre Activité : le secteur ${secteurImprimeur} propose ${duSecteur.length} activités`);
+    else if (!coeur.includes(choisis[0]?.id)) echoue(`filtre Activité : l'imprimerie commence par ${choisis[0]?.nom}`);
+    else ok(`filtre Activité : ${toutes.length} activités, ${duSecteur.length} dans le secteur ${secteurImprimeur}, l'imprimerie montre ${choisis.length} métiers, d'abord ${choisis[0].nom}`);
   }
+  // The sector filter and the counter are the same number (max, 10/10: the
+  // catalogue said 63 sectors and the filter « Voir les 64 »).
+  {
+    const dansLeFiltre = new Set(agents.map((a) => a.secteur));
+    const declares = new Set(catalogueJson.secteurs.map((s) => s.id));
+    const enTrop = [...dansLeFiltre].filter((s) => !declares.has(s));
+    const sansFiche = [...declares].filter((s) => !dansLeFiltre.has(s));
+    if (enTrop.length || sansFiche.length) echoue(`secteurs : le filtre en montre ${dansLeFiltre.size}, le catalogue en déclare ${declares.size} (hors catalogue : ${enTrop.join(', ') || 'aucun'} ; sans fiche : ${sansFiche.join(', ') || 'aucun'})`);
+    else ok(`secteurs : ${declares.size} au catalogue, ${dansLeFiltre.size} dans le filtre, les mêmes`);
+  }
+
+  // La fiche se lit dans une activité (max, 10/10) : le menu de l'en-tête
+  // propose les 422 activités, le nom devient « Assistant de réunion commerce
+  // de gros », et la fiche porte la matière de l'activité : le poste tel que
+  // la branche le nomme, son expert du devis, ses logiciels, son vocabulaire.
+  // La composition est celle des pages métier × activité (specialisation.js).
+  {
+    const gros = ACTIVITES_RECHERCHE.find((a) => /^grossiste/i.test(a.nom));
+    const optique = ACTIVITES_RECHERCHE.find((a) => /^optique/i.test(a.nom));
+    const reunion = agents.find((a) => /^assistant de réunion/i.test(a.nom));
+    const devis = agents.find((a) => estTransversal(a) && DEVIS.test(a.nom));
+    if (!gros || !optique || !reunion || !devis) echoue(`spécialisation : il manque ${[!gros && 'un grossiste', !optique && 'l’optique', !reunion && 'l’assistant de réunion', !devis && 'un agent de devis transversal'].filter(Boolean).join(', ')}`);
+    else {
+      const sansMenu = renderToString(<FicheDetail agent={reunion} onClose={() => {}} />);
+      const generique = renderToString(<FicheDetail agent={reunion} onClose={() => {}} onChoisirActivite={() => {}} />);
+      const html = renderToString(<FicheDetail agent={reunion} onClose={() => {}} activite={gros} onChoisirActivite={() => {}} />);
+      const options = (generique.match(/<option /g) ?? []).length - 1;
+      const nom = nomSpecialise(reunion, gros);
+      const spec = specialiser(reunion, gros, agents);
+      const terme = spec.pack.vocabulaire?.[0]?.terme;
+      if (sansMenu.includes('fd-specialiser')) echoue('spécialisation : le menu s’affiche sans personne pour prendre le choix');
+      else if (options !== ACTIVITES_RECHERCHE.length) echoue(`spécialisation : le menu propose ${options} activités sur ${ACTIVITES_RECHERCHE.length}`);
+      else if (!generique.includes(`<h1 id="fd-titre-${reunion.id}" class="fd-h1">${reunion.nom}</h1>`)) echoue('spécialisation : sans activité, la fiche ne garde pas son nom');
+      else if (!html.includes(`class="fd-h1">${nom}</h1>`)) echoue(`spécialisation : la fiche ne s’appelle pas « ${nom} »`);
+      else if (!terme || !html.includes(terme)) echoue(`spécialisation : le vocabulaire de l’activité (« ${terme} ») manque à la fiche`);
+      else if (!html.includes(`Dans votre activité : ${gros.nom}`)) echoue('spécialisation : la fiche ne dit pas dans quelle activité elle se lit');
+      else ok(`spécialisation : « ${nom} », ${options} activités au menu, le vocabulaire du grossiste dans la fiche`);
+    }
+    // L'agent de devis lu en optique renvoie à l'expert du devis de la branche
+    // (l'opticien), pas à lui-même — comme sa page métier × activité.
+    if (optique && devis) {
+      const spec = specialiser(devis, optique, agents);
+      const html = renderToString(<FicheDetail agent={devis} onClose={() => {}} activite={optique} onChoisirActivite={() => {}} />);
+      if (!spec.expert) echoue(`spécialisation : ${devis.nom} en optique ne nomme pas l’expert du devis de la branche`);
+      else if (spec.expert.fiche.id === devis.id || estTransversal(spec.expert.fiche)) echoue(`spécialisation : l’expert du devis en optique est ${spec.expert.fiche.nom}, un métier transversal`);
+      else if (!html.includes(spec.expert.fiche.nom)) echoue(`spécialisation : la fiche ne cite pas ${spec.expert.fiche.nom}`);
+      else ok(`spécialisation : ${devis.nom} en optique renvoie à ${spec.expert.fiche.nom} (« ${spec.expert.role} »)`);
+    }
+  }
+
   // Le site n'offre jamais l'installeur : Desktop Commander est livré sur la Box
   // (max, 08/10). Un bouton « Télécharger » ramènerait le visiteur hors de l'offre.
   const telechargeurs = execSync("grep -rlE 'releases/(latest/)?download|\\.msi|T[eé]l[eé]charger' src seo || true", { encoding: 'utf8' }).trim();

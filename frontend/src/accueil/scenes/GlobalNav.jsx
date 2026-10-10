@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Logo, LIENS } from '../composants.jsx';
 import { suivre } from '../analytique.js';
+import { lireListe, ecouterListe, nombreDAgents, PAGE_LISTE } from '../../data/liste.js';
 
 // The navigation of max's art-direction audit (08/10, §18): five entries,
 // four of them opening a drawer, and one way in, the demo. Resources moved
@@ -48,6 +49,14 @@ const Loupe = () => (
 export default function GlobalNav({ page = 'accueil', seuil = 24 }) {
   const [opaque, setOpaque] = useState(false);
   const [ouvert, setOuvert] = useState(false);
+  // The recruitment list, shown once it holds something (read after mount:
+  // the prerendered page knows nothing of this browser).
+  const [liste, setListe] = useState(0);
+  useEffect(() => {
+    const compter = (l) => setListe(nombreDAgents(l) + (l.box ? 1 : 0));
+    compter(lireListe());
+    return ecouterListe(compter);
+  }, []);
 
   useEffect(() => {
     const maj = () => setOpaque(window.scrollY > seuil);
@@ -86,6 +95,12 @@ export default function GlobalNav({ page = 'accueil', seuil = 24 }) {
             <input id="recherche-entete" name="q" type="search" placeholder="Rechercher un agent, un métier…" autoComplete="off" />
           </form>
           <a href="/catalogue" className="inline-flex min-[1720px]:hidden items-center justify-center w-11 h-11 rounded-xl text-[var(--texte-doux)] hover:text-white" aria-label="Rechercher un agent ou un métier"><Loupe /></a>
+          {liste > 0 && (
+            <a href={PAGE_LISTE} className="inline-flex items-center gap-2 h-11 px-3 rounded-xl border border-[var(--trait-fort)] text-sm text-white hover:border-[var(--cyan)]" aria-label={`Ma liste de recrutement, ${liste} élément${liste > 1 ? 's' : ''}`}>
+              <span className="hidden sm:inline">Ma liste</span>
+              <span className="inline-flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full bg-[var(--cyan)] text-[#020817] text-xs font-bold">{liste}</span>
+            </a>
+          )}
           <a href={DEMO} className="bouton bouton-plein !min-h-[40px] !px-4 !text-sm hidden sm:inline-flex" onClick={() => suivre('demo_click')}>Demander une démo</a>
           <button type="button" className="lg:hidden w-11 h-11 inline-flex items-center justify-center rounded-xl border border-[var(--trait-fort)]" aria-expanded={ouvert} aria-controls="menu-mobile" aria-label={ouvert ? 'Fermer le menu' : 'Ouvrir le menu'} onClick={() => setOuvert(!ouvert)}>
             <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">

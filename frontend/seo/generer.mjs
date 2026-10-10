@@ -10,32 +10,90 @@
 // The run fails, writing nothing, when a slug collides or a link points at a
 // page that is not generated: a dead link in 10 000 pages is found here or
 // never.
-import { readFileSync, readdirSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
+import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SITE = 'https://iagent.agency';
-const MAX_URLS_PAR_SITEMAP = 50000; // the sitemaps.org limit per file
-const SORTIE = join(RACINE, 'frontend', process.argv[2] ?? 'dist');
+// max's SEO brief (10/10): combination sitemaps of 15 000 to 20 000 addresses,
+// well under the 50 000 that Google accepts, so each can be watched in Search Console.
+const MAX_URLS_PAR_SITEMAP = 15000;
+const ARGS = process.argv.slice(2);
+const SORTIE = join(RACINE, 'frontend', ARGS.find((a) => !a.startsWith('--')) ?? 'dist');
+const RELEVER_DATES = ARGS.includes('--dates');
 
 const lire = (chemin) => JSON.parse(readFileSync(join(RACINE, chemin), 'utf8'));
-const fiches = readdirSync(join(RACINE, 'agents')).filter((n) => n.endsWith('.json')).map((n) => lire(join('agents', n)));
+const fichiersFiches = readdirSync(join(RACINE, 'agents')).filter((n) => n.endsWith('.json'));
+const fiches = fichiersFiches.map((n) => lire(join('agents', n)));
+const cheminFiche = new Map(fiches.map((f, i) => [f.id, `agents/${fichiersFiches[i]}`]));
 const activites = lire('catalogue/activites.json').activites;
 const logiciels = lire('catalogue/logiciels.json').logiciels;
-const secteurs = new Map(lire('catalogue/catalogue.json').secteurs.map((s) => [s.id, s.nom]));
+const secteursListe = lire('catalogue/catalogue.json').secteurs;
+// Every total a page writes comes from here, the site's one source.
+const STATS = statistiquesCatalogue(fiches);
+const secteurs = new Map(secteursListe.map((s) => [s.id, s.nom]));
 
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
 import { ENTREPRISE } from '../src/data/entreprise.js';
+import { urlRecruter } from '../src/data/recrutement.js';
 import { slugifier } from './slug.mjs';
+import { statistiquesCatalogue } from '../src/data/statistiques.js';
+import { specialiser } from '../src/data/specialisation.js';
 import { portraitDe } from '../src/data/portraits.js';
 import { estTransversal, cerclesDeLActivite, personnelDeLActivite, FAMILLES_ACTIVITE } from '../src/data/activites-recherche.js';
 export { slugifier };
 
 const echapper = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+// --- dates ----------------------------------------------------------------
+// A page's <lastmod> is the date its data last changed (max's brief: never a
+// date regenerated at every build). seo/dates.json keeps, for every source
+// (a fiche, an activity, a software, a sector), the fingerprint of its data and
+// the day it was first seen with that fingerprint. A source whose data changed
+// since takes today's date and is counted in the report; `--dates` writes the
+// file anew, dating new sources by their last commit when git knows it.
+const FICHIER_DATES = join(RACINE, 'frontend', 'seo', 'dates.json');
+const datesConnues = existsSync(FICHIER_DATES) ? JSON.parse(readFileSync(FICHIER_DATES, 'utf8')) : {};
+const AUJOURDHUI = new Date().toISOString().slice(0, 10);
+const datesVues = {};
+const sourcesModifiees = [];
+let datesGit = null;
+function dateGit(chemin) {
+  if (!RELEVER_DATES) return null;
+  if (!datesGit) {
+    datesGit = new Map();
+    try {
+      const log = execFileSync('git', ['log', '--format=>%cs', '--name-only', '--', 'agents', 'catalogue'], { cwd: RACINE, encoding: 'utf8', maxBuffer: 1 << 28 });
+      let d = null;
+      for (const ligne of log.split('\n')) {
+        if (ligne.startsWith('>')) d = ligne.slice(1);
+        else if (ligne && !datesGit.has(ligne)) datesGit.set(ligne, d);
+      }
+    } catch { /* no git here: today's date */ }
+  }
+  return datesGit.get(chemin) ?? null;
+}
+function dateDe(cle, donnees, chemin) {
+  const h = createHash('sha256').update(JSON.stringify(donnees)).digest('hex').slice(0, 16);
+  const connue = datesConnues[cle];
+  if (connue && connue[0] === h) return (datesVues[cle] = connue)[1];
+  if (!RELEVER_DATES) sourcesModifiees.push(cle);
+  return (datesVues[cle] = [h, dateGit(chemin) ?? AUJOURDHUI])[1];
+}
+const plusRecente = (...dates) => dates.filter(Boolean).sort().pop() ?? null;
+
 // --- addresses ------------------------------------------------------------
 const logParId = new Map(logiciels.map((l) => [l.id, l]));
+const memo = new Map();
+const unique = (cle, f) => (memo.has(cle) ? memo.get(cle) : memo.set(cle, f()).get(cle));
+const dFiche = (f) => unique(`fiche:${f.id}`, () => dateDe(`fiche:${f.id}`, f, cheminFiche.get(f.id)));
+const dActivite = (a) => unique(`activite:${a.id}`, () => dateDe(`activite:${a.id}`, a, 'catalogue/activites.json'));
+const dLogiciel = (id) => unique(`logiciel:${id}`, () => dateDe(`logiciel:${id}`, logParId.get(id), 'catalogue/logiciels.json'));
+const dSecteur = (id) => unique(`secteur:${id}`, () => dateDe(`secteur:${id}`, secteursListe.find((x) => x.id === id), 'catalogue/catalogue.json'));
 const slugs = new Map(); // url -> what claimed it, to refuse collisions
 function reserver(url, qui) {
   if (slugs.has(url)) throw new Error(`adresse ${url} prise deux fois : ${slugs.get(url)} et ${qui}`);
@@ -142,19 +200,19 @@ main p{color:var(--doux)}main p a{text-decoration:none;border-bottom:1px solid r
 
 const liens = (items) => items.map(([t, u]) => `<a href="${u}">${echapper(t)}</a>`).join('');
 
-function page({ url, titre, description, fil = [], corps, portrait = null, appel = null }) {
+function page({ url, titre, description, fil = [], corps, portrait = null, appel = null, recruter = null, noindex = false }) {
   // The page's title and hook open the coloured band; the rest is the body.
   const m = corps.match(/^\s*(<h1>[\s\S]*?<\/h1>)\s*(<p class="accroche">[\s\S]*?<\/p>)?/);
   const tete = m ? m[0] : '';
   const reste = (m ? corps.slice(m[0].length) : corps)
     .replace(/<\/strong> : /g, '</strong>').replace(/(<li><a [^>]*>[^<]*<\/a>) : /g, '$1<br>');
   const filHtml = [['Accueil', '/'], ...fil].map(([t, u]) => (u ? `<a href="${u}">${echapper(t)}</a>` : `<span>${echapper(t)}</span>`)).join('<span aria-hidden="true">›</span>');
-  const [appelTitre, appelTexte] = appel ?? ['Trouvez le collaborateur IA de votre métier', `${fiches.length.toLocaleString('fr-FR')} métiers, réglés sur votre secteur et votre activité.`];
+  const [appelTitre, appelTexte] = appel ?? ['Trouvez le collaborateur IA de votre métier', `${STATS.metiers.toLocaleString('fr-FR')} métiers, réglés sur votre secteur et votre activité.`];
   return `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${echapper(titre)} | iAgent</title>
 <meta name="description" content="${echapper(description.slice(0, 300))}">
-<meta name="theme-color" content="#020817">
+<meta name="theme-color" content="#020817">${noindex ? '\n<meta name="robots" content="noindex,follow">' : ''}
 <link rel="canonical" href="${SITE}${url}"><link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest">
 <link rel="preload" href="/polices/montserrat-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/seo.css"></head>
@@ -169,12 +227,12 @@ function page({ url, titre, description, fil = [], corps, portrait = null, appel
 <div class="bandeau"><div class="cadre">
 <nav class="fil" aria-label="Fil d'Ariane">${filHtml}<a class="retour" href="/catalogue">← Retour au catalogue</a></nav>
 <div class="heros${portrait ? ' avec-portrait' : ''}"><div>${tete}
-<div class="actions"><a class="bouton bouton-degrade" href="/catalogue">Recruter un agent</a><a class="bouton bouton-contour" href="/how-it-works">Comment ça marche</a></div></div>
+<div class="actions">${recruter ? `<a class="bouton bouton-degrade" href="${echapper(recruter)}">Recruter cet agent</a>` : '<a class="bouton bouton-degrade" href="/catalogue">Recruter un agent</a>'}<a class="bouton bouton-contour" href="/how-it-works">Comment ça marche</a></div></div>
 ${portrait ? `<div class="portrait"><img src="${portrait}" alt="" width="320" height="320"></div>` : ''}</div>
 </div></div>
 <main class="cadre">${reste}
 <section class="appel"><div><h2>${echapper(appelTitre)}</h2><p>${echapper(appelTexte)}</p></div>
-<div class="actions" style="margin:0"><a class="bouton bouton-degrade" href="/catalogue">Voir le catalogue</a><a class="bouton bouton-contour" href="/pricing">Voir les tarifs</a></div></section>
+<div class="actions" style="margin:0">${recruter ? `<a class="bouton bouton-degrade" href="${echapper(recruter)}">Recruter cet agent</a>` : '<a class="bouton bouton-degrade" href="/catalogue">Voir le catalogue</a>'}<a class="bouton bouton-contour" href="/pricing">Voir les tarifs</a></div></section>
 </main>
 <footer class="pied"><div class="cadre pied-grille">
 <div><img src="/accueil/logo-iagent-blanc.svg" alt="iAgent" width="112" height="32"><p>Des collaborateurs IA par métier, qui connaissent vos logiciels et travaillent chez vous, en local, ou par API.</p></div>
@@ -189,7 +247,19 @@ const liste = (items) => `<ul>${items.join('')}</ul>`;
 const puces = (items) => items.length <= 24
   ? `<p class="puces">${items.join('')}</p>`
   : `<p class="puces">${items.slice(0, 24).join('')}</p><details class="suite"><summary>Voir les ${items.length - 24} autres</summary><p class="puces">${items.slice(24).join('')}</p></details>`;
+// « Un agent agent de devis » read on the preview of 10/10: a title that already says « agent » keeps its own word.
+const unAgent = (f) => (/^agent /i.test(f.nom) ? `Un ${echapper(f.nom.toLowerCase())}` : `Un agent ${echapper(f.nom.toLowerCase())}`);
 const lien = (texte, url) => `<a href="${url}">${echapper(texte)}</a>`;
+// What the activity's pack says beyond words, documents and rules: what the
+// trade counts, who it deals with, when its year turns. Every activity has the
+// three (422 on 422 at 10/10); they were written for the hiring interview and
+// never shown, while max asked for pages with the trade's real matter.
+const sectionsDuPack = (p) => [
+  p.unites?.length ? `<h2>Ce qu'il compte dans votre activité</h2>${liste(p.unites.map((u) => `<li><strong>${echapper(u.unite)}</strong> : ${echapper(u.emploi)}</li>`))}` : '',
+  p.interlocuteurs?.length ? `<h2>Avec qui il travaille</h2>${liste(p.interlocuteurs.map((i) => `<li><strong>${echapper(i.role)}</strong> : ${echapper(i.attend)}</li>`))}` : '',
+  p.rythmes?.length ? `<h2>Les moments de l'année</h2>${liste(p.rythmes.map((r) => `<li>${echapper(r)}</li>`))}` : '',
+].join('\n');
+
 // Two fiches of different sectors can share a title (« Assistant paie » in
 // accounting and in HR): in a list, the sector tells them apart.
 const titres = new Map();
@@ -199,17 +269,23 @@ const nomDistinct = (f) => homonymes.has(f.nom) ? `${f.nom} (${(secteurs.get(f.s
 
 // --- pages ----------------------------------------------------------------
 const pages = new Map(); // url -> html
+// url -> { famille, lastmod, noindex }: the family names the sitemap the
+// address goes in; a page kept out of the index says why, and is in no sitemap.
+const meta = new Map();
+const poser = (url, famille, lastmod, html, noindex = null) => { pages.set(url, html); meta.set(url, { famille, lastmod, noindex }); };
+
 
 for (const f of fiches) {
   const url = urlFiche.get(f.id);
   const secteur = secteurs.get(f.secteur) ?? f.secteur;
   const quals = f.qualifications.logiciels;
-  pages.set(url, page({
+  poser(url, 'metiers', plusRecente(dFiche(f), ...quals.map((q) => dLogiciel(q.logiciel))), page({
     url,
     titre: `${f.nom} : agent IA`,
     description: f.accroche,
     fil: [['Secteurs', '/secteurs'], [secteur, urlSecteur.get(f.secteur)]],
     portrait: portraitDe(f),
+    recruter: urlRecruter({ slug: f.slug }),
     appel: [`Recrutez votre ${f.nom.toLowerCase()}`, "Un entretien d'embauche dans l'application, et il se met au travail chez vous."],
     corps: `<h1>${echapper(f.nom)}, un agent IA qui travaille pour vous</h1>
 <p class="accroche">${echapper(f.accroche)}</p>
@@ -227,13 +303,14 @@ ${transversaux.includes(f) ? `<h2>Dans votre activité</h2>${puces(activites.map
     reserver(u, `${f.id}×${q.logiciel}`);
     const autres = quals.filter((x) => x !== q).map((x) => lien(logParId.get(x.logiciel).nom, urlPosteLogiciel(f, x.logiciel)));
     const taches = f.taches.filter((t) => (t.logiciels ?? []).includes(l.categorie));
-    pages.set(u, page({
+    poser(u, 'metiers-logiciels', plusRecente(dFiche(f), dLogiciel(q.logiciel)), page({
       url: u,
       titre: `${f.nom} sur ${l.nom}`,
       description: `${f.nom} qui sait travailler sur ${l.nom}. ${q.usage}`,
       fil: [['Agents', '/catalogue'], [f.nom, urlFiche.get(f.id)], [l.nom, urlLogiciel.get(q.logiciel)]],
       portrait: portraitDe(f),
-      corps: `<h1>Un agent ${echapper(f.nom.toLowerCase())} qui travaille sur ${echapper(l.nom)}</h1>
+      recruter: urlRecruter({ slug: f.slug }),
+      corps: `<h1>${unAgent(f)} qui travaille sur ${echapper(l.nom)}</h1>
 <p class="accroche">${echapper(q.usage)}</p>
 <div class="carte"><p>${echapper(f.accroche)}</p></div>
 ${taches.length ? `<h2>Ses tâches dans ${echapper(l.nom)}</h2>${liste(taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}</li>`))}` : ''}
@@ -259,7 +336,7 @@ for (const [id, url] of urlLogiciel) {
   const l = logParId.get(id);
   const postes = postesDuLogiciel.get(id) ?? [];
   const acts = activitesDuLogiciel.get(id) ?? [];
-  pages.set(url, page({
+  poser(url, 'logiciels', plusRecente(dLogiciel(id), ...postes.map(({ f }) => dFiche(f)), ...acts.map(dActivite)), page({
     url,
     titre: `Agents IA qui savent tenir ${l.nom}`,
     description: postes.length
@@ -286,12 +363,12 @@ for (const l of [...logParId.values()].sort((x, y) => x.nom.localeCompare(y.nom,
   parLettre.get(lettre).push(l);
 }
 const nomLogiciel = (l) => (urlLogiciel.has(l.id) ? lien(l.nom, urlLogiciel.get(l.id)) : echapper(l.nom)) + (l.editeur ? ` <small>${echapper(l.editeur)}</small>` : '');
-pages.set('/logiciels', page({
+poser('/logiciels', 'core', plusRecente(...logiciels.map((l) => dLogiciel(l.id))), page({
   url: '/logiciels',
-  titre: `Logiciels métier : les ${logParId.size.toLocaleString('fr-FR')} outils que connaissent les agents iAgent`,
-  description: `ERP, CRM, comptabilité, paie, logiciels de production, de santé, d'industrie… Les ${logParId.size.toLocaleString('fr-FR')} logiciels métier du référentiel iAgent, de A à Z.`,
+  titre: `Logiciels métier : les ${STATS.logiciels.toLocaleString('fr-FR')} outils que connaissent les agents iAgent`,
+  description: `ERP, CRM, comptabilité, paie, logiciels de production, de santé, d'industrie… Les ${STATS.logiciels.toLocaleString('fr-FR')} logiciels métier du référentiel iAgent, de A à Z.`,
   fil: [['Logiciels', null]],
-  corps: `<h1>Les ${logParId.size.toLocaleString('fr-FR')} logiciels métier du référentiel</h1>
+  corps: `<h1>Les ${STATS.logiciels.toLocaleString('fr-FR')} logiciels métier du référentiel</h1>
 <p class="accroche">Les outils que vos agents savent tenir, de A à Z, avec leur éditeur. Vous connaissez votre activité ? <a href="/activites">Voyez les logiciels de votre branche</a>.</p>
 <p class="puces">${[...parLettre.keys()].map((k) => `<a href="#lettre-${k}">${k}</a>`).join('')}</p>
 ${[...parLettre].map(([k, ls]) => `<h2 id="lettre-${k}">${k}</h2>${liste(ls.map((l) => `<li>${nomLogiciel(l)}</li>`))}`).join('\n')}`,
@@ -299,19 +376,19 @@ ${[...parLettre].map(([k, ls]) => `<h2 id="lettre-${k}">${k}</h2>${liste(ls.map(
 
 // Every family of jobs (the 43 sectors), each with its own page listing its
 // jobs: the other way in, for a visitor who knows the field and not the title.
-pages.set('/secteurs', page({
+poser('/secteurs', 'core', plusRecente(...[...secteurs.keys()].map(dSecteur), ...fiches.map(dFiche)), page({
   url: '/secteurs',
-  titre: `Agents IA par secteur : ${secteurs.size} familles de métiers`,
-  description: `Comptabilité, commerce, santé, juridique, logistique… Les ${fiches.length} métiers iAgent rangés en ${secteurs.size} secteurs.`,
+  titre: `Agents IA par secteur : ${STATS.secteurs} familles de métiers`,
+  description: `Comptabilité, commerce, santé, juridique, logistique… Les ${STATS.metiers} métiers iAgent rangés en ${STATS.secteurs} secteurs.`,
   fil: [['Secteurs', null]],
   corps: `<h1>Les métiers, secteur par secteur</h1>
-<p class="accroche">${secteurs.size} familles de métiers, ${fiches.length} métiers. Vous connaissez votre activité plutôt que le métier ? <a href="/activites">Cherchez par activité</a>.</p>
+<p class="accroche">${STATS.secteurs} familles de métiers, ${STATS.metiers} métiers. Vous connaissez votre activité plutôt que le métier ? <a href="/activites">Cherchez par activité</a>.</p>
 ${liste([...secteurs].map(([id, nom]) => `<li>${lien(nom, urlSecteur.get(id))}<br>${fiches.filter((f) => f.secteur === id).length} métiers</li>`))}`,
 }));
 for (const [id, nom] of secteurs) {
   const leurs = fiches.filter((f) => f.secteur === id);
   const url = urlSecteur.get(id);
-  pages.set(url, page({
+  poser(url, 'secteurs', plusRecente(dSecteur(id), ...leurs.map(dFiche)), page({
     url,
     titre: `Agents IA ${nom.toLowerCase()} : ${leurs.length} métiers`,
     description: `${leurs.length} agents IA du secteur ${nom.toLowerCase()} : ${leurs.slice(0, 4).map((f) => f.nom.toLowerCase()).join(', ')}…`,
@@ -322,13 +399,13 @@ ${liste(leurs.map((f) => `<li>${lien(f.nom, urlFiche.get(f.id))} : ${echapper(f.
   }));
 }
 
-pages.set('/activites', page({
+poser('/activites', 'core', plusRecente(...activites.map(dActivite)), page({
   url: '/activites',
-  titre: `Agents IA par activité : ${activites.length} activités`,
-  description: `Imprimerie, boulangerie, cabinet comptable, transport… Trouvez les agents IA de votre activité parmi ${activites.length} activités.`,
+  titre: `Agents IA par activité : ${STATS.activites} activités`,
+  description: `Imprimerie, boulangerie, cabinet comptable, transport… Trouvez les agents IA de votre activité parmi ${STATS.activites} activités.`,
   fil: [['Activités', null]],
   corps: `<h1>Votre activité, vos agents</h1>
-<p class="accroche">Choisissez votre activité parmi ${activites.length} : chaque agent que vous recrutez reçoit son vocabulaire, ses documents, ses règles et ses logiciels. Vous préférez chercher par famille de métiers ? <a href="/secteurs">Les secteurs</a>.</p>
+<p class="accroche">Choisissez votre activité parmi ${STATS.activites} : chaque agent que vous recrutez reçoit son vocabulaire, ses documents, ses règles et ses logiciels. Vous préférez chercher par famille de métiers ? <a href="/secteurs">Les secteurs</a>.</p>
 ${Object.entries(FAMILLES_ACTIVITE).map(([id, nom]) => {
     const siennes = activites.filter((a) => a.famille === id);
     return siennes.length ? `<h2>${echapper(nom)}</h2>${puces(siennes.map((a) => lien(a.nom, urlActivite.get(a.id))))}` : '';
@@ -342,7 +419,8 @@ for (const a of activites) {
   const p = a.pack ?? {};
   const { proches, outilles } = cerclesDeLActivite(a, fiches);
   const personnel = personnelDeLActivite(a, fiches);
-  pages.set(url, page({
+  const sesFiches = [...proches, ...outilles, ...(personnel ? [...personnel.services.flatMap((x) => x.postes.map((y) => y.fiche)), ...personnel.terrain.map((y) => y.fiche)] : [])];
+  poser(url, 'activites', plusRecente(dActivite(a), ...sesFiches.map(dFiche)), page({
     url,
     titre: `Agents IA pour ${a.nom.toLowerCase()}`,
     description: `${a.trait} Des agents IA qui parlent le métier de votre activité.`,
@@ -359,8 +437,28 @@ ${proches.length + outilles.length ? `<h2>Les métiers les plus proches de votre
 ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
 ${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
 ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}
+${sectionsDuPack(p)}
 <h2>Les postes que toute entreprise emploie, réglés sur votre activité</h2>${puces(transversaux.map((f) => lien(nomDistinct(f), urlPosteActivite(f, a))))}`,
   }));
+}
+
+// max's rule (SEO brief of 10/10): a job × activity page is indexed only when
+// it has matter of its own: a valid job with its missions, an activity that
+// takes this job (the cross-trade rule above), the activity's own introduction,
+// vocabulary, documents, rules and software. Missing one, the page still
+// exists for the visitor who follows a link, says noindex, and is in no sitemap.
+function sansMatiere(f, a) {
+  const p = a.pack ?? {};
+  const manque = [
+    !f.taches?.length && 'missions du métier',
+    !estTransversal(f) && 'métier sans rapport avec cette activité',
+    !a.trait && "introduction de l'activité",
+    !p.vocabulaire?.length && "vocabulaire de l'activité",
+    !p.documents?.length && "documents de l'activité",
+    !p.regles?.length && "règles de l'activité",
+    !p.logiciels?.length && "logiciels de l'activité",
+  ].filter(Boolean);
+  return manque.length ? manque.join(', ') : null;
 }
 
 // Each page joins what the fiche says about the job and what the activity's
@@ -369,29 +467,39 @@ ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r
 // tasks), which then goes into the title: "… pour imprimerie, sur Masterprint".
 for (const a of activites) {
   const p = a.pack ?? {};
+  // The trade's own staff (catalogue/personnel.json): the name this job bears
+  // in the branch, and the branch's own expert when it has one for the same
+  // function. max (10/10): « agent de devis × optique » must read as the
+  // optician's quoting post, as the printer's deviseur already does. The
+  // composition is `specialiser()`, the one the fiche uses when the visitor
+  // picks his activity on it: one page, one fiche, the same matter.
   for (const f of transversaux) {
     const url = reserver(urlPosteActivite(f, a), `${f.id}×${a.id}`);
-    const familles = new Set(f.taches.flatMap((t) => t.logiciels ?? []));
-    const outils = (p.logiciels ?? []).map((id) => logParId.get(id)).filter((l) => familles.has(l.categorie));
+    const { place, expert, outils, outilsDe, autresLogiciels } = specialiser(f, a, fiches);
     const sur = outils.length ? `, sur ${outils.map((l) => l.nom).join(' ou ')}` : '';
     const activite = a.nom.toLowerCase();
-    pages.set(url, page({
+    const raison = sansMatiere(f, a);
+    poser(url, 'combinaisons', plusRecente(dFiche(f), dActivite(a), ...outils.map((l) => dLogiciel(l.id))), page({
+      noindex: Boolean(raison),
       url,
       titre: `${f.nom} pour ${activite}${sur}`,
       description: `${f.nom} pour ${activite}${sur}. ${f.accroche} ${a.trait}`,
       fil: [[a.nom, urlActivite.get(a.id)], [f.nom, urlFiche.get(f.id)]],
       portrait: portraitDe(f),
-      corps: `<h1>Un agent ${echapper(f.nom.toLowerCase())} pour ${echapper(activite)}${echapper(sur)}</h1>
+      recruter: urlRecruter({ slug: f.slug, activite: a.nom }),
+      corps: `<h1>${unAgent(f)} pour ${echapper(activite)}${echapper(sur)}</h1>
 <p class="accroche">${echapper(f.accroche)}</p>
-<div class="carte"><p>${echapper(a.trait)}</p><p>Il reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p></div>
+<div class="carte"><p>${echapper(a.trait)}</p>${place ? `<p>Dans une entreprise de ${echapper(activite)}, ce poste s'appelle « ${echapper(place.role)} » (${echapper(place.service.toLowerCase())}).</p>` : ''}<p>Il reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p></div>
+${expert ? `<div class="carte"><p>Votre branche a son propre expert du devis : ${lien(expert.fiche.nom, urlFiche.get(expert.fiche.id))}, « ${echapper(expert.role)} ». ${echapper(expert.fiche.accroche)}</p></div>` : ''}
 <h2>Ce qu'il fait chaque jour</h2>
-${liste(f.taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}</li>`))}
+${liste(f.taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}${outilsDe(t).length ? ` Dans ${outilsDe(t).map((l) => echapper(l.nom)).join(' ou ')}.` : ''}</li>`))}
 ${outils.length ? `<h2>Les logiciels de votre activité qu'il tient</h2>${liste(outils.map((l) => `<li>${lien(l.nom, urlLogiciel.get(l.id))}${l.editeur ? `, de ${echapper(l.editeur)}` : ''}</li>`))}` : ''}
-${(p.logiciels ?? []).length > outils.length ? `<h2>Les autres logiciels de votre activité</h2><p>Il vous demande à l'entretien lesquels vous employez.</p>${puces((p.logiciels ?? []).map((id) => logParId.get(id)).filter((l) => !outils.includes(l)).map((l) => lien(l.nom, urlLogiciel.get(l.id))))}` : ''}
+${autresLogiciels.length ? `<h2>Les autres logiciels de votre activité</h2><p>Il vous demande à l'entretien lesquels vous employez.</p>${puces(autresLogiciels.map((l) => lien(l.nom, urlLogiciel.get(l.id))))}` : ''}
 ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
 ${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
-${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}`,
-    }));
+${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}
+${sectionsDuPack(p)}`,
+    }), raison);
   }
 }
 
@@ -399,7 +507,9 @@ ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r
 const cibles = new Set(pages.keys());
 const HORS_SEO = new Set(['/', '/catalogue', '/favicon.ico', '/favicon.svg', '/apple-touch-icon.png', '/site.webmanifest', '/seo.css', ...PAGES_OFFRE.map((p) => `/${p.nom}`)]);
 for (const [url, html] of pages) {
-  for (const [, href] of html.matchAll(/href="(\/[^"]*)"/g)) {
+  for (const [, lu] of html.matchAll(/href="(\/[^"]*)"/g)) {
+    // A page with what the visitor chose in its address (/recruter?poste=…) is still that page.
+    const href = lu.split('?')[0];
     if (HORS_SEO.has(href) || href.startsWith('/polices/')) continue;
     if (!cibles.has(href)) throw new Error(`${url} renvoie vers ${href}, page non générée`);
   }
@@ -412,18 +522,229 @@ for (const [url, html] of pages) {
   writeFileSync(fichier, html);
 }
 
-// The offer pages of max's site plan (07/10) are built by Vite, listed here.
-const urls = ['/', '/catalogue', ...PAGES_OFFRE.map((p) => `/${p.nom}`), ...pages.keys()];
-const lots = [];
-for (let i = 0; i < urls.length; i += MAX_URLS_PAR_SITEMAP) lots.push(urls.slice(i, i + MAX_URLS_PAR_SITEMAP));
-lots.forEach((lot, i) => writeFileSync(join(SORTIE, `sitemap-${i + 1}.xml`),
-  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${lot.map((u) => `<url><loc>${SITE}${u}</loc></url>`).join('\n')}\n</urlset>\n`));
-writeFileSync(join(SORTIE, 'sitemap.xml'),
-  `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${lots.map((_, i) => `<sitemap><loc>${SITE}/sitemap-${i + 1}.xml</loc></sitemap>`).join('\n')}\n</sitemapindex>\n`);
+// --- sitemaps ---------------------------------------------------------------
+// One index, one sitemap per family (max's brief of 10/10), the combinations
+// cut in files of 15 000 and gzipped. Only indexable, canonical, absolute https
+// addresses: no query string, no noindex page, nothing redirected.
+// The offer pages of max's site plan are built by Vite; the list page
+// (/recrutement) is a cart, noindex, and stays out.
+for (const p of PAGES_OFFRE) meta.set(`/${p.nom}`, { famille: 'core', lastmod: null, noindex: p.noindex ? 'panier du visiteur' : null });
+meta.set('/', { famille: 'core', lastmod: null, noindex: null });
+meta.set('/catalogue', { famille: 'core', lastmod: null, noindex: null });
+const redirigees = new Set((JSON.parse(readFileSync(join(RACINE, 'vercel.json'), 'utf8')).redirects ?? []).map((r) => r.source));
+const FAMILLES = ['core', 'metiers', 'secteurs', 'activites', 'logiciels', 'metiers-logiciels', 'combinaisons'];
+const parFamille = new Map(FAMILLES.map((f) => [f, []]));
+for (const [url, m] of meta) {
+  if (m.noindex || redirigees.has(url) || url.includes('?')) continue;
+  parFamille.get(m.famille).push(url);
+}
+const ORDRE_CORE = ['/', '/catalogue'];
+parFamille.get('core').sort((a, b) => (ORDRE_CORE.indexOf(b) - ORDRE_CORE.indexOf(a)) || a.localeCompare(b));
+
+const urlset = (urls) => `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => {
+  const d = meta.get(u).lastmod;
+  return `<url><loc>${SITE}${u}</loc>${d ? `<lastmod>${d}</lastmod>` : ''}</url>`;
+}).join('\n')}\n</urlset>\n`;
+mkdirSync(SORTIE, { recursive: true });
+for (const vieux of readdirSync(SORTIE).filter((n) => /^sitemap.*\.xml(\.gz)?$/.test(n))) rmSync(join(SORTIE, vieux));
+const sitemaps = []; // { fichier, famille, urls }
+for (const famille of FAMILLES) {
+  const urls = parFamille.get(famille);
+  if (!urls.length) continue;
+  // A family too big for one file is cut, numbered and gzipped.
+  if (urls.length > MAX_URLS_PAR_SITEMAP || famille === 'combinaisons') {
+    for (let i = 0, n = 1; i < urls.length; i += MAX_URLS_PAR_SITEMAP, n += 1) {
+      const fichier = `sitemap-${famille}-${String(n).padStart(2, '0')}.xml.gz`;
+      const lot = urls.slice(i, i + MAX_URLS_PAR_SITEMAP);
+      writeFileSync(join(SORTIE, fichier), gzipSync(urlset(lot)));
+      sitemaps.push({ fichier, famille, urls: lot });
+    }
+  } else {
+    const fichier = `sitemap-${famille}.xml`;
+    writeFileSync(join(SORTIE, fichier), urlset(urls));
+    sitemaps.push({ fichier, famille, urls });
+  }
+}
+const index = `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemaps.map((s) => {
+  const d = plusRecente(...s.urls.map((u) => meta.get(u).lastmod));
+  return `<sitemap><loc>${SITE}/${s.fichier}</loc>${d ? `<lastmod>${d}</lastmod>` : ''}</sitemap>`;
+}).join('\n')}\n</sitemapindex>\n`;
+writeFileSync(join(SORTIE, 'sitemap-index.xml'), index);
+// The address submitted before 10/10 keeps answering, with the same index.
+writeFileSync(join(SORTIE, 'sitemap.xml'), index);
 writeFileSync(join(SORTIE, 'seo.css'), STYLE.trim() + '\n');
-writeFileSync(join(SORTIE, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`);
+// A Vercel preview (VERCEL_ENV=preview) is a copy of the site on another host:
+// its robots.txt forbids everything, so a search engine never indexes a copy
+// in place of iagent.agency (max's brief of 10/10 17h). Vercel adds on its
+// side the header `x-robots-tag: noindex` on every preview answer. Only the
+// production build, and a build on a machine without Vercel, announce the index.
+const EN_APERCU = Boolean(process.env.VERCEL_ENV) && process.env.VERCEL_ENV !== 'production';
+writeFileSync(join(SORTIE, 'robots.txt'), EN_APERCU
+  ? `# Aperçu de travail : rien à indexer ici, le site est https://iagent.agency/\nUser-agent: *\nDisallow: /\n`
+  : `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap-index.xml\n`);
+
+// --- report -------------------------------------------------------------------
+// max's brief: the SEO report, at every build (seo-rapport.json next to the
+// sitemaps, for the back-office's « SEO Factory »). Every address is opened
+// from what was written: a title, an h1, a canonical pointing at itself, and a
+// noindex exactly where the rule put one. Counters are read back too: a total
+// of jobs, sectors, activities or software written anywhere must be the
+// catalogue's (the crawl of 10/10 still found « 1 249 métiers » on a page).
+const construitIci = existsSync(join(SORTIE, 'index.html')); // false for the bench's trial run
+const fichierDe = (url) => join(SORTIE, url === '/' ? 'index.html' : `${url.slice(1)}.html`);
+const nombreLu = (t) => Number(t.replace(/[\s  ]/g, ''));
+// A total written on a page is the catalogue's or it is wrong. Two nets: the
+// totals the site published before (the crawl of 10/10 read 1 249 / 43 / 1 693
+// from an old build, 1 403 / 63 / 303 / 1 973 from a later one), and the
+// phrases that announce a total, whatever the number.
+const ANCIENS_TOTAUX = { métiers: [1249, 1403], secteurs: [43, 63, 64], activités: [303], logiciels: [1693, 1973] };
+const ATTENDU = { métiers: STATS.metiers, secteurs: STATS.secteurs, activités: STATS.activites, logiciels: STATS.logiciels };
+const PHRASES_TOTAUX = /(\d{1,3}(?:[\s\u00a0\u202f]\d{3})*)\s*(?:<\/?(?:strong|span|b|em|a)[^>]*>\s*)*(métiers prêts|métiers iAgent, à|métiers rangés|familles de métiers|métiers, réglés|métiers\.|activités reconnues|activités\b(?=[^<]{0,3}<)|logiciels métier du référentiel|logiciels au référentiel|secteurs\b)/g;
+const QUOI = (phrase) => phrase.match(/métiers|secteurs|activités|logiciels/)[0];
+// An anomaly names the address, its family, the reason, the day it was seen
+// and what to do: the line max's SEO agency can act on without opening the code.
+const anomalies = { absentes: [], sansTitre: [], sansH1: [], sansCanonical: [], canonicalAilleurs: [], noindexIncoherent: [], compteursFaux: [], metiersSansPage: [], logicielsSansPageCites: [] };
+const ACTIONS = {
+  absentes: 'construire la page ou retirer son adresse',
+  sansTitre: 'donner un <title> à la page',
+  sansH1: 'donner un <h1> à la page',
+  sansCanonical: 'poser <link rel="canonical"> sur la page',
+  canonicalAilleurs: "faire pointer le canonical sur la page elle-même",
+  noindexIncoherent: "aligner la balise robots sur la règle d'indexation",
+  compteursFaux: 'lire le total dans statistiquesCatalogue() au lieu de l\'écrire',
+  metiersSansPage: 'vérifier la fiche du métier dans agents/ et son slug',
+  logicielsSansPageCites: 'vérifier le logiciel dans catalogue/logiciels.json',
+};
+const anomalie = (quoi, url, raison) => anomalies[quoi].push({ url, famille: meta.get(url)?.famille ?? null, raison, detectee: AUJOURDHUI, action: ACTIONS[quoi] });
+const noindexParRaison = {};
+for (const [url, m] of meta) {
+  if (m.noindex) noindexParRaison[m.noindex] = (noindexParRaison[m.noindex] ?? 0) + 1;
+  let html = pages.get(url);
+  if (html === undefined) {
+    if (!existsSync(fichierDe(url))) { if (construitIci) anomalie('absentes', url, 'aucun fichier construit pour cette adresse'); continue; }
+    html = readFileSync(fichierDe(url), 'utf8');
+  }
+  const tete = html.slice(0, html.indexOf('</head>'));
+  if (!/<title>[^<]+<\/title>/.test(tete)) anomalie('sansTitre', url, 'pas de <title>');
+  if (!/<h1[\s>]/.test(html)) anomalie('sansH1', url, 'pas de <h1>');
+  const canonical = tete.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
+  if (!canonical) anomalie('sansCanonical', url, 'pas de canonical');
+  else if (canonical !== `${SITE}${url}`) anomalie('canonicalAilleurs', url, `canonical vers ${canonical}`);
+  if (/<meta name="robots" content="noindex/.test(tete) !== Boolean(m.noindex)) anomalie('noindexIncoherent', url, m.noindex ? `la règle dit noindex (${m.noindex}) et la page ne le dit pas` : 'la page dit noindex et la règle non');
+  for (const [, lu, phrase] of html.matchAll(PHRASES_TOTAUX)) {
+    const quoi = QUOI(phrase);
+    const n = nombreLu(lu);
+    if (n !== ATTENDU[quoi] && (ANCIENS_TOTAUX[quoi].includes(n) || n > ATTENDU[quoi] / 2)) anomalie('compteursFaux', url, `« ${lu} ${phrase.replace(/<[^>]+>/g, '')} » au lieu de ${ATTENDU[quoi]}`);
+  }
+}
+const familleDe = (prefixe) => [...meta.values()].filter((m) => m.famille === prefixe);
+
+// --- jobs: three sources that must agree ------------------------------------
+// The catalogue's list (catalogue/catalogue.json), the fiches on disk
+// (agents/) and the job sitemap are three counts from three places; the report
+// writes all three and names any job missing from the sitemap, so a job that
+// disappears is seen here and not by a visitor (max's brief of 10/10 17h:
+// 1 645 expected against 1 644 published — the one was AG-1690, merged into
+// AG-1610 on 09/10 as the same post twice; nothing was lost, and this block
+// would now say so by name).
+const indexables = new Set(sitemaps.flatMap((x) => x.urls));
+const catalogueIds = new Set(lire('catalogue/catalogue.json').agents.map((a) => a.id));
+const fichesParId = new Map(fiches.map((f) => [f.id, f]));
+for (const id of catalogueIds) {
+  const f = fichesParId.get(id);
+  const url = f ? urlFiche.get(id) : null;
+  if (!f) anomalie('metiersSansPage', `/agents/${id}`, `${id} est au catalogue sans fiche dans agents/`);
+  else if (!indexables.has(url)) anomalie('metiersSansPage', url, meta.get(url)?.noindex ? `noindex : ${meta.get(url).noindex}` : 'absente du sitemap des métiers');
+}
+for (const f of fiches) if (!catalogueIds.has(f.id)) anomalie('metiersSansPage', urlFiche.get(f.id), `${f.id} a une fiche dans agents/ sans ligne au catalogue`);
+const metiersRapport = {
+  base: catalogueIds.size,
+  fiches: fiches.length,
+  publics: fiches.filter((f) => !meta.get(urlFiche.get(f.id))?.noindex).length,
+  indexables: parFamille.get('metiers').length,
+  exclus: anomalies.metiersSansPage.length,
+  exclusDetail: anomalies.metiersSansPage.map((x) => ({ url: x.url, raison: x.raison })),
+  regle: "un métier = une ligne de catalogue/catalogue.json = une fiche dans agents/ = une adresse /agents/<slug> dans sitemap-metiers.xml ; la construction s'arrête si l'un des trois manque",
+};
+
+// --- software: why 3 071 at the catalogue make fewer pages ------------------
+// A software page exists when a fiche is qualified on it or an activity's pack
+// lists it; the rest of the catalogue is kept for the hiring interview (the
+// client names his tool, the agent recognises it) and makes no page, because
+// a page about a tool no agent uses would promise nothing. The report says it
+// by cause, so the gap is read as a choice and not as a loss.
+const slugNom = (l) => slugifier(l.nom);
+const slugsAvecPage = new Set([...urlLogiciel.keys()].map((id) => slugNom(logParId.get(id))));
+const sansPage = logiciels.filter((l) => !urlLogiciel.has(l.id));
+const causeDe = (l) => {
+  if (!l.nom?.trim()) return 'sans nom';
+  if (slugsAvecPage.has(slugNom(l))) return "même nom qu'un logiciel qui a sa page (doublon ou édition régionale)";
+  if (l.aConfirmer || l.note?.includes('à confirmer')) return 'cité par aucune fiche ni aucun pack d\'activité, et encore à confirmer';
+  return 'cité par aucune fiche ni aucun pack d\'activité';
+};
+const compterPar = (liste, cle) => Object.fromEntries(Object.entries(liste.reduce((acc, x) => ((acc[cle(x)] = (acc[cle(x)] ?? 0) + 1), acc), {})).sort((a, b) => b[1] - a[1]));
+for (const id of cites) if (!urlLogiciel.has(id)) anomalie('logicielsSansPageCites', `/logiciels/${id}`, `${id} est cité par une fiche ou une activité et n'a pas de page`);
+const logicielsRapport = {
+  total: logiciels.length,
+  avecPage: urlLogiciel.size,
+  sansPage: sansPage.length,
+  causes: compterPar(sansPage, causeDe),
+  sansPageParCategorie: (() => { const e = Object.entries(compterPar(sansPage, (l) => l.categorie ?? 'sans catégorie')); return Object.fromEntries([...e.slice(0, 15), ['autres familles', e.slice(15).reduce((n, [, v]) => n + v, 0)]]); })(),
+  exemples: sansPage.slice(0, 20).map((l) => ({ id: l.id, nom: l.nom, categorie: l.categorie, cause: causeDe(l) })),
+  regle: "un logiciel a sa page quand une fiche est qualifiée dessus ou qu'un pack d'activité le liste ; les autres servent l'entretien d'embauche et ne font pas de page",
+};
+
+// --- what is kept out of the sitemaps, address by address ------------------
+// max's brief (10/10 17h): say whether the noindex page and the redirected
+// address are the same one. `uniques` counts distinct addresses; `details`
+// names each with its status, its robots rule and its reason.
+const exclusions = new Map();
+for (const [url, m] of meta) if (m.noindex) exclusions.set(url, { url, statut: 200, robots: 'noindex', famille: m.famille, raison: m.noindex });
+for (const r of JSON.parse(readFileSync(join(RACINE, 'vercel.json'), 'utf8')).redirects ?? []) {
+  const e = exclusions.get(r.source);
+  if (e) { e.statut = r.permanent ? 308 : 307; e.raison += ` ; redirigée vers ${r.destination}`; }
+  else exclusions.set(r.source, { url: r.source, statut: r.permanent ? 308 : 307, robots: null, famille: meta.get(r.source)?.famille ?? null, raison: `redirigée vers ${r.destination}` });
+}
+const rapport = {
+  genere: AUJOURDHUI,
+  environnement: EN_APERCU ? `aperçu (${process.env.VERCEL_ENV}) : robots.txt interdit tout, rien à indexer ici` : 'production : robots.txt annonce sitemap-index.xml',
+  compteurs: { metiers: STATS.metiers, secteurs: STATS.secteurs, activites: STATS.activites, logiciels: STATS.logiciels, taches: STATS.taches },
+  metiers: metiersRapport,
+  logiciels: logicielsRapport,
+  adresses: {
+    generees: meta.size,
+    indexables: sitemaps.reduce((n, x) => n + x.urls.length, 0),
+    noindex: Object.values(noindexParRaison).reduce((a, b) => a + b, 0),
+    noindexParRaison,
+    redirigees: [...redirigees].length,
+    erreurs404: anomalies.absentes.length,
+    exclusionsUniques: exclusions.size,
+    details: [...exclusions.values()],
+  },
+  parFamille: Object.fromEntries(FAMILLES.map((f) => [f, { pages: familleDe(f).length, indexables: parFamille.get(f).length }])),
+  sitemaps: sitemaps.map((x) => ({ fichier: x.fichier, adresses: x.urls.length, lastmod: plusRecente(...x.urls.map((u) => meta.get(u).lastmod)) })),
+  dates: {
+    regle: "lastmod = jour où la donnée de la page a changé (empreinte de chaque fiche, activité, logiciel, secteur dans seo/dates.json), jamais le jour de la construction ; une page composée prend la plus récente de ses sources : métier + logiciels qualifiés, métier + activité + logiciels de l'activité employés, logiciel + métiers et activités qui le citent",
+    sourcesSuivies: Object.keys(datesVues).length,
+    modifieesDepuisLeReleve: sourcesModifiees.length,
+    exemples: sourcesModifiees.slice(0, 20),
+  },
+  anomalies: Object.fromEntries(Object.entries(anomalies).map(([k, v]) => [k, { nombre: v.length, action: ACTIONS[k], exemples: v.slice(0, 20) }])),
+};
+writeFileSync(join(SORTIE, 'seo-rapport.json'), JSON.stringify(rapport, null, 2) + '\n');
+if (RELEVER_DATES) {
+  writeFileSync(FICHIER_DATES, JSON.stringify(Object.fromEntries(Object.entries(datesVues).sort()), null, 0).replace(/\],"/g, '],\n"') + '\n');
+  console.log(`dates : ${Object.keys(datesVues).length} sources relevées dans seo/dates.json`);
+}
 
 const compte = (prefixe) => [...pages.keys()].filter((u) => u.startsWith(prefixe)).length;
 const postesLogiciels = [...pages.keys()].filter((u) => u.startsWith('/agents/') && u.split('/').length === 4).length;
 const postesActivites = [...pages.keys()].filter((u) => u.startsWith('/activites/') && u.split('/').length === 4).length;
-console.log(`pages : ${fiches.length} postes, ${compte('/activites/') - postesActivites} activités, ${compte('/logiciels/')} logiciels, ${postesLogiciels} poste × logiciel, ${postesActivites} poste × activité — ${pages.size} en tout, ${lots.length} sitemap(s)`);
+console.log(`pages : ${fiches.length} postes, ${compte('/activites/') - postesActivites} activités, ${compte('/logiciels/')} logiciels, ${postesLogiciels} poste × logiciel, ${postesActivites} poste × activité — ${pages.size} en tout`);
+console.log(`sitemaps : ${rapport.adresses.indexables} adresses indexables en ${sitemaps.length} fichiers (${sitemaps.map((x) => `${x.fichier} ${x.urls.length}`).join(', ')}), ${rapport.adresses.noindex} en noindex`);
+if (sourcesModifiees.length) console.log(`dates : ${sourcesModifiees.length} source(s) modifiée(s) depuis le relevé, datée(s) d'aujourd'hui (node seo/generer.mjs --dates pour relever)`);
+const fautes = Object.entries(anomalies).filter(([, v]) => v.length);
+if (fautes.length) {
+  for (const [k, v] of fautes) console.error(`SEO ${k} : ${v.length} — ${v.slice(0, 5).map((x) => `${x.url} (${x.raison})`).join(' ; ')}`);
+  process.exit(1);
+}

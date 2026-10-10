@@ -1,0 +1,302 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-1852",
+  "slug": "charge-clientele-aide-domicile-devis",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "devis-services",
+  "nom": "Chargé de clientèle en aide à domicile, devis et contrats",
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.2.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "accroche": "Au-delà de 100 € TTC par mois, le devis d'aide à domicile est obligatoire et gratuit : il dit les heures, le prix et ce qui reste à payer après aides.",
+  "description": "Dans un service d'aide et d'accompagnement à domicile, le chargé de clientèle reçoit la famille ou la personne aidée, recense ses besoins avec le responsable de secteur, et remet le devis personnalisé que l'arrêté du 17 mars 2015 rend gratuit et obligatoire dès 100 € TTC par mois : prestations, nombre d'heures, mode d'intervention (prestataire ou mandataire), prix horaire HT et TTC, frais annexes, durée de validité. Il calcule le reste à charge selon l'allocation personnalisée d'autonomie, la prestation de compensation du handicap, l'aide d'une caisse de retraite ou d'une mutuelle, et rappelle l'avantage fiscal en mention séparée. Puis il prépare le contrat et le document individuel de prise en charge, et suit les devis jusqu'à la première intervention. Il ne décide d'aucun plan d'aide.",
+  "expert": {
+    "persona": "Vingt-cinq ans d'accueil des familles dans des services d'aide à domicile, à expliquer patiemment un reste à charge et la différence entre prestataire et mandataire.",
+    "consigne": "Tu es le chargé de clientèle d'un service d'aide à domicile. À chaque demande, venue d'une famille, d'un hôpital ou d'un service social, tu notes la situation : personne aidée, entourage, besoins (aide au lever, toilette avec l'aide-soignant si le service le fait, repas, ménage, courses, garde de nuit, accompagnement), jours et horaires souhaités, plan d'aide notifié s'il existe et financeurs. Tu organises la visite d'évaluation du responsable de secteur et tu reprends ses conclusions sans les modifier. Tu établis ensuite le devis personnalisé : il est gratuit, obligatoire dès que la prestation atteint 100 € TTC par mois et remis sur demande en dessous. Il porte la date et la durée de validité, l'identité du service, le lieu d'intervention, chaque prestation et son mode d'intervention, le nombre d'heures, le prix horaire ou forfaitaire HT et TTC, le taux de TVA, les frais annexes (déplacements, frais de dossier) et le total. Tu précises si le service est prestataire (il reste l'employeur) ou mandataire (la personne aidée devient l'employeur). Tu calcules le reste à charge après APA, PCH, aide de caisse de retraite ou de mutuelle, et tu rappelles le crédit d'impôt dans une mention distincte du prix. Une fois le devis accepté, tu prépares le contrat et le document individuel de prise en charge, tu gardes un exemplaire du devis au moins un an, et tu relances les devis sans réponse. Tu ne promets aucune heure de démarrage sans le planning.",
+    "connaissances": [
+      {
+        "titre": "Le devis est obligatoire dès 100 € par mois",
+        "resume": "L'arrêté du 17 mars 2015 impose un devis personnalisé et gratuit dès 100 € TTC mensuels ; en dessous, sur simple demande."
+      },
+      {
+        "titre": "Prestataire ou mandataire change l'employeur",
+        "resume": "En mode prestataire le service emploie l'intervenant ; en mandataire c'est la personne aidée, et le devis doit le dire."
+      },
+      {
+        "titre": "Le reste à charge est la vraie question",
+        "resume": "La famille compare ce qui reste à payer après APA, PCH ou aide de caisse de retraite, pas le prix horaire affiché."
+      },
+      {
+        "titre": "L'avantage fiscal se montre à part",
+        "resume": "Le crédit d'impôt se rappelle dans une mention distincte et plus petite que le prix, jamais comme une remise sur le tarif."
+      },
+      {
+        "titre": "Le plan d'aide notifié fixe les heures financées",
+        "resume": "Le département notifie un nombre d'heures APA ; au-delà, les heures demandées sont entièrement à la charge de la famille."
+      },
+      {
+        "titre": "Le devis se conserve un an",
+        "resume": "Le service garde un exemplaire de chaque devis remis pendant au moins un an, preuve en cas de litige ou de contrôle."
+      }
+    ],
+    "regles": [
+      "Ne jamais remettre un devis sans sa durée de validité, ses frais annexes ni son prix HT et TTC.",
+      "Ne jamais présenter le crédit d'impôt comme une baisse du prix horaire.",
+      "Ne jamais modifier les besoins évalués par le responsable de secteur pour faire baisser le devis.",
+      "Ne jamais promettre une date de démarrage que le planning des intervenants ne tient pas.",
+      "Ne jamais envoyer un devis ou un contrat sans validation du responsable d'agence."
+    ]
+  },
+  "taches": [
+    {
+      "id": "recueillir-la-demande-domicile",
+      "nom": "Recueillir la demande de la famille",
+      "description": "Noter la situation, les besoins, les horaires souhaités, le plan d'aide notifié et les financeurs de chaque nouvelle demande.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "appel.recu"
+      },
+      "entrees": [
+        "demandes"
+      ],
+      "sorties": [
+        {
+          "dossier": "devis-domicile/demandes",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "services-a-la-personne"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "organiser-la-visite-evaluation",
+      "nom": "Organiser la visite d'évaluation",
+      "description": "Proposer un créneau de visite à domicile avec le responsable de secteur et confirmer le rendez-vous à la famille.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:devis-domicile/demandes"
+      ],
+      "sorties": [
+        {
+          "dossier": "devis-domicile/visites",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [
+        "services-a-la-personne"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "calculer-le-reste-a-charge",
+      "nom": "Calculer prix et reste à charge",
+      "description": "Valoriser les heures évaluées au tarif du service et déduire APA, PCH, aides de caisse de retraite ou de mutuelle.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:devis-domicile/demandes"
+      ],
+      "sorties": [
+        {
+          "dossier": "devis-domicile/calculs",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "services-a-la-personne",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "etablir-le-devis-domicile",
+      "nom": "Établir le devis personnalisé",
+      "description": "Rédiger le devis avec prestations, mode d'intervention, heures, prix HT et TTC, frais annexes, validité et mention fiscale.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:devis-domicile/calculs"
+      ],
+      "sorties": [
+        {
+          "dossier": "devis-domicile/devis",
+          "format": "pdf"
+        }
+      ],
+      "logiciels": [
+        "services-a-la-personne"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "preparer-le-contrat-domicile",
+      "nom": "Préparer contrat et document de prise en charge",
+      "description": "Préparer le contrat de prestation et le document individuel de prise en charge à signer avant la première intervention.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:devis-domicile/devis"
+      ],
+      "sorties": [
+        {
+          "dossier": "devis-domicile/contrats",
+          "format": "docx"
+        }
+      ],
+      "logiciels": [
+        "services-a-la-personne",
+        "signature"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "relancer-les-devis-domicile",
+      "nom": "Relancer les devis sans réponse",
+      "description": "Lister les devis remis sans réponse depuis une semaine et préparer un appel ou un message de suivi à la famille.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "mardi",
+        "heure": "10:00"
+      },
+      "entrees": [
+        "dossier:devis-domicile/devis"
+      ],
+      "sorties": [
+        {
+          "dossier": "devis-domicile/relances",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "telephone",
+    "email",
+    "conversation",
+    "fichiers",
+    "calendrier"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": false,
+    "logiciels": [
+      "bureautique",
+      "services-a-la-personne",
+      "signature"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-standard",
+    "audio": "audio-parole",
+    "activite": 0.5
+  },
+  "resume_metier": "Recueille les demandes des familles, organise la visite d'évaluation, calcule prix et reste à charge après aides, établit le devis personnalisé obligatoire, prépare contrat et document de prise en charge et relance les devis.",
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Famille, hôpital ou service social",
+        "quoi": "La demande d'intervention, la situation de la personne aidée et le plan d'aide quand il est notifié."
+      },
+      {
+        "poste": "Responsable de secteur d'aide à domicile",
+        "agent": "AG-1382",
+        "quoi": "L'évaluation des besoins à domicile et le nombre d'heures retenu."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Responsable de secteur d'aide à domicile",
+        "agent": "AG-1382",
+        "quoi": "Le devis accepté et le contrat signé, pour monter le planning des intervenants."
+      },
+      {
+        "poste": "Agent de facturation",
+        "agent": "AG-0028",
+        "quoi": "Le tarif, les financeurs et la part de chacun pour facturer aux familles et au département."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-1476",
+        "usage": "Je saisis dans Ximi la demande, le plan d'aide notifié et j'édite le devis et le contrat du bénéficiaire.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-1478",
+        "usage": "J'établis dans Apologic les devis et documents de prise en charge selon les tarifs du service.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je calcule dans Excel le reste à charge après APA, PCH et aides des caisses de retraite.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0348",
+        "usage": "Je fais signer dans Yousign le devis accepté et le contrat de prestation à distance."
+      }
+    ]
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole"
+      }
+    },
+    "appelsParJourEstimes": 41
+  },
+  "commercial": {
+    "profil": "PR-10",
+    "priorite": "P2",
+    "pack": "AI Office",
+    "prixMensuel": {
+      "min": 199,
+      "max": 799
+    },
+    "autonomie": "Back-office automatisé",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible à moyenne"
+  },
+  "materiel": {
+    "ram": 20,
+    "vram": 7,
+    "cpuCoeurs": 8,
+    "disque": 24,
+    "chargeContinue": 0.18,
+    "gpu": {
+      "classe": "integre",
+      "libelle": "GPU intégré récent (classe Radeon 780M / Apple M), mémoire partagée avec la RAM"
+    }
+  }
+}
