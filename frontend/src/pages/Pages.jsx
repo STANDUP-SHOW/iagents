@@ -458,7 +458,7 @@ function MentionsLegales() {
     ['Raison sociale', e.nom],
     ['Forme juridique', e.formeJuridique && (e.capital ? `${e.formeJuridique} au capital de ${e.capital}` : e.formeJuridique)],
     ['Siège', adresseEnUneLigne()],
-    ['SIRET', e.siret],
+    ['SIRET', e.siret ?? (e.immatriculation && `Immatriculation ${e.immatriculation}`)],
     ['RCS', e.rcs],
     ['TVA intracommunautaire', e.tva],
     ['Téléphone', <a href={`tel:${e.telephoneInternational}`}>{e.telephone}</a>],
