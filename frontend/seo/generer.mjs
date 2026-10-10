@@ -190,6 +190,12 @@ const puces = (items) => items.length <= 24
   ? `<p class="puces">${items.join('')}</p>`
   : `<p class="puces">${items.slice(0, 24).join('')}</p><details class="suite"><summary>Voir les ${items.length - 24} autres</summary><p class="puces">${items.slice(24).join('')}</p></details>`;
 const lien = (texte, url) => `<a href="${url}">${echapper(texte)}</a>`;
+// Two fiches of different sectors can share a title (« Assistant paie » in
+// accounting and in HR): in a list, the sector tells them apart.
+const titres = new Map();
+for (const f of fiches) titres.set(f.nom, (titres.get(f.nom) ?? 0) + 1);
+const homonymes = new Set([...titres].filter(([, k]) => k > 1).map(([nom]) => nom));
+const nomDistinct = (f) => homonymes.has(f.nom) ? `${f.nom} (${(secteurs.get(f.secteur) ?? f.secteur).toLowerCase()})` : f.nom;
 
 // --- pages ----------------------------------------------------------------
 const pages = new Map(); // url -> html
@@ -327,11 +333,11 @@ ${personnel.services.filter((s) => s.postes.length).map((s) => `<h3>${echapper(s
 ${personnel.terrain.length ? `<h3>Sur le terrain</h3><p>Ces métiers restent les vôtres : vos agents préparent leur travail, ils ne prennent pas leur place.</p>${liste(personnel.terrain.map(({ metier, fiche }) => `<li><strong>${echapper(metier)}</strong> : préparé par ${lien(fiche.nom, urlFiche.get(fiche.id))}</li>`))}` : ''}
 <p class="sources">Postes relevés dans ${echapper(personnel.sources.join(' ; '))}.</p>` : ''}
 ${p.logiciels?.length ? `<h2>Les logiciels de votre métier</h2><p>Vos agents y travaillent : à l'entretien d'embauche, chacun vous demande lesquels tournent dans votre entreprise.</p>${liste(p.logiciels.map((id) => logParId.get(id)).map((l) => `<li>${lien(l.nom, urlLogiciel.get(l.id))}${l.editeur ? `, de ${echapper(l.editeur)}` : ''}</li>`))}` : ''}
-${proches.length + outilles.length ? `<h2>Les métiers les plus proches de votre activité</h2>${puces([...proches, ...outilles].map((f) => lien(f.nom, urlFiche.get(f.id))))}` : ''}
+${proches.length + outilles.length ? `<h2>Les métiers les plus proches de votre activité</h2>${puces([...proches, ...outilles].map((f) => lien(nomDistinct(f), urlFiche.get(f.id))))}` : ''}
 ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
 ${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
 ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}
-<h2>Les postes que toute entreprise emploie, réglés sur votre activité</h2>${puces(transversaux.map((f) => lien(f.nom, urlPosteActivite(f, a))))}`,
+<h2>Les postes que toute entreprise emploie, réglés sur votre activité</h2>${puces(transversaux.map((f) => lien(nomDistinct(f), urlPosteActivite(f, a))))}`,
   }));
 }
 
