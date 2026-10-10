@@ -176,7 +176,7 @@ for (const page of PAGES) {
     ['je suis boulanger', ['Chef de fournil', 'Responsable de boutique', 'Qualité, hygiène et allergènes', 'Secrétaire comptable']],
     // Asked in everyday words, these found no activity at all.
     ['créer une entreprise de transport', ['Deviseur — cotation transport', 'Planification des tournées']],
-    ['ouvrir une ferme bio', ['Devis et contrats', 'Chef de culture']],
+    ['ouvrir une ferme bio', ['offres et devis aux restaurateurs', 'Chef de culture']],
     ['créer une agence de voyage', ['Devis et cotation des voyages', 'Conception des circuits']],
   ]) {
     const rendu = renderToString(<CreezEntreprise ideeInitiale={idee} />).replace(/&#x27;/g, "'");

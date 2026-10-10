@@ -1,6 +1,6 @@
 # Coût par agent et par mois — API seule contre Local-Agent
 
-Généré par `outils/economie.ts` le 2026-10-09 sur 1644 fiches. Hypothèses dans `dimensionnement/tarifs-api.json` (version 2026-09-19) : 12 000 jetons d'entrée par tour dont 70 % en cache, 800 en sortie, 6 tours par exécution (+4 avec navigateur, +3 pour un document lourd), 20 % des exécutions restent par l'API chez Local-Agent, matériel amorti sur 12 mois, électricité 0.25 €/kWh, le client utilise son propre PC. **Ce sont des hypothèses, pas des mesures** : à remplacer par les moyennes relevées dès que des agents tournent.
+Généré par `outils/economie.ts` le 2026-10-10 sur 1761 fiches. Hypothèses dans `dimensionnement/tarifs-api.json` (version 2026-09-19) : 12 000 jetons d'entrée par tour dont 70 % en cache, 800 en sortie, 6 tours par exécution (+4 avec navigateur, +3 pour un document lourd), 20 % des exécutions restent par l'API chez Local-Agent, matériel amorti sur 12 mois, électricité 0.25 €/kWh, le client utilise son propre PC. **Ce sont des hypothèses, pas des mesures** : à remplacer par les moyennes relevées dès que des agents tournent.
 
 Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que l'API seule. « Partagé » = le bundle d'un petit client porte un mélange d'agents et celui-ci paie sa part de charge (5 % au minimum) ; « seul » = un seul agent sur son bundle, le pire cas ; « en flotte » = sa part sur le bundle au meilleur prix par unité de puissance (gros client).
 
@@ -1650,7 +1650,124 @@ Règle commerciale : matériel + API résiduelle au moins **3× moins cher** que
 | AG-1756 Gestionnaire des parcours de formation des conducteurs de train | 1059 | 141 € | 352 € | 58 € | 28 € | 30 € | 2.4× ✗ | 0.6× ✗ | 28 € | L (6/bundle) | 2 800 € |
 | AG-1757 Responsable de centre de formation sécurité incendie et secourisme | 757 | 106 € | 265 € | 51 € | 21 € | 30 € | 2.1× ✗ | 0.5× ✗ | 28 € | L (6/bundle) | 2 800 € |
 | AG-1758 Assistant de formation en sécurité et secourisme | 932 | 130 € | 326 € | 52 € | 26 € | 26 € | 2.5× ✗ | 2.5× ✗ | 21 € | S (1/bundle) | 2 800 € |
+| AG-1760 Attaché commercial CHR en torréfaction, cotations cafés | 906 | 99 € | 246 € | 47 € | 20 € | 28 € | 2.1× ✗ | 0.4× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1761 Vendeur en bijouterie-joaillerie, devis de création et de réparation | 1059 | 148 € | 369 € | 57 € | 30 € | 28 € | 2.6× ✗ | 0.6× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1762 Conseiller de vente projet en bricolage, métrés et devis | 1204 | 140 € | 350 € | 56 € | 28 € | 28 € | 2.5× ✗ | 0.6× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1763 Conseiller en aménagement de jardin, devis de plantation | 1204 | 140 € | 350 € | 67 € | 28 € | 39 € | 2.1× ✗ | 0.3× ✗ | 39 € | XL (10/bundle) | 2 800 € |
+| AG-1764 Libraire chargé des collectivités, devis et marchés publics | 460 | 64 € | 160 € | 41 € | 13 € | 28 € | 1.6× ✗ | 0.3× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1765 Chargé des devis CSE et collectivités en magasin de jouets | 1201 | 140 € | 350 € | 56 € | 28 € | 28 € | 2.5× ✗ | 0.6× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1766 Chargé de clientèle clubs et collectivités, devis d'équipement sportif | 1055 | 119 € | 299 € | 52 € | 24 € | 28 € | 2.3× ✗ | 0.5× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1767 Concepteur-vendeur en cuisine et ameublement, plans et devis | 1059 | 120 € | 300 € | 63 € | 24 € | 39 € | 1.9× ✗ | 0.3× ✗ | 39 € | XL (10/bundle) | 2 800 € |
+| AG-1768 Préparateur en pharmacie référent maintien à domicile, devis de matériel médical | 910 | 99 € | 247 € | 48 € | 20 € | 28 € | 2.1× ✗ | 0.4× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1769 Vendeur de fruits et légumes aux professionnels, mercuriale et cotations | 785 | 82 € | 205 € | 44 € | 16 € | 28 € | 1.9× ✗ | 0.4× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1770 Chargé de clientèle entreprises en alimentation, devis de coffrets | 1201 | 140 € | 350 € | 56 € | 28 € | 28 € | 2.5× ✗ | 0.6× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1771 Conseiller entreprises en boutique opérateur, devis de flotte mobile | 1055 | 147 € | 368 € | 68 € | 29 € | 39 € | 2.2× ✗ | 0.3× ✗ | 39 € | XL (10/bundle) | 2 800 € |
+| AG-1772 Commercial sédentaire B2B en vente en ligne, devis professionnels | 1081 | 115 € | 287 € | 51 € | 23 € | 28 € | 2.3× ✗ | 0.5× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1773 Conseiller de vente aux professionnels en électroménager, devis d'équipement | 1055 | 119 € | 298 € | 52 € | 24 € | 28 € | 2.3× ✗ | 0.5× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1790 Chargé d'appels d'offres et de cotations en matériel médical | 1234 | 166 € | 414 € | 87 € | 33 € | 53 € | 1.9× ✗ | 0.4× ✗ | 53 € | XL (7/bundle) | 2 800 € |
+| AG-1791 Technico-commercial sédentaire en hygiène professionnelle | 1205 | 141 € | 351 € | 58 € | 28 € | 30 € | 2.4× ✗ | 0.6× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1792 Chargé de tarification en distribution alimentaire | 906 | 127 € | 317 € | 56 € | 25 € | 30 € | 2.3× ✗ | 0.6× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1793 Chargé de tarification CHR en distribution de boissons | 1056 | 120 € | 299 € | 52 € | 24 € | 28 € | 2.3× ✗ | 0.5× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1794 Technico-commercial sédentaire en emballages | 1205 | 127 € | 316 € | 55 € | 25 € | 30 € | 2.3× ✗ | 0.6× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1795 Chargé d'appels d'offres et de cotations en fournitures de bureau | 635 | 82 € | 205 € | 47 € | 16 € | 30 € | 1.8× ✗ | 0.4× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1796 Chargé de cotation en négoce textile et habillement | 1351 | 182 € | 455 € | 67 € | 36 € | 30 € | 2.7× ✗ | 0.8× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1797 Chargé de cotation import-export | 1204 | 133 € | 333 € | 57 € | 27 € | 30 € | 2.4× ✗ | 0.6× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1798 Technico-commercial sédentaire en négoce de bois et panneaux | 1084 | 145 € | 361 € | 59 € | 29 € | 30 € | 2.5× ✗ | 0.6× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1799 Technico-commercial sédentaire en négoce de matériaux | 1084 | 145 € | 361 € | 63 € | 29 € | 34 € | 2.3× ✗ | 0.6× ✗ | 32 € | L (6/bundle) | 2 800 € |
+| AG-1800 Technico-commercial sédentaire en négoce de métaux | 1084 | 124 € | 309 € | 59 € | 25 € | 34 € | 2.1× ✗ | 0.5× ✗ | 32 € | L (6/bundle) | 2 800 € |
+| AG-1801 Vendeur conseil sédentaire en pièces automobiles | 1230 | 144 € | 360 € | 63 € | 29 € | 34 € | 2.3× ✗ | 0.6× ✗ | 32 € | L (6/bundle) | 2 800 € |
+| AG-1802 Assistant commercial export en négoce de vins et spiritueux | 1654 | 203 € | 508 € | 68 € | 41 € | 28 € | 3.0× ✗ | 0.8× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1803 Technico-commercial sédentaire en sanitaire et chauffage | 1804 | 189 € | 473 € | 68 € | 38 € | 30 € | 2.8× ✗ | 0.8× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1804 Technico-commercial sédentaire en matériel électrique | 1354 | 175 € | 438 € | 69 € | 35 € | 34 € | 2.5× ✗ | 0.7× ✗ | 32 € | L (6/bundle) | 2 800 € |
+| AG-1805 Technico-commercial sédentaire en quincaillerie et fournitures industrielles | 1056 | 148 € | 369 € | 60 € | 30 € | 30 € | 2.5× ✗ | 0.6× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1806 Analyste tarification des offres d'énergie | 1231 | 144 € | 360 € | 82 € | 29 € | 53 € | 1.8× ✗ | 0.3× ✗ | 53 € | XL (7/bundle) | 2 800 € |
+| AG-1820 Chargé de devis groupes en transport de voyageurs par autocar | 1659 | 176 € | 439 € | 65 € | 35 € | 30 € | 2.7× ✗ | 0.7× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1821 Chargé de cotation en location longue durée de véhicules | 1655 | 175 € | 438 € | 84 € | 35 € | 49 € | 2.1× ✗ | 0.4× ✗ | 49 € | XL (8/bundle) | 2 800 € |
+| AG-1822 Chargé de devis entreprises en location de véhicules | 1231 | 136 € | 339 € | 57 € | 27 € | 30 € | 2.4× ✗ | 0.6× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1823 Chargé de devis en location de matériel et d'engins | 1231 | 136 € | 339 € | 61 € | 27 € | 34 € | 2.2× ✗ | 0.6× ✗ | 32 € | L (6/bundle) | 2 800 € |
+| AG-1824 Chargé de réservations et de devis en transport de personnes avec chauffeur | 1681 | 171 € | 427 € | 68 € | 34 € | 34 € | 2.5× ✗ | 0.7× ✗ | 32 € | L (6/bundle) | 2 800 € |
+| AG-1825 Chargé de devis de pollinisation et de ventes de miel aux professionnels | 1059 | 120 € | 300 € | 51 € | 24 € | 27 € | 2.4× ✗ | 2.4× ✗ | 13 € | S (1/bundle) | 2 800 € |
+| AG-1826 Chargé de cotations en conchyliculture et aquaculture | 1059 | 120 € | 300 € | 52 € | 24 € | 28 € | 2.3× ✗ | 0.5× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1827 Chargé d'accueil et de devis en centre équestre | 1055 | 112 € | 281 € | 41 € | 22 € | 19 € | 2.7× ✗ | 2.3× ✗ | 16 € | S (1/bundle) | 2 800 € |
+| AG-1828 Chargé de devis en pépinière et horticulture | 1659 | 204 € | 509 € | 84 € | 41 € | 43 € | 2.4× ✗ | 0.5× ✗ | 43 € | XL (9/bundle) | 2 800 € |
+| AG-1829 Chargé des tarifs et devis professionnels en domaine viticole | 1205 | 140 € | 351 € | 56 € | 28 € | 28 € | 2.5× ✗ | 0.6× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1850 Chargé d'affaires en bureau d'études environnement, chiffrage des offres | 1234 | 136 € | 340 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.3× ✗ | 49 € | XL (8/bundle) | 2 800 € |
+| AG-1851 Chargé d'affaires en sites et sols pollués, chiffrage des offres | 1204 | 133 € | 333 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.3× ✗ | 49 € | XL (8/bundle) | 2 800 € |
+| AG-1852 Chargé de clientèle en aide à domicile, devis et contrats | 1204 | 133 € | 333 € | 51 € | 27 € | 24 € | 2.6× ✗ | 2.5× ✗ | 20 € | S (1/bundle) | 2 800 € |
+| AG-1853 Auxiliaire spécialisé vétérinaire, devis de soins et de chirurgie | 485 | 68 € | 169 € | 35 € | 14 € | 22 € | 1.9× ✗ | 1.7× ✗ | 18 € | S (1/bundle) | 2 800 € |
+| AG-1854 Chargé de partenariats de club sportif, propositions commerciales | 761 | 106 € | 265 € | 43 € | 21 € | 22 € | 2.5× ✗ | 2.2× ✗ | 18 € | S (1/bundle) | 2 800 € |
+| AG-1855 Conseiller commercial en salle de sport, abonnements et devis entreprises | 935 | 101 € | 253 € | 45 € | 20 € | 24 € | 2.3× ✗ | 2.1× ✗ | 20 € | S (1/bundle) | 2 800 € |
+| AG-1856 Chef de projet en agence de communication, devis et budgets | 1055 | 113 € | 281 € | 53 € | 23 € | 30 € | 2.1× ✗ | 0.5× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1857 Chef de publicité en régie, propositions commerciales et ordres d'insertion | 1204 | 133 € | 333 € | 57 € | 27 € | 30 € | 2.4× ✗ | 0.6× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1858 Consultant en relations presse, propositions et honoraires | 1055 | 120 € | 299 € | 52 € | 24 € | 28 € | 2.3× ✗ | 0.5× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1859 Chargé d'avant-vente en relation client externalisée, chiffrage des offres | 1204 | 133 € | 333 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.3× ✗ | 49 € | XL (8/bundle) | 2 800 € |
+| AG-1860 Chef de mission en commissariat aux comptes, lettre de mission | 1052 | 119 € | 298 € | 67 € | 24 € | 43 € | 1.8× ✗ | 0.3× ✗ | 43 € | XL (9/bundle) | 2 800 € |
+| AG-1861 Chef de mission comptable, lettre de mission et honoraires | 1055 | 119 € | 298 € | 52 € | 24 € | 28 € | 2.3× ✗ | 0.5× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1862 Chargé de propositions commerciales en cabinet de conseil | 1055 | 120 € | 299 € | 73 € | 24 € | 49 € | 1.6× ✗ | 0.3× ✗ | 49 € | XL (8/bundle) | 2 800 € |
+| AG-1863 Conseiller commercial en centre d'affaires, devis de bureaux et domiciliation | 1204 | 126 € | 315 € | 47 € | 25 € | 22 € | 2.7× ✗ | 2.4× ✗ | 18 € | S (1/bundle) | 2 800 € |
+| AG-1864 Clerc de commissaire de justice, devis de constats et honoraires | 1055 | 119 € | 299 € | 58 € | 24 € | 34 € | 2.1× ✗ | 2.1× ✗ | 23 € | S (1/bundle) | 2 800 € |
+| AG-1865 Comptable taxateur, estimation des frais d'actes | 1651 | 203 € | 507 € | 68 € | 41 € | 28 € | 3.0× ✗ | 0.8× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1866 Conseiller en formation, propositions et devis de formation | 1084 | 122 € | 305 € | 49 € | 24 € | 24 € | 2.5× ✗ | 2.4× ✗ | 20 € | S (1/bundle) | 2 800 € |
+| AG-1867 Conseiller en portage salarial, simulations et propositions commerciales | 1201 | 133 € | 332 € | 48 € | 27 € | 22 € | 2.8× ✗ | 2.5× ✗ | 18 € | S (1/bundle) | 2 800 € |
+| AG-1868 Chargé d'affaires en recouvrement de créances, mandats et tarification | 1055 | 141 € | 351 € | 56 € | 28 € | 28 € | 2.5× ✗ | 0.6× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1869 Chargé d'affaires en sécurité privée, chiffrage des prestations | 1055 | 119 € | 299 € | 54 € | 24 € | 30 € | 2.2× ✗ | 0.5× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1870 Chef de projet en traduction, devis et analyses de volumes | 1230 | 136 € | 339 € | 51 € | 27 € | 24 € | 2.6× ✗ | 2.5× ✗ | 20 € | S (1/bundle) | 2 800 € |
+| AG-1871 Chargé d'affaires en intérim, coefficients et propositions commerciales | 1055 | 120 € | 299 € | 50 € | 24 € | 26 € | 2.4× ✗ | 2.3× ✗ | 21 € | S (1/bundle) | 2 800 € |
+| AG-1880 Chef de projet web en agence digitale, devis et chiffrage des projets | 1055 | 113 € | 281 € | 53 € | 23 € | 30 € | 2.1× ✗ | 0.5× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1881 Ingénieur avant-vente en ESN, chiffrage des propositions | 1234 | 136 € | 340 € | 76 € | 27 € | 49 € | 1.8× ✗ | 0.3× ✗ | 49 € | XL (8/bundle) | 2 800 € |
+| AG-1882 Consultant avant-vente data et IA, chiffrage des projets | 1055 | 113 € | 281 € | 71 € | 23 € | 49 € | 1.6× ✗ | 0.3× ✗ | 49 € | XL (8/bundle) | 2 800 € |
+| AG-1883 Ingénieur avant-vente en infogérance, chiffrage des propositions de service | 1055 | 120 € | 299 € | 54 € | 24 € | 30 € | 2.2× ✗ | 0.5× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1884 Ingénieur avant-vente en cybersécurité, chiffrage des audits et services | 1084 | 122 € | 305 € | 73 € | 24 € | 49 € | 1.7× ✗ | 0.3× ✗ | 49 € | XL (8/bundle) | 2 800 € |
+| AG-1885 Technico-commercial en maintenance informatique, devis et contrats | 1655 | 203 € | 509 € | 71 € | 41 € | 30 € | 2.9× ✗ | 0.8× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1886 Producteur en studio de jeu vidéo, chiffrage des projets en prestation | 1055 | 113 € | 281 € | 53 € | 23 € | 30 € | 2.1× ✗ | 0.5× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1887 Responsable de studio d'enregistrement, devis et réservations de séances | 1531 | 186 € | 465 € | 71 € | 37 € | 34 € | 2.6× ✗ | 2.6× ✗ | 23 € | S (1/bundle) | 2 800 € |
+| AG-1888 Consultant en agence d'acquisition, propositions commerciales et honoraires | 1055 | 113 € | 281 € | 53 € | 23 € | 30 € | 2.1× ✗ | 0.5× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1889 Ingénieur avant-vente en édition de logiciels, chiffrage des offres | 1205 | 141 € | 351 € | 77 € | 28 € | 49 € | 1.8× ✗ | 0.3× ✗ | 49 € | XL (8/bundle) | 2 800 € |
+| AG-1890 Assistant de conseiller en gestion de patrimoine, lettre de mission | 1055 | 147 € | 369 € | 68 € | 30 € | 39 € | 2.2× ✗ | 0.3× ✗ | 39 € | XL (10/bundle) | 2 800 € |
+| AG-1891 Chargé de propositions et de tarification en banque privée et family office | 1084 | 124 € | 309 € | 63 € | 25 € | 39 € | 1.9× ✗ | 0.3× ✗ | 39 € | XL (10/bundle) | 2 800 € |
+| AG-1892 Chargé de propositions commerciales en conseil RSE et climat | 1085 | 115 € | 288 € | 53 € | 23 € | 30 € | 2.2× ✗ | 0.5× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1893 Chargé d'affaires en financement participatif, propositions commerciales | 1055 | 113 € | 281 € | 61 € | 23 € | 39 € | 1.8× ✗ | 0.3× ✗ | 39 € | XL (10/bundle) | 2 800 € |
+| AG-1894 Chargé d'affaires en vote électronique, propositions commerciales de scrutin | 1084 | 115 € | 288 € | 57 € | 23 € | 34 € | 2.0× ✗ | 2.0× ✗ | 23 € | S (1/bundle) | 2 800 € |
+| AG-1910 Chargé de cotation en manutention portuaire | 1055 | 120 € | 299 € | 54 € | 24 € | 30 € | 2.2× ✗ | 0.5× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1911 Ingénieur d'offres en matériel ferroviaire, chiffrage des appels d'offres | 1230 | 144 € | 360 € | 78 € | 29 € | 49 € | 1.9× ✗ | 0.3× ✗ | 49 € | XL (8/bundle) | 2 800 € |
+| AG-1912 Chargé d'offres en démantèlement nucléaire, chiffrage des prestations | 1204 | 140 € | 351 € | 77 € | 28 € | 49 € | 1.8× ✗ | 0.3× ✗ | 49 € | XL (8/bundle) | 2 800 € |
+| AG-1913 Commissaire-priseur, estimations et inventaires | 1204 | 140 € | 351 € | 71 € | 28 € | 43 € | 2.0× ✗ | 0.3× ✗ | 43 € | XL (9/bundle) | 2 800 € |
+| AG-1914 Chargé d'affaires en bureau d'études naval, chiffrage des études | 1204 | 133 € | 333 € | 61 € | 27 € | 34 € | 2.2× ✗ | 2.2× ✗ | 23 € | S (1/bundle) | 2 800 € |
+| AG-1915 Conseiller en formation aéronautique, devis et plans de financement | 1204 | 140 € | 351 € | 52 € | 28 € | 24 € | 2.7× ✗ | 2.5× ✗ | 20 € | S (1/bundle) | 2 800 € |
+| AG-1916 Chargé d'offres en transport public urbain, chiffrage des délégations | 1804 | 224 € | 560 € | 94 € | 45 € | 49 € | 2.4× ✗ | 0.5× ✗ | 49 € | XL (8/bundle) | 2 800 € |
+| AG-1917 Chargé d'affaires IRVE et stationnement, chiffrage des offres | 1204 | 140 € | 351 € | 71 € | 28 € | 43 € | 2.0× ✗ | 0.3× ✗ | 43 € | XL (9/bundle) | 2 800 € |
+| AG-1918 Chargé d'affaires en prestations par drone, devis de missions | 1204 | 126 € | 316 € | 79 € | 25 € | 54 € | 1.6× ✗ | 1.0× ✗ | 34 € | M (1/bundle) | 2 800 € |
+| AG-1919 Ingénieur d'affaires courrier et colis, propositions commerciales | 1201 | 168 € | 420 € | 64 € | 34 € | 30 € | 2.6× ✗ | 0.7× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1920 Chargé de commercialisation groupes en domaine skiable, devis de forfaits | 1084 | 122 € | 305 € | 49 € | 24 € | 24 € | 2.5× ✗ | 2.4× ✗ | 20 € | S (1/bundle) | 2 800 € |
+| AG-1921 Responsable des ventes séminaires en thalassothérapie, devis de groupes | 1084 | 122 € | 305 € | 49 € | 24 € | 24 € | 2.5× ✗ | 2.4× ✗ | 20 € | S (1/bundle) | 2 800 € |
+| AG-1922 Responsable des ventes groupes en croisière fluviale, cotations | 1084 | 122 € | 305 € | 49 € | 24 € | 24 € | 2.5× ✗ | 2.4× ✗ | 20 € | S (1/bundle) | 2 800 € |
+| AG-1940 Chargé de commercialisation en centre aquatique, devis groupes et entreprises | 1060 | 120 € | 300 € | 46 € | 24 € | 22 € | 2.6× ✗ | 2.4× ✗ | 18 € | S (1/bundle) | 2 800 € |
+| AG-1941 Chargé des ventes groupes en cinéma, devis de privatisations et scolaires | 1060 | 113 € | 282 € | 44 € | 23 € | 22 € | 2.5× ✗ | 2.3× ✗ | 18 € | S (1/bundle) | 2 800 € |
+| AG-1942 Chargé des ventes de droits audiovisuels, propositions commerciales de licences | 1055 | 112 € | 281 € | 50 € | 22 € | 28 € | 2.2× ✗ | 0.5× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1943 Média-planneur, chiffrage des recommandations et plans médias | 1201 | 140 € | 350 € | 58 € | 28 € | 30 € | 2.4× ✗ | 0.6× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1944 Chargé de partenariats en écurie de course, propositions commerciales | 1654 | 203 € | 508 € | 62 € | 41 € | 22 € | **3.3×** | **3.0×** | 18 € | S (1/bundle) | 2 800 € |
+| AG-1945 Technico-commercial sédentaire en coopérative, cotations des appros | 1059 | 120 € | 300 € | 48 € | 24 € | 24 € | 2.5× ✗ | 2.4× ✗ | 20 € | S (1/bundle) | 2 800 € |
+| AG-1946 Technico-commercial en meunerie, cotations des farines et contrats clients | 913 | 99 € | 249 € | 50 € | 20 € | 30 € | 2.0× ✗ | 0.4× ✗ | 28 € | L (6/bundle) | 2 800 € |
+| AG-1947 Chargé de clientèle en microbrasserie, devis d'événements et cuvées | 1059 | 120 € | 300 € | 43 € | 24 € | 19 € | 2.8× ✗ | 2.4× ✗ | 16 € | S (1/bundle) | 2 800 € |
+| AG-1948 Chargé de développement de l'apprentissage en CFA, devis et prise en charge | 1205 | 140 € | 351 € | 52 € | 28 € | 24 € | 2.7× ✗ | 2.5× ✗ | 20 € | S (1/bundle) | 2 800 € |
+| AG-1949 Assistant d'expertise maritime et aéronautique, devis de missions et honoraires | 1204 | 133 € | 333 € | 54 € | 27 € | 28 € | 2.5× ✗ | 0.6× ✗ | 26 € | L (7/bundle) | 2 800 € |
+| AG-1950 Chargé d'affaires en télésurveillance, devis d'abonnement et de raccordement | 1205 | 133 € | 333 € | 48 € | 27 € | 22 € | 2.8× ✗ | 2.5× ✗ | 18 € | S (1/bundle) | 2 800 € |
+| AG-1951 Chargé d'affaires en location-entretien de linge, chiffrage des contrats | 1205 | 140 € | 351 € | 50 € | 28 € | 22 € | 2.8× ✗ | 2.5× ✗ | 18 € | S (1/bundle) | 2 800 € |
+| AG-1952 Ingénieur avant-vente satellites, chiffrage des propositions commerciales | 1354 | 147 € | 368 € | 73 € | 29 € | 43 € | 2.0× ✗ | 0.3× ✗ | 43 € | XL (9/bundle) | 2 800 € |
+| AG-1953 Chargé des accès industriels en grande infrastructure de recherche, devis | 1205 | 126 € | 316 € | 59 € | 25 € | 34 € | 2.1× ✗ | 2.1× ✗ | 23 € | S (1/bundle) | 2 800 € |
+| AG-1954 Chargé de valorisation de biobanque, tarification des cessions | 1056 | 112 € | 281 € | 56 € | 23 € | 34 € | 2.0× ✗ | 2.0× ✗ | 23 € | S (1/bundle) | 2 800 € |
+| AG-1955 Gestionnaire des frais de justice en laboratoire d'expertise, devis | 1205 | 134 € | 334 € | 61 € | 27 € | 34 € | 2.2× ✗ | 2.2× ✗ | 23 € | S (1/bundle) | 2 800 € |
+| AG-1956 Chargé d'offres en impression fiduciaire, chiffrage des appels d'offres | 1354 | 154 € | 386 € | 74 € | 31 € | 43 € | 2.1× ✗ | 0.4× ✗ | 43 € | XL (9/bundle) | 2 800 € |
+| AG-1970 Chargé de développement en formation maritime, devis et conventions STCW | 1056 | 120 € | 299 € | 43 € | 24 € | 19 € | 2.8× ✗ | 2.4× ✗ | 16 € | S (1/bundle) | 2 800 € |
+| AG-1971 Chargé d'affaires en formation ferroviaire, chiffrage des parcours | 1234 | 143 € | 358 € | 62 € | 29 € | 34 € | 2.3× ✗ | 2.3× ✗ | 23 € | S (1/bundle) | 2 800 € |
+| AG-1972 Chargé de développement commercial en formation sécurité, devis SSIAP et SST | 1055 | 119 € | 299 € | 48 € | 24 € | 24 € | 2.5× ✗ | 2.3× ✗ | 20 € | S (1/bundle) | 2 800 € |
+| AG-1973 Chargé d'affaires en hydraulique et risques naturels, chiffrage des offres | 635 | 80 € | 201 € | 59 € | 16 € | 43 € | 1.4× ✗ | 0.2× ✗ | 43 € | XL (9/bundle) | 2 800 € |
+| AG-1974 Chargé d'affaires en topographie, hydrographie et SIG, chiffrage des levés | 1231 | 136 € | 339 € | 70 € | 27 € | 43 € | 1.9× ✗ | 0.3× ✗ | 43 € | XL (9/bundle) | 2 800 € |
+| AG-1975 Chargé d'affaires en remorquage portuaire, cotation des remorquages | 1056 | 120 € | 299 € | 48 € | 24 € | 24 € | 2.5× ✗ | 2.4× ✗ | 20 € | S (1/bundle) | 2 800 € |
+| AG-1976 Chargé d'affaires flottes en télépéage, propositions commerciales | 1201 | 133 € | 332 € | 51 € | 27 € | 24 € | 2.6× ✗ | 2.5× ✗ | 20 € | S (1/bundle) | 2 800 € |
+| AG-1977 Responsable commercial et des contrats de vente en exploitation agricole | 307 | 36 € | 90 € | 41 € | 7 € | 34 € | 0.9× ✗ | 0.9× ✗ | 23 € | S (1/bundle) | 2 800 € |
+| AG-1978 Responsable de la commercialisation des captures en armement de pêche | 670 | 64 € | 161 € | 37 € | 13 € | 24 € | 1.7× ✗ | 1.6× ✗ | 20 € | S (1/bundle) | 2 800 € |
 
-**159 fiches sur 1644 tiennent la règle des 3× en bundle partagé, 50 avec un agent seul sur son bundle.** Un agent seul sur un bundle à carte dédiée (image, vidéo) ne la tient pas : le bundle doit être partagé ou l'agent vendu en mode API.
+**160 fiches sur 1761 tiennent la règle des 3× en bundle partagé, 51 avec un agent seul sur son bundle.** Un agent seul sur un bundle à carte dédiée (image, vidéo) ne la tient pas : le bundle doit être partagé ou l'agent vendu en mode API.
 
 Lecture : un employé au coût employeur médian revient à 2 800 € par mois, un SMIC chargé à 2 100 €. L'abonnement à l'agent (prix cible du catalogue) s'ajoute aux colonnes Local-Agent et n'entre pas dans la règle des 3×.
