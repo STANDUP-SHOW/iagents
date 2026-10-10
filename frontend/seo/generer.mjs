@@ -26,6 +26,7 @@ const logiciels = lire('catalogue/logiciels.json').logiciels;
 const secteurs = new Map(lire('catalogue/catalogue.json').secteurs.map((s) => [s.id, s.nom]));
 
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
+import { ENTREPRISE } from '../src/data/entreprise.js';
 import { slugifier } from './slug.mjs';
 import { portraitDe } from '../src/data/portraits.js';
 import { estTransversal, cerclesDeLActivite, personnelDeLActivite, FAMILLES_ACTIVITE } from '../src/data/activites-recherche.js';
@@ -178,7 +179,7 @@ ${portrait ? `<div class="portrait"><img src="${portrait}" alt="" width="320" he
 <footer class="pied"><div class="cadre pied-grille">
 <div><img src="/accueil/logo-iagent-blanc.svg" alt="iAgent" width="112" height="32"><p>Des collaborateurs IA par métier, qui connaissent vos logiciels et travaillent chez vous, en local, ou par API.</p></div>
 ${PIED.map(([t, items]) => `<nav aria-label="${t}"><b>${t}</b>${liens(items)}</nav>`).join('')}
-</div><div class="cadre pied-bas"><span>© 2026 iAgent</span><span>Human ambition. Agentic execution.</span></div></footer>
+</div><div class="cadre pied-bas"><span>© 2026 ${echapper(ENTREPRISE.nom)} · <a href="/mentions-legales" style="display:inline;padding:0">Mentions légales</a></span><span>Human ambition. Agentic execution.</span></div></footer>
 </body></html>
 `;
 }

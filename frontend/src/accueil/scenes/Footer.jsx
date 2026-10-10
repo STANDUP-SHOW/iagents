@@ -1,6 +1,7 @@
 import donnees from 'virtual:accueil';
 import { Logo, RECRUTER, LIENS } from '../composants.jsx';
 import { suivre } from '../analytique.js';
+import { ENTREPRISE } from '../../data/entreprise.js';
 
 /** Plain links a crawler can follow into the catalogue's static pages. */
 export default function Footer() {
@@ -59,7 +60,7 @@ export default function Footer() {
         ))}
       </div></div>
       <div className="px-[var(--gouttiere)]"><div className="cadre pb-10 text-xs text-[var(--texte-pale)] flex flex-wrap gap-4 justify-between">
-        <p>© {new Date().getFullYear()} iAgent</p>
+        <p>© {new Date().getFullYear()} {ENTREPRISE.nom} · <a href="/mentions-legales" className="hover:text-[var(--cyan)]">Mentions légales</a></p>
         <p>Human ambition. Agentic execution.</p>
       </div></div>
     </footer>
