@@ -23,7 +23,12 @@ const index = lireXml('sitemap-index.xml');
 const fichiers = [...index.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
 if (fichiers.length < 7) fautes.push(`l'index ne liste que ${fichiers.length} sitemaps`);
 if (lireXml('sitemap.xml') !== index) fautes.push("sitemap.xml (l'ancienne adresse) ne porte pas le même index");
-if (!readFileSync(join(SORTIE, 'robots.txt'), 'utf8').includes(`Sitemap: ${SITE}/sitemap-index.xml`)) fautes.push("robots.txt n'annonce pas sitemap-index.xml");
+// A Vercel preview forbids everything (generer.mjs); production announces the index.
+const robots = readFileSync(join(SORTIE, 'robots.txt'), 'utf8');
+const EN_APERCU = Boolean(process.env.VERCEL_ENV) && process.env.VERCEL_ENV !== 'production';
+if (EN_APERCU) {
+  if (!/^Disallow: \/$/m.test(robots) || robots.includes('Sitemap:')) fautes.push("robots.txt d'un aperçu doit interdire tout et n'annoncer aucun sitemap");
+} else if (!robots.includes(`Sitemap: ${SITE}/sitemap-index.xml`) || !/^Allow: \/$/m.test(robots)) fautes.push("robots.txt n'annonce pas sitemap-index.xml");
 const rapport = JSON.parse(readFileSync(join(SORTIE, 'seo-rapport.json'), 'utf8'));
 let total = 0;
 const vues = new Set();
@@ -50,6 +55,10 @@ for (const loc of fichiers) {
 }
 if (total !== rapport.adresses.indexables) fautes.push(`les sitemaps portent ${total} adresses, le rapport en compte ${rapport.adresses.indexables}`);
 const trop = Object.entries(rapport.anomalies).filter(([, v]) => v.nombre);
-for (const [k, v] of trop) fautes.push(`rapport : ${v.nombre} ${k}`);
+for (const [k, v] of trop) fautes.push(`rapport : ${v.nombre} ${k} — ${v.exemples.slice(0, 3).map((x) => `${x.url} (${x.raison})`).join(' ; ')}`);
+// The report's three job counts must agree with the sitemap, and every excluded address must be named.
+if (rapport.metiers.base !== rapport.metiers.fiches || rapport.metiers.indexables !== rapport.metiers.base - rapport.metiers.exclus) fautes.push(`rapport : ${rapport.metiers.base} métiers au catalogue, ${rapport.metiers.fiches} fiches, ${rapport.metiers.indexables} indexables, ${rapport.metiers.exclus} exclus : ça ne tombe pas juste`);
+if (rapport.logiciels.avecPage + rapport.logiciels.sansPage !== rapport.logiciels.total) fautes.push('rapport : logiciels avec page + sans page ≠ total');
+if (rapport.adresses.details.length !== rapport.adresses.exclusionsUniques || rapport.adresses.details.some((d) => !d.url || !d.raison)) fautes.push('rapport : chaque exclusion doit nommer son adresse et sa raison');
 if (fautes.length) { for (const f of fautes.slice(0, 30)) console.error('  ✗   ' + f); process.exit(1); }
 console.log(`sitemaps : ${fichiers.length} fichiers, ${total} adresses, toutes absolues, sans paramètre, indexables ; rapport sans anomalie`);

@@ -485,7 +485,7 @@ for (const a of activites) {
     const place = placeDe.get(f.id) ?? null;
     const expert = DEVIS.test(f.nom) && expertDevis && expertDevis.fiche.id !== f.id ? expertDevis : null;
     const raison = sansMatiere(f, a);
-    poser(url, 'combinaisons', plusRecente(dFiche(f), dActivite(a)), page({
+    poser(url, 'combinaisons', plusRecente(dFiche(f), dActivite(a), ...outils.map((l) => dLogiciel(l.id))), page({
       noindex: Boolean(raison),
       url,
       titre: `${f.nom} pour ${activite}${sur}`,
@@ -579,7 +579,15 @@ writeFileSync(join(SORTIE, 'sitemap-index.xml'), index);
 // The address submitted before 10/10 keeps answering, with the same index.
 writeFileSync(join(SORTIE, 'sitemap.xml'), index);
 writeFileSync(join(SORTIE, 'seo.css'), STYLE.trim() + '\n');
-writeFileSync(join(SORTIE, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap-index.xml\n`);
+// A Vercel preview (VERCEL_ENV=preview) is a copy of the site on another host:
+// its robots.txt forbids everything, so a search engine never indexes a copy
+// in place of iagent.agency (max's brief of 10/10 17h). Vercel adds on its
+// side the header `x-robots-tag: noindex` on every preview answer. Only the
+// production build, and a build on a machine without Vercel, announce the index.
+const EN_APERCU = Boolean(process.env.VERCEL_ENV) && process.env.VERCEL_ENV !== 'production';
+writeFileSync(join(SORTIE, 'robots.txt'), EN_APERCU
+  ? `# Aperçu de travail : rien à indexer ici, le site est https://iagent.agency/\nUser-agent: *\nDisallow: /\n`
+  : `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap-index.xml\n`);
 
 // --- report -------------------------------------------------------------------
 // max's brief: the SEO report, at every build (seo-rapport.json next to the
@@ -599,32 +607,116 @@ const ANCIENS_TOTAUX = { métiers: [1249, 1403], secteurs: [43, 63, 64], activit
 const ATTENDU = { métiers: STATS.metiers, secteurs: STATS.secteurs, activités: STATS.activites, logiciels: STATS.logiciels };
 const PHRASES_TOTAUX = /(\d{1,3}(?:[\s\u00a0\u202f]\d{3})*)\s*(?:<\/?(?:strong|span|b|em|a)[^>]*>\s*)*(métiers prêts|métiers iAgent, à|métiers rangés|familles de métiers|métiers, réglés|métiers\.|activités reconnues|activités\b(?=[^<]{0,3}<)|logiciels métier du référentiel|logiciels au référentiel|secteurs\b)/g;
 const QUOI = (phrase) => phrase.match(/métiers|secteurs|activités|logiciels/)[0];
-const anomalies = { absentes: [], sansTitre: [], sansH1: [], sansCanonical: [], canonicalAilleurs: [], noindexIncoherent: [], compteursFaux: [] };
+// An anomaly names the address, its family, the reason, the day it was seen
+// and what to do: the line max's SEO agency can act on without opening the code.
+const anomalies = { absentes: [], sansTitre: [], sansH1: [], sansCanonical: [], canonicalAilleurs: [], noindexIncoherent: [], compteursFaux: [], metiersSansPage: [], logicielsSansPageCites: [] };
+const ACTIONS = {
+  absentes: 'construire la page ou retirer son adresse',
+  sansTitre: 'donner un <title> à la page',
+  sansH1: 'donner un <h1> à la page',
+  sansCanonical: 'poser <link rel="canonical"> sur la page',
+  canonicalAilleurs: "faire pointer le canonical sur la page elle-même",
+  noindexIncoherent: "aligner la balise robots sur la règle d'indexation",
+  compteursFaux: 'lire le total dans statistiquesCatalogue() au lieu de l\'écrire',
+  metiersSansPage: 'vérifier la fiche du métier dans agents/ et son slug',
+  logicielsSansPageCites: 'vérifier le logiciel dans catalogue/logiciels.json',
+};
+const anomalie = (quoi, url, raison) => anomalies[quoi].push({ url, famille: meta.get(url)?.famille ?? null, raison, detectee: AUJOURDHUI, action: ACTIONS[quoi] });
 const noindexParRaison = {};
 for (const [url, m] of meta) {
   if (m.noindex) noindexParRaison[m.noindex] = (noindexParRaison[m.noindex] ?? 0) + 1;
   let html = pages.get(url);
   if (html === undefined) {
-    if (!existsSync(fichierDe(url))) { if (construitIci) anomalies.absentes.push(url); continue; }
+    if (!existsSync(fichierDe(url))) { if (construitIci) anomalie('absentes', url, 'aucun fichier construit pour cette adresse'); continue; }
     html = readFileSync(fichierDe(url), 'utf8');
   }
   const tete = html.slice(0, html.indexOf('</head>'));
-  if (!/<title>[^<]+<\/title>/.test(tete)) anomalies.sansTitre.push(url);
-  if (!/<h1[\s>]/.test(html)) anomalies.sansH1.push(url);
+  if (!/<title>[^<]+<\/title>/.test(tete)) anomalie('sansTitre', url, 'pas de <title>');
+  if (!/<h1[\s>]/.test(html)) anomalie('sansH1', url, 'pas de <h1>');
   const canonical = tete.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
-  if (!canonical) anomalies.sansCanonical.push(url);
-  else if (canonical !== `${SITE}${url}`) anomalies.canonicalAilleurs.push(`${url} → ${canonical}`);
-  if (/<meta name="robots" content="noindex/.test(tete) !== Boolean(m.noindex)) anomalies.noindexIncoherent.push(url);
+  if (!canonical) anomalie('sansCanonical', url, 'pas de canonical');
+  else if (canonical !== `${SITE}${url}`) anomalie('canonicalAilleurs', url, `canonical vers ${canonical}`);
+  if (/<meta name="robots" content="noindex/.test(tete) !== Boolean(m.noindex)) anomalie('noindexIncoherent', url, m.noindex ? `la règle dit noindex (${m.noindex}) et la page ne le dit pas` : 'la page dit noindex et la règle non');
   for (const [, lu, phrase] of html.matchAll(PHRASES_TOTAUX)) {
     const quoi = QUOI(phrase);
     const n = nombreLu(lu);
-    if (n !== ATTENDU[quoi] && (ANCIENS_TOTAUX[quoi].includes(n) || n > ATTENDU[quoi] / 2)) anomalies.compteursFaux.push(`${url} : « ${lu} ${phrase.replace(/<[^>]+>/g, '')} » au lieu de ${ATTENDU[quoi]}`);
+    if (n !== ATTENDU[quoi] && (ANCIENS_TOTAUX[quoi].includes(n) || n > ATTENDU[quoi] / 2)) anomalie('compteursFaux', url, `« ${lu} ${phrase.replace(/<[^>]+>/g, '')} » au lieu de ${ATTENDU[quoi]}`);
   }
 }
 const familleDe = (prefixe) => [...meta.values()].filter((m) => m.famille === prefixe);
+
+// --- jobs: three sources that must agree ------------------------------------
+// The catalogue's list (catalogue/catalogue.json), the fiches on disk
+// (agents/) and the job sitemap are three counts from three places; the report
+// writes all three and names any job missing from the sitemap, so a job that
+// disappears is seen here and not by a visitor (max's brief of 10/10 17h:
+// 1 645 expected against 1 644 published — the one was AG-1690, merged into
+// AG-1610 on 09/10 as the same post twice; nothing was lost, and this block
+// would now say so by name).
+const indexables = new Set(sitemaps.flatMap((x) => x.urls));
+const catalogueIds = new Set(lire('catalogue/catalogue.json').agents.map((a) => a.id));
+const fichesParId = new Map(fiches.map((f) => [f.id, f]));
+for (const id of catalogueIds) {
+  const f = fichesParId.get(id);
+  const url = f ? urlFiche.get(id) : null;
+  if (!f) anomalie('metiersSansPage', `/agents/${id}`, `${id} est au catalogue sans fiche dans agents/`);
+  else if (!indexables.has(url)) anomalie('metiersSansPage', url, meta.get(url)?.noindex ? `noindex : ${meta.get(url).noindex}` : 'absente du sitemap des métiers');
+}
+for (const f of fiches) if (!catalogueIds.has(f.id)) anomalie('metiersSansPage', urlFiche.get(f.id), `${f.id} a une fiche dans agents/ sans ligne au catalogue`);
+const metiersRapport = {
+  base: catalogueIds.size,
+  fiches: fiches.length,
+  publics: fiches.filter((f) => !meta.get(urlFiche.get(f.id))?.noindex).length,
+  indexables: parFamille.get('metiers').length,
+  exclus: anomalies.metiersSansPage.length,
+  exclusDetail: anomalies.metiersSansPage.map((x) => ({ url: x.url, raison: x.raison })),
+  regle: "un métier = une ligne de catalogue/catalogue.json = une fiche dans agents/ = une adresse /agents/<slug> dans sitemap-metiers.xml ; la construction s'arrête si l'un des trois manque",
+};
+
+// --- software: why 3 071 at the catalogue make fewer pages ------------------
+// A software page exists when a fiche is qualified on it or an activity's pack
+// lists it; the rest of the catalogue is kept for the hiring interview (the
+// client names his tool, the agent recognises it) and makes no page, because
+// a page about a tool no agent uses would promise nothing. The report says it
+// by cause, so the gap is read as a choice and not as a loss.
+const slugNom = (l) => slugifier(l.nom);
+const slugsAvecPage = new Set([...urlLogiciel.keys()].map((id) => slugNom(logParId.get(id))));
+const sansPage = logiciels.filter((l) => !urlLogiciel.has(l.id));
+const causeDe = (l) => {
+  if (!l.nom?.trim()) return 'sans nom';
+  if (slugsAvecPage.has(slugNom(l))) return "même nom qu'un logiciel qui a sa page (doublon ou édition régionale)";
+  if (l.aConfirmer || l.note?.includes('à confirmer')) return 'cité par aucune fiche ni aucun pack d\'activité, et encore à confirmer';
+  return 'cité par aucune fiche ni aucun pack d\'activité';
+};
+const compterPar = (liste, cle) => Object.fromEntries(Object.entries(liste.reduce((acc, x) => ((acc[cle(x)] = (acc[cle(x)] ?? 0) + 1), acc), {})).sort((a, b) => b[1] - a[1]));
+for (const id of cites) if (!urlLogiciel.has(id)) anomalie('logicielsSansPageCites', `/logiciels/${id}`, `${id} est cité par une fiche ou une activité et n'a pas de page`);
+const logicielsRapport = {
+  total: logiciels.length,
+  avecPage: urlLogiciel.size,
+  sansPage: sansPage.length,
+  causes: compterPar(sansPage, causeDe),
+  sansPageParCategorie: (() => { const e = Object.entries(compterPar(sansPage, (l) => l.categorie ?? 'sans catégorie')); return Object.fromEntries([...e.slice(0, 15), ['autres familles', e.slice(15).reduce((n, [, v]) => n + v, 0)]]); })(),
+  exemples: sansPage.slice(0, 20).map((l) => ({ id: l.id, nom: l.nom, categorie: l.categorie, cause: causeDe(l) })),
+  regle: "un logiciel a sa page quand une fiche est qualifiée dessus ou qu'un pack d'activité le liste ; les autres servent l'entretien d'embauche et ne font pas de page",
+};
+
+// --- what is kept out of the sitemaps, address by address ------------------
+// max's brief (10/10 17h): say whether the noindex page and the redirected
+// address are the same one. `uniques` counts distinct addresses; `details`
+// names each with its status, its robots rule and its reason.
+const exclusions = new Map();
+for (const [url, m] of meta) if (m.noindex) exclusions.set(url, { url, statut: 200, robots: 'noindex', famille: m.famille, raison: m.noindex });
+for (const r of JSON.parse(readFileSync(join(RACINE, 'vercel.json'), 'utf8')).redirects ?? []) {
+  const e = exclusions.get(r.source);
+  if (e) { e.statut = r.permanent ? 308 : 307; e.raison += ` ; redirigée vers ${r.destination}`; }
+  else exclusions.set(r.source, { url: r.source, statut: r.permanent ? 308 : 307, robots: null, famille: meta.get(r.source)?.famille ?? null, raison: `redirigée vers ${r.destination}` });
+}
 const rapport = {
   genere: AUJOURDHUI,
+  environnement: EN_APERCU ? `aperçu (${process.env.VERCEL_ENV}) : robots.txt interdit tout, rien à indexer ici` : 'production : robots.txt annonce sitemap-index.xml',
   compteurs: { metiers: STATS.metiers, secteurs: STATS.secteurs, activites: STATS.activites, logiciels: STATS.logiciels, taches: STATS.taches },
+  metiers: metiersRapport,
+  logiciels: logicielsRapport,
   adresses: {
     generees: meta.size,
     indexables: sitemaps.reduce((n, x) => n + x.urls.length, 0),
@@ -632,11 +724,18 @@ const rapport = {
     noindexParRaison,
     redirigees: [...redirigees].length,
     erreurs404: anomalies.absentes.length,
+    exclusionsUniques: exclusions.size,
+    details: [...exclusions.values()],
   },
   parFamille: Object.fromEntries(FAMILLES.map((f) => [f, { pages: familleDe(f).length, indexables: parFamille.get(f).length }])),
   sitemaps: sitemaps.map((x) => ({ fichier: x.fichier, adresses: x.urls.length, lastmod: plusRecente(...x.urls.map((u) => meta.get(u).lastmod)) })),
-  dates: { sourcesSuivies: Object.keys(datesVues).length, modifieesDepuisLeReleve: sourcesModifiees.length, exemples: sourcesModifiees.slice(0, 20) },
-  anomalies: Object.fromEntries(Object.entries(anomalies).map(([k, v]) => [k, { nombre: v.length, exemples: v.slice(0, 20) }])),
+  dates: {
+    regle: "lastmod = jour où la donnée de la page a changé (empreinte de chaque fiche, activité, logiciel, secteur dans seo/dates.json), jamais le jour de la construction ; une page composée prend la plus récente de ses sources : métier + logiciels qualifiés, métier + activité + logiciels de l'activité employés, logiciel + métiers et activités qui le citent",
+    sourcesSuivies: Object.keys(datesVues).length,
+    modifieesDepuisLeReleve: sourcesModifiees.length,
+    exemples: sourcesModifiees.slice(0, 20),
+  },
+  anomalies: Object.fromEntries(Object.entries(anomalies).map(([k, v]) => [k, { nombre: v.length, action: ACTIONS[k], exemples: v.slice(0, 20) }])),
 };
 writeFileSync(join(SORTIE, 'seo-rapport.json'), JSON.stringify(rapport, null, 2) + '\n');
 if (RELEVER_DATES) {
@@ -652,6 +751,6 @@ console.log(`sitemaps : ${rapport.adresses.indexables} adresses indexables en ${
 if (sourcesModifiees.length) console.log(`dates : ${sourcesModifiees.length} source(s) modifiée(s) depuis le relevé, datée(s) d'aujourd'hui (node seo/generer.mjs --dates pour relever)`);
 const fautes = Object.entries(anomalies).filter(([, v]) => v.length);
 if (fautes.length) {
-  for (const [k, v] of fautes) console.error(`SEO ${k} : ${v.length} — ${v.slice(0, 5).join(' ; ')}`);
+  for (const [k, v] of fautes) console.error(`SEO ${k} : ${v.length} — ${v.slice(0, 5).map((x) => `${x.url} (${x.raison})`).join(' ; ')}`);
   process.exit(1);
 }
