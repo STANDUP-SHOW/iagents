@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { devisAgent, euros, installationDe, ficheDe, LOCATION_BOX } from '../data/offres.js';
 import { FINANCEMENT } from '../../../dimensionnement/offre-box.ts';
 import { economieDe, tachesAReliretConseillees } from '../data/loader.js';
-import { libelleSecteur, libelleFamille, nomDuLogiciel, portraitDe } from '../data/recherche.js';
+import { activitesDuPoste, libelleSecteur, libelleFamille, nomDuLogiciel, portraitDe } from '../data/recherche.js';
 import { PRIX_AGENT_MOIS, NOTE_ACHAT, prixAgentCourt } from '../data/prix.js';
-import { RECRUTER } from '../accueil/composants.jsx';
+import { urlRecruter } from '../data/recrutement.js';
 import logicielsJson from '../../../catalogue/logiciels.json';
 
 /**
@@ -168,7 +168,8 @@ function Section({ id, agentId, inscrire, titre, chapeau, children }) {
 
 // `ongletInitial` says which section the view opens on. The bench renders the
 // fiche once per section; every section is in the HTML whatever the value.
-export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', installation = null }) {
+export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', installation = null, activite = null }) {
+  const recruter = urlRecruter({ poste: agent.nom, ref: agent.id, secteur: libelleSecteur(agent.secteur), activite: activite?.nom, parmi: activitesDuPoste(agent) });
   const depart = sectionDe(ongletInitial);
   const [actif, setActif] = useState(depart);
   const defile = useRef(null);
@@ -293,7 +294,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
           <div className="fd-tete-mobile">
             <p className="fd-prix">{PRIX_AGENT_MOIS ?? 'Sur devis'}{PRIX_AGENT_MOIS && <span> / mois</span>}</p>
             <p className="fd-note">{NOTE_ACHAT ? `${NOTE_ACHAT} · ` : ''}la Box et la consommation à part</p>
-            <a href={RECRUTER} className="bouton bouton-plein w-full" onClick={() => suivre('recruit_agent', { fiche: agent.id })}>Recruter cet agent <Icone nom="fleche" taille={16} /></a>
+            <a href={recruter} className="bouton bouton-plein w-full" onClick={() => suivre('recruit_agent', { fiche: agent.id })}>Recruter cet agent <Icone nom="fleche" taille={16} /></a>
             <button type="button" className="bouton bouton-contour w-full" onClick={() => aller('recrutement')}>Personnaliser</button>
           </div>
         </header>
@@ -437,7 +438,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                   <p className="fd-ajout-titre">Votre logiciel n'est pas présent ?</p>
                   <p className="fd-tache-desc">Vous l'ajoutez lors de l'entretien d'embauche : l'agent vous demande ce que tourne l'entreprise et règle sa propre configuration.</p>
                 </div>
-                <a href={RECRUTER} className="bouton bouton-contour">Ajouter un outil lors de l'entretien</a>
+                <a href={recruter} className="bouton bouton-contour">Ajouter un outil lors de l'entretien</a>
               </div>
             </Section>
 
@@ -580,7 +581,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                   <p className="fd-ajout-titre">Prêt à le rencontrer ?</p>
                   <p className="fd-tache-desc">L'embauche se fait dans l'application iAgent : vous la téléchargez, puis l'agent vous fait passer l'entretien.</p>
                 </div>
-                <a href={RECRUTER} className="bouton bouton-plein">Faire passer l'entretien <Icone nom="fleche" taille={16} /></a>
+                <a href={recruter} className="bouton bouton-plein">Faire passer l'entretien <Icone nom="fleche" taille={16} /></a>
               </div>
             </Section>
           </div>
@@ -628,7 +629,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                 </div>
               </div>
 
-              <a href={RECRUTER} className="bouton bouton-plein w-full" onClick={() => suivre('recruit_agent', { fiche: agent.id })}>Recruter cet agent <Icone nom="fleche" taille={16} /></a>
+              <a href={recruter} className="bouton bouton-plein w-full" onClick={() => suivre('recruit_agent', { fiche: agent.id })}>Recruter cet agent <Icone nom="fleche" taille={16} /></a>
               <div className="fd-a-actions">
                 <button type="button" className="bouton bouton-contour" onClick={() => aller('recrutement')}>Personnaliser</button>
                 <button type="button" className="bouton bouton-contour" onClick={() => aller('recrutement')}>Comparer les coûts</button>
@@ -644,7 +645,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
           <p className="fd-collant-nom">{agent.nom}</p>
           <p className="fd-note">{prixAgentCourt()}</p>
         </div>
-        <a href={RECRUTER} className="bouton bouton-plein" onClick={() => suivre('recruit_agent', { fiche: agent.id })}>Recruter</a>
+        <a href={recruter} className="bouton bouton-plein" onClick={() => suivre('recruit_agent', { fiche: agent.id })}>Recruter cet agent</a>
       </div>
     </div>
   );

@@ -20,6 +20,7 @@ export const PAGES = [
   { nom: 'create', titre: 'iAgent Create : de votre idée à une entreprise composée', description: "Décrivez votre projet : iAgent propose l'équipe d'agents qui l'étudie, le finance, le construit, le lance et le fait tourner." },
   { nom: 'opportunities', titre: 'Opportunités : des projets repérés sur le marché', description: "Des projets repérés, avec leurs scénarios, leurs coûts, leurs risques et l'équipe d'agents qu'il faudrait. Aucune promesse de rentabilité." },
   { nom: 'contact', titre: 'Contact et démonstration iAgent', description: "Une démonstration, une équipe à composer, une infrastructure à dimensionner : dites-nous ce que vous voulez accomplir." },
+  { nom: 'recruter', titre: 'Recruter un agent iAgent', description: "Le métier, le secteur et l'activité déjà remplis : confirmez votre demande, nous revenons vers vous avec le prix et l'entretien d'embauche." },
   { nom: 'mentions-legales', titre: 'Mentions légales iAgent', description: "L'éditeur du site iagent.agency, son directeur de la publication, son hébergeur et l'usage des données que vous nous confiez." },
 ];
 

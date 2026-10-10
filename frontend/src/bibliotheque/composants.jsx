@@ -1,11 +1,11 @@
 // The library's pieces: the profile card, the preview panel, the search field
 // and the filters. They only present what the fiches already say.
 import { useEffect, useId, useRef, useState } from 'react';
-import { libelleSecteur, libelleFamille, logicielsDe, nomDuLogiciel, portraitDe, suggestions, urlFiche } from '../data/recherche.js';
+import { activitesDuPoste, libelleSecteur, libelleFamille, logicielsDe, nomDuLogiciel, portraitDe, suggestions, urlFiche } from '../data/recherche.js';
 import { PRIX_AGENT_MOIS, NOTE_ACHAT } from '../data/prix.js';
 import { passes3xTest, ratio3x } from '../data/loader.js';
 import { devisAgent, euros, installationDe } from '../data/offres.js';
-import { RECRUTER } from '../accueil/composants.jsx';
+import { urlRecruter } from '../data/recrutement.js';
 
 const Fleche = () => (
   <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" className="flex-none">
@@ -78,7 +78,7 @@ const ONGLETS_APERCU = [
  * The preview beside the grid (a sheet from the bottom on a phone): enough to
  * decide whether to open the full fiche.
  */
-export function Apercu({ agent, installation, onFermer, onFicheComplete, focaliser = true }) {
+export function Apercu({ agent, installation, onFermer, onFicheComplete, focaliser = true, activite = null }) {
   const [onglet, setOnglet] = useState('competences');
   const fermer = useRef(null);
   useEffect(() => { setOnglet('competences'); if (focaliser) fermer.current?.focus({ preventScroll: true }); }, [agent?.id]);
@@ -164,7 +164,7 @@ export function Apercu({ agent, installation, onFermer, onFicheComplete, focalis
       </div>
 
       <div className="bi-apercu-actions">
-        <a href={RECRUTER} className="bouton bouton-plein w-full">Recruter cet agent <Fleche /></a>
+        <a href={urlRecruter({ poste: agent.nom, ref: agent.id, secteur: libelleSecteur(agent.secteur), activite: activite?.nom, parmi: activitesDuPoste(agent) })} className="bouton bouton-plein w-full">Recruter cet agent <Fleche /></a>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" className="bouton bouton-contour !text-sm" onClick={() => onFicheComplete(agent)}>Fiche complète</button>
           <a href={`/agents/${agent.slug}`} className="bouton bouton-contour !text-sm">Page du métier</a>

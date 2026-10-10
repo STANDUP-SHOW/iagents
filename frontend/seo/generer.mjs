@@ -27,9 +27,10 @@ const secteurs = new Map(lire('catalogue/catalogue.json').secteurs.map((s) => [s
 
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
 import { ENTREPRISE } from '../src/data/entreprise.js';
+import { urlRecruter } from '../src/data/recrutement.js';
 import { slugifier } from './slug.mjs';
 import { portraitDe } from '../src/data/portraits.js';
-import { estTransversal, cerclesDeLActivite, personnelDeLActivite, FAMILLES_ACTIVITE } from '../src/data/activites-recherche.js';
+import { estTransversal, cerclesDeLActivite, personnelDeLActivite, FAMILLES_ACTIVITE, coeurDeLActivite } from '../src/data/activites-recherche.js';
 export { slugifier };
 
 const echapper = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -142,7 +143,7 @@ main p{color:var(--doux)}main p a{text-decoration:none;border-bottom:1px solid r
 
 const liens = (items) => items.map(([t, u]) => `<a href="${u}">${echapper(t)}</a>`).join('');
 
-function page({ url, titre, description, fil = [], corps, portrait = null, appel = null }) {
+function page({ url, titre, description, fil = [], corps, portrait = null, appel = null, recruter = null }) {
   // The page's title and hook open the coloured band; the rest is the body.
   const m = corps.match(/^\s*(<h1>[\s\S]*?<\/h1>)\s*(<p class="accroche">[\s\S]*?<\/p>)?/);
   const tete = m ? m[0] : '';
@@ -169,12 +170,12 @@ function page({ url, titre, description, fil = [], corps, portrait = null, appel
 <div class="bandeau"><div class="cadre">
 <nav class="fil" aria-label="Fil d'Ariane">${filHtml}<a class="retour" href="/catalogue">← Retour au catalogue</a></nav>
 <div class="heros${portrait ? ' avec-portrait' : ''}"><div>${tete}
-<div class="actions"><a class="bouton bouton-degrade" href="/catalogue">Recruter un agent</a><a class="bouton bouton-contour" href="/how-it-works">Comment ça marche</a></div></div>
+<div class="actions">${recruter ? `<a class="bouton bouton-degrade" href="${echapper(recruter)}">Recruter cet agent</a>` : '<a class="bouton bouton-degrade" href="/catalogue">Recruter un agent</a>'}<a class="bouton bouton-contour" href="/how-it-works">Comment ça marche</a></div></div>
 ${portrait ? `<div class="portrait"><img src="${portrait}" alt="" width="320" height="320"></div>` : ''}</div>
 </div></div>
 <main class="cadre">${reste}
 <section class="appel"><div><h2>${echapper(appelTitre)}</h2><p>${echapper(appelTexte)}</p></div>
-<div class="actions" style="margin:0"><a class="bouton bouton-degrade" href="/catalogue">Voir le catalogue</a><a class="bouton bouton-contour" href="/pricing">Voir les tarifs</a></div></section>
+<div class="actions" style="margin:0">${recruter ? `<a class="bouton bouton-degrade" href="${echapper(recruter)}">Recruter cet agent</a>` : '<a class="bouton bouton-degrade" href="/catalogue">Voir le catalogue</a>'}<a class="bouton bouton-contour" href="/pricing">Voir les tarifs</a></div></section>
 </main>
 <footer class="pied"><div class="cadre pied-grille">
 <div><img src="/accueil/logo-iagent-blanc.svg" alt="iAgent" width="112" height="32"><p>Des collaborateurs IA par métier, qui connaissent vos logiciels et travaillent chez vous, en local, ou par API.</p></div>
@@ -200,6 +201,13 @@ const nomDistinct = (f) => homonymes.has(f.nom) ? `${f.nom} (${(secteurs.get(f.s
 // --- pages ----------------------------------------------------------------
 const pages = new Map(); // url -> html
 
+// The trades whose staff include each job: « Recruter cet agent » offers them.
+const activitesDuPoste = new Map();
+for (const a of activites) for (const { fiche } of coeurDeLActivite(a, fiches)) {
+  if (!activitesDuPoste.has(fiche.id)) activitesDuPoste.set(fiche.id, []);
+  if (!activitesDuPoste.get(fiche.id).includes(a.nom)) activitesDuPoste.get(fiche.id).push(a.nom);
+}
+
 for (const f of fiches) {
   const url = urlFiche.get(f.id);
   const secteur = secteurs.get(f.secteur) ?? f.secteur;
@@ -210,6 +218,7 @@ for (const f of fiches) {
     description: f.accroche,
     fil: [['Secteurs', '/secteurs'], [secteur, urlSecteur.get(f.secteur)]],
     portrait: portraitDe(f),
+    recruter: urlRecruter({ poste: f.nom, ref: f.id, secteur, parmi: activitesDuPoste.get(f.id) }),
     appel: [`Recrutez votre ${f.nom.toLowerCase()}`, "Un entretien d'embauche dans l'application, et il se met au travail chez vous."],
     corps: `<h1>${echapper(f.nom)}, un agent IA qui travaille pour vous</h1>
 <p class="accroche">${echapper(f.accroche)}</p>
@@ -233,6 +242,7 @@ ${transversaux.includes(f) ? `<h2>Dans votre activité</h2>${puces(activites.map
       description: `${f.nom} qui sait travailler sur ${l.nom}. ${q.usage}`,
       fil: [['Agents', '/catalogue'], [f.nom, urlFiche.get(f.id)], [l.nom, urlLogiciel.get(q.logiciel)]],
       portrait: portraitDe(f),
+      recruter: urlRecruter({ poste: f.nom, ref: f.id, secteur, logiciel: l.nom, parmi: activitesDuPoste.get(f.id) }),
       corps: `<h1>Un agent ${echapper(f.nom.toLowerCase())} qui travaille sur ${echapper(l.nom)}</h1>
 <p class="accroche">${echapper(q.usage)}</p>
 <div class="carte"><p>${echapper(f.accroche)}</p></div>
@@ -381,6 +391,7 @@ for (const a of activites) {
       description: `${f.nom} pour ${activite}${sur}. ${f.accroche} ${a.trait}`,
       fil: [[a.nom, urlActivite.get(a.id)], [f.nom, urlFiche.get(f.id)]],
       portrait: portraitDe(f),
+      recruter: urlRecruter({ poste: f.nom, ref: f.id, secteur: secteurs.get(f.secteur) ?? f.secteur, activite: a.nom }),
       corps: `<h1>Un agent ${echapper(f.nom.toLowerCase())} pour ${echapper(activite)}${echapper(sur)}</h1>
 <p class="accroche">${echapper(f.accroche)}</p>
 <div class="carte"><p>${echapper(a.trait)}</p><p>Il reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p></div>
@@ -399,7 +410,9 @@ ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r
 const cibles = new Set(pages.keys());
 const HORS_SEO = new Set(['/', '/catalogue', '/favicon.ico', '/favicon.svg', '/apple-touch-icon.png', '/site.webmanifest', '/seo.css', ...PAGES_OFFRE.map((p) => `/${p.nom}`)]);
 for (const [url, html] of pages) {
-  for (const [, href] of html.matchAll(/href="(\/[^"]*)"/g)) {
+  for (const [, lu] of html.matchAll(/href="(\/[^"]*)"/g)) {
+    // A page with what the visitor chose in its address (/recruter?poste=…) is still that page.
+    const href = lu.split('?')[0];
     if (HORS_SEO.has(href) || href.startsWith('/polices/')) continue;
     if (!cibles.has(href)) throw new Error(`${url} renvoie vers ${href}, page non générée`);
   }

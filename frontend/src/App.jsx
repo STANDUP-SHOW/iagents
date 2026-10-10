@@ -151,6 +151,8 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
   }), [base, ouParAgent]);
   // The activities follow the chosen sector (max, 10/10): a print-shop sector
   // offers print trades, not bakeries.
+  // The trade the visitor picked or typed, carried to « Recruter cet agent ».
+  const activiteEnCours = filtres.activites.length === 1 ? activiteDe(filtres.activites[0]) : (activitesVues[0] ?? null);
   const optionsActivite = useMemo(() => optionsActivites(base, filtres.secteurs), [base, filtres.secteurs]);
 
   useEffect(() => { setCombien(PAR_PAGE); }, [requete, filtres, tri, vue, packOuvert]);
@@ -402,7 +404,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
               <>
                 <div className="bi-voile" onClick={fermerApercu} aria-hidden="true" />
                 <div className="bi-apercu-zone">
-                  <Apercu agent={apercu} installation={installation} onFermer={fermerApercu} onFicheComplete={setFicheOuverte} focaliser={apercu.id !== apercuOuvertSeul.current} />
+                  <Apercu agent={apercu} installation={installation} activite={activiteEnCours} onFermer={fermerApercu} onFicheComplete={setFicheOuverte} focaliser={apercu.id !== apercuOuvertSeul.current} />
                 </div>
               </>
             )}
@@ -421,7 +423,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
       )}
 
       {ficheOuverte && (
-        <FicheDetail agent={ficheOuverte} installation={installation} onClose={() => setFicheOuverte(null)} />
+        <FicheDetail agent={ficheOuverte} installation={installation} activite={activiteEnCours} onClose={() => setFicheOuverte(null)} />
       )}
     </div>
   );

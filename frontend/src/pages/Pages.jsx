@@ -3,6 +3,8 @@ import { nombre, LIENS, RECRUTER } from '../accueil/composants.jsx';
 import tarifs, { euros, montant, STATUTS, BOX_PUBLIQUES, BOX_DES, prixAgentEnUneLigne } from '../data/tarifs.js';
 import { Tete, Bande, Cartes, Etapes, Coches, Voisines, Fin, Bouton, Demande } from './blocs.jsx';
 import { COMPOSANTS_BUSINESS } from './PagesBusiness.jsx';
+import { useEffect, useState } from 'react';
+import { lireRecrutement } from '../data/recrutement.js';
 import { ENTREPRISE, HEBERGEUR, adresseEnUneLigne, dirigeantEnClair } from '../data/entreprise.js';
 
 // The offer pages of max's site plan (07/10). Every claim here is one the
@@ -450,6 +452,56 @@ function Contact() {
   );
 }
 
+/* ----------------------------------------------------------------- recruter */
+
+// « Recruter cet agent » from any fiche lands here with the job, its sector
+// and the activity already chosen (max, 10/10): the visitor confirms, never
+// starts over from a generic choice. No download: the request goes to us and
+// the hiring interview happens on the Box.
+function Recruter() {
+  const [r, setR] = useState(null);
+  useEffect(() => { setR(lireRecrutement(window.location.search)); }, []);
+  const poste = r?.poste;
+  const recap = r ? [['Métier', poste], ['Secteur', r.secteur], ['Activité', r.activite], ['Logiciel', r.logiciel]].filter(([, v]) => v) : [];
+  return (
+    <>
+      <Tete surtitre="Recrutement" titre={poste ? <>Vous recrutez<br /><span className="mq-cyan">{poste}.</span></> : <>Recrutez<br /><span className="mq-cyan">votre agent.</span></>}
+        texte={poste ? `Votre demande est déjà remplie pour ce poste. Ajoutez votre activité si elle manque, et nous préparons votre ${poste.toLowerCase()}.` : "Dites-nous quel métier vous voulez recruter, ou choisissez-le dans le catalogue."}>
+        {!poste && <Bouton href={LIENS.catalogue} evenement="catalog_click">Choisir dans le catalogue</Bouton>}
+      </Tete>
+      {recap.length > 0 && (
+        <Bande titre="Le poste">
+          <dl className="pg-mentions">{recap.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+        </Bande>
+      )}
+      <Bande surtitre="Ensuite" titre="Trois étapes jusqu'au travail">
+        <Etapes items={[
+          ['Votre demande', 'Nous vous rappelons avec le prix de cet agent, de votre installation et de la consommation, avant tout engagement.'],
+          ["L'entretien d'embauche", "À l'oral, l'agent vous demande vos logiciels, vos horaires et ce qui doit attendre votre accord."],
+          ['Au travail', 'Il est installé sur votre Box, réglé sur votre activité, et commence ses tâches.'],
+        ]} />
+      </Bande>
+      <Bande id="demande" surtitre="Votre demande" titre={poste ? `Recruter ${poste.toLowerCase()}` : 'Votre recrutement'}>
+        {r && (
+          <Demande key={poste ?? 'vide'} sujet={poste ? `Recrutement : ${poste}` : 'Recrutement'} evenement="recruit_request"
+            message={poste ? `Je souhaite recruter cet agent : ${poste}${r.activite ? `, pour mon activité ${r.activite.toLowerCase()}` : ''}.` : ''}
+            champs={[
+              ['Poste', 'Métier recruté', null, poste ?? ''],
+              ['Secteur', 'Secteur', null, r.secteur ?? ''],
+              r.parmi.length ? ['Activité', 'Votre activité', [...r.parmi, 'Une autre activité']] : ['Activité', 'Votre activité', null, r.activite ?? '', 'Par exemple : imprimerie offset'],
+              ...(r.logiciel ? [['Logiciel', 'Logiciel', null, r.logiciel]] : []),
+              ...(r.ref ? [['Référence', 'Référence de la fiche', null, r.ref]] : []),
+            ]} />
+        )}
+      </Bande>
+      <Fin titre="Une question avant de recruter ?">
+        <Bouton href="/contact" variante="contour-cyan">Parler à un conseiller</Bouton>
+        <a href={RECRUTER} className="bouton bouton-contour">Comment ça marche</a>
+      </Fin>
+    </>
+  );
+}
+
 /* --------------------------------------------------------- mentions légales */
 
 function MentionsLegales() {
@@ -503,6 +555,7 @@ export const COMPOSANTS = {
   enterprise: Enterprise,
   faq: Faq,
   contact: Contact,
+  recruter: Recruter,
   'mentions-legales': MentionsLegales,
   ...COMPOSANTS_BUSINESS,
 };
