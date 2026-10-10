@@ -84,7 +84,7 @@ const PIED = [
   ['Agents', [['Le catalogue des métiers', '/catalogue'], ['Par activité', '/activites'], ['Par secteur', '/secteurs'], ['Skill Packs', '/skills'], ['Créer votre entreprise', '/create'], ['Opportunités', '/opportunities']]],
   ['Voice', [['iAgent Voice', '/voice'], ['Standard téléphonique', '/standard-telephonique'], ['Support Center', '/support-center'], ['Sales Center', '/sales-center']]],
   ['Entreprise', [['iAgent Enterprise', '/enterprise'], ['IA locale et hybride', '/local-ai'], ['Sécurité', '/security'], ['Questions fréquentes', '/faq'], ['Contact', '/contact']]],
-  ['Ressources', [['Comment ça marche', '/how-it-works'], ['Activités', '/activites'], ['Secteurs', '/secteurs']]],
+  ['Ressources', [['Comment ça marche', '/how-it-works'], ['Activités', '/activites'], ['Secteurs', '/secteurs'], ['Logiciels métier', '/logiciels']]],
 ];
 const POLICES = [400, 600, 800].map((g) => `@font-face{font-family:Montserrat;font-style:normal;font-weight:${g};font-display:swap;src:url(/polices/montserrat-latin-${g}-normal.woff2) format("woff2")}`).join('');
 const STYLE = `${POLICES}
@@ -275,6 +275,28 @@ ${acts.length ? `<h2>Les activités qui l'emploient</h2>${liste(acts.map((a) => 
 
 // Every activity, by family: the way in for a visitor who knows their trade
 // (« imprimerie ») and not the name of the job they need.
+// Every software of the reference list, A to Z: max wants the whole list on
+// show (10/10). A tool that no job or activity cites has no page of its own
+// (see `cites`), so it is listed with its publisher, without a link.
+const parLettre = new Map();
+for (const l of [...logParId.values()].sort((x, y) => x.nom.localeCompare(y.nom, 'fr', { sensitivity: 'base' }))) {
+  const c = l.nom.normalize('NFD').charAt(0).toUpperCase();
+  const lettre = /[A-Z]/.test(c) ? c : '0-9';
+  if (!parLettre.has(lettre)) parLettre.set(lettre, []);
+  parLettre.get(lettre).push(l);
+}
+const nomLogiciel = (l) => (urlLogiciel.has(l.id) ? lien(l.nom, urlLogiciel.get(l.id)) : echapper(l.nom)) + (l.editeur ? ` <small>${echapper(l.editeur)}</small>` : '');
+pages.set('/logiciels', page({
+  url: '/logiciels',
+  titre: `Logiciels métier : les ${logParId.size.toLocaleString('fr-FR')} outils que connaissent les agents iAgent`,
+  description: `ERP, CRM, comptabilité, paie, logiciels de production, de santé, d'industrie… Les ${logParId.size.toLocaleString('fr-FR')} logiciels métier du référentiel iAgent, de A à Z.`,
+  fil: [['Logiciels', null]],
+  corps: `<h1>Les ${logParId.size.toLocaleString('fr-FR')} logiciels métier du référentiel</h1>
+<p class="accroche">Les outils que vos agents savent tenir, de A à Z, avec leur éditeur. Vous connaissez votre activité ? <a href="/activites">Voyez les logiciels de votre branche</a>.</p>
+<p class="puces">${[...parLettre.keys()].map((k) => `<a href="#lettre-${k}">${k}</a>`).join('')}</p>
+${[...parLettre].map(([k, ls]) => `<h2 id="lettre-${k}">${k}</h2>${liste(ls.map((l) => `<li>${nomLogiciel(l)}</li>`))}`).join('\n')}`,
+}));
+
 // Every family of jobs (the 43 sectors), each with its own page listing its
 // jobs: the other way in, for a visitor who knows the field and not the title.
 pages.set('/secteurs', page({
