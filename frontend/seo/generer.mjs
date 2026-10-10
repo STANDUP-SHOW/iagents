@@ -247,6 +247,8 @@ const liste = (items) => `<ul>${items.join('')}</ul>`;
 const puces = (items) => items.length <= 24
   ? `<p class="puces">${items.join('')}</p>`
   : `<p class="puces">${items.slice(0, 24).join('')}</p><details class="suite"><summary>Voir les ${items.length - 24} autres</summary><p class="puces">${items.slice(24).join('')}</p></details>`;
+// « Un agent agent de devis » read on the preview of 10/10: a title that already says « agent » keeps its own word.
+const unAgent = (f) => (/^agent /i.test(f.nom) ? `Un ${echapper(f.nom.toLowerCase())}` : `Un agent ${echapper(f.nom.toLowerCase())}`);
 const lien = (texte, url) => `<a href="${url}">${echapper(texte)}</a>`;
 // What the activity's pack says beyond words, documents and rules: what the
 // trade counts, who it deals with, when its year turns. Every activity has the
@@ -308,7 +310,7 @@ ${transversaux.includes(f) ? `<h2>Dans votre activité</h2>${puces(activites.map
       fil: [['Agents', '/catalogue'], [f.nom, urlFiche.get(f.id)], [l.nom, urlLogiciel.get(q.logiciel)]],
       portrait: portraitDe(f),
       recruter: urlRecruter({ slug: f.slug }),
-      corps: `<h1>Un agent ${echapper(f.nom.toLowerCase())} qui travaille sur ${echapper(l.nom)}</h1>
+      corps: `<h1>${unAgent(f)} qui travaille sur ${echapper(l.nom)}</h1>
 <p class="accroche">${echapper(q.usage)}</p>
 <div class="carte"><p>${echapper(f.accroche)}</p></div>
 ${taches.length ? `<h2>Ses tâches dans ${echapper(l.nom)}</h2>${liste(taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}</li>`))}` : ''}
@@ -491,7 +493,7 @@ for (const a of activites) {
       fil: [[a.nom, urlActivite.get(a.id)], [f.nom, urlFiche.get(f.id)]],
       portrait: portraitDe(f),
       recruter: urlRecruter({ slug: f.slug, activite: a.nom }),
-      corps: `<h1>Un agent ${echapper(f.nom.toLowerCase())} pour ${echapper(activite)}${echapper(sur)}</h1>
+      corps: `<h1>${unAgent(f)} pour ${echapper(activite)}${echapper(sur)}</h1>
 <p class="accroche">${echapper(f.accroche)}</p>
 <div class="carte"><p>${echapper(a.trait)}</p>${place ? `<p>Dans une entreprise de ${echapper(activite)}, ce poste s'appelle « ${echapper(place.role)} » (${echapper(place.service.toLowerCase())}).</p>` : ''}<p>Il reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p></div>
 ${expert ? `<div class="carte"><p>Votre branche a son propre expert du devis : ${lien(expert.fiche.nom, urlFiche.get(expert.fiche.id))}, « ${echapper(expert.role)} ». ${echapper(expert.fiche.accroche)}</p></div>` : ''}
