@@ -17,7 +17,7 @@ export const html = (p) => `<!DOCTYPE html>
   <title>${echapper(p.titre)}</title>
   <meta name="description" content="${echapper(p.description)}" />
   <link rel="canonical" href="https://iagent.agency/${p.nom}" />
-  <link rel="icon" type="image/png" href="/puce-cerveau.png" />
+  <link rel="icon" href="/favicon.ico" sizes="48x48" /><link rel="icon" type="image/svg+xml" href="/favicon.svg" /><link rel="apple-touch-icon" href="/apple-touch-icon.png" /><link rel="manifest" href="/site.webmanifest" />
   <meta name="theme-color" content="#020817" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="iAgent" />

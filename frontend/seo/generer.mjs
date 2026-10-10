@@ -155,7 +155,7 @@ function page({ url, titre, description, fil = [], corps, portrait = null, appel
 <title>${echapper(titre)} | iAgent</title>
 <meta name="description" content="${echapper(description.slice(0, 300))}">
 <meta name="theme-color" content="#020817">
-<link rel="canonical" href="${SITE}${url}"><link rel="icon" type="image/png" href="/puce-cerveau.png">
+<link rel="canonical" href="${SITE}${url}"><link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest">
 <link rel="preload" href="/polices/montserrat-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/seo.css"></head>
 <body>
@@ -369,7 +369,7 @@ ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r
 
 // --- checks, then write ---------------------------------------------------
 const cibles = new Set(pages.keys());
-const HORS_SEO = new Set(['/', '/catalogue', '/puce-cerveau.png', '/seo.css', ...PAGES_OFFRE.map((p) => `/${p.nom}`)]);
+const HORS_SEO = new Set(['/', '/catalogue', '/favicon.ico', '/favicon.svg', '/apple-touch-icon.png', '/site.webmanifest', '/seo.css', ...PAGES_OFFRE.map((p) => `/${p.nom}`)]);
 for (const [url, html] of pages) {
   for (const [, href] of html.matchAll(/href="(\/[^"]*)"/g)) {
     if (HORS_SEO.has(href) || href.startsWith('/polices/')) continue;
