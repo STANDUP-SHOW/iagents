@@ -100,14 +100,16 @@ export { Bouton };
  * A request: what the visitor wants, in the plan's fields. It writes an email
  * to CONTACT; while no address is set it says so, and sends nothing.
  */
-export function Demande({ sujet, champs = [], evenement }) {
+export function Demande({ sujet, champs = [], evenement, message = '', libelleEnvoi = 'Envoyer la demande', annexe = null }) {
   const [envoye, setEnvoye] = useState(false);
   const soumettre = (e) => {
     e.preventDefault();
     if (evenement) suivre(evenement);
     if (!CONTACT) { setEnvoye(true); return; }
     const donnees = new FormData(e.currentTarget);
-    const corps = [...donnees.entries()].filter(([, v]) => String(v).trim()).map(([k, v]) => `${k} : ${v}`).join('\n');
+    // `annexe`: what the page adds as it stands at the moment of sending (the recruitment list).
+    const corps = [...[...donnees.entries()].filter(([, v]) => String(v).trim()).map(([k, v]) => `${k} : ${v}`), ...(annexe ? ['', annexe()] : [])].join('\n');
+    setEnvoye(true);
     window.location.href = `mailto:${CONTACT}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
   };
   return (
@@ -115,14 +117,15 @@ export function Demande({ sujet, champs = [], evenement }) {
       <label><span>Votre nom</span><input name="Nom" autoComplete="name" required /></label>
       <label><span>Votre entreprise</span><input name="Entreprise" autoComplete="organization" required /></label>
       <label><span>Votre adresse e-mail</span><input name="E-mail" type="email" autoComplete="email" required /></label>
-      {champs.map(([nom, libelle, options]) => (
+      {champs.map(([nom, libelle, options, valeur = '', aide]) => (
         <label key={nom}>
           <span>{libelle}</span>
-          {options ? <select name={nom} defaultValue="">{['', ...options].map((o) => <option key={o} value={o}>{o || 'Choisir'}</option>)}</select> : <input name={nom} />}
+          {options ? <select name={nom} defaultValue={valeur}>{['', ...options].map((o) => <option key={o} value={o}>{o || 'Choisir'}</option>)}</select> : <input name={nom} defaultValue={valeur} placeholder={aide} />}
         </label>
       ))}
-      <label className="pg-large"><span>Ce que vous voulez accomplir</span><textarea name="Message" rows="4" /></label>
-      <button type="submit" className="bouton bouton-plein">Envoyer la demande <Fleche /></button>
+      <label className="pg-large"><span>Ce que vous voulez accomplir</span><textarea name="Message" rows="4" defaultValue={message} /></label>
+      <button type="submit" className="bouton bouton-plein">{libelleEnvoi} <Fleche /></button>
+      {envoye && CONTACT && <p className="pg-note" role="status">Votre messagerie s'ouvre avec votre demande, adressée à {CONTACT}. Envoyez le message : nous vous répondons avec la suite. Si rien ne s'ouvre, écrivez-nous directement à cette adresse.</p>}
       {envoye && !CONTACT && <p className="pg-note" role="status">La réception des demandes n'est pas encore branchée : rien n'est parti. Revenez très bientôt, ou téléchargez l'application pour essayer un agent dès maintenant.</p>}
     </form>
   );
