@@ -467,8 +467,15 @@ function ListeRecrutement() {
   useEffect(() => {
     setL(lireListe());
     const q = new URLSearchParams(window.location.search);
-    setRetour(q.get('paiement'));
-    if (q.get('paiement') === 'reussi') viderListe();
+    // Back from Stripe: the list is emptied only once the server says the
+    // session is paid; a return address alone proves nothing.
+    if (q.get('paiement') === 'reussi' && q.get('session')) {
+      setRetour('verification');
+      fetch(`/api/paiement/session?id=${encodeURIComponent(q.get('session'))}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((s) => { if (s?.paye) { viderListe(); setRetour('reussi'); } else setRetour('en-attente'); })
+        .catch(() => setRetour('en-attente'));
+    } else if (q.get('paiement') === 'annule') setRetour('annule');
     fetch('/api/paiement/etat').then((r) => (r.ok ? r.json() : null)).then((e) => setPaiement(e?.paiement === true)).catch(() => setPaiement(false));
     return ecouterListe(setL);
   }, []);
@@ -492,7 +499,9 @@ function ListeRecrutement() {
       <Tete surtitre="Recrutement" titre={<>Votre liste<br /><span className="mq-cyan">de recrutement.</span></>}
         texte="Les agents que vous recrutez, votre Box Commander, chaque prix sur sa ligne. Validez, et nous préparons votre équipe." />
       {retour === 'reussi' && <Bande><p className="pg-note" role="status">Paiement reçu. Nous vous écrivons pour préparer votre Box et l'entretien d'embauche de vos agents.</p></Bande>}
-      {retour === 'annule' && <Bande><p className="pg-note" role="status">Paiement annulé : rien n'a été prélevé, votre liste est toujours là.</p></Bande>}
+      {retour === 'verification' && <Bande><p className="pg-note" role="status">Vérification de votre paiement…</p></Bande>}
+      {retour === 'en-attente' && <Bande><p className="pg-note" role="status">Votre paiement n'est pas encore confirmé. Votre liste reste ici ; nous vous écrivons dès qu'il l'est.</p></Bande>}
+      {retour === 'annule' &&<Bande><p className="pg-note" role="status">Paiement annulé : rien n'a été prélevé, votre liste est toujours là.</p></Bande>}
       {l && (vide ? (
         <Bande titre="Votre liste est vide">
           <p className="pg-texte">Ouvrez la fiche d'un métier et choisissez « Recruter cet agent » : il s'ajoute ici.</p>
