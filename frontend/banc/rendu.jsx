@@ -313,6 +313,16 @@ for (const page of PAGES) {
     else if (!coeur.includes(choisis[0]?.id)) echoue(`filtre Activité : l'imprimerie commence par ${choisis[0]?.nom}`);
     else ok(`filtre Activité : ${toutes.length} activités, ${duSecteur.length} dans le secteur ${secteurImprimeur}, l'imprimerie montre ${choisis.length} métiers, d'abord ${choisis[0].nom}`);
   }
+  // The sector filter and the counter are the same number (max, 10/10: the
+  // catalogue said 63 sectors and the filter « Voir les 64 »).
+  {
+    const dansLeFiltre = new Set(agents.map((a) => a.secteur));
+    const declares = new Set(catalogueJson.secteurs.map((s) => s.id));
+    const enTrop = [...dansLeFiltre].filter((s) => !declares.has(s));
+    const sansFiche = [...declares].filter((s) => !dansLeFiltre.has(s));
+    if (enTrop.length || sansFiche.length) echoue(`secteurs : le filtre en montre ${dansLeFiltre.size}, le catalogue en déclare ${declares.size} (hors catalogue : ${enTrop.join(', ') || 'aucun'} ; sans fiche : ${sansFiche.join(', ') || 'aucun'})`);
+    else ok(`secteurs : ${declares.size} au catalogue, ${dansLeFiltre.size} dans le filtre, les mêmes`);
+  }
 
   // Le site n'offre jamais l'installeur : Desktop Commander est livré sur la Box
   // (max, 08/10). Un bouton « Télécharger » ramènerait le visiteur hors de l'offre.
