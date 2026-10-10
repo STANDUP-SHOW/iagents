@@ -1,7 +1,7 @@
 // The library's pieces: the profile card, the preview panel, the search field
 // and the filters. They only present what the fiches already say.
 import { useEffect, useId, useRef, useState } from 'react';
-import { libelleSecteur, libelleFamille, logicielsDe, nomDuLogiciel, portraitDe, suggestions } from '../data/recherche.js';
+import { libelleSecteur, libelleFamille, logicielsDe, nomDuLogiciel, portraitDe, suggestions, urlFiche } from '../data/recherche.js';
 import { PRIX_AGENT_MOIS, NOTE_ACHAT } from '../data/prix.js';
 import { passes3xTest, ratio3x } from '../data/loader.js';
 import { devisAgent, euros, installationDe } from '../data/offres.js';
@@ -36,7 +36,7 @@ function Badge({ agent }) {
  */
 export function CarteAgent({ agent, choisi, onVoir, compact = false, prioritaire = false }) {
   const logiciels = logicielsDe(agent).slice(0, 3);
-  const ouvrir = () => onVoir(agent);
+  const ouvrir = () => onVoir(agent, true);
   return (
     <article className={`bi-carte ${compact ? 'bi-carte-compacte' : ''} ${choisi ? 'bi-carte-choisie' : ''}`}>
       <div className="bi-portrait">
@@ -46,7 +46,7 @@ export function CarteAgent({ agent, choisi, onVoir, compact = false, prioritaire
       <div className="bi-corps">
         <p className="bi-ref">{agent.id}</p>
         <h3 className="bi-poste">
-          <button type="button" onClick={ouvrir} className="text-left" aria-label={`Aperçu du profil ${agent.nom}`}>{agent.nom}</button>
+          <a href={urlFiche(agent)} onClick={(e) => { e.preventDefault(); ouvrir(); }} className="text-left" aria-label={`Aperçu du profil ${agent.nom}`}>{agent.nom}</a>
         </h3>
         <p className="bi-secteur">{libelleSecteur(agent.secteur)} · {libelleFamille(agent.famille)}</p>
         {!compact && <p className="bi-accroche">{agent.accroche}</p>}
