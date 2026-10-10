@@ -68,8 +68,9 @@ export default function HeroAccomplish() {
           <IntentInput id="intention-hero" exemples={EXEMPLES} grand />
         </div>
       </div>
-      <dl className="h-bas au-dessus cadre w-full grid grid-cols-3 gap-4 pb-10 text-center">
+      <dl className="h-bas au-dessus cadre w-full grid grid-cols-2 md:grid-cols-4 gap-4 pb-10 text-center">
         <div className="flex flex-col-reverse"><dt className="note">métiers prêts</dt><dd className="font-[Montserrat] text-2xl md:text-4xl font-bold text-white">{nombre(compteurs.fiches)}</dd></div>
+        <div className="flex flex-col-reverse"><dt className="note">secteurs</dt><dd className="font-[Montserrat] text-2xl md:text-4xl font-bold text-white">{nombre(compteurs.secteurs)}</dd></div>
         <div className="flex flex-col-reverse"><dt className="note">activités reconnues</dt><dd className="font-[Montserrat] text-2xl md:text-4xl font-bold text-white">{nombre(compteurs.activites)}</dd></div>
         <div className="flex flex-col-reverse"><dt className="note">logiciels métier</dt><dd className="font-[Montserrat] text-2xl md:text-4xl font-bold text-white">{nombre(compteurs.logiciels)}</dd></div>
       </dl>
