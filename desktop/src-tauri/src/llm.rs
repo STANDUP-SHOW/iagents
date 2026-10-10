@@ -204,6 +204,155 @@ impl LLMService {
     }
 }
 
+/// Ce qu'un agent a répondu après avoir, peut-être, employé ses outils.
+#[derive(Debug, Clone, Default)]
+pub struct ReponseOutillee {
+    pub texte: String,
+    /// Une ligne par appel d'outil, abouti ou refusé, pour l'écran.
+    pub outils: Vec<String>,
+}
+
+/// Combien de tours un agent peut enchaîner avant qu'on l'arrête : chaque tour
+/// est un aller-retour avec le modèle, qui peut demander plusieurs outils.
+/// Le quota d'appels de `mcp::APPELS_PAR_CONVERSATION` reste le vrai
+/// coupe-circuit ; celui-ci empêche une boucle qui ne demanderait que des outils
+/// inconnus (refusés avant d'être comptés) de tourner sans fin.
+pub const TOURS_MAX: usize = 12;
+
+/// Les outils tels que l'API Anthropic les attend.
+pub fn outils_pour_l_api(offerts: &[crate::mcp::OutilOffert]) -> Vec<serde_json::Value> {
+    offerts
+        .iter()
+        .map(|o| {
+            let mut schema = o.schema.clone();
+            if !schema.is_object() {
+                schema = serde_json::json!({ "type": "object" });
+            }
+            serde_json::json!({
+                "name": o.nom_pour_le_modele,
+                "description": o.description,
+                "input_schema": schema,
+            })
+        })
+        .collect()
+}
+
+impl LLMService {
+    /// Le même service, tourné vers une autre adresse : le banc y met un
+    /// serveur écrit à la main sur la boucle locale.
+    #[cfg(test)]
+    pub fn vers(api_key: &str, api_url: &str) -> Self {
+        LLMService { api_key: api_key.to_string(), api_url: api_url.to_string() }
+    }
+
+    async fn envoyer(&self, requete: &serde_json::Value) -> Result<serde_json::Value, String> {
+        let client = reqwest::Client::new();
+        let response = client
+            .post(&self.api_url)
+            .header("x-api-key", &self.api_key)
+            .header("anthropic-version", "2023-06-01")
+            .json(requete)
+            .send()
+            .await
+            .map_err(|e| format!("API request failed: {}", e))?;
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            return Err(format!("API error {}: {}", status, body));
+        }
+        response
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))
+    }
+
+    /// La conversation, avec les outils de l'agent.
+    ///
+    /// C'est la porte que le dépôt disait murée : jusqu'ici aucune requête ne
+    /// portait de `tools`, donc aucun modèle n'apprenait qu'un outil existait,
+    /// et aucun `tool_use` n'était lu. Chaque appel passe par `executeur`, donc
+    /// par `mcp::Client::appeler` et ses quatre refus : rien de ce que le
+    /// modèle demande n'atteint un serveur sans eux.
+    ///
+    /// Sans outil offert, c'est la conversation d'avant, à l'identique.
+    pub async fn call_agent_llm_outille(
+        &self,
+        agent_persona: &AgentPersona,
+        user_command: &str,
+        executeur: &mut dyn crate::mcp::Executeur,
+    ) -> Result<ReponseOutillee, String> {
+        let offerts = executeur.offerts();
+        if offerts.is_empty() {
+            let texte = self.call_agent_llm(agent_persona, user_command).await?;
+            return Ok(ReponseOutillee { texte, outils: Vec::new() });
+        }
+        let outils = outils_pour_l_api(&offerts);
+        let mut messages = vec![serde_json::json!({ "role": "user", "content": user_command })];
+
+        for _ in 0..TOURS_MAX {
+            let requete = serde_json::json!({
+                "model": MODELE_API,
+                // Plus large que la conversation sans outils : un fichier lu
+                // puis résumé demande plus qu'une phrase de standard.
+                "max_tokens": 4096,
+                "output_config": { "effort": "low" },
+                "system": agent_persona.system_prompt,
+                "tools": outils,
+                "messages": messages,
+            });
+            let reponse = self.envoyer(&requete).await?;
+            let contenu = reponse
+                .get("content")
+                .and_then(serde_json::Value::as_array)
+                .cloned()
+                .unwrap_or_default();
+            let texte: String = contenu
+                .iter()
+                .filter(|b| b.get("type").and_then(serde_json::Value::as_str) == Some("text"))
+                .filter_map(|b| b.get("text").and_then(serde_json::Value::as_str))
+                .collect::<Vec<_>>()
+                .join("\n");
+            let demandes: Vec<&serde_json::Value> = contenu
+                .iter()
+                .filter(|b| b.get("type").and_then(serde_json::Value::as_str) == Some("tool_use"))
+                .collect();
+
+            if reponse.get("stop_reason").and_then(serde_json::Value::as_str) != Some("tool_use")
+                || demandes.is_empty()
+            {
+                if texte.trim().is_empty() {
+                    return Err("No text in response".to_string());
+                }
+                return Ok(ReponseOutillee { texte, outils: executeur.resume() });
+            }
+
+            // Le tour du modèle repart tel quel : l'API exige de retrouver ses
+            // propres blocs `tool_use` avant les résultats qui leur répondent.
+            messages.push(serde_json::json!({ "role": "assistant", "content": contenu }));
+            let mut resultats = Vec::new();
+            for demande in demandes {
+                let nom = demande.get("name").and_then(serde_json::Value::as_str).unwrap_or("");
+                let id = demande.get("id").and_then(serde_json::Value::as_str).unwrap_or("");
+                let arguments = demande.get("input").cloned().unwrap_or(serde_json::json!({}));
+                // L'appel bloque sur le tuyau du serveur : on le dit au moteur
+                // d'exécution plutôt que de figer un de ses fils sans prévenir.
+                let (sortie, erreur) = tokio::task::block_in_place(|| executeur.executer(nom, arguments));
+                resultats.push(serde_json::json!({
+                    "type": "tool_result",
+                    "tool_use_id": id,
+                    "content": sortie,
+                    "is_error": erreur,
+                }));
+            }
+            messages.push(serde_json::json!({ "role": "user", "content": resultats }));
+        }
+        Err(format!(
+            "{} a enchaîné {} tours d'outils sans conclure : la conversation est arrêtée.",
+            agent_persona.name, TOURS_MAX
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

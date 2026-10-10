@@ -32,6 +32,8 @@ mod whatsapp;
 mod mise_a_jour;
 mod plateforme;
 mod administration;
+#[cfg(test)]
+mod banc_outils;
 
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
@@ -336,6 +338,19 @@ struct ReponseAgent {
     texte: String,
     motif: String,
     bascule: bool,
+    /// Ce que l'agent a fait de ses outils pendant ce tour, une ligne par appel,
+    /// et les outils auxquels il avait droit qui ne se sont pas ouverts.
+    outils: Vec<String>,
+}
+
+/// Ferme l'atelier et ajoute au compte rendu ce qui n'a pas pu s'écrire : un
+/// journal qu'on croit tenu et qui ne l'est pas vaut moins que pas de journal.
+fn fermer_atelier(atelier: Option<mcp::Atelier>, outils: &mut Vec<String>) {
+    if let Some(a) = atelier {
+        if let Err(e) = a.fermer() {
+            outils.push(format!("journal des outils non tenu : {}", e));
+        }
+    }
 }
 
 #[tauri::command]
@@ -372,28 +387,45 @@ async fn repondre(
     };
     let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_API)?;
 
-    let texte = match &choix.voie {
+    // Les outils que sa fiche lui donne, ouverts pour ce tour et refermés après,
+    // quoi qu'il arrive : un serveur laissé ouvert derrière l'écran ne se voit pas.
+    let (mut atelier, indisponibles) = mcp::atelier_pour(&fiche_id, &prenom).await;
+    let mut sans = mcp::SansOutil;
+    let executeur: &mut dyn mcp::Executeur = match atelier.as_mut() {
+        Some(a) => a,
+        None => &mut sans,
+    };
+    let reponse = match &choix.voie {
         modele::Voie::Local { modele: nom } => {
-            modele::repondre_en_local(modele::ADRESSE_LOCALE, nom, &prompt_systeme, &enonce).await?
+            modele::repondre_en_local_outille(modele::ADRESSE_LOCALE, nom, &prompt_systeme, &enonce, executeur).await
         }
         modele::Voie::Api { .. } => {
             let llm_service = {
                 let llm = state.llm.lock().unwrap();
                 llm.as_ref()
-                    .ok_or("aucune cle d API n est enregistree sur cet ordinateur")?
-                    .clone()
+                    .ok_or("aucune cle d API n est enregistree sur cet ordinateur")
+                    .map(|s| s.clone())
             };
-            let persona = AgentPersona {
-                id: prenom.clone(),
-                name: prenom,
-                role: String::new(),
-                system_prompt: prompt_systeme,
-            };
-            llm_service.call_agent_llm(&persona, &enonce).await?
+            match llm_service {
+                Ok(llm_service) => {
+                    let persona = AgentPersona {
+                        id: prenom.clone(),
+                        name: prenom.clone(),
+                        role: String::new(),
+                        system_prompt: prompt_systeme,
+                    };
+                    llm_service.call_agent_llm_outille(&persona, &enonce, executeur).await
+                }
+                Err(e) => Err(e.to_string()),
+            }
         }
     };
+    let mut outils = reponse.as_ref().map(|r| r.outils.clone()).unwrap_or_default();
+    fermer_atelier(atelier, &mut outils);
+    let reponse = reponse?;
+    outils.extend(indisponibles.into_iter().map(|m| format!("outil indisponible : {}", m)));
 
-    Ok(ReponseAgent { texte, motif: choix.motif, bascule: choix.bascule })
+    Ok(ReponseAgent { texte: reponse.texte, motif: choix.motif, bascule: choix.bascule, outils })
 }
 
 /// Exécute une tâche de l'agent et pose le résultat dans le dossier du client.
@@ -468,26 +500,41 @@ async fn executer_tache(
     };
     let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_API)?;
 
-    let texte = match &choix.voie {
+    // Mêmes outils qu'en conversation, par le même portier.
+    let (mut atelier, _indisponibles) = mcp::atelier_pour(&fiche_id, &prenom).await;
+    let mut sans = mcp::SansOutil;
+    let executeur: &mut dyn mcp::Executeur = match atelier.as_mut() {
+        Some(a) => a,
+        None => &mut sans,
+    };
+    let reponse = match &choix.voie {
         modele::Voie::Local { modele: nom } => {
-            modele::repondre_en_local(modele::ADRESSE_LOCALE, nom, &prep.systeme, &enonce).await?
+            modele::repondre_en_local_outille(modele::ADRESSE_LOCALE, nom, &prep.systeme, &enonce, executeur).await
         }
         modele::Voie::Api { .. } => {
             let llm_service = {
                 let llm = state.llm.lock().unwrap();
                 llm.as_ref()
-                    .ok_or("aucune cle d API n est enregistree sur cet ordinateur")?
-                    .clone()
+                    .ok_or("aucune cle d API n est enregistree sur cet ordinateur")
+                    .map(|s| s.clone())
             };
-            let persona = AgentPersona {
-                id: prenom.clone(),
-                name: prenom.clone(),
-                role: String::new(),
-                system_prompt: prep.systeme.clone(),
-            };
-            llm_service.call_agent_llm(&persona, &enonce).await?
+            match llm_service {
+                Ok(llm_service) => {
+                    let persona = AgentPersona {
+                        id: prenom.clone(),
+                        name: prenom.clone(),
+                        role: String::new(),
+                        system_prompt: prep.systeme.clone(),
+                    };
+                    llm_service.call_agent_llm_outille(&persona, &enonce, executeur).await
+                }
+                Err(e) => Err(e.to_string()),
+            }
         }
     };
+    let mut outils = reponse.as_ref().map(|r| r.outils.clone()).unwrap_or_default();
+    fermer_atelier(atelier, &mut outils);
+    let texte = reponse?.texte;
 
     // Un fichier vide serait pire qu'une erreur : le client croirait le travail
     // fait. Le modèle qui n'a rien rendu est un échec, pas un résultat.
@@ -527,6 +574,7 @@ async fn executer_tache(
         },
         motif: choix.motif,
         validation_humaine: prep.validation_humaine,
+        outils,
     })
 }
 
