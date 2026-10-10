@@ -11,6 +11,6 @@ const page = PAGES.some((p) => p.id === params.get('page')) ? params.get('page')
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App pageInitiale={page} rechercheInitiale={params.get('q') ?? ''} secteurInitial={params.get('secteur') ?? ''} vueInitiale={params.get('vue') ?? undefined} ideeInitiale={params.get('idee') ?? ''} />
+    <App pageInitiale={page} rechercheInitiale={params.get('q') ?? ''} secteurInitial={params.get('secteur') ?? ''} vueInitiale={params.get('vue') ?? undefined} ideeInitiale={params.get('idee') ?? ''} ficheInitiale={params.get('fiche') ?? ''} activiteInitiale={params.get('activite') ?? ''} />
   </React.StrictMode>
 );

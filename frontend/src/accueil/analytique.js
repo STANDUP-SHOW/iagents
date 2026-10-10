@@ -26,6 +26,7 @@ export const EVENEMENTS = [
   'plan_select',
   'box_quote',
   'recruit_agent',
+  'recruit_list',
   'personalize_agent',
   'create_idea_submit',
   'opportunity_view',

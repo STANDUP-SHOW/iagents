@@ -93,18 +93,22 @@ function Entree({ requete, setRequete }) {
   );
 }
 
-export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier', installationInitiale, rechercheInitiale = '', secteurInitial = '', ideeInitiale = '' }) {
+export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier', installationInitiale, rechercheInitiale = '', secteurInitial = '', ideeInitiale = '', ficheInitiale = '', activiteInitiale = '' }) {
   const [page, setPage] = useState(pageInitiale);
   const [installation, setInstallationEtat] = useState(() => installationInitiale ?? lireInstallation());
   const choisirInstallation = (id) => { setInstallationEtat(id); ecrireInstallation(id); };
   const [vue, setVue] = useState(VUES.some((v) => v.id === vueInitiale) ? vueInitiale : 'metier');
   const [packOuvert, setPackOuvert] = useState(null);
   const [requete, setRequete] = useState(rechercheInitiale);
-  const [filtres, setFiltres] = useState(secteurInitial ? { ...FILTRES_VIDES, secteurs: [secteurInitial] } : FILTRES_VIDES);
+  // « Recruter cet agent » on a page of the site opens here, on that agent's
+  // complete fiche and with the activity the visitor came from.
+  const activiteVenue = ACTIVITES.find((a) => a.nom === activiteInitiale);
+  const [filtres, setFiltres] = useState({ ...FILTRES_VIDES, secteurs: secteurInitial ? [secteurInitial] : [], activites: activiteVenue ? [activiteVenue.id] : [] });
   const [tri, setTri] = useState('pertinence');
   const [compact, setCompact] = useState(false);
-  const [apercu, setApercu] = useState(null);
-  const [ficheOuverte, setFicheOuverte] = useState(null);
+  const ficheVenue = (ficheInitiale && agents.find((a) => a.slug === ficheInitiale)) || null;
+  const [apercu, setApercu] = useState(ficheVenue);
+  const [ficheOuverte, setFicheOuverte] = useState(ficheVenue);
   const [tiroir, setTiroir] = useState(false);
   const [combien, setCombien] = useState(PAR_PAGE);
 

@@ -30,7 +30,7 @@ import { ENTREPRISE } from '../src/data/entreprise.js';
 import { urlRecruter } from '../src/data/recrutement.js';
 import { slugifier } from './slug.mjs';
 import { portraitDe } from '../src/data/portraits.js';
-import { estTransversal, cerclesDeLActivite, personnelDeLActivite, FAMILLES_ACTIVITE, coeurDeLActivite } from '../src/data/activites-recherche.js';
+import { estTransversal, cerclesDeLActivite, personnelDeLActivite, FAMILLES_ACTIVITE } from '../src/data/activites-recherche.js';
 export { slugifier };
 
 const echapper = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -201,12 +201,6 @@ const nomDistinct = (f) => homonymes.has(f.nom) ? `${f.nom} (${(secteurs.get(f.s
 // --- pages ----------------------------------------------------------------
 const pages = new Map(); // url -> html
 
-// The trades whose staff include each job: « Recruter cet agent » offers them.
-const activitesDuPoste = new Map();
-for (const a of activites) for (const { fiche } of coeurDeLActivite(a, fiches)) {
-  if (!activitesDuPoste.has(fiche.id)) activitesDuPoste.set(fiche.id, []);
-  if (!activitesDuPoste.get(fiche.id).includes(a.nom)) activitesDuPoste.get(fiche.id).push(a.nom);
-}
 
 for (const f of fiches) {
   const url = urlFiche.get(f.id);
@@ -218,7 +212,7 @@ for (const f of fiches) {
     description: f.accroche,
     fil: [['Secteurs', '/secteurs'], [secteur, urlSecteur.get(f.secteur)]],
     portrait: portraitDe(f),
-    recruter: urlRecruter({ poste: f.nom, ref: f.id, secteur, parmi: activitesDuPoste.get(f.id) }),
+    recruter: urlRecruter({ slug: f.slug }),
     appel: [`Recrutez votre ${f.nom.toLowerCase()}`, "Un entretien d'embauche dans l'application, et il se met au travail chez vous."],
     corps: `<h1>${echapper(f.nom)}, un agent IA qui travaille pour vous</h1>
 <p class="accroche">${echapper(f.accroche)}</p>
@@ -242,7 +236,7 @@ ${transversaux.includes(f) ? `<h2>Dans votre activité</h2>${puces(activites.map
       description: `${f.nom} qui sait travailler sur ${l.nom}. ${q.usage}`,
       fil: [['Agents', '/catalogue'], [f.nom, urlFiche.get(f.id)], [l.nom, urlLogiciel.get(q.logiciel)]],
       portrait: portraitDe(f),
-      recruter: urlRecruter({ poste: f.nom, ref: f.id, secteur, logiciel: l.nom, parmi: activitesDuPoste.get(f.id) }),
+      recruter: urlRecruter({ slug: f.slug }),
       corps: `<h1>Un agent ${echapper(f.nom.toLowerCase())} qui travaille sur ${echapper(l.nom)}</h1>
 <p class="accroche">${echapper(q.usage)}</p>
 <div class="carte"><p>${echapper(f.accroche)}</p></div>
@@ -391,7 +385,7 @@ for (const a of activites) {
       description: `${f.nom} pour ${activite}${sur}. ${f.accroche} ${a.trait}`,
       fil: [[a.nom, urlActivite.get(a.id)], [f.nom, urlFiche.get(f.id)]],
       portrait: portraitDe(f),
-      recruter: urlRecruter({ poste: f.nom, ref: f.id, secteur: secteurs.get(f.secteur) ?? f.secteur, activite: a.nom }),
+      recruter: urlRecruter({ slug: f.slug, activite: a.nom }),
       corps: `<h1>Un agent ${echapper(f.nom.toLowerCase())} pour ${echapper(activite)}${echapper(sur)}</h1>
 <p class="accroche">${echapper(f.accroche)}</p>
 <div class="carte"><p>${echapper(a.trait)}</p><p>Il reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p></div>
