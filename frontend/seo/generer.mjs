@@ -42,6 +42,7 @@ import { ENTREPRISE } from '../src/data/entreprise.js';
 import { urlRecruter } from '../src/data/recrutement.js';
 import { slugifier } from './slug.mjs';
 import { statistiquesCatalogue } from '../src/data/statistiques.js';
+import { DEVIS } from '../../outils/poste-de-devis.ts';
 import { portraitDe } from '../src/data/portraits.js';
 import { estTransversal, cerclesDeLActivite, personnelDeLActivite, FAMILLES_ACTIVITE } from '../src/data/activites-recherche.js';
 export { slugifier };
@@ -247,6 +248,16 @@ const puces = (items) => items.length <= 24
   ? `<p class="puces">${items.join('')}</p>`
   : `<p class="puces">${items.slice(0, 24).join('')}</p><details class="suite"><summary>Voir les ${items.length - 24} autres</summary><p class="puces">${items.slice(24).join('')}</p></details>`;
 const lien = (texte, url) => `<a href="${url}">${echapper(texte)}</a>`;
+// What the activity's pack says beyond words, documents and rules: what the
+// trade counts, who it deals with, when its year turns. Every activity has the
+// three (422 on 422 at 10/10); they were written for the hiring interview and
+// never shown, while max asked for pages with the trade's real matter.
+const sectionsDuPack = (p) => [
+  p.unites?.length ? `<h2>Ce qu'il compte dans votre activité</h2>${liste(p.unites.map((u) => `<li><strong>${echapper(u.unite)}</strong> : ${echapper(u.emploi)}</li>`))}` : '',
+  p.interlocuteurs?.length ? `<h2>Avec qui il travaille</h2>${liste(p.interlocuteurs.map((i) => `<li><strong>${echapper(i.role)}</strong> : ${echapper(i.attend)}</li>`))}` : '',
+  p.rythmes?.length ? `<h2>Les moments de l'année</h2>${liste(p.rythmes.map((r) => `<li>${echapper(r)}</li>`))}` : '',
+].join('\n');
+
 // Two fiches of different sectors can share a title (« Assistant paie » in
 // accounting and in HR): in a list, the sector tells them apart.
 const titres = new Map();
@@ -424,6 +435,7 @@ ${proches.length + outilles.length ? `<h2>Les métiers les plus proches de votre
 ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
 ${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
 ${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}
+${sectionsDuPack(p)}
 <h2>Les postes que toute entreprise emploie, réglés sur votre activité</h2>${puces(transversaux.map((f) => lien(nomDistinct(f), urlPosteActivite(f, a))))}`,
   }));
 }
@@ -453,12 +465,23 @@ function sansMatiere(f, a) {
 // tasks), which then goes into the title: "… pour imprimerie, sur Masterprint".
 for (const a of activites) {
   const p = a.pack ?? {};
+  // The trade's own staff (catalogue/personnel.json): the name this job bears
+  // in the branch, and the branch's own expert when it has one for the same
+  // function. max (10/10): « agent de devis × optique » must read as the
+  // optician's quoting post, as the printer's deviseur already does.
+  const per = personnelDeLActivite(a, fiches);
+  const postes = per ? per.services.flatMap((s) => s.postes.map((x) => ({ ...x, service: s.libelle }))) : [];
+  const placeDe = new Map(postes.map((x) => [x.fiche.id, x]));
+  const expertDevis = postes.find((x) => !estTransversal(x.fiche) && (DEVIS.test(x.role) || DEVIS.test(x.fiche.nom))) ?? null;
   for (const f of transversaux) {
     const url = reserver(urlPosteActivite(f, a), `${f.id}×${a.id}`);
     const familles = new Set(f.taches.flatMap((t) => t.logiciels ?? []));
     const outils = (p.logiciels ?? []).map((id) => logParId.get(id)).filter((l) => familles.has(l.categorie));
+    const outilsDe = (t) => outils.filter((l) => (t.logiciels ?? []).includes(l.categorie));
     const sur = outils.length ? `, sur ${outils.map((l) => l.nom).join(' ou ')}` : '';
     const activite = a.nom.toLowerCase();
+    const place = placeDe.get(f.id) ?? null;
+    const expert = DEVIS.test(f.nom) && expertDevis && expertDevis.fiche.id !== f.id ? expertDevis : null;
     const raison = sansMatiere(f, a);
     poser(url, 'combinaisons', plusRecente(dFiche(f), dActivite(a)), page({
       noindex: Boolean(raison),
@@ -470,14 +493,16 @@ for (const a of activites) {
       recruter: urlRecruter({ slug: f.slug, activite: a.nom }),
       corps: `<h1>Un agent ${echapper(f.nom.toLowerCase())} pour ${echapper(activite)}${echapper(sur)}</h1>
 <p class="accroche">${echapper(f.accroche)}</p>
-<div class="carte"><p>${echapper(a.trait)}</p><p>Il reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p></div>
+<div class="carte"><p>${echapper(a.trait)}</p>${place ? `<p>Dans une entreprise de ${echapper(activite)}, ce poste s'appelle « ${echapper(place.role)} » (${echapper(place.service.toLowerCase())}).</p>` : ''}<p>Il reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p></div>
+${expert ? `<div class="carte"><p>Votre branche a son propre expert du devis : ${lien(expert.fiche.nom, urlFiche.get(expert.fiche.id))}, « ${echapper(expert.role)} ». ${echapper(expert.fiche.accroche)}</p></div>` : ''}
 <h2>Ce qu'il fait chaque jour</h2>
-${liste(f.taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}</li>`))}
+${liste(f.taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}${outilsDe(t).length ? ` Dans ${outilsDe(t).map((l) => echapper(l.nom)).join(' ou ')}.` : ''}</li>`))}
 ${outils.length ? `<h2>Les logiciels de votre activité qu'il tient</h2>${liste(outils.map((l) => `<li>${lien(l.nom, urlLogiciel.get(l.id))}${l.editeur ? `, de ${echapper(l.editeur)}` : ''}</li>`))}` : ''}
 ${(p.logiciels ?? []).length > outils.length ? `<h2>Les autres logiciels de votre activité</h2><p>Il vous demande à l'entretien lesquels vous employez.</p>${puces((p.logiciels ?? []).map((id) => logParId.get(id)).filter((l) => !outils.includes(l)).map((l) => lien(l.nom, urlLogiciel.get(l.id))))}` : ''}
 ${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
 ${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
-${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}`,
+${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}
+${sectionsDuPack(p)}`,
     }), raison);
   }
 }
