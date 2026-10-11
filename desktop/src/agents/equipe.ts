@@ -523,9 +523,13 @@ export function competencesDuMembre(
   return out;
 }
 
-/** Les prénoms proposés, un par membre, que le client change à sa guise. */
+/**
+ * Les prénoms proposés, un par membre, que le client change à sa guise. Aucun
+ * prénom mixte : chacun porte son genre (`prenoms.ts`), que le portrait et la
+ * voix suivent. « Camille » y était, et laissait la voix au hasard.
+ */
 export const PRENOMS_PROPOSES = [
-  'Victor', 'Léa', 'Hugo', 'Camille', 'Nora', 'Paul', 'Inès', 'Louis', 'Jeanne', 'Malik', 'Clara', 'Adam',
+  'Victor', 'Léa', 'Hugo', 'Sarah', 'Nora', 'Paul', 'Inès', 'Louis', 'Jeanne', 'Malik', 'Clara', 'Adam',
 ];
 
 export function prenomsPourEquipe(n: number, dejaPris: readonly string[] = []): string[] {

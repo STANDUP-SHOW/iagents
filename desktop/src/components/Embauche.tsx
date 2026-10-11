@@ -18,6 +18,7 @@ import {
   type Reponse,
 } from '../agents/entretien'
 import type { Sexe } from '../agents/fiche'
+import { sexeDuPrenom } from '../agents/prenoms'
 import {
   AUCUN_DE_CEUX_LA,
   competencesDepuisComposition,
@@ -279,7 +280,9 @@ export default function Embauche({
       const existant = JSON.parse(await invoke<string>('lire_installation').catch(() => '{}'))
       const agents = Array.isArray(existant.agents) ? existant.agents : []
       const nouveau: Record<string, unknown> = { prenom: prenom.trim(), ficheId, voix }
-      if (sexe) nouveau.sexe = sexe
+      // Not chosen: the name's own gender, so face and voice follow it.
+      const genre = sexe || sexeDuPrenom(prenom)
+      if (genre) nouveau.sexe = genre
       if (photo.trim()) nouveau.photo = photo.trim()
 
       // Ce que le client a répondu sur l'autonomie devient son planning, sans

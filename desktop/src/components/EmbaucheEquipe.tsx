@@ -14,7 +14,8 @@ import {
 } from '../agents/equipe'
 import { ficheComposee, type FicheMere } from '../agents/fiche-composee'
 import { FICHE_TEAM_HOLDER } from '../agents/team-holder'
-import { AGENTS_MAX_PAR_POSTE } from '../agents/fiche'
+import { AGENTS_MAX_PAR_POSTE, type Sexe } from '../agents/fiche'
+import { sexeDuPrenom } from '../agents/prenoms'
 
 /**
  * L'équipe proposée pour une demande, et son embauche en une fois.
@@ -38,6 +39,8 @@ export default function EmbaucheEquipe({
   const [lecture, setLecture] = useState(lectureInitiale)
   const [retenus, setRetenus] = useState<Record<string, boolean>>({})
   const [prenoms, setPrenoms] = useState<Record<string, string>>({})
+  // Le genre choisi pour un membre ; vide = celui de son prénom, s'il en a un.
+  const [sexes, setSexes] = useState<Record<string, Sexe | ''>>({})
   const [dejaInstalles, setDejaInstalles] = useState<{ prenom: string; ficheId: string }[]>([])
   const [activiteId, setActiviteId] = useState(lectureInitiale.activite?.id ?? '')
   const [erreur, setErreur] = useState('')
@@ -124,6 +127,7 @@ export default function EmbaucheEquipe({
                   prenom: m.prenom,
                   ficheId: m.ficheId,
                   voix: '',
+                  ...(sexes[m.posteId] || sexeDuPrenom(m.prenom) ? { sexe: sexes[m.posteId] || sexeDuPrenom(m.prenom) } : {}),
                   competences: competencesDuMembre(m, equipe, lecture, passages),
                   ...(dossiers[m.prenom] ? { dossiers: dossiers[m.prenom] } : {}),
                 })),
@@ -201,13 +205,29 @@ export default function EmbaucheEquipe({
               {chefDeja ? (
                 <p className="precision">{chefEnPlace!.prenom} tient déjà votre équipe : il tiendra aussi celle-ci.</p>
               ) : (
-                <input
-                  type="text"
-                  placeholder="son prénom"
-                  value={prenoms[m.posteId] ?? ''}
-                  disabled={!retenu}
-                  onChange={(e) => setPrenoms({ ...prenoms, [m.posteId]: e.target.value })}
-                />
+                <span className="ligne">
+                  <input
+                    type="text"
+                    placeholder="son prénom"
+                    value={prenoms[m.posteId] ?? ''}
+                    disabled={!retenu}
+                    onChange={(e) => {
+                      setPrenoms({ ...prenoms, [m.posteId]: e.target.value })
+                      // A new name brings its own gender back, unless the client picks one.
+                      setSexes({ ...sexes, [m.posteId]: '' })
+                    }}
+                  />
+                  <select
+                    value={sexes[m.posteId] || sexeDuPrenom(prenoms[m.posteId] ?? '') || ''}
+                    disabled={!retenu}
+                    onChange={(e) => setSexes({ ...sexes, [m.posteId]: e.target.value as Sexe | '' })}
+                    aria-label="son genre"
+                  >
+                    <option value="">genre non précisé</option>
+                    <option value="femme">femme</option>
+                    <option value="homme">homme</option>
+                  </select>
+                </span>
               )}
               <p className="precision">
                 {m.entendu.length

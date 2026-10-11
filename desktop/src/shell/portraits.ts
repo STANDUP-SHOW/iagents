@@ -38,9 +38,13 @@ const empreinte = (t: string) => [...t].reduce((h, c) => (h * 31 + c.charCodeAt(
  * gender chosen at hiring; else the fiche's own portrait from the bank.
  */
 export function portraitDe(a: Pick<AgentInstalle, 'prenom' | 'photo' | 'sexe'> & { fiche: { id: string } }): string {
-  if (a.photo && /^(https?:|data:|\/portraits\/)/.test(a.photo)) return a.photo
+  // A bank portrait says nothing of its gender: once the agent's gender is
+  // known, it gives way to a featured face of that gender (max, 11/10/2026:
+  // « la photo d'une femme avec un nom Victor »).
+  const deLaBanque = Boolean(a.photo?.startsWith('/portraits/agents/'))
+  if (a.photo && /^(https?:|data:|\/portraits\/)/.test(a.photo) && !(deLaBanque && a.sexe)) return a.photo
   const nom = sansAccents(a.prenom)
-  if (NOMMES[nom]) return vedette(NOMMES[nom])
+  if (NOMMES[nom] && (!a.sexe || VEDETTES[a.sexe].includes(NOMMES[nom]))) return vedette(NOMMES[nom])
   if (a.sexe) {
     const pool = VEDETTES[a.sexe]
     return vedette(pool[empreinte(nom) % pool.length])

@@ -1,3 +1,5 @@
+import { sexeDuPrenom } from './prenoms.ts';
+
 export type JourSemaine =
   | 'lundi'
   | 'mardi'
@@ -170,7 +172,12 @@ export interface AgentInstalle {
   prenom: string;
   voix: string;
   photo: string;
-  /** Absent tant que le client n'a rien choisi : on n'invente pas un genre. */
+  /**
+   * Ce que le client a choisi, sinon le genre de son prénom quand il n'est pas
+   * mixte (`prenoms.ts`). Absent pour un prénom mixte ou inconnu : le portrait,
+   * la voix et la façon de parler de soi le suivent, et un Victor n'a plus le
+   * visage ni la voix d'une femme (max, 11/10/2026).
+   */
   sexe?: Sexe;
   fiche: Fiche;
   /** Le plan réellement exécuté : fiche par défaut + modifications du client. */
@@ -274,7 +281,7 @@ export function installerAgents(
       prenom,
       voix,
       photo: photo ?? fiche.photo ?? '',
-      sexe,
+      sexe: sexe ?? sexeDuPrenom(prenom),
       fiche,
       planning: planningDuClient(fiche, planning),
       dossiers: dossiers ?? {},

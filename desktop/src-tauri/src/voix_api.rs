@@ -137,11 +137,52 @@ fn rang(prenom: &str, n: usize) -> usize {
     prenom.bytes().fold(0usize, |h, b| h.wrapping_mul(31).wrapping_add(b as usize)) % n
 }
 
+/// The gender of a common, unambiguous first name, from the table the screen
+/// reads too (`src/config/prenoms.json`), so the face and the voice agree.
+/// Mixed or unknown names give nothing. Only the first word counts.
+pub fn sexe_du_prenom(prenom: &str) -> Option<&'static str> {
+    static TABLE: std::sync::OnceLock<(Vec<String>, Vec<String>)> = std::sync::OnceLock::new();
+    let (hommes, femmes) = TABLE.get_or_init(|| {
+        let v: Value = serde_json::from_str(include_str!("../../src/config/prenoms.json"))
+            .expect("prenoms.json is valid JSON");
+        let liste = |k: &str| -> Vec<String> {
+            v[k].as_array()
+                .map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect())
+                .unwrap_or_default()
+        };
+        (liste("homme"), liste("femme"))
+    });
+    let premier: String = prenom
+        .split(|c: char| c.is_whitespace() || c == '-')
+        .find(|m| !m.is_empty())?
+        .chars()
+        .flat_map(char::to_lowercase)
+        .map(|c| match c {
+            'à' | 'â' | 'ä' => 'a',
+            'é' | 'è' | 'ê' | 'ë' => 'e',
+            'î' | 'ï' => 'i',
+            'ô' | 'ö' => 'o',
+            'ù' | 'û' | 'ü' => 'u',
+            'ç' => 'c',
+            c => c,
+        })
+        .collect();
+    if hommes.contains(&premier) {
+        Some("homme")
+    } else if femmes.contains(&premier) {
+        Some("femme")
+    } else {
+        None
+    }
+}
+
 /// The voice an agent speaks with on this engine. A voice the client chose
-/// wins when it belongs to the engine; otherwise the agent's gender, when the
-/// hiring gave one; otherwise a voice tied to the first name. Never a gender
-/// guessed from the name.
+/// wins when it belongs to the engine; otherwise the gender the hiring gave;
+/// otherwise the gender of the first name when it is unambiguous — a Victor
+/// spoke with a woman's voice until 11/10/2026 because nothing was saved for
+/// him; otherwise a voice tied to the first name.
 pub fn voix_de(moteur: Moteur, prenom: &str, voix: Option<&str>, sexe: Option<&str>) -> String {
+    let sexe = sexe.or_else(|| sexe_du_prenom(prenom));
     match moteur {
         Moteur::ElevenLabs => {
             if let Some(v) = voix.filter(|v| v.len() == 20 && v.chars().all(|c| c.is_ascii_alphanumeric())) {
@@ -389,6 +430,17 @@ mod tests {
         // A voice of the other engine is ignored rather than sent.
         assert_eq!(voix_de(Moteur::Gemini, "Léa", Some("Aoede"), None), "Aoede");
         assert_eq!(voix_de(Moteur::ElevenLabs, "Léa", Some("Aoede"), Some("femme")), ELEVENLABS_FEMME);
+        // Nothing saved for the agent: the name decides, as on max's PC.
+        for prenom in ["Victor", "Hugo", "Paul", "Louis", "Malik", "Adam", "Jean-Marc"] {
+            assert!(GEMINI_HOMMES.contains(&voix_de(Moteur::Gemini, prenom, None, None).as_str()), "{prenom}");
+            assert_eq!(voix_de(Moteur::ElevenLabs, prenom, None, None), ELEVENLABS_HOMME, "{prenom}");
+        }
+        for prenom in ["Léa", "Sarah", "Nora", "Inès", "Jeanne", "Clara", "Marie Claire"] {
+            assert!(GEMINI_FEMMES.contains(&voix_de(Moteur::Gemini, prenom, None, None).as_str()), "{prenom}");
+        }
+        assert_eq!(sexe_du_prenom("Camille"), None);
+        // A gender the client chose wins over the name.
+        assert!(GEMINI_FEMMES.contains(&voix_de(Moteur::Gemini, "Victor", None, Some("femme")).as_str()));
         assert_eq!(voix_de(Moteur::ElevenLabs, "Hugo", Some("ZQe5CZNOzWyzChESwQEW"), None), "ZQe5CZNOzWyzChESwQEW");
         assert_eq!(voix_de(Moteur::Mistral, "Léa", Some("Kore"), None), MISTRAL_DEFAUT);
         assert_eq!(voix_de(Moteur::Mistral, "Léa", Some("fr_marie_happy"), None), "fr_marie_happy");
