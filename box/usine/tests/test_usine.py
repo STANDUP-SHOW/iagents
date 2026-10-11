@@ -57,10 +57,11 @@ class Materiel(unittest.TestCase):
         self.assertEqual(len([e for e in ecarts if "TPM" in e]), 1)
         self.assertEqual(len([e for e in ecarts if "Secure Boot" in e]), 1)
 
-    def test_exr1_accepte_16_ou_32(self):
-        inv = {**INVENTAIRE_BOSGAME, "cpu": "Intel N305", "memoire_go": 15.6, "mac": {"eth0": "00:11:22:33:44:55", "eth1": None, "wifi": "00:11:22:33:44:56"}}
+    def test_exr1_exige_32_go(self):
+        # max, 11/10/2026 : la Box Home a 32 Go (le brief disait 16/32) ; 16 Go est refusé.
+        inv = {**INVENTAIRE_BOSGAME, "cpu": "Intel N305", "memoire_go": 31.2, "mac": {"eth0": "00:11:22:33:44:55", "eth1": None, "wifi": "00:11:22:33:44:56"}}
         self.assertEqual(comparer_materiel(inv, PROFILS["exr1"]), [])
-        self.assertEqual(comparer_materiel({**inv, "memoire_go": 32}, PROFILS["exr1"]), [])
+        self.assertNotEqual(comparer_materiel({**inv, "memoire_go": 15.6}, PROFILS["exr1"]), [])
         self.assertNotEqual(comparer_materiel({**inv, "memoire_go": 24}, PROFILS["exr1"]), [])
 
     def test_vm_sans_secure_boot_conforme(self):

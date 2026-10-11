@@ -46,7 +46,7 @@ commerciale garde les codes du brief : `IA-FR-CMD-00000127` (business),
 |---|---|---|
 | agents / espaces de navigateur | 8 / 8 | 1 / 1 |
 | voix | activable | démarre seule, test micro + enceintes + AEC |
-| machine | BOSGAME M4 Neo (64 Go) | EXR1 (16/32 Go) |
+| machine | BOSGAME M4 Neo (64 Go, confirmé par max le 11/10) | EXR1 (32 Go, confirmé par max le 11/10 ; le brief disait 16/32) |
 | services réels en 0.1 | iagent-device, iagent-commander, iagent-updater, iagent-watchdog | les mêmes |
 
 ## 4. iAgent OS
