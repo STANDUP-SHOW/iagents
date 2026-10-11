@@ -373,9 +373,10 @@ export function DockVocal({
         </button>
       )}
 
-      {voix.motif ? (
-        <p className="dock-motif">{voix.motif}</p>
-      ) : voix.partiel || voix.reponse ? (
+      {/* Le motif dit pourquoi le micro est coupé ; il ne doit pas cacher la
+          réponse à une question écrite, qui arrive quand même. */}
+      {voix.motif && <p className="dock-motif">{voix.motif}</p>}
+      {voix.partiel || voix.reponse ? (
         <div className="dock-transcription" aria-live="polite">
           {voix.partiel && (
             <p>
@@ -390,7 +391,7 @@ export function DockVocal({
             </p>
           )}
         </div>
-      ) : (
+      ) : voix.motif ? null : (
         <p className="dock-aide">Dites « Voice », puis le prénom de l’agent. Ou écrivez-lui, ou touchez une phrase ci-dessous.</p>
       )}
 

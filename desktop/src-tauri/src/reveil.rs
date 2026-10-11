@@ -143,7 +143,18 @@ fn agent_nomme(mot: &str, prenoms: &[String]) -> Option<String> {
 /// appel, parce que le client fait les deux : « Voice Robert ! » d'un trait, ou
 /// « Voice » puis, l'application ayant répondu qu'elle écoute, « Robert ».
 pub fn entendu(etat: &Etat, texte: &str, prenoms: &[String]) -> (Etat, Reaction) {
-    let mots: Vec<String> = texte.split_whitespace().map(nu).filter(|m| !m.is_empty()).collect();
+    // Two views of the same words: the bare form to recognise the wake word
+    // and the first name, the words as said to pass on to the agent. Handing
+    // the bare form on turned « Présente-toi en deux phrases. » into
+    // « presentetoi en deux phrases » in the model's prompt.
+    let dits: Vec<&str> = texte.split_whitespace().filter(|m| !nu(m).is_empty()).collect();
+    let mots: Vec<String> = dits.iter().map(|m| nu(m)).collect();
+    // From the first kept word to the end of the text, so a lone « ? » or
+    // « : » between words stays where the speaker put it.
+    let demande = |depuis: usize| match dits.get(depuis) {
+        Some(m) => texte[m.as_ptr() as usize - texte.as_ptr() as usize..].trim_end().to_string(),
+        None => String::new(),
+    };
     if mots.is_empty() {
         return (etat.clone(), Reaction::Rien);
     }
@@ -160,7 +171,7 @@ pub fn entendu(etat: &Etat, texte: &str, prenoms: &[String]) -> (Etat, Reaction)
                 Some(suivant) => match agent_nomme(suivant, prenoms) {
                     Some(prenom) => (
                         Etat::Dormante,
-                        Reaction::Appel { prenom, demande: mots[2..].join(" ") },
+                        Reaction::Appel { prenom, demande: demande(2) },
                     ),
                     None => (
                         Etat::Dormante,
@@ -178,7 +189,7 @@ pub fn entendu(etat: &Etat, texte: &str, prenoms: &[String]) -> (Etat, Reaction)
                 // qui tienne sa règle — réveillée en permanence, l'écoute
                 // reprendrait tout ce qui se dit dans la pièce.
                 Etat::Dormante,
-                Reaction::Appel { prenom, demande: mots[1..].join(" ") },
+                Reaction::Appel { prenom, demande: demande(1) },
             ),
             None => (Etat::Dormante, Reaction::AucunAgentDeCeNom { entendu: mots[0].clone() }),
         },
@@ -218,6 +229,18 @@ mod tests {
         );
         // L'échange est ouvert : on n'est pas resté éveillé pour la pièce.
         assert_eq!(etat, Etat::Dormante);
+    }
+
+    #[test]
+    fn la_demande_garde_ses_accents_et_sa_ponctuation() {
+        // Seen on max's PC on 11/10/2026: the agent received the bare form.
+        let (_, reaction) = entendu(&Etat::Dormante, "Voice Robert, Présente-toi en deux phrases.", &maison());
+        assert_eq!(
+            reaction,
+            Reaction::Appel { prenom: "Robert".into(), demande: "Présente-toi en deux phrases.".into() }
+        );
+        let (_, suite) = entendu(&Etat::Eveillee, "Carla : où en es-tu ?", &maison());
+        assert_eq!(suite, Reaction::Appel { prenom: "Carla".into(), demande: "où en es-tu ?".into() });
     }
 
     #[test]
