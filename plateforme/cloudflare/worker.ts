@@ -130,7 +130,7 @@ export class Plateforme extends DurableObject<Env> {
     requete.headers.forEach((v, k) => { entetes[k.toLowerCase()] = v; });
     const brut = requete.body ? await requete.text() : '';
     return enJson(await traiterRequete(
-      { reglages: this.reglages, stockage: this.stockage, maintenant, routes: toutesLesRoutes },
+      { reglages: this.reglages, stockage: this.stockage, maintenant, routes: toutesLesRoutes, differer: (travail) => this.ctx.waitUntil(travail.catch(() => {})) },
       { methode: requete.method, url: url.pathname + url.search, entetes, brut },
     ));
   }
