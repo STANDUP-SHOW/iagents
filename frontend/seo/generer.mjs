@@ -194,19 +194,32 @@ main p{color:var(--doux)}main p a{text-decoration:none;border-bottom:1px solid r
 .pied-bas{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;padding:0 20px 32px;color:var(--pale);font-size:.8rem}
 .puces{display:flex;flex-wrap:wrap;gap:8px;margin:0}.puces a{border:1px solid var(--trait-fort)!important;border-radius:999px;padding:6px 14px;font-size:.86rem;color:var(--texte);background:rgba(255,255,255,.03)}.puces a:hover{border-color:var(--cyan)!important;color:var(--cyan)}
 .suite{margin-top:12px}.suite summary{cursor:pointer;color:var(--cyan);font-weight:600;margin-bottom:12px}
+.eclat{background:linear-gradient(90deg,#03f3ff,#76cae9 35%,#b61180 70%,#e5007e);-webkit-background-clip:text;background-clip:text;color:transparent}
+.badge{display:inline-flex;align-items:center;gap:8px;margin:0;padding:5px 12px 5px 6px;border-radius:999px;border:1px solid rgba(62,240,138,.4);background:rgba(62,240,138,.08);color:#bff5d4;font-size:.8rem;font-weight:600}.badge::before{content:'✓';display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#23c46b;color:#04101f;font-size:.72rem;font-weight:800}
+.jetons{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 0;padding:0;list-style:none}.jetons li{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:12px;border:1px solid var(--trait-fort);background:rgba(6,18,38,.7);color:var(--doux);font-size:.84rem}.jetons b{color:#fff}.jetons li::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+main ul.missions{counter-reset:m;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}main ul.missions li{counter-increment:m;position:relative;padding-top:52px}main ul.missions li::before{content:counter(m);position:absolute;left:18px;top:16px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#76cae9,#b61180);color:#fff;font-weight:800;font-size:.82rem;box-shadow:0 0 16px rgba(118,202,233,.45)}
+.savoir{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:24px 0}.savoir>section{background:linear-gradient(180deg,rgba(16,34,66,.72),rgba(6,15,34,.78));border:1px solid var(--trait);border-radius:20px;padding:20px 20px 12px;position:relative;overflow:hidden}.savoir>section::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--teinte,var(--cyan))}
+.savoir h3{margin:0 0 12px;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--teinte,var(--cyan))}.savoir dl{margin:0}.savoir dt{color:#fff;font-weight:700;font-size:.9rem;margin-top:10px}.savoir dd{margin:2px 0 0;color:var(--doux);font-size:.84rem;line-height:1.5}
+.savoir>section:nth-child(1){--teinte:#03f3ff}.savoir>section:nth-child(2){--teinte:#76cae9}.savoir>section:nth-child(3){--teinte:#e5007e}.savoir>section:nth-child(4){--teinte:#fdc802}
+.outils{display:flex;flex-wrap:wrap;gap:10px;margin:0;padding:0;list-style:none}.outils li{display:flex;align-items:center;gap:10px;padding:10px 16px 10px 10px!important;border-radius:14px!important}.outils li span{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(3,243,255,.2),rgba(182,17,128,.25));color:#fff;font-weight:800;font-size:.9rem}.outils li a{color:#fff}.outils li small{display:block;color:var(--pale);font-size:.76rem}
+main ul.collegues{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}main ul.collegues li{padding:0;overflow:hidden}main ul.collegues a{display:block;color:var(--texte);text-decoration:none}main ul.collegues img{display:block;width:100%;aspect-ratio:1;object-fit:cover;object-position:50% 15%}main ul.collegues span{display:block;padding:10px 12px;font-size:.86rem;font-weight:600;line-height:1.35}
+@media (max-width:980px){.savoir{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:560px){.savoir{grid-template-columns:1fr}main ul.collegues{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:1180px){.menu{display:none}.tete .bouton-degrade{display:none}.mobile{display:block}}
 @media (max-width:820px){.heros.avec-portrait{grid-template-columns:1fr}.heros.avec-portrait .portrait{max-width:220px;order:-1}.pied-grille{grid-template-columns:1fr 1fr}.retour{margin-left:0}}
 @media (max-width:480px){.heros.avec-portrait .portrait{max-width:140px}main ul{grid-template-columns:1fr}.pied-grille{grid-template-columns:1fr}.appel{padding:28px 22px}}`;
 
 const liens = (items) => items.map(([t, u]) => `<a href="${u}">${echapper(t)}</a>`).join('');
 
-function page({ url, titre, description, fil = [], corps, portrait = null, appel = null, recruter = null, noindex = false }) {
+function page({ url, titre, description, fil = [], corps, portrait = null, appel = null, recruter = null, noindex = false, badge = null, jetons = [] }) {
   // The page's title and hook open the coloured band; the rest is the body.
   const m = corps.match(/^\s*(<h1>[\s\S]*?<\/h1>)\s*(<p class="accroche">[\s\S]*?<\/p>)?/);
   const tete = m ? m[0] : '';
   const reste = (m ? corps.slice(m[0].length) : corps)
     .replace(/<\/strong> : /g, '</strong>').replace(/(<li><a [^>]*>[^<]*<\/a>) : /g, '$1<br>');
   const filHtml = [['Accueil', '/'], ...fil].map(([t, u]) => (u ? `<a href="${u}">${echapper(t)}</a>` : `<span>${echapper(t)}</span>`)).join('<span aria-hidden="true">›</span>');
+  // The same trail for search engines (audit of 11/10): every step that has an address, then this page.
+  const etapes = [['Accueil', '/'], ...fil.filter(([, u]) => u && u !== url), [titre, url]];
+  const ariane = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: etapes.map(([t, u], i) => ({ '@type': 'ListItem', position: i + 1, name: t, item: `${SITE}${u}` })) }).replace(/</g, '\\u003c');
   const [appelTitre, appelTexte] = appel ?? ['Trouvez le collaborateur IA de votre métier', `${STATS.metiers.toLocaleString('fr-FR')} métiers, réglés sur votre secteur et votre activité.`];
   return `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -215,7 +228,8 @@ function page({ url, titre, description, fil = [], corps, portrait = null, appel
 <meta name="theme-color" content="#020817">${noindex ? '\n<meta name="robots" content="noindex,follow">' : ''}
 <link rel="canonical" href="${SITE}${url}"><link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/site.webmanifest">
 <link rel="preload" href="/polices/montserrat-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/seo.css"></head>
+<link rel="stylesheet" href="/seo.css">
+<script type="application/ld+json">${ariane}</script></head>
 <body>
 <header class="tete"><div class="cadre tete-ligne">
 <a class="logo" href="/" aria-label="iAgent, accueil"><img src="/accueil/logo-iagent-blanc.svg" alt="iAgent" width="91" height="26"></a>
@@ -226,7 +240,8 @@ function page({ url, titre, description, fil = [], corps, portrait = null, appel
 </div></header>
 <div class="bandeau"><div class="cadre">
 <nav class="fil" aria-label="Fil d'Ariane">${filHtml}<a class="retour" href="/catalogue">← Retour au catalogue</a></nav>
-<div class="heros${portrait ? ' avec-portrait' : ''}"><div>${tete}
+<div class="heros${portrait ? ' avec-portrait' : ''}"><div>${badge ? `<p class="badge">${echapper(badge)}</p>` : ''}${tete}
+${jetons.length ? `<ul class="jetons">${jetons.map((j) => `<li>${j}</li>`).join('')}</ul>` : ''}
 <div class="actions">${recruter ? `<a class="bouton bouton-degrade" href="${echapper(recruter)}">Recruter cet agent</a>` : '<a class="bouton bouton-degrade" href="/catalogue">Recruter un agent</a>'}<a class="bouton bouton-contour" href="/how-it-works">Comment ça marche</a></div></div>
 ${portrait ? `<div class="portrait"><img src="${portrait}" alt="" width="320" height="320"></div>` : ''}</div>
 </div></div>
@@ -242,7 +257,7 @@ ${PIED.map(([t, items]) => `<nav aria-label="${t}"><b>${t}</b>${liens(items)}</n
 `;
 }
 
-const liste = (items) => `<ul>${items.join('')}</ul>`;
+const liste = (items, classe = '') => `<ul${classe ? ` class="${classe}"` : ''}>${items.join('')}</ul>`;
 // A long run of links reads as chips, folded beyond two dozen.
 const puces = (items) => items.length <= 24
   ? `<p class="puces">${items.join('')}</p>`
@@ -259,6 +274,30 @@ const sectionsDuPack = (p) => [
   p.interlocuteurs?.length ? `<h2>Avec qui il travaille</h2>${liste(p.interlocuteurs.map((i) => `<li><strong>${echapper(i.role)}</strong> : ${echapper(i.attend)}</li>`))}` : '',
   p.rythmes?.length ? `<h2>Les moments de l'année</h2>${liste(p.rythmes.map((r) => `<li>${echapper(r)}</li>`))}` : '',
 ].join('\n');
+
+// The activity's knowledge in four columns (the audit's « KnowledgePack »):
+// what the trade says, what it handles, what it obeys, and what is its own
+// (what it counts, who it deals with, when its year turns). The full text,
+// nothing folded: these words are what a search engine reads on the page.
+function savoirDuPack(p, activite) {
+  const colonne = (titre, lignes) => (lignes.length ? `<section><h3>${titre}</h3><dl>${lignes.join('')}</dl></section>` : '');
+  const ligne = (dt, dd) => `<dt>${echapper(dt)}</dt>${dd ? `<dd>${echapper(dd)}</dd>` : ''}`;
+  const colonnes = [
+    colonne('Vocabulaire', (p.vocabulaire ?? []).map((v) => ligne(v.terme, v.sens))),
+    colonne('Documents', (p.documents ?? []).map((d) => ligne(d.nom, d.role))),
+    colonne('Règles', (p.regles ?? []).map((r) => `<dd>${echapper(r)}</dd>`)),
+    colonne('Spécificités', [
+      ...(p.unites ?? []).map((u) => ligne(u.unite, u.emploi)),
+      ...(p.interlocuteurs ?? []).map((x) => ligne(x.role, x.attend)),
+      ...(p.rythmes ?? []).map((r) => `<dd>${echapper(r)}</dd>`),
+    ]),
+  ].filter(Boolean);
+  return colonnes.length ? `<h2>Le savoir de votre activité qu'il reçoit</h2><p>Ce que connaît, en plus de son métier, un collaborateur réglé sur ${echapper(activite)}.</p><div class="savoir">${colonnes.join('')}</div>` : '';
+}
+
+// The activity's software as a strip of named tiles (an initial, never a logo:
+// the publishers' marks are theirs).
+const outilsEnBande = (outils) => `<ul class="outils">${outils.map((l) => `<li><span aria-hidden="true">${echapper(l.nom.trim()[0]?.toUpperCase() ?? '·')}</span><div>${lien(l.nom, urlLogiciel.get(l.id))}${l.editeur ? `<small>${echapper(l.editeur)}</small>` : ''}</div></li>`).join('')}</ul>`;
 
 // Two fiches of different sectors can share a title (« Assistant paie » in
 // accounting and in HR): in a list, the sector tells them apart.
@@ -461,6 +500,24 @@ function sansMatiere(f, a) {
   return manque.length ? manque.join(', ') : null;
 }
 
+// « Autres agents qualifiés pour cette activité » (audit, RelatedAgents): six
+// neighbours of the same activity, only pages that are indexed themselves, each
+// with its own stable face, never the face of this page.
+const indexTransversal = new Map(transversaux.map((f, i) => [f.id, i]));
+function collegues(f, a) {
+  const vus = new Set([portraitDe(f)]);
+  const choisis = [];
+  const depart = indexTransversal.get(f.id) ?? 0;
+  for (let k = 1; k < transversaux.length && choisis.length < 6; k++) {
+    const g = transversaux[(depart + k * 37) % transversaux.length];
+    const visage = portraitDe(g);
+    if (g.id === f.id || vus.has(visage) || sansMatiere(g, a)) continue;
+    vus.add(visage);
+    choisis.push(`<li><a href="${urlPosteActivite(g, a)}"><img src="${visage}" alt="" width="160" height="160" loading="lazy" decoding="async"><span>${echapper(g.nom)}</span></a></li>`);
+  }
+  return choisis.length ? `<h2>Autres agents qualifiés pour ${echapper(a.nom.toLowerCase())}</h2><ul class="collegues">${choisis.join('')}</ul>` : '';
+}
+
 // Each page joins what the fiche says about the job and what the activity's
 // pack says about the trade: its vocabulary, documents, rules, and the
 // activity's software the job actually works in (same family as one of its
@@ -487,18 +544,23 @@ for (const a of activites) {
       fil: [[a.nom, urlActivite.get(a.id)], [f.nom, urlFiche.get(f.id)]],
       portrait: portraitDe(f),
       recruter: urlRecruter({ slug: f.slug, activite: a.nom }),
-      corps: `<h1>${unAgent(f)} pour ${echapper(activite)}${echapper(sur)}</h1>
+      badge: raison ? null : 'Agent qualifié pour cette activité',
+      jetons: [
+        `<b>${f.taches.length}</b> missions décrites`,
+        outils.length ? `<b>${outils.length}</b> logiciel${outils.length > 1 ? 's' : ''} de votre activité` : 'Vos logiciels, demandés à l’entretien',
+        'Local, cloud ou hybride',
+        'Dirigé depuis Desktop Commander',
+      ],
+      corps: `<h1>${unAgent(f)} pour <span class="eclat">${echapper(activite)}</span>${echapper(sur)}</h1>
 <p class="accroche">${echapper(f.accroche)}</p>
 <div class="carte"><p>${echapper(a.trait)}</p>${place ? `<p>Dans une entreprise de ${echapper(activite)}, ce poste s'appelle « ${echapper(place.role)} » (${echapper(place.service.toLowerCase())}).</p>` : ''}<p>Il reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p></div>
 ${expert ? `<div class="carte"><p>Votre branche a son propre expert du devis : ${lien(expert.fiche.nom, urlFiche.get(expert.fiche.id))}, « ${echapper(expert.role)} ». ${echapper(expert.fiche.accroche)}</p></div>` : ''}
 <h2>Ce qu'il fait chaque jour</h2>
-${liste(f.taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}${outilsDe(t).length ? ` Dans ${outilsDe(t).map((l) => echapper(l.nom)).join(' ou ')}.` : ''}</li>`))}
-${outils.length ? `<h2>Les logiciels de votre activité qu'il tient</h2>${liste(outils.map((l) => `<li>${lien(l.nom, urlLogiciel.get(l.id))}${l.editeur ? `, de ${echapper(l.editeur)}` : ''}</li>`))}` : ''}
+${liste(f.taches.map((t) => `<li><strong>${echapper(t.nom)}</strong> : ${echapper(t.description)}${outilsDe(t).length ? ` Dans ${outilsDe(t).map((l) => echapper(l.nom)).join(' ou ')}.` : ''}</li>`), 'missions')}
+${savoirDuPack(p, activite)}
+${outils.length ? `<h2>Les logiciels de votre activité qu'il tient</h2>${outilsEnBande(outils)}` : ''}
 ${autresLogiciels.length ? `<h2>Les autres logiciels de votre activité</h2><p>Il vous demande à l'entretien lesquels vous employez.</p>${puces(autresLogiciels.map((l) => lien(l.nom, urlLogiciel.get(l.id))))}` : ''}
-${p.vocabulaire?.length ? `<h2>Le vocabulaire qu'il connaît</h2>${liste(p.vocabulaire.map((v) => `<li><strong>${echapper(v.terme)}</strong> : ${echapper(v.sens)}</li>`))}` : ''}
-${p.documents?.length ? `<h2>Les documents qu'il manie</h2>${liste(p.documents.map((d) => `<li><strong>${echapper(d.nom)}</strong> : ${echapper(d.role)}</li>`))}` : ''}
-${p.regles?.length ? `<h2>Les règles qu'il respecte</h2>${liste(p.regles.map((r) => `<li>${echapper(r)}</li>`))}` : ''}
-${sectionsDuPack(p)}`,
+${collegues(f, a)}`,
     }), raison);
   }
 }
