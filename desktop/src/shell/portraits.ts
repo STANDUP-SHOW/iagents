@@ -35,7 +35,8 @@ const empreinte = (t: string) => [...t].reduce((h, c) => (h * 31 + c.charCodeAt(
 /**
  * The face of a hired agent. A photo the client gave wins when the window can
  * load it; then the site's named agents; then a featured portrait matching the
- * gender chosen at hiring; else the fiche's own portrait from the bank.
+ * gender chosen at hiring; else any featured face. The bank is for the
+ * library only.
  */
 export function portraitDe(a: Pick<AgentInstalle, 'prenom' | 'photo' | 'sexe'> & { fiche: { id: string } }): string {
   // A bank portrait says nothing of its gender: once the agent's gender is
@@ -45,11 +46,10 @@ export function portraitDe(a: Pick<AgentInstalle, 'prenom' | 'photo' | 'sexe'> &
   if (a.photo && /^(https?:|data:|\/portraits\/)/.test(a.photo) && !(deLaBanque && a.sexe)) return a.photo
   const nom = sansAccents(a.prenom)
   if (NOMMES[nom] && (!a.sexe || VEDETTES[a.sexe].includes(NOMMES[nom]))) return vedette(NOMMES[nom])
-  if (a.sexe) {
-    const pool = VEDETTES[a.sexe]
-    return vedette(pool[empreinte(nom) % pool.length])
-  }
-  return portraitDeFiche(a.fiche.id)
+  // A hired agent always wears a face of the iAgent team (max, 11/10/2026),
+  // never one from the library bank, even when its gender is unknown.
+  const pool = a.sexe ? VEDETTES[a.sexe] : [...VEDETTES.femme, ...VEDETTES.homme]
+  return vedette(pool[empreinte(nom) % pool.length])
 }
 
 /** The featured faces offered at hiring: those of the chosen gender, or all 25. */
