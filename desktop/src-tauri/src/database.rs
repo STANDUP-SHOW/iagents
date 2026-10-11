@@ -120,10 +120,23 @@ impl Database {
         let id = Uuid::new_v4().to_string();
         let now = horodatage();
 
-        conn.execute(
+        // `voice_prints.user_id` references `users(id)`, and the bundled SQLite
+        // enforces foreign keys. Nothing ever created the owner's row, so on
+        // every real install the first voice print was refused (« FOREIGN KEY
+        // constraint failed », max's PC, 11/10/2026). The owner is created
+        // here, in the same transaction, so the print cannot be orphaned.
+        let tx = conn.unchecked_transaction()
+            .map_err(|e| format!("la base du poste n'a pas pu s'ouvrir en écriture : {}", e))?;
+        tx.execute(
+            "INSERT OR IGNORE INTO users (id, username, email, created_at) VALUES (?1, ?1, ?1, ?2)",
+            params![user_id, &now],
+        ).map_err(|e| format!("la personne du poste n'a pas pu être inscrite : {}", e))?;
+        tx.execute(
             "INSERT OR REPLACE INTO voice_prints (id, user_id, mfcc_data, created_at) VALUES (?1, ?2, ?3, ?4)",
             params![&id, user_id, mfcc_data, &now],
-        ).map_err(|e| format!("Failed to save voice print: {}", e))?;
+        ).map_err(|e| format!("l'empreinte n'a pas pu être rangée : {}", e))?;
+        tx.commit()
+            .map_err(|e| format!("l'empreinte n'a pas pu être rangée : {}", e))?;
 
         Ok(VoicePrint {
             id,
@@ -179,4 +192,30 @@ fn horodatage() -> String {
         .map(|d| d.as_secs())
         .unwrap_or(0);
     crate::tache::date_rfc3339(secondes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn une_empreinte_se_range_sur_une_base_neuve() {
+        // Seen on max's PC on 11/10/2026: the very first save failed because
+        // no `users` row existed for the owner.
+        let dossier = std::env::temp_dir().join(format!("iagent-base-{}", Uuid::new_v4()));
+        let base = Database::new(&dossier.join("iagent.db")).unwrap();
+        base.init().unwrap();
+        {
+            let conn = base.conn.lock().unwrap();
+            let actives: i64 = conn.query_row("PRAGMA foreign_keys", [], |r| r.get(0)).unwrap();
+            assert_eq!(actives, 1, "the test only means something if foreign keys are enforced");
+        }
+
+        base.save_voice_print("proprietaire", "{\"a\":1}").unwrap();
+        // A second recording replaces the first instead of failing.
+        base.save_voice_print("proprietaire", "{\"a\":2}").unwrap();
+        let rangee = base.get_voice_print("proprietaire").unwrap().unwrap();
+        assert_eq!(rangee.mfcc_data, "{\"a\":2}");
+        let _ = std::fs::remove_dir_all(dossier);
+    }
 }
