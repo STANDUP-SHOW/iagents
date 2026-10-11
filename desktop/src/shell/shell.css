@@ -110,9 +110,22 @@
     radial-gradient(1px 1px at 43% 4.6%, rgba(255, 220, 140, 0.6), transparent 70%);
   opacity: 0.8;
 }
-.dc > :not(.decor):not(.palette-voile):not(.tiroir-voile) {
+/* Every block of the frame is its own stacking context, so a menu opened
+ * inside one block only rises above its neighbours if the block itself does.
+ * `:where` keeps this rule light, so the layers below can override it. */
+.dc > :where(:not(.decor, .palette-voile, .tiroir-voile)) {
   position: relative;
   z-index: 1;
+}
+/* The layers, low to high: the blocks (1), the top bar and any block with an
+ * open floating menu (30), the drawer (60), the command palette (80). Without
+ * this, the notifications slid under the modules, the voice block and the
+ * clock. Two separate rules: an engine without `:has` drops only the second. */
+.dc > .barre-haute {
+  z-index: 30;
+}
+.dc > :has(.menu-flottant) {
+  z-index: 30;
 }
 
 @keyframes scintille {
@@ -597,7 +610,20 @@ kbd {
   border-radius: 14px;
   border: 1px solid var(--bord-verre);
   background: var(--verre-fort);
+  backdrop-filter: blur(14px);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+/* A glass card is its own stacking context too (backdrop-filter): the one
+ * holding an open menu goes above the cards that follow it on the page. */
+.zone-centrale .carte-verre:has(.menu-flottant) {
+  position: relative;
+  z-index: 30;
+}
+/* The agent's « ⋯ » sits on the left of its card: open towards the right,
+ * or the left half of the menu is cut by the edge of the page. */
+.plus-zone .menu-flottant {
+  right: auto;
+  left: 0;
 }
 .menu-flottant h4 {
   font-size: 12px;

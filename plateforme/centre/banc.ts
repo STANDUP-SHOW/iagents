@@ -33,7 +33,8 @@ console.log(' Règles pures');
 verifier('réglages lisibles', reglagesInvalides() === null, reglagesInvalides());
 const t = tarifsEnTexte();
 verifier('les prix viennent du fichier du site (Essential 149 €, Box 69 € sur 36 mois)', t.includes('Essential : 149 € HT par mois') && t.includes('69 € HT par mois sur 36 mois'), t);
-verifier('une offre que le site ne vend pas encore est nommée sans prix', /iAgent Reception[^\n]*ne pas donner de prix/.test(t), t);
+// Voice is shown on the site at its pilot price since 11/10 (max: « Tarif pilote », never « sur devis »).
+verifier('la téléphonie se donne au tarif pilote du site (Reception 49 €)', /iAgent Reception[^\n]*: 49 € HT par mois\./.test(t), t);
 {
   const s = new Stockage(null);
   const lundi8h = new Date('2026-10-26T07:00:00Z'); // Monday after the change to winter time: 08:00 in Paris
