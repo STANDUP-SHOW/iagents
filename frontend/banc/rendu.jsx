@@ -373,7 +373,7 @@ for (const page of PAGES) {
   // Le site présente un produit terminé (max, 10/10) : aucune page n'annonce
   // une fonction pour plus tard. Le catalogue (data/*.json) décrit les tâches
   // des agents et n'est pas concerné.
-  const avenir = execSync("grep -rniE 'bient[oô]t|prochainement|en pr[ée]vision|arrive progressivement|arrivera|arriveront|à venir|en cours de d[ée]veloppement|pas encore (branch|construit|disponible)' src/pages src/accueil src/components src/App.jsx src/data/tarifs.json seo/generer.mjs || true", { encoding: 'utf8' }).trim();
+  const avenir = execSync("grep -rniE 'bient(o|ô)t|prochainement|en pr(e|é)vision|arrive progressivement|arrivera|arriveront|à venir|en cours de d(e|é)veloppement|pas encore (branch|construit|disponible)' src/pages src/accueil src/components src/App.jsx src/data/tarifs.json seo/generer.mjs || true", { encoding: 'utf8' }).trim();
   if (avenir) echoue(`une page annonce encore une fonction pour plus tard : ${avenir.split('\n').map((l) => l.slice(0, 120)).join(' ; ')}`);
   else ok('aucune page ne renvoie une fonction à plus tard');
 }

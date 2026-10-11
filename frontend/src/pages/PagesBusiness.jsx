@@ -4,8 +4,8 @@ import { euros, montant, STATUTS, BOX_DES, VOICE, prixAgentEnUneLigne } from '..
 import { Tete, Bande, Cartes, Etapes, Coches, Voisines, Fin, Bouton, Demande } from './blocs.jsx';
 
 // The Business pages of max's global document (07/10, §3, §9, §11, §12, §16).
-// The telephone is not built yet: every voice offer says « bientôt », and the
-// artisan's case is shown as a scenario, never as something a client runs today.
+// Every page says what the offer does, in the present (max, 10/10): the voice
+// offers carry the pilot status of the grid, the artisan's case is a real case.
 
 const { compteurs } = donnees;
 
