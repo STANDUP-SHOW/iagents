@@ -20,7 +20,11 @@ export const portraitDeFiche = (ficheId: string) => {
 const vedette = (n: number) => `/portraits/equipe/v${String(n).padStart(3, '0')}.webp`
 
 /** The site's named agents keep their face here too. */
-const NOMMES: Record<string, number> = { julie: 20, thomas: 12, samir: 6, lea: 7, marco: 1, elise: 22, victor: 21 }
+const NOMMES: Record<string, number> = {
+  julie: 20, thomas: 12, samir: 6, lea: 7, marco: 1, elise: 22, victor: 21,
+  // The fundraising team, faces chosen with max on his PC (11/10/2026).
+  hugo: 12, camille: 22, nora: 20, paul: 24, ines: 25, louis: 19, sarah: 5,
+}
 
 /** The featured portraits by the presentation of the face, read on max's sheet. */
 const VEDETTES: Record<Sexe, number[]> = {
