@@ -1,0 +1,116 @@
+name: Build Linux Box (.deb)
+
+# Les paquets de la Box (brief Factory Installer, 11/10/2026) : Desktop Commander
+# en édition Box (IAGENT_EDITION=box, adresse et clé de plateforme compilées) et
+# les trois services Rust (iagent-device, iagent-updater, iagent-watchdog), tous
+# en .deb pour Ubuntu 24.04. L'ISO d'usine les embarque (build-factory-iso.yml)
+# et iagent-updater les remplace sur les Box. Sur ubuntu-24.04 exprès, pas
+# -latest : la glibc et le webkit du .deb doivent être ceux d'iAgent OS.
+#
+# Sans les variables IAGENT_PLATEFORME_URL et IAGENT_CLE_PLATEFORME (Settings →
+# Variables du dépôt), Desktop Commander se construit en édition libre et l'étape
+# le dit : build.rs refuse une édition Box à moitié configurée, et une Box
+# redirigeable ne doit pas sortir en silence (docs/master/README.md §6).
+on:
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - 'box/services/**'
+      - 'back-office/admin/**'
+      - '.github/workflows/build-linux-deb.yml'
+  push:
+    tags:
+      - 'v*'
+      - 'box-v*'
+  workflow_dispatch:
+
+concurrency:
+  group: deb-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  services:
+    name: Services Rust de la Box (.deb)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: box/services
+      - name: cargo-deb
+        run: cargo install cargo-deb --locked
+      - name: Bancs puis paquets
+        run: |
+          cargo test --manifest-path box/services/Cargo.toml --workspace
+          for crate in agent-device updater watchdog; do
+            cargo deb --manifest-path "box/services/$crate/Cargo.toml" --output dist/
+          done
+          ls -l dist/
+          sha256sum dist/*.deb > dist/SHA256SUMS-services
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iagent-services-deb
+          path: dist/
+
+  desktop:
+    name: Desktop Commander, édition Box (.deb)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # La liste vit dans desktop/dependances-systeme.txt et nulle part ailleurs (même règle que controles.yml).
+      - name: Dépendances système de Tauri
+        run: |
+          sudo apt-get update
+          grep -v '^[[:space:]]*\(#\|$\)' desktop/dependances-systeme.txt \
+            | xargs sudo apt-get install -y --no-install-recommends
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Installer
+        run: npm install
+        working-directory: desktop
+
+      # Édition Box quand le dépôt porte adresse et clé ; édition libre sinon, en le disant.
+      - name: Construire le .deb
+        working-directory: desktop
+        env:
+          IAGENT_PLATEFORME_URL: ${{ vars.IAGENT_PLATEFORME_URL }}
+          IAGENT_CLE_PLATEFORME: ${{ vars.IAGENT_CLE_PLATEFORME }}
+        run: |
+          if [ -n "$IAGENT_PLATEFORME_URL" ] && [ -n "$IAGENT_CLE_PLATEFORME" ]; then
+            echo "édition Box : plateforme $IAGENT_PLATEFORME_URL"
+            export IAGENT_EDITION=box
+          else
+            echo "::warning::IAGENT_PLATEFORME_URL / IAGENT_CLE_PLATEFORME absentes des variables du dépôt : .deb en édition LIBRE, qui ne doit pas sortir sur une Box."
+          fi
+          npm run build
+          mkdir -p ../dist
+          cp src-tauri/target/release/bundle/deb/*.deb ../dist/
+          ls -l ../dist/
+
+      # Même garde que le flux Windows : whisper compilé pour le processeur du runner (AVX-512) a planté un client.
+      - name: Le binaire ne dépend pas du processeur du runner
+        run: |
+          if grep -q "GGML_NATIVE:BOOL=ON" desktop/src-tauri/target/release/build/whisper-rs-sys-*/out/build/CMakeCache.txt 2>/dev/null; then
+            echo "::error::whisper compilé en GGML_NATIVE : le binaire ne tournerait que sur ce processeur"; exit 1
+          fi
+
+      - name: Nom stable et condensé
+        run: |
+          cd dist
+          for f in *.deb; do mv "$f" "iagent-desktop_$(dpkg-deb -f "$f" Version)_amd64.deb" 2>/dev/null || true; done
+          sha256sum *.deb > SHA256SUMS-desktop
+          ls -l
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iagent-desktop-deb
+          path: dist/

@@ -14,10 +14,10 @@ export const tenants = [
 
 const PEM = '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA9tJ0bancbancbancbancbancbancbancbancbanc=\n-----END PUBLIC KEY-----\n';
 export const boxes = [
-  { device_id: 'BOX-7F3A', tenant_id: 'tn-boulangerie', serial: 'IAB-2026-0001', identite_publique: PEM, gamme: 'business', os: 'ubuntu-core 24', version_desktop: '0.2.1', statut: 'active', plan_id: 'box-commander-36', sante: { vu_le: '2026-10-07T07:58:00Z', cpu: 23, memoire: 61, disque: 38, temperature: 54 }, garantie_jusqu_au: '2028-09-02' },
-  { device_id: 'BOX-91C2', tenant_id: 'tn-cabinet', serial: 'IAB-2026-0002', identite_publique: PEM, gamme: 'business', os: 'ubuntu-core 24', version_desktop: '0.2.0', statut: 'suspendue', plan_id: 'box-commander-24', sante: { vu_le: '2026-10-02T11:20:00Z', cpu: 4, memoire: 22, disque: 71, temperature: 41 }, garantie_jusqu_au: '2026-09-30' },
-  { device_id: 'BOX-0D11', tenant_id: 'tn-famille', serial: 'IAB-2026-0003', identite_publique: PEM, gamme: 'home', os: 'ubuntu-core 24', version_desktop: '0.2.1', statut: 'provisionnee', plan_id: 'home-box', sante: null, garantie_jusqu_au: '2028-10-01' },
-  { device_id: 'BOX-55EE', tenant_id: null, serial: 'IAB-2026-0004', identite_publique: PEM, gamme: 'business', os: 'ubuntu-core 24', version_desktop: '0.2.1', statut: 'stock', plan_id: null, sante: null, garantie_jusqu_au: null },
+  { device_id: 'BOX-7F3A', tenant_id: 'tn-boulangerie', serial: 'IAB-2026-0001', identite_publique: PEM, gamme: 'business', os: 'ubuntu-core 24', version_desktop: '0.2.1', statut: 'active', plan_id: 'box-commander-36', sante: { vu_le: '2026-10-07T07:58:00Z', cpu: 23, memoire: 61, disque: 38, temperature: 54 }, garantie_jusqu_au: '2028-09-02', reference: 'IA-FR-CMD-00000001', profil_materiel: 'bosgame-m4-neo', inventaire: null, versions: { device: '0.1.0', desktop: '0.2.1' }, usine: { enrolee_le: '2026-09-01T09:00:00Z', installateur: '0.1.0', operateur: 'atelier (banc)', lot: 'L-2026-09', jeton_id: 'JU-banc' } },
+  { device_id: 'BOX-91C2', tenant_id: 'tn-cabinet', serial: 'IAB-2026-0002', identite_publique: PEM, gamme: 'business', os: 'ubuntu-core 24', version_desktop: '0.2.0', statut: 'suspendue', plan_id: 'box-commander-24', sante: { vu_le: '2026-10-02T11:20:00Z', cpu: 4, memoire: 22, disque: 71, temperature: 41 }, garantie_jusqu_au: '2026-09-30', reference: 'IA-FR-CMD-00000002', profil_materiel: null, inventaire: null, versions: null, usine: null },
+  { device_id: 'BOX-0D11', tenant_id: 'tn-famille', serial: 'IAB-2026-0003', identite_publique: PEM, gamme: 'home', os: 'ubuntu-core 24', version_desktop: '0.2.1', statut: 'provisionnee', plan_id: 'home-box', sante: null, garantie_jusqu_au: '2028-10-01', reference: 'IA-FR-HOME-00000001', profil_materiel: 'exr1', inventaire: null, versions: null, usine: null },
+  { device_id: 'BOX-55EE', tenant_id: null, serial: 'IAB-2026-0004', identite_publique: PEM, gamme: 'business', os: 'ubuntu-core 24', version_desktop: '0.2.1', statut: 'stock', plan_id: null, sante: null, garantie_jusqu_au: null, reference: 'IA-FR-CMD-00000003', profil_materiel: null, inventaire: null, versions: null, usine: null },
 ];
 
 const plan = (p) => ({
@@ -87,6 +87,39 @@ export const audit = [
   { id: 'aud-3', tenant_id: null, quand: '2026-10-06T10:30:00Z', acteur: 'back-office', action: 'skill.revue', cible: 'SP-commandes-telephone', detail: 'en-revue : données vérifiées anonymes.' },
 ];
 
+export const jetonsUsine = [
+  { id: 'JU-banc-1', operateur: 'Léa (banc)', lot: 'L-2026-10-A', tenant_id: null, plan_id: null, cree_le: '2026-10-11T08:00:00Z', expire_le: '2099-01-01T08:00:00Z', utilisations_max: 10, utilisations: 3 },
+  { id: 'JU-banc-2', operateur: 'Marc (banc)', lot: null, tenant_id: 'tn-famille', plan_id: 'home-box', cree_le: '2026-10-01T08:00:00Z', expire_le: '2026-10-02T08:00:00Z', utilisations_max: 1, utilisations: 1 },
+];
+
+export const rapportsUsine = [
+  {
+    id: 'RU-banc-1', device_id: 'BOX-7F3A', reference: 'IA-FR-CMD-00000001', serial: 'IAB-2026-0001', gamme: 'business', profil_materiel: 'bosgame-m4-neo',
+    inventaire: { cpu: 'AMD Ryzen 7 7840HS', coeurs: 8, memoire_go: 62.7, disque: { modele: 'Samsung 980 PRO', capacite_go: 1000 }, mac: { eth0: 'a8:b1:c2:d3:e4:f5', eth1: 'a8:b1:c2:d3:e4:f6', wifi: null }, bios: { fournisseur: 'AMI', version: '1.07', date: null }, tpm: { present: true, version: '2.0' }, uefi: true, secure_boot: true, releve_le: '2026-09-01T09:00:00Z' },
+    installateur: { version: '0.1.0', build_id: 'IAGENT-FACTORY-0.1.0+7', commit: 'ad6c328f' }, operateur: 'Léa (banc)', lot: 'L-2026-09',
+    commence_le: '2026-09-01T09:00:00Z', termine_le: '2026-09-01T09:14:00Z', recu_le: '2026-09-01T09:14:05Z',
+    tests: [
+      { id: 'materiel', libelle: 'Matériel conforme au profil', verdict: 'passe', duree_ms: 400, detail: 'AMD Ryzen 7 7840HS · 62.7 Go · 1000 Go' },
+      { id: 'tpm', libelle: 'TPM 2.0 présent et clé du disque scellée', verdict: 'echec', duree_ms: 30, detail: 'aucun /sys/class/tpm/tpm0 : TPM désactivé dans le BIOS ?' },
+    ],
+    verdict: 'echec',
+  },
+  {
+    id: 'RU-banc-2', device_id: 'BOX-7F3A', reference: 'IA-FR-CMD-00000001', serial: 'IAB-2026-0001', gamme: 'business', profil_materiel: 'bosgame-m4-neo',
+    inventaire: { cpu: 'AMD Ryzen 7 7840HS', coeurs: 8, memoire_go: 62.7, disque: { modele: 'Samsung 980 PRO', capacite_go: 1000 }, mac: { eth0: 'a8:b1:c2:d3:e4:f5', eth1: 'a8:b1:c2:d3:e4:f6', wifi: null }, bios: { fournisseur: 'AMI', version: '1.07', date: null }, tpm: { present: true, version: '2.0' }, uefi: true, secure_boot: true, releve_le: '2026-09-01T09:30:00Z' },
+    installateur: { version: '0.1.0', build_id: 'IAGENT-FACTORY-0.1.0+7', commit: 'ad6c328f' }, operateur: 'Léa (banc)', lot: 'L-2026-09',
+    commence_le: '2026-09-01T09:30:00Z', termine_le: '2026-09-01T09:47:00Z', recu_le: '2026-09-01T09:47:04Z',
+    tests: [
+      { id: 'materiel', libelle: 'Matériel conforme au profil', verdict: 'passe', duree_ms: 410, detail: 'AMD Ryzen 7 7840HS · 62.7 Go · 1000 Go' },
+      { id: 'tpm', libelle: 'TPM 2.0 présent et clé du disque scellée', verdict: 'passe', duree_ms: 2100, detail: 'TPM 2.0, jeton systemd-tpm2 sur DATA' },
+      { id: 'audio', libelle: 'Son : enceintes et microphone', verdict: 'non_constate', duree_ms: 2, detail: 'pas de micro attendu sur ce profil' },
+    ],
+    verdict: 'passe',
+  },
+];
+
+export const etiquettes = Object.fromEntries(boxes.map((b) => [b.device_id, { reference: b.reference, device_id: b.device_id, gamme: b.gamme, serial: b.serial, qr: b.reference }]));
+
 /** The answer of each GET route of routes.json, as the bench platform serves it. */
 export function reponsesDeBanc() {
   return {
@@ -104,5 +137,8 @@ export function reponsesDeBanc() {
     'GET /create/opportunites': opportunites.filter((o) => o.statut === 'publiee'),
     [`GET /create/etudes/${etude.id}`]: etude,
     ...Object.fromEntries(boxes.map((b) => [`GET /controle/boxes/${b.device_id}`, b])),
+    'GET /controle/usine/jetons': jetonsUsine,
+    ...Object.fromEntries(boxes.map((b) => [`GET /controle/boxes/${b.device_id}/rapports`, rapportsUsine.filter((r) => r.device_id === b.device_id)])),
+    ...Object.fromEntries(boxes.map((b) => [`GET /controle/boxes/${b.device_id}/etiquette`, etiquettes[b.device_id]])),
   };
 }

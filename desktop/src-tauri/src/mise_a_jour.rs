@@ -152,6 +152,17 @@ pub fn demarrer<R: Runtime>(app: &AppHandle<R>) {
         dire(&version, None, "mises a jour automatiques eteintes en developpement");
         return;
     }
+    // Sur la Box (édition figée, Linux), un seul updater : iagent-updater pose
+    // les .deb signés que le Control Plane publie (box/services/updater). Deux
+    // updaters sur la même machine se marcheraient dessus ; celui-ci se tait.
+    if crate::plateforme::Edition::compilee().box_figee && cfg!(target_os = "linux") {
+        dire(
+            &version,
+            None,
+            "mises a jour par iagent-updater (edition Box) : rien a chercher ici",
+        );
+        return;
+    }
     if !configuree(app.config().plugins.0.get("updater")) {
         dire(
             &version,

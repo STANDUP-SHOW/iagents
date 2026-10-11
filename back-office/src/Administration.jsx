@@ -22,10 +22,12 @@ import Opportunites, { lectures as lOpportunites } from './ecrans/Opportunites.j
 import Etudes, { lectures as lEtudes } from './ecrans/Etudes.jsx';
 import Devis, { lectures as lDevis } from './ecrans/Devis.jsx';
 import Audit, { lectures as lAudit } from './ecrans/Audit.jsx';
+import Usine, { lectures as lUsine } from './ecrans/Usine.jsx';
 
 export const ECRANS = [
   { id: 'plans', titre: 'Plans et prix', Composant: Plans, lectures: lPlans },
   { id: 'boxes', titre: 'Boxes', Composant: Boxes, lectures: lBoxes },
+  { id: 'usine', titre: 'Usine', Composant: Usine, lectures: lUsine },
   { id: 'licences', titre: 'Licences', Composant: Licences, lectures: lLicences },
   { id: 'voix', titre: 'Voice et téléphonie', Composant: Voix, lectures: lVoix },
   { id: 'catalogue', titre: 'Catalogue et compteur', Composant: Catalogue, lectures: lCatalogue },

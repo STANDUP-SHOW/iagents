@@ -890,11 +890,41 @@ par WhatsApp et email.
   `executeJavaScript`) sont refusés par construction. Cliquer et remplir vient
   en phase C, avec validation humaine avant tout envoi.
 
+- **La Box se fabrique, elle ne s'installe pas** (brief de max du 11/10/2026,
+  `box/`, `docs/box-usine.md`). **Un seul cycle de vie**, dans `regles.ts` :
+  `usine → qualifiee → stock → provisionnee → expediee → active → suspendue |
+  restituee | remplacee` ; l'usine n'ajoute pas d'état parallèle, un échec
+  d'usine laisse la Box `usine` avec son rapport. **`gamme` reste `business |
+  home`** (max, 11/10) : Commander est le nom de l'application, pas une gamme ;
+  la référence garde les codes du brief (`IA-FR-CMD-…`, `IA-FR-HOME-…`) par
+  `referenceBox()`. **Le verdict d'un rapport d'usine se recalcule**
+  (`verdictRapport`, tests obligatoires du profil matériel `box/materiel/`),
+  jamais lu ; Python (`regles.py`) et TypeScript rendent le même verdict sur les
+  mêmes témoins, deux bancs le tiennent.
+- **Rust fait tourner la machine, TypeScript fait tourner le produit, Python
+  fait tourner l'IA et les tests** (max, 11/10/2026). Services résidents de la
+  Box en Rust (`box/services/`), écran d'usine et back-office en React, tests
+  d'usine en Python bibliothèque standard.
+- **Un service systemd absent refuse en français et n'est pas activable** :
+  `box/os/systemd/SERVICES.json` est la seule liste de ce qui tourne sur iAgent
+  OS, `check-systemd.ts` tient les unités à cette liste, `check-profils.ts`
+  refuse qu'un profil allume un service absent. Même règle que « du code qui
+  rend Ok sans agir », au niveau de systemctl.
+- **Sur la Box, un seul updater** : `iagent-updater` pose des `.deb` dont il
+  vérifie l'empreinte ET la signature de la plateforme (`iagent-maj-v1`) ;
+  l'updater Tauri se tait en édition Box sous Linux. Toute mise à jour publiée
+  est signée ou n'est pas publiée (503 sans `PLATEFORME_CLE_SIGNATURE`).
+- **Rien de `box/` n'a tourné sur une machine au 11/10/2026** : écrit sur un
+  poste Windows sans Node, Rust ni Python, vérifié par l'intégration continue
+  seulement. La liste du non constaté est dans `box/README.md` ; ne pas la
+  raccourcir sans l'avoir vu.
+
 ## Commandes
 
 ```bash
 npm install
 npm run controle              # banc du dimensionnement + validation des paquets
+npm run controle-box          # les bancs de box/ (profils, unités, autoinstall, rapports, manifeste)
 npm run controle-application  # typage React + tests Rust de l'application (176)
 npm run controle-boutique     # la boutique : rend vraiment ses pages, tous onglets
 npx tsc --noEmit

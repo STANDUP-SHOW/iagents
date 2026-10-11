@@ -10,11 +10,45 @@
 export type Iso = string; // date ISO 8601
 export type Id = string;
 
+/**
+ * Ce que l'usine relève sur la machine avant d'installer (brief Factory
+ * Installer du 11/10/2026, §6, §13). Rien ici n'est un secret : ce sont les
+ * caractéristiques que porte déjà la fiche technique du fabricant.
+ */
+export type InventaireBox = {
+  cpu: string;
+  coeurs: number;
+  memoire_go: number;
+  disque: { modele: string; capacite_go: number };
+  mac: { eth0: string | null; eth1: string | null; wifi: string | null };
+  bios: { fournisseur: string; version: string; date: string | null };
+  tpm: { present: boolean; version: string | null };
+  uefi: boolean;
+  secure_boot: boolean | null;
+  releve_le: Iso;
+};
+
+/**
+ * Cycle de vie d'une Box, un seul (brief du 11/10/2026 §41 posé sur les états
+ * du §6) : `usine` (enrôlée par le Factory Installer, tests en cours) →
+ * `qualifiee` (rapport d'usine passé) → `stock` (prête à attribuer) →
+ * `provisionnee` (attribuée à un client) → `expediee` → `active` (première
+ * télémétrie chez le client) → `suspendue` | `restituee` | `remplacee`.
+ * Une Box provisionnée à la main par le back-office entre directement en `stock`.
+ */
+export type StatutBox = 'usine' | 'qualifiee' | 'stock' | 'provisionnee' | 'expediee' | 'active' | 'suspendue' | 'restituee' | 'remplacee';
+
 /** Une Box iAgent : appliance louée, propriété d'iAgent (§4, §6). */
 export type Box = {
   device_id: Id;
   tenant_id: Id | null; // null = en stock, pas encore attribuée
   serial: string;
+  /**
+   * Référence commerciale, imprimée sur l'étiquette et dans le QR :
+   * `IA-FR-CMD-00000127` (business) ou `IA-FR-HOME-00000128` (home). Un numéro
+   * d'ordre par gamme, attribué par la plateforme à la création, jamais un secret.
+   */
+  reference: string;
   /** Clé publique Ed25519 de la Box, en PEM. La clé privée ne quitte jamais la Box (TPM visé). */
   identite_publique: string;
   /**
@@ -25,10 +59,73 @@ export type Box = {
   gamme: 'business' | 'home';
   os: string;
   version_desktop: string;
-  statut: 'stock' | 'provisionnee' | 'active' | 'suspendue' | 'restituee' | 'remplacee';
+  statut: StatutBox;
   plan_id: Id | null;
   sante: { vu_le: Iso; cpu?: number; memoire?: number; disque?: number; temperature?: number } | null;
   garantie_jusqu_au: Iso | null;
+  /** Identifiant du profil matériel (`box/materiel/<id>.json`) contre lequel l'usine l'a qualifiée ; null si provisionnée à la main. */
+  profil_materiel: string | null;
+  inventaire: InventaireBox | null;
+  /** Versions des services installés, par nom de service (`device`, `desktop`, `os`…), reçues par la télémétrie. */
+  versions: Record<string, string> | null;
+  /** Ce que l'usine a inscrit à l'enrôlement ; null pour une Box provisionnée à la main. */
+  usine: { enrolee_le: Iso; installateur: string; operateur: string; lot: string | null; jeton_id: Id } | null;
+};
+
+/**
+ * Jeton d'usine : émis par le back-office pour un opérateur et un lot, montré
+ * une seule fois, gardé ici par son empreinte seulement. Il autorise
+ * `POST /controle/usine/enroler` sans accès admin sur la machine d'atelier.
+ */
+export type JetonUsine = {
+  id: Id;
+  /** SHA-256 (hex) du jeton ; le jeton lui-même n'est jamais stocké. */
+  empreinte: string;
+  operateur: string;
+  lot: string | null;
+  /** Client et plan à attribuer dès que le rapport d'usine passe ; null = la Box reste en stock. */
+  tenant_id: Id | null;
+  plan_id: Id | null;
+  cree_le: Iso;
+  expire_le: Iso;
+  utilisations_max: number;
+  utilisations: number;
+};
+
+export type VerdictTest = 'passe' | 'echec' | 'non_constate';
+
+/** Le rapport d'usine d'une Box (brief §45, §46) : une ligne par test, et un verdict que la plateforme recalcule. */
+export type RapportUsine = {
+  id: Id;
+  device_id: Id;
+  reference: string;
+  serial: string;
+  gamme: Box['gamme'];
+  profil_materiel: string;
+  inventaire: InventaireBox;
+  installateur: { version: string; build_id: string; commit: string };
+  operateur: string;
+  lot: string | null;
+  commence_le: Iso;
+  termine_le: Iso;
+  recu_le: Iso;
+  tests: { id: string; libelle: string; verdict: VerdictTest; duree_ms: number; detail: string | null }[];
+  /** Dérivé des tests et des tests obligatoires du profil matériel ; jamais cru sur parole. */
+  verdict: 'passe' | 'echec';
+};
+
+/** Une mise à jour publiée pour les Box (§6) : signée par la plateforme, la Box refuse un paquet dont la signature ne tombe pas juste. */
+export type MiseAJour = {
+  id: Id; // `${composant}:${canal}:${version}`
+  composant: 'desktop' | 'os' | 'skills' | 'device';
+  version: string;
+  canal: 'stable' | 'beta';
+  url: string;
+  /** SHA-256 (hex) du paquet. */
+  empreinte: string;
+  /** Ed25519 de la plateforme sur `iagent-maj-v1\n<composant>\n<version>\n<empreinte>`, base64url. */
+  signature: string;
+  publiee_le: Iso;
 };
 
 /** Le droit d'exécuter un agent : Client + Box + Template + Spécialisation + Licence (§6). */

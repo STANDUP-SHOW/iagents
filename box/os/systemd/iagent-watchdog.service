@@ -1,0 +1,24 @@
+# Le chien de garde (brief §30) : systemd relance déjà chaque service ; celui-ci
+# compte les relances (NRestarts) des services réels, et au troisième échec en
+# dix minutes porte l'alerte à iagent-device, qui l'inscrit dans la télémétrie
+# et dans le journal « security ».
+[Unit]
+Description=iAgent Box - surveillance des services
+After=iagent-device.service
+Wants=iagent-device.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/iagent-watchdog
+Restart=always
+RestartSec=10
+SyslogIdentifier=device
+Environment=IAGENT_ETAT=/var/lib/iagent
+ProtectSystem=strict
+ReadWritePaths=/var/lib/iagent
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -89,7 +89,8 @@ const clientBanc = (table) => creerClientWeb({ adresse: '/plateforme', jeton: JE
 // What each screen must show from the bench answers: its proof of reading them.
 const ATTENDU = {
   plans: ['agent-essential', 'masqué', 'legacy', 'ancienne', 'à venir', 'sur devis', 'BE', 'Aucune route de remise'],
-  boxes: ['IAB-2026-0001', 'Boulangerie Martin (banc)', 'suspendue', 'en stock', 'échue le', 'CPU 23', 'jamais remontée'],
+  boxes: ['IAB-2026-0001', 'IA-FR-CMD-00000001', 'IA-FR-HOME-00000001', 'Boulangerie Martin (banc)', 'suspendue', 'en stock', 'échue le', 'CPU 23', 'jamais remontée'],
+  usine: ['Léa (banc)', 'L-2026-10-A', '3 / 10', 'expiré le', 'Famille Durand (banc)', 'home-box', 'Émettre le jeton', 'usine', 'qualifiee', 'expediee'],
   licences: ['ent-0001', 'AG-0179', 'revoquee', 'Révoquer', 'Cabinet Roux Avocats (banc)'],
   voix: ['+33187650001', 'telnyx', 'transfere-humain', '0,16', 'Commande de 3 baguettes', 'GET /voix/fournisseurs'],
   catalogue: ['182 490', '1 249', 'GET /controle/catalogue'],
@@ -119,14 +120,14 @@ console.log('\nÉtats ouverts (formulaires, fiches, relectures)');
   const cas = [
     ['plans', { versionInitiale: 'agent-essential' }, ['Nouvelle version de agent-essential', 'rien n\'est écrasé', 'Enregistrer la version']],
     ['plans', { versionInitiale: '' }, ['Nouveau plan : sa première version']],
-    ['boxes', { boxInitiale: boxes[0].device_id }, [`Fiche de la Box ${boxes[0].device_id}`, 'clé publique Ed25519 enregistrée', 'box-commander-36']],
+    ['boxes', { boxInitiale: boxes[0].device_id }, [`Fiche de la Box ${boxes[0].device_id}`, 'clé publique Ed25519 enregistrée', 'box-commander-36', "Rapports d'usine", 'PASS', 'NON CONSTATÉ', '1 rapport(s) antérieur(s)', 'FAIL le', 'IA-FR-CMD-00000001', "Imprimer l'étiquette"]],
     ['opportunites', { ouverteInitiale: opportunites[0].id }, ['Relecture : Accueil téléphonique', 'Pénurie de vendeurs le matin']],
     ['etudes', { etudeInitiale: etude.id }, [`Étude ${etude.id}`, 'ambitieux', '61 000', 'seuil rentabilite mois']],
   ];
   for (const [id, props, attendus] of cas) {
     const e = ECRANS.find((x) => x.id === id);
     const lectures = [...e.lectures];
-    if (props.boxInitiale) lectures.push(['box', { params: { id: props.boxInitiale } }]);
+    if (props.boxInitiale) lectures.push(['box', { params: { id: props.boxInitiale } }], ['rapportsBox', { params: { id: props.boxInitiale } }], ['etiquetteBox', { params: { id: props.boxInitiale } }]);
     if (props.etudeInitiale) lectures.push(['etude', { params: { id: props.etudeInitiale } }]);
     const initial = await precharger(client, lectures);
     const r = rendre(`${id} ${JSON.stringify(props)}`, <Administration client={client} initial={initial} ecranInitial={id} propsEcran={props} />);

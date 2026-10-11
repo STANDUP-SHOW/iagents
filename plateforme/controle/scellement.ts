@@ -38,6 +38,24 @@ export const messageSkill = (skillPackId: string, version: string, empreinte: st
 export const infoSkill = (deviceId: string, skillPackId: string, version: string): string =>
   `iagent-skill-v1|${deviceId}|${skillPackId}|${version}`;
 
+// A published update (brief §33 : « artifact + hash + signature + version ») is
+// signed the same way as a Skill Pack, over its component, version and SHA-256,
+// so a Box refuses a package whose hash or version was swapped on the way.
+export const messageMiseAJour = (composant: string, version: string, empreinte: string): string =>
+  `iagent-maj-v1\n${composant}\n${version}\n${empreinte}`;
+
+export function signerMiseAJour(composant: string, version: string, empreinte: string, cle: KeyObject): string {
+  return b64(sign(null, Buffer.from(messageMiseAJour(composant, version, empreinte), 'utf8'), cle));
+}
+
+export function verifierSignatureMiseAJour(composant: string, version: string, empreinte: string, signature: string, clePubliquePem: string): boolean {
+  try {
+    return verify(null, Buffer.from(messageMiseAJour(composant, version, empreinte), 'utf8'), createPublicKey(clePubliquePem), deB64(signature));
+  } catch {
+    return false;
+  }
+}
+
 export function signerSkill(skillPackId: string, version: string, empreinte: string, cle: KeyObject): string {
   return b64(sign(null, Buffer.from(messageSkill(skillPackId, version, empreinte), 'utf8'), cle));
 }
