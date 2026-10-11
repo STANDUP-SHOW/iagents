@@ -219,32 +219,43 @@ function App() {
 
     let silenceTimeout: NodeJS.Timeout | null = null
     let lastResult = ''
+    let vivant = true
 
-    const interval = setInterval(async () => {
-      try {
-        const result = await invoke<string | null>('get_partial_result')
-        if (result) {
-          setPartialResult(result)
-          lastResult = result
+    // One question at a time: the next one leaves only once the previous one
+    // has answered. A transcription can take longer than 200 ms on a modest
+    // processor, and a setInterval piled the calls up behind it.
+    const interroger = async () => {
+      while (vivant) {
+        try {
+          const result = await invoke<string | null>('get_partial_result')
+          if (result && result !== lastResult) {
+            setPartialResult(result)
+            lastResult = result
 
-          // Reset silence timer when we get new speech
-          if (silenceTimeout) clearTimeout(silenceTimeout)
+            // Reset silence timer when we get new speech
+            if (silenceTimeout) clearTimeout(silenceTimeout)
 
-          // If we've been silent for 1 second, treat it as end of speech
-          silenceTimeout = setTimeout(() => {
-            if (lastResult && lastResult.trim()) {
-              processVoiceCommand(lastResult)
-              lastResult = ''
-            }
-          }, 1000)
+            // If we've been silent for 1 second, treat it as end of speech
+            silenceTimeout = setTimeout(() => {
+              if (lastResult && lastResult.trim()) {
+                const phrase = lastResult
+                lastResult = ''
+                // Heard once, handled once: the next poll must not find it again.
+                invoke('voix_oublier').catch(() => {})
+                processVoiceCommand(phrase)
+              }
+            }, 1000)
+          }
+        } catch (err) {
+          console.log('Failed to get partial result:', err)
         }
-      } catch (err) {
-        console.log('Failed to get partial result:', err)
+        await new Promise((r) => setTimeout(r, 200))
       }
-    }, 200)
+    }
+    interroger()
 
     return () => {
-      clearInterval(interval)
+      vivant = false
       if (silenceTimeout) clearTimeout(silenceTimeout)
     }
   }, [ecoute.active, activeAgent, agents])

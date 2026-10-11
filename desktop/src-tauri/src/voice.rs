@@ -8,6 +8,25 @@ use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextPar
 /// Whisper travaille en 16 kHz mono : tout ce qui entre est ramené à ce taux.
 const TAUX_WHISPER: u32 = 16_000;
 
+/// What a partial transcription looks at: the last few seconds, not
+/// everything heard since the microphone opened. Transcribing the whole buffer
+/// on every poll made each call longer than the last, until one took longer
+/// than the polling interval and the window stopped answering (Big Work,
+/// 10/10/2026: "ne répond pas" right after "En écoute…").
+const FENETRE_PARTIELLE: usize = 8 * TAUX_WHISPER as usize;
+
+/// The buffer never holds more than this: a room nobody speaks in must not
+/// fill memory, and a sentence longer than this is not a voice command.
+const TAMPON_MAXIMUM: usize = 30 * TAUX_WHISPER as usize;
+
+/// Keeps only the end of the buffer.
+fn garder_la_fin(t: &mut Vec<f32>, garder: usize) {
+    if t.len() > garder {
+        let trop = t.len() - garder;
+        t.drain(..trop);
+    }
+}
+
 pub struct VoiceState {
     contexte: Arc<WhisperContext>,
     /// Audio capté depuis le dernier vidage, déjà ramené en 16 kHz mono.
@@ -90,22 +109,44 @@ impl VoiceState {
 
     /// Transcrit ce qui a été capté sans vider le tampon.
     pub fn get_partial_result(&self) -> Result<String, String> {
-        let echantillons = self.tampon.lock().unwrap().clone();
+        let (contexte, echantillons) = self.instantane_partiel();
         if echantillons.is_empty() {
             return Ok(String::new());
         }
-        self.transcrire(&echantillons)
+        transcrire(&contexte, &echantillons)
+    }
+
+    /// The model and the last seconds heard, so the caller can transcribe
+    /// WITHOUT holding any lock: a transcription takes seconds on a modest
+    /// processor, and everything else waiting on the voice would wait with it.
+    pub fn instantane_partiel(&self) -> (Arc<WhisperContext>, Vec<f32>) {
+        let t = self.tampon.lock().unwrap();
+        let debut = t.len().saturating_sub(FENETRE_PARTIELLE);
+        (Arc::clone(&self.contexte), t[debut..].to_vec())
+    }
+
+    /// Forgets what was heard: once a sentence has been handled, it must not
+    /// be transcribed and handled again on the next poll.
+    pub fn oublier(&self) {
+        self.tampon.lock().unwrap().clear();
     }
 
     fn transcrire(&self, echantillons: &[f32]) -> Result<String, String> {
+        transcrire(&self.contexte, echantillons)
+    }
+}
+
+/// Transcribes 16 kHz mono samples. A free function so that it can run on a
+/// worker thread with only the model in hand.
+pub fn transcrire(contexte: &WhisperContext, echantillons: &[f32]) -> Result<String, String> {
+    {
         // Whisper refuse les fragments trop courts : moins d'une seconde ne
         // porte pas de phrase exploitable.
         if echantillons.len() < TAUX_WHISPER as usize {
             return Ok(String::new());
         }
 
-        let mut etat = self
-            .contexte
+        let mut etat = contexte
             .create_state()
             .map_err(|e| format!("initialisation de la transcription : {}", e))?;
 
@@ -183,6 +224,7 @@ fn ouvrir_entree(
                 }
                 let mut t = tampon_f32.lock().unwrap();
                 t.extend(reduire(donnees, canaux, pas));
+                garder_la_fin(&mut t, TAMPON_MAXIMUM);
             },
             sur_erreur,
             None,
@@ -199,6 +241,7 @@ fn ouvrir_entree(
                     .collect();
                 let mut t = tampon.lock().unwrap();
                 t.extend(reduire(&en_f32, canaux, pas));
+                garder_la_fin(&mut t, TAMPON_MAXIMUM);
             },
             sur_erreur,
             None,
@@ -475,4 +518,27 @@ fn jouer_wav(chemin: &std::path::Path) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn le_tampon_ne_garde_que_la_fin() {
+        let mut t: Vec<f32> = (0..10).map(|i| i as f32).collect();
+        garder_la_fin(&mut t, 4);
+        assert_eq!(t, vec![6.0, 7.0, 8.0, 9.0]);
+        garder_la_fin(&mut t, 10);
+        assert_eq!(t.len(), 4, "un tampon plus court que la limite reste entier");
+    }
+
+    #[test]
+    fn la_transcription_partielle_regarde_quelques_secondes_au_plus() {
+        // Le gel de Big Work : chaque interrogation transcrivait tout depuis
+        // l'ouverture du micro. La fenêtre doit tenir sous le plafond du
+        // tampon, et rester de l'ordre d'une phrase.
+        assert!(FENETRE_PARTIELLE <= TAMPON_MAXIMUM);
+        assert!(FENETRE_PARTIELLE <= 10 * TAUX_WHISPER as usize);
+    }
 }

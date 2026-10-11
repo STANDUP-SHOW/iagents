@@ -184,8 +184,10 @@ fn greet(name: &str) -> String {
     format!("Hello, {}!", name)
 }
 
+/// `async`, et le modele charge hors du fil de la fenetre : 190 Mo a lire au
+/// lancement figeaient l'ecran le temps du chargement.
 #[tauri::command]
-fn init_voice(state: State<AppState>) -> Result<String, String> {
+async fn init_voice(state: State<'_, AppState>) -> Result<String, String> {
     // Ce qui manque se dit AVANT d'essayer. whisper-rs rend « failed to load
     // model », qui ne nomme ni le fichier ni ce que le client peut y faire, et
     // l'écran le montrait tel quel, en anglais, à un client francophone.
@@ -194,7 +196,12 @@ fn init_voice(state: State<AppState>) -> Result<String, String> {
     }
 
     let model_path = voice::chemin_modele_ecoute();
-    match VoiceState::new(&model_path) {
+    let charge = tauri::async_runtime::spawn_blocking(move || {
+        VoiceState::new(&model_path).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("chargement interrompu : {}", e))?;
+    match charge {
         Ok(voice_state) => {
             {
                 let mut voice = state.voice.lock().unwrap();
@@ -263,14 +270,54 @@ fn process_voice_audio(audio_data: Vec<i16>, state: State<AppState>) -> Result<O
     }
 }
 
-#[tauri::command]
-fn get_partial_result(state: State<AppState>) -> Result<Option<String>, String> {
-    let voice_guard = state.voice.lock().unwrap();
+/// Vrai pendant qu'une transcription partielle tourne : l'ecran interroge
+/// toutes les 200 ms, et une transcription prend plus longtemps que ca sur un
+/// processeur modeste. Sans ce garde, les appels s'empilaient.
+static TRANSCRIPTION_EN_COURS: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 
-    if let Some(voice) = voice_guard.as_ref() {
-        voice.get_partial_result().map(Some)
-    } else {
-        Err("L'écoute n'est pas prête sur ce poste.".to_string())
+/// Ce qui vient d'etre entendu, transcrit hors du fil de la fenetre.
+///
+/// `async` n'est pas un detail : une commande Tauri synchrone tourne sur le fil
+/// de la fenetre, et celle-ci transcrivait tout ce qui avait ete entendu depuis
+/// l'ouverture du micro, cinq fois par seconde. Sur Big Work (i5-4460) la
+/// fenetre passait en « ne repond pas » des le lancement, puisque l'ecoute
+/// demarre seule (10/10/2026).
+#[tauri::command]
+async fn get_partial_result(state: State<'_, AppState>) -> Result<Option<String>, String> {
+    use std::sync::atomic::Ordering;
+
+    let (contexte, echantillons) = {
+        let voice_guard = state.voice.lock().unwrap();
+        let Some(voice) = voice_guard.as_ref() else {
+            return Err("L'écoute n'est pas prête sur ce poste.".to_string());
+        };
+        voice.instantane_partiel()
+    };
+    if echantillons.is_empty() {
+        return Ok(Some(String::new()));
+    }
+    // Une transcription tourne deja : on ne l'attend pas, on rend « rien de
+    // neuf » et l'ecran redemandera.
+    if TRANSCRIPTION_EN_COURS.swap(true, Ordering::AcqRel) {
+        return Ok(None);
+    }
+    let resultat = tauri::async_runtime::spawn_blocking(move || {
+        voice::transcrire(&contexte, &echantillons)
+    })
+    .await;
+    TRANSCRIPTION_EN_COURS.store(false, Ordering::Release);
+    resultat
+        .map_err(|e| format!("transcription interrompue : {}", e))?
+        .map(Some)
+}
+
+/// Oublie ce qui a ete entendu, une fois la phrase traitee : sinon elle serait
+/// retranscrite, et retraitee, a l'interrogation suivante.
+#[tauri::command]
+fn voix_oublier(state: State<AppState>) {
+    if let Some(voice) = state.voice.lock().unwrap().as_ref() {
+        voice.oublier();
     }
 }
 
@@ -795,6 +842,7 @@ fn main() {
             stop_voice_recognition,
             process_voice_audio,
             get_partial_result,
+            voix_oublier,
             text_to_speech,
             empreinte_capturer,
             empreinte_oublier,
