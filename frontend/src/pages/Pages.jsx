@@ -332,8 +332,8 @@ function Evolution() {
           ['coche', 'Méthodes validées', 'Ce qui a marché chez d’autres, sans leurs données.'],
         ]} />
       </Bande>
-      <Bande surtitre="Aujourd'hui" titre="Ce que chaque fiche montre déjà"
-        texte={`Les ${metiers} fiches décrivent les missions de chaque métier et les logiciels qu'il sait tenir, parmi ${logiciels} logiciels du référentiel. La version, les nouveautés et les logiciels certifiés s'y ajouteront à mesure qu'ils seront mesurés.`}>
+      <Bande surtitre="Les fiches" titre="Ce que chaque fiche montre"
+        texte={`Les ${metiers} fiches décrivent les missions de chaque métier, ce qui attend votre accord et les logiciels qu'il sait tenir, parmi ${logiciels} logiciels du référentiel.`}>
         <Bouton href={LIENS.catalogue} variante="contour-cyan" evenement="catalog_click">Explorer les métiers</Bouton>
       </Bande>
       <Bande surtitre="Mises à jour" titre="Sans rien faire de votre côté"
@@ -359,8 +359,8 @@ function InsideIAgent() {
           <ul>{POLES.map((p) => <li key={p} className="pg-noeud">{p}</li>)}</ul>
         </div>
       </Bande>
-      <Bande surtitre="Les chiffres" titre="Mesurés, ou absents"
-        texte="Agents actifs, missions menées, opérations supervisées : ces chiffres s'afficheront ici quand ils seront mesurés. Aucun n'est inventé en attendant." />
+      <Bande surtitre="Les chiffres" titre="Mesurés, jamais inventés"
+        texte={`Chaque chiffre publié sur ce site est compté dans le catalogue au moment de sa publication : ${nombre(compteurs.fiches)} métiers, ${nombre(compteurs.activites)} activités, ${nombre(compteurs.logiciels)} logiciels. Nous ne publions aucun chiffre d'usage que nous n'avons pas mesuré.`} />
       <Fin titre="Construisez la vôtre">
         <Bouton href={LIENS.entreprise} evenement="create_company_click">Construire mon équipe</Bouton>
         <Bouton href="/workforce" variante="contour-cyan">iAgent Workforce</Bouton>
@@ -409,7 +409,7 @@ const QUESTIONS = [
   ['Mes données quittent-elles l’entreprise ?', "En local, rien ne sort pour être traité. Par l'API, seul ce que la tâche demande part au fournisseur d'IA. Vous choisissez la voie, et l'application vous prévient avant de basculer."],
   ['Un agent peut-il agir sans moi ?', "Oui, s'il est réglé ainsi : il travaille seul, sauf sur les tâches que vous mettez sous contrôle. Aucun e-mail ne part sans que vous ayez relu le texte exact."],
   ['Combien d’agents par Box ?', "Jusqu'à 20. Au-delà, une deuxième Box, ou une infrastructure sur devis."],
-  ['Les agents répondent-ils sur WhatsApp ou au téléphone ?', "Pas encore : la voix et l'e-mail fonctionnent, WhatsApp et le téléphone arrivent bientôt."],
+  ['Les agents répondent-ils sur WhatsApp ou au téléphone ?', "Notre centre d'appels IA répond déjà sur WhatsApp et au téléphone pour iAgent Tech : prise de rendez-vous, qualification, transfert à un conseiller, consentement pour les appels sortants. Pour équiper votre propre entreprise (standard téléphonique, SAV, campagnes), un conseiller vous présente l'offre et sa mise en service."],
   ['Sur quel système tourne l’application ?', 'Desktop Commander tourne sous Windows ; la Box est livrée avec.'],
 ];
 

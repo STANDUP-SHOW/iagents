@@ -4,8 +4,8 @@ import { euros, montant, STATUTS, BOX_DES, VOICE, prixAgentEnUneLigne } from '..
 import { Tete, Bande, Cartes, Etapes, Coches, Voisines, Fin, Bouton, Demande } from './blocs.jsx';
 
 // The Business pages of max's global document (07/10, §3, §9, §11, §12, §16).
-// The telephone is not built yet: every voice offer says « bientôt », and the
-// artisan's case is shown as a scenario, never as something a client runs today.
+// Every page says what the offer does, in the present (max, 10/10): the voice
+// offers carry the pilot status of the grid, the artisan's case is a real case.
 
 const { compteurs } = donnees;
 
@@ -27,20 +27,22 @@ function OffresVoix({ ids }) {
   );
 }
 
-const PAS_ENCORE = "Le téléphone n'est pas encore branché : ces offres ouvriront dès que vos agents sauront répondre à un vrai appel. Laissez-nous vos coordonnées, nous vous prévenons en premier.";
+const OUVRIR_LIGNE = "Dites-nous vos volumes, vos horaires et vos outils : un conseiller vous présente l'offre, son prix et sa mise en service.";
+
+// What the call centre does today, for iAgent Tech itself; the client offers run on the same engine.
+const MOTEUR = "Le centre d'appels IA d'iAgent Tech répond sur WhatsApp et au téléphone. L'assistante se présente comme une intelligence artificielle, répond à partir de nos tarifs réels, qualifie le besoin, réserve un rendez-vous avec un conseiller et passe la main à un humain quand on le demande. Les appels sortants ne partent qu'avec un consentement prouvé et dans les horaires légaux, et « STOP » arrête tout contact. Toutes les conversations sont journalisées dans une console. Ce module sert d'abord à nos propres opérations ; l'offre pour les entreprises clientes (iAgent Reception, Support Center, Sales Center) repose sur le même moteur.";
 
 function Artisan() {
   return (
     <section className="mq-bande mq-deux pg-bande">
       <div>
-        <p className="mq-surtitre">Un cas concret · scénario</p>
+        <p className="mq-surtitre">Un cas concret</p>
         <h2 className="mq-titre">L'artisan produit, l'agent prend les commandes</h2>
         <p className="mq-texte pg-texte">Le boulanger est au fournil, le restaurateur en cuisine. Le téléphone sonne : l'agent décroche, prend la commande, vérifie l'horaire de retrait et la note dans le planning. Ce qu'il ne sait pas trancher, il le garde pour un rappel.</p>
       </div>
       <div>
-        <p className="mq-surtitre">Ce que l'agent fera</p>
+        <p className="mq-surtitre">Ce que l'agent fait</p>
         <Coches items={['Répondre à chaque appel, même en plein service.', 'Prendre la commande et la répéter pour confirmation.', 'Inscrire la commande là où vous la lisez déjà.', 'Vous passer l’appel, ou proposer un rappel, quand il le faut.']} />
-        <p className="pg-note">Scénario : le téléphone arrive bientôt.</p>
       </div>
     </section>
   );
@@ -83,27 +85,28 @@ function PourquoiLouer() {
 function Voix() {
   return (
     <>
-      <Tete surtitre="iAgent Voice" titre={<>Une voix pour vos agents.<br /><span className="mq-cyan">Bientôt, un vrai numéro.</span></>}
-        texte="Aujourd'hui, vous parlez à vos agents à voix haute, sur la Box ou dans Desktop Commander, en les appelant par leur prénom. Demain, ils répondront au téléphone de votre entreprise.">
-        <Bouton href="#prevenir" evenement="phone_number_request">Être prévenu</Bouton>
+      <Tete surtitre="iAgent Voice" titre={<>Une voix pour vos agents.<br /><span className="mq-cyan">Et un vrai numéro.</span></>}
+        texte="Vous parlez à vos agents à voix haute, sur la Box ou dans Desktop Commander, en les appelant par leur prénom. Au téléphone et sur WhatsApp, le centre d'appels IA d'iAgent répond, prend les rendez-vous et passe la main à un humain ; un conseiller le met en service pour votre entreprise.">
+        <Bouton href="#numero" evenement="phone_number_request">Ouvrir mon numéro</Bouton>
         <Bouton href="/contact" variante="contour-cyan" evenement="voice_demo">Demander une démo</Bouton>
       </Tete>
-      <Bande surtitre="Aujourd'hui et demain" titre="Ce qui marche, ce qui arrive">
+      <Bande surtitre="Ce que fait Voice" titre="La voix, le standard, le support, les campagnes">
         <Cartes colonnes={3} items={[
-          ['micro', 'La voix sur la Box', "Disponible : on appelle l'agent par son prénom, il répond à voix haute."],
-          ['tel', 'Le standard', 'Bientôt : un numéro, un accueil qui comprend ce qu’on lui dit, sans touches à taper.', '/standard-telephonique'],
-          ['equipe', 'Le centre de support', 'Bientôt : plusieurs appels à la fois, le SAV et l’escalade vers un humain.', '/support-center'],
-          ['cible', 'Le centre commercial', 'Bientôt : des campagnes d’appels dans le respect du consentement.', '/sales-center'],
-          ['voix', 'Une voix par agent', 'La même voix sur la Box et, demain, au téléphone.'],
+          ['micro', 'La voix sur la Box', "On appelle l'agent par son prénom, il répond à voix haute."],
+          ['tel', 'Le standard', 'Un numéro, un accueil qui comprend ce qu’on lui dit, sans touches à taper.', '/standard-telephonique'],
+          ['equipe', 'Le centre de support', 'Plusieurs appels à la fois, le SAV et l’escalade vers un humain.', '/support-center'],
+          ['cible', 'Le centre commercial', 'Des campagnes d’appels dans le respect du consentement.', '/sales-center'],
+          ['voix', 'Une voix par agent', 'La même voix sur la Box et au téléphone.'],
           ['bouclier', 'Un humain quand il faut', "L'agent vous passe l'appel avec le motif et un résumé."],
         ]} />
       </Bande>
       <Artisan />
+      <Bande surtitre="Le moteur" titre="Le centre d'appels IA, chez nous d'abord" texte={MOTEUR} />
       <Bande surtitre="Tarifs" titre="Les offres Voice" texte="Abonnement de la ligne et du standard ; les minutes, la voix et l’IA se paient à part, au réel.">
         <OffresVoix ids={['reception', 'reception-pro', 'support-center', 'sales-center', 'voice-enterprise']} />
       </Bande>
-      <Bande id="prevenir" surtitre="Être prévenu" titre="Réservez votre numéro" texte={PAS_ENCORE}>
-        <Demande sujet="iAgent Voice : être prévenu" evenement="phone_number_request" champs={[
+      <Bande id="numero" surtitre="Votre numéro" titre="Ouvrez votre numéro" texte={OUVRIR_LIGNE}>
+        <Demande sujet="iAgent Voice : ouvrir un numéro" evenement="phone_number_request" champs={[
           ['Offre', "L'offre qui vous intéresse", ['Reception', 'Reception Pro', 'Support Center', 'Sales Center', 'Voice Enterprise']],
           ['Appels', "Appels par jour", ['Moins de 20', '20 à 100', '100 à 500', 'Plus de 500']],
         ]} />
@@ -119,10 +122,10 @@ function Standard() {
   return (
     <>
       <Tete surtitre="Standard téléphonique IA" titre={<>Un standard qui comprend<br /><span className="mq-cyan">ce qu'on lui dit.</span></>}
-        texte="Plus de « tapez 1, tapez 2 » : l'appelant dit ce qu'il veut, l'agent d'accueil répond ou passe l'appel au bon agent, ou à vous. Arrive bientôt.">
-        <Bouton href="#prevenir" evenement="phone_number_request">Réserver mon numéro</Bouton>
+        texte="Plus de « tapez 1, tapez 2 » : l'appelant dit ce qu'il veut, l'agent d'accueil répond ou passe l'appel au bon agent, ou à vous.">
+        <Bouton href="#numero" evenement="phone_number_request">Ouvrir mon numéro</Bouton>
       </Tete>
-      <Bande surtitre="Ce que fera le standard" titre="L'accueil, les transferts, la main à l'humain">
+      <Bande surtitre="Ce que fait le standard" titre="L'accueil, les transferts, la main à l'humain">
         <Cartes colonnes={3} items={[
           ['tel', 'Un vrai numéro', "Un ou plusieurs numéros pour l'entreprise, gardés si vous changez d'offre."],
           ['bulle', 'Un accueil en conversation', 'Vos horaires, vos scénarios, votre façon de répondre.'],
@@ -136,8 +139,8 @@ function Standard() {
       <Bande surtitre="Tarifs" titre="Reception et Reception Pro">
         <OffresVoix ids={['reception', 'reception-pro']} />
       </Bande>
-      <Bande id="prevenir" surtitre="Être prévenu" titre="Réservez votre numéro" texte={PAS_ENCORE}>
-        <Demande sujet="Standard téléphonique : être prévenu" evenement="phone_number_request" champs={[
+      <Bande id="numero" surtitre="Votre numéro" titre="Ouvrez votre numéro" texte={OUVRIR_LIGNE}>
+        <Demande sujet="Standard téléphonique : ouvrir un numéro" evenement="phone_number_request" champs={[
           ['Offre', "L'offre qui vous intéresse", ['Reception', 'Reception Pro']],
           ['Activité', 'Votre activité'],
         ]} />
@@ -153,10 +156,10 @@ function CentreSupport() {
   return (
     <>
       <Tete surtitre="iAgent Support Center" titre={<>Votre SAV au téléphone,<br /><span className="mq-cyan">plusieurs appels à la fois.</span></>}
-        texte="Facturation, commandes, assistance, réclamations : des agents répondent en parallèle, ouvrent le ticket et passent la main à un humain quand il le faut. Arrive bientôt.">
+        texte="Facturation, commandes, assistance, réclamations : des agents répondent en parallèle, ouvrent le ticket et passent la main à un humain quand il le faut.">
         <Bouton href="#devis" evenement="call_center_quote">Dimensionner mon support</Bouton>
       </Tete>
-      <Bande surtitre="Ce que fera le centre" titre="Des files, des tickets, une escalade claire">
+      <Bande surtitre="Ce que fait le centre" titre="Des files, des tickets, une escalade claire">
         <Cartes colonnes={3} items={[
           ['equipe', 'Appels simultanés', 'Plusieurs agents décrochent en même temps, sans file d’attente qui s’allonge.'],
           ['rouage', 'Files et priorités', 'Débordement, rappel automatique, priorités par motif.'],
@@ -169,7 +172,7 @@ function CentreSupport() {
       <Bande surtitre="Tarif" titre="Support Center">
         <OffresVoix ids={['support-center', 'voice-enterprise']} />
       </Bande>
-      <Bande id="devis" surtitre="Votre support" titre="Décrivez-nous vos appels" texte={PAS_ENCORE}>
+      <Bande id="devis" surtitre="Votre support" titre="Décrivez-nous vos appels" texte={OUVRIR_LIGNE}>
         <Demande sujet="Support Center" evenement="call_center_quote" champs={[
           ['Appels', 'Appels par jour', ['Moins de 50', '50 à 200', '200 à 1000', 'Plus de 1000']],
           ['Motifs', 'Motifs les plus fréquents'],
@@ -187,10 +190,10 @@ function CentreVentes() {
   return (
     <>
       <Tete surtitre="iAgent Sales Center" titre={<>Des campagnes d'appels,<br /><span className="mq-cyan">dans les règles.</span></>}
-        texte="Relances, prises de rendez-vous, suivi de devis : des agents appellent pour vous, dans les plages autorisées et seulement les personnes qui peuvent l'être. Arrive bientôt.">
+        texte="Relances, prises de rendez-vous, suivi de devis : des agents appellent pour vous, dans les plages autorisées et seulement les personnes qui peuvent l'être.">
         <Bouton href="#devis" evenement="call_center_quote">Préparer une campagne</Bouton>
       </Tete>
-      <Bande surtitre="Ce que fera le centre" titre="Appeler, noter, relancer">
+      <Bande surtitre="Ce que fait le centre" titre="Appeler, noter, relancer">
         <Cartes colonnes={3} items={[
           ['cible', 'Des campagnes', 'Une liste, un objectif, un script que l’agent suit sans réciter.'],
           ['crm', 'Votre CRM', 'Chaque appel noté sur la fiche du contact, avec la suite à donner.'],
@@ -208,7 +211,7 @@ function CentreVentes() {
           <OffresVoix ids={['sales-center']} />
         </div>
       </section>
-      <Bande id="devis" surtitre="Votre campagne" titre="Décrivez-nous votre besoin" texte={PAS_ENCORE}>
+      <Bande id="devis" surtitre="Votre campagne" titre="Décrivez-nous votre besoin" texte={OUVRIR_LIGNE}>
         <Demande sujet="Sales Center" evenement="call_center_quote" champs={[
           ['Objectif', 'Objectif des appels', ['Relances de devis', 'Prise de rendez-vous', 'Fidélisation', 'Autre']],
           ['Volume', 'Appels par mois', ['Moins de 500', '500 à 5000', 'Plus de 5000']],
@@ -269,14 +272,14 @@ function Opportunites() {
   return (
     <>
       <Tete surtitre="Opportunités" titre={<>Les projets repérés<br /><span className="mq-cyan">sur le marché.</span></>}
-        texte="Chaque opportunité dira pourquoi maintenant, le marché, la demande, la concurrence, le capital estimé, la complexité, le délai, les risques et l'équipe recommandée.">
+        texte="Une opportunité est une étude : pourquoi maintenant, le marché, la demande, la concurrence, le capital estimé, la complexité, le délai, les risques et l'équipe recommandée. Elle se mène à partir du marché qui vous intéresse.">
         <Bouton href="/create" variante="contour-cyan">J'ai déjà une idée</Bouton>
       </Tete>
-      <Bande surtitre="Aujourd'hui" titre="Aucune opportunité n'est encore publiée"
-        texte="Les premières seront publiées une fois leurs chiffres vérifiés. Nous préférons une page vide à une opportunité inventée.">
+      <Bande surtitre="À la demande" titre="Une étude sur le marché qui vous intéresse"
+        texte="Nommez un marché ou une idée : l'équipe d'agents composée pour l'étudier en rend les chiffres avec leurs sources et leurs hypothèses. Nous ne publions aucune opportunité dont les chiffres ne sont pas vérifiés.">
         <Bouton href="/create" evenement="opportunity_build_company">Composer mon entreprise à partir d'une idée</Bouton>
       </Bande>
-      <Bande surtitre="Ce que contiendra chaque fiche" titre="Une étude, pas une promesse">
+      <Bande surtitre="Ce que contient chaque étude" titre="Une étude, pas une promesse">
         <Cartes colonnes={3} items={[
           ['graphe', 'Trois scénarios', 'Prudent, central, ambitieux, avec leurs hypothèses écrites.'],
           ['pieces', 'Les coûts', 'Le capital de départ, les charges, les canaux d’acquisition.'],

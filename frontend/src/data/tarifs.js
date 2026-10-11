@@ -29,7 +29,7 @@ export function montant(o) {
   return `${environ}${euros(o.mensuel)}`;
 }
 
-export const STATUTS = { pilote: 'Tarif pilote', public: 'Tarif public', 'sur-devis': 'Sur devis', bientot: 'Bientôt' };
+export const STATUTS = { pilote: 'Tarif pilote', public: 'Tarif public', 'sur-devis': 'Sur devis' };
 
 /** The voice offers (document global, §12), by id. */
 export const VOICE = Object.fromEntries(tarifs.voice.offres.map((o) => [o.id, o]));

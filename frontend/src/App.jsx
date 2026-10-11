@@ -393,7 +393,7 @@ export default function App({ pageInitiale = 'catalogue', vueInitiale = 'metier'
               ) : (
                 <>
                   <div className="bi-vide">
-                    <p className="titre-display titre-petit">Pas encore de métier à ce nom : nous pouvons vous le composer.</p>
+                    <p className="titre-display titre-petit">Aucun métier à ce nom : nous pouvons vous le composer.</p>
                     <p className="mt-2 text-[var(--texte-doux)]">Dites ce que vous voulez confier, et iAgent compose l'agent ou l'équipe sur mesure. Vous pouvez aussi chercher par activité, ou partir des métiers que toute entreprise emploie, juste en dessous.</p>
                     <div className="mt-6 flex flex-wrap justify-center gap-3">
                       <a href={LIENS.idee(requete || 'Un agent pour mon entreprise')} className="bouton bouton-plein">Composer un agent sur mesure</a>

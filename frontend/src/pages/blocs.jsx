@@ -126,7 +126,7 @@ export function Demande({ sujet, champs = [], evenement, message = '', libelleEn
       <label className="pg-large"><span>Ce que vous voulez accomplir</span><textarea name="Message" rows="4" defaultValue={message} /></label>
       <button type="submit" className="bouton bouton-plein">{libelleEnvoi} <Fleche /></button>
       {envoye && CONTACT && <p className="pg-note" role="status">Votre messagerie s'ouvre avec votre demande, adressée à {CONTACT}. Envoyez le message : nous vous répondons avec la suite. Si rien ne s'ouvre, écrivez-nous directement à cette adresse.</p>}
-      {envoye && !CONTACT && <p className="pg-note" role="status">La réception des demandes n'est pas encore branchée : rien n'est parti. Revenez très bientôt, ou téléchargez l'application pour essayer un agent dès maintenant.</p>}
+      {envoye && !CONTACT && <p className="pg-note" role="status">Votre demande n'a pas pu partir d'ici : rien n'est envoyé. Écrivez-nous directement, nous vous répondons avec la suite.</p>}
     </form>
   );
 }
