@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import '../accueil/accueil.css';
 import './pages.css';
+import './scenes.css';
 import Page from './Page.jsx';
 
 const racine = document.getElementById('page');

@@ -261,7 +261,7 @@ for (const page of PAGES) {
     if (!html.includes('<h1')) echoue(`page ${nom} : pas de titre principal`);
   }
   ok(`les ${PAGES_OFFRE.length} pages de l'offre se rendent`);
-  const sources = ['src/pages/Pages.jsx', 'src/pages/PagesBusiness.jsx', 'src/pages/blocs.jsx', 'src/accueil/Accueil.jsx'];
+  const sources = ['src/pages/Pages.jsx', 'src/pages/PagesOffre.jsx', 'src/pages/PagesBusiness.jsx', 'src/pages/scenes.jsx', 'src/pages/blocs.jsx', 'src/accueil/Accueil.jsx'];
   const enDur = sources.flatMap((f) => [...readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8').matchAll(/\d[\d\s,.]*\s?€/g)].map((m) => `${f} : ${m[0]}`));
   if (enDur.length) echoue(`montants écrits en dur : ${enDur.join(' ; ')}`);
   else ok('aucun montant écrit en dur dans les pages');
