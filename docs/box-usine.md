@@ -122,10 +122,12 @@ Linux (`mise_a_jour.rs`). Le A/B d'image (§32 du brief) attend `SYSTEM_B`.
 1. **La machine business.** `dimensionnement/offre-box.json` et
    `docs/offre-box.md` vendent une « Box Commandeur » Minisforum MS-01 (i9,
    32 Go) qui **ne fait tourner aucun agent** ; le brief nomme un BOSGAME M4 Neo
-   (Ryzen 7 7840HS, 64 Go) qui fait tourner jusqu'à 8 agents. Décision du
-   11/10 : **le brief fait foi pour `box/materiel/`**, `offre-box.*` n'est pas
-   touché (il porte les prix de la boutique et `check-offre-box.ts` exige une
-   source datée) ; à réaligner quand un prix et une fiche existent.
+   (Ryzen 7 7840HS, 64 Go) qui fait tourner jusqu'à 8 agents. **Tranché par
+   max le 11/10/2026 : la Box business de base a 64 Go.** Le brief fait foi pour
+   `box/materiel/` ; `offre-box.json` n'est pas touché (il porte les prix de la
+   boutique et `check-offre-box.ts` exige une source datée) et `docs/offre-box.md`
+   le dit : sa ligne « Box Commandeur 32 Go » est dépassée sur la mémoire, à
+   remplacer quand la machine 64 Go a son prix.
 2. **« Commandeur » vs « Commander ».** Le dépôt dit les deux ; le brief et les
    plans tarifaires disent Commander. Ce document dit Commander.
 3. **L'OS.** MASTER §6 : « Ubuntu Core si compatible, sinon Windows IoT » ;
