@@ -31,14 +31,23 @@ export function useApparition() {
 /**
  * The opening scene of a page: a background (city, sunrise or orbit), the
  * text on the left, a visual on the right, and a row of proofs under the
- * actions. `decor` picks one of the home page's backgrounds.
+ * actions. `decor` picks one of the home page's backgrounds; `photo` puts
+ * a scene of the page's subject there instead ({ src, alt, position }),
+ * already toned in night blue and violet with a digital weave
+ * (public/pages/decor-*.webp), then lit and faded into the page by CSS.
  */
-export function Heros({ surtitre, titre, texte, actions, preuves, visuel, decor = 'ville', className = '', badge }) {
+export function Heros({ surtitre, titre, texte, actions, preuves, visuel, decor = 'ville', photo, className = '', badge }) {
   return (
-    <section className={`sc-heros sc-decor-${decor} ${className}`}>
-      <div className="sc-heros-fond" aria-hidden="true">
-        <img src={`/accueil/decor-${decor}-1280.webp`} srcSet={`/accueil/decor-${decor}-1280.webp 1280w, /accueil/decor-${decor}.webp 2560w`} sizes="100vw" alt="" width="1280" height="720" fetchpriority="high" decoding="async" />
-      </div>
+    <section className={`sc-heros ${photo ? 'sc-heros-photo' : `sc-decor-${decor}`} ${className}`}>
+      {photo ? (
+        <figure className="sc-heros-fond">
+          <img src={`${IMG}/${photo.src}.webp`} srcSet={`${IMG}/${photo.src}-800.webp 800w, ${IMG}/${photo.src}.webp 1600w`} sizes="100vw" alt={photo.alt} width="1600" height="900" fetchpriority="high" decoding="async" style={photo.position ? { objectPosition: photo.position } : undefined} />
+        </figure>
+      ) : (
+        <div className="sc-heros-fond" aria-hidden="true">
+          <img src={`/accueil/decor-${decor}-1280.webp`} srcSet={`/accueil/decor-${decor}-1280.webp 1280w, /accueil/decor-${decor}.webp 2560w`} sizes="100vw" alt="" width="1280" height="720" fetchpriority="high" decoding="async" />
+        </div>
+      )}
       <div className="sc-cadre sc-heros-grille">
         <div className="sc-heros-texte">
           {badge && <p className="sc-badge">{badge}</p>}
