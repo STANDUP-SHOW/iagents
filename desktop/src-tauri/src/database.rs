@@ -203,7 +203,7 @@ mod tests {
         // Seen on max's PC on 11/10/2026: the very first save failed because
         // no `users` row existed for the owner.
         let dossier = std::env::temp_dir().join(format!("iagent-base-{}", Uuid::new_v4()));
-        let base = Database::new(&dossier.join("iagent.db")).unwrap();
+        let base = Database::new(&dossier.join("temoin.sqlite")).unwrap();
         base.init().unwrap();
         {
             let conn = base.conn.lock().unwrap();
