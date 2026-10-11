@@ -52,11 +52,11 @@ const CANAUX = {
   voix: { libelle: 'Voix', detail: 'Vous lui parlez, il vous répond' },
   conversation: { libelle: 'Conversation', detail: 'Échanges écrits dans l\'application' },
   email: { libelle: 'E-mail', detail: 'Brouillons relus avant tout envoi' },
-  whatsapp: { libelle: 'WhatsApp', detail: 'Répond aux messages, vous passe la main' },
+  whatsapp: { libelle: 'WhatsApp', detail: 'Par le centre d\'appels IA, mis en service avec vous' },
   calendrier: { libelle: 'Agenda', detail: 'Lit et prépare les rendez-vous' },
   fichiers: { libelle: 'Fichiers', detail: 'Dans les dossiers que vous lui ouvrez' },
   navigateur: { libelle: 'Navigateur', detail: 'Avec vos sessions, vous validez' },
-  telephone: { libelle: 'Téléphone', detail: 'Répond aux appels, prend les rendez-vous' },
+  telephone: { libelle: 'Téléphone', detail: 'Par le centre d\'appels IA, mis en service avec vous' },
 };
 
 // Missions are grouped by rhythm: it is the one grouping every fiche carries

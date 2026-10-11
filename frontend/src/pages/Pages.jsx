@@ -409,7 +409,7 @@ const QUESTIONS = [
   ['Mes données quittent-elles l’entreprise ?', "En local, rien ne sort pour être traité. Par l'API, seul ce que la tâche demande part au fournisseur d'IA. Vous choisissez la voie, et l'application vous prévient avant de basculer."],
   ['Un agent peut-il agir sans moi ?', "Oui, s'il est réglé ainsi : il travaille seul, sauf sur les tâches que vous mettez sous contrôle. Aucun e-mail ne part sans que vous ayez relu le texte exact."],
   ['Combien d’agents par Box ?', "Jusqu'à 20. Au-delà, une deuxième Box, ou une infrastructure sur devis."],
-  ['Les agents répondent-ils sur WhatsApp ou au téléphone ?', "Oui. Vous leur parlez à voix haute sur la Box et dans Desktop Commander, ils écrivent et relisent vos e-mails, et sur WhatsApp comme au téléphone un agent répond aux messages et aux appels, prend les rendez-vous et vous passe la main quand il le faut."],
+  ['Les agents répondent-ils sur WhatsApp ou au téléphone ?', "Notre centre d'appels IA répond déjà sur WhatsApp et au téléphone pour iAgent Tech : prise de rendez-vous, qualification, transfert à un conseiller, consentement pour les appels sortants. Pour équiper votre propre entreprise (standard téléphonique, SAV, campagnes), un conseiller vous présente l'offre et sa mise en service."],
   ['Sur quel système tourne l’application ?', 'Desktop Commander tourne sous Windows ; la Box est livrée avec.'],
 ];
 

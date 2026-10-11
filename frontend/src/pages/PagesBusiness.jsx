@@ -27,7 +27,10 @@ function OffresVoix({ ids }) {
   );
 }
 
-const OUVRIR_LIGNE = "Dites-nous vos volumes, vos horaires et vos outils : nous dimensionnons votre ligne, ouvrons votre numéro et réglons vos agents avec vous.";
+const OUVRIR_LIGNE = "Dites-nous vos volumes, vos horaires et vos outils : un conseiller vous présente l'offre, son prix et sa mise en service.";
+
+// What the call centre does today, for iAgent Tech itself; the client offers run on the same engine.
+const MOTEUR = "Le centre d'appels IA d'iAgent Tech répond sur WhatsApp et au téléphone. L'assistante se présente comme une intelligence artificielle, répond à partir de nos tarifs réels, qualifie le besoin, réserve un rendez-vous avec un conseiller et passe la main à un humain quand on le demande. Les appels sortants ne partent qu'avec un consentement prouvé et dans les horaires légaux, et « STOP » arrête tout contact. Toutes les conversations sont journalisées dans une console. Ce module sert d'abord à nos propres opérations ; l'offre pour les entreprises clientes (iAgent Reception, Support Center, Sales Center) repose sur le même moteur.";
 
 function Artisan() {
   return (
@@ -83,7 +86,7 @@ function Voix() {
   return (
     <>
       <Tete surtitre="iAgent Voice" titre={<>Une voix pour vos agents.<br /><span className="mq-cyan">Et un vrai numéro.</span></>}
-        texte="Vous parlez à vos agents à voix haute, sur la Box ou dans Desktop Commander, en les appelant par leur prénom. Au téléphone de votre entreprise et sur WhatsApp, ils répondent, prennent les rendez-vous et vous passent la main quand il le faut.">
+        texte="Vous parlez à vos agents à voix haute, sur la Box ou dans Desktop Commander, en les appelant par leur prénom. Au téléphone et sur WhatsApp, le centre d'appels IA d'iAgent répond, prend les rendez-vous et passe la main à un humain ; un conseiller le met en service pour votre entreprise.">
         <Bouton href="#numero" evenement="phone_number_request">Ouvrir mon numéro</Bouton>
         <Bouton href="/contact" variante="contour-cyan" evenement="voice_demo">Demander une démo</Bouton>
       </Tete>
@@ -98,6 +101,7 @@ function Voix() {
         ]} />
       </Bande>
       <Artisan />
+      <Bande surtitre="Le moteur" titre="Le centre d'appels IA, chez nous d'abord" texte={MOTEUR} />
       <Bande surtitre="Tarifs" titre="Les offres Voice" texte="Abonnement de la ligne et du standard ; les minutes, la voix et l’IA se paient à part, au réel.">
         <OffresVoix ids={['reception', 'reception-pro', 'support-center', 'sales-center', 'voice-enterprise']} />
       </Bande>
