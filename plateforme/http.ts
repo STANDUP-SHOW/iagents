@@ -27,6 +27,12 @@ export type Contexte = {
   /** La Box authentifiée, quand l'accès est `box`. */
   box: Box | null;
   maintenant: () => Date;
+  /**
+   * Fait continuer un travail après la réponse : un webhook d'opérateur attend
+   * un 200 en quelques secondes, le modèle de langage peut en prendre plus. Sous
+   * Node la promesse continue d'elle-même ; chez Cloudflare `waitUntil` la garde.
+   */
+  differer: (travail: Promise<unknown>) => void;
 };
 
 /** `type` : pour répondre autre chose que du JSON (TwiML d'un opérateur) ; `corps` est alors écrit tel quel. */
@@ -112,7 +118,7 @@ export function reglagesDeLEnvironnement(env: Record<string, string | undefined>
 /** Une requête déjà lue : la porte a lu le corps en entier (borné à `CORPS_MAX`). */
 export type Requete = { methode: string; url: string; entetes: Record<string, string>; brut: string };
 
-export type Socle = { reglages: Reglages; stockage: Stockage; maintenant: () => Date; routes: Route[] };
+export type Socle = { reglages: Reglages; stockage: Stockage; maintenant: () => Date; routes: Route[]; differer?: (travail: Promise<unknown>) => void };
 
 export const ACCUEIL: Reponse = { statut: 200, corps: 'plateforme iagent', type: 'text/plain; charset=utf-8' };
 
@@ -154,6 +160,7 @@ export async function traiterRequete(s: Socle, req: Requete): Promise<Reponse> {
   try {
     return await route.traiter({
       stockage: s.stockage, params, query: url.searchParams, corps, brut, entetes, url: req.url || '/', box, maintenant: s.maintenant,
+      differer: s.differer ?? ((travail) => { void travail.catch(() => {}); }),
     });
   } catch (e) {
     return refus(400, e instanceof Error ? e.message : 'Requête refusée.');
