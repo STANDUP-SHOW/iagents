@@ -12,7 +12,7 @@ const ENTREES = [
     ['Desktop Commander', '/#desktop-commander', 'toute l’équipe sur un écran'],
     ['Box Commander', '/box', 'le poste posé dans vos bureaux'],
     ['Voice', '/voice', 'parlez à vos agents'],
-    ['Standard téléphonique', '/standard-telephonique', 'bientôt'],
+    ['Standard téléphonique', '/standard-telephonique', 'un accueil qui comprend'],
     ['Support Center', '/support-center', 'le service client'],
     ['Sales Center', '/sales-center', 'la force commerciale'],
   ] },

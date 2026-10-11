@@ -11,7 +11,7 @@ export const PAGE_LISTE = '/recrutement';
 
 export const PALIERS = tarifs.agents.affichage === 'paliers' ? tarifs.agents.paliers : [];
 export const PALIER_DEFAUT = PALIERS[0]?.id ?? null;
-export const BOX_EN_VENTE = BOX_PUBLIQUES.filter((b) => typeof b.mensuel === 'number' && b.statut !== 'sur-devis' && b.statut !== 'bientot');
+export const BOX_EN_VENTE = BOX_PUBLIQUES.filter((b) => typeof b.mensuel === 'number' && b.statut !== 'sur-devis');
 
 const vide = () => ({ agents: [], box: null });
 

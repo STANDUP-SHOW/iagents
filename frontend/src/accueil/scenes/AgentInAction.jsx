@@ -9,8 +9,8 @@ const VERBES = [
   ['Livre', 'des fichiers prêts dans votre dossier'],
 ];
 
-// The channels it works through. Telephone and WhatsApp are coming, said so.
-const CANAUX = [['email', 'E-mail'], ['web', 'Navigateur'], ['crm', 'CRM'], ['erp', 'ERP'], ['doc', 'Documents'], ['agenda', 'Agenda'], ['tel', 'Téléphone · bientôt'], ['bulle', 'WhatsApp · bientôt']];
+// The channels it works through.
+const CANAUX = [['email', 'E-mail'], ['web', 'Navigateur'], ['crm', 'CRM'], ['erp', 'ERP'], ['doc', 'Documents'], ['agenda', 'Agenda'], ['tel', 'Téléphone'], ['bulle', 'WhatsApp']];
 
 /** Scene 08 — the manifesto: not a chatbot, a colleague; four verbs. */
 export default function AgentInAction() {

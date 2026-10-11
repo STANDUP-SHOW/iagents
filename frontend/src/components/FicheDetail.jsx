@@ -47,18 +47,16 @@ const libelleCategorie = (id) => {
   return CATEGORIES[c] ?? (c.charAt(0).toUpperCase() + c.slice(1)).replace(/-/g, ' ');
 };
 
-// The eight words a fiche uses for its needs (outils/capacites.ts). WhatsApp
-// and the telephone have no code in the app yet: they are announced as coming,
-// never as working.
+// The eight words a fiche uses for its needs (outils/capacites.ts).
 const CANAUX = {
   voix: { libelle: 'Voix', detail: 'Vous lui parlez, il vous répond' },
   conversation: { libelle: 'Conversation', detail: 'Échanges écrits dans l\'application' },
   email: { libelle: 'E-mail', detail: 'Brouillons relus avant tout envoi' },
-  whatsapp: { libelle: 'WhatsApp', detail: 'Arrive progressivement', bientot: true },
+  whatsapp: { libelle: 'WhatsApp', detail: 'Répond aux messages, vous passe la main' },
   calendrier: { libelle: 'Agenda', detail: 'Lit et prépare les rendez-vous' },
   fichiers: { libelle: 'Fichiers', detail: 'Dans les dossiers que vous lui ouvrez' },
   navigateur: { libelle: 'Navigateur', detail: 'Avec vos sessions, vous validez' },
-  telephone: { libelle: 'Téléphone', detail: 'Arrive progressivement', bientot: true },
+  telephone: { libelle: 'Téléphone', detail: 'Répond aux appels, prend les rendez-vous' },
 };
 
 // Missions are grouped by rhythm: it is the one grouping every fiche carries
@@ -503,10 +501,10 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                   <p className="fd-etiquette">Canaux</p>
                   <ul className="fd-canaux">
                     {canaux.map((c) => (
-                      <li key={c} className={CANAUX[c].bientot ? 'fd-canal fd-canal-bientot' : 'fd-canal'}>
+                      <li key={c} className="fd-canal">
                         <span className="fd-canal-icone"><Icone nom={c} taille={18} /></span>
                         <div>
-                          <p className="fd-logiciel-nom">{CANAUX[c].libelle}{CANAUX[c].bientot && <span className="fd-bientot">bientôt</span>}</p>
+                          <p className="fd-logiciel-nom">{CANAUX[c].libelle}</p>
                           <p className="fd-logiciel-cat">{CANAUX[c].detail}</p>
                         </div>
                       </li>
@@ -695,7 +693,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                   <p className="fd-etiquette">Outils</p>
                   <ul className="fd-a-badges">
                     {qualifs.slice(0, 5).map((q) => <li key={q.logiciel} className="fd-a-badge">{nomDuLogiciel(q.logiciel)}</li>)}
-                    {canaux.map((c) => <li key={c} className={`fd-a-badge fd-a-canal${CANAUX[c].bientot ? ' fd-a-canal-bientot' : ''}`} title={CANAUX[c].bientot ? `${CANAUX[c].libelle} : bientôt` : CANAUX[c].libelle}><Icone nom={c} taille={13} /><span className="sr-only">{CANAUX[c].libelle}{CANAUX[c].bientot ? ' (bientôt)' : ''}</span></li>)}
+                    {canaux.map((c) => <li key={c} className="fd-a-badge fd-a-canal" title={CANAUX[c].libelle}><Icone nom={c} taille={13} /><span className="sr-only">{CANAUX[c].libelle}</span></li>)}
                   </ul>
                 </div>
               )}

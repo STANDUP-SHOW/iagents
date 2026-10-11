@@ -128,8 +128,7 @@ export default function TaskCommander() {
               </div>
             </div>
             <p className="note mt-4">
-              Aujourd'hui, votre bras droit fait le point de l'équipe, relève ce qui attend votre accord et règle le travail des autres à votre demande.
-              La répartition d'une mission entre plusieurs agents arrive progressivement.
+              Votre bras droit fait le point de l'équipe, relève ce qui attend votre accord et règle le travail des autres à votre demande.
             </p>
           </div>
         </div>

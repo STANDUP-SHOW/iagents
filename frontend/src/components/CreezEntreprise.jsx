@@ -3,6 +3,7 @@ import agents from '../data/loader.js';
 import { CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee } from '../data/offres.js';
 import { agentsPourDemande, coeurPourDemande, logicielsPourDemande, terrainPourDemande } from '../data/recherche.js';
 import ConseilMachine from './ConseilMachine.jsx';
+import { statistiquesCatalogue } from '../data/statistiques.js';
 
 function LigneAgent({ id, coche, onBasculer, role }) {
   const fiche = ficheDe(id);
@@ -82,7 +83,7 @@ export default function CreezEntreprise({ ideeInitiale = '' }) {
           <p className="text-sm text-nuit-200 mt-3">
             {activites.length
               ? <>Votre activité : {activites.map((a) => <span key={a.id} className="badge bg-neon-400/15 text-neon-300 border border-neon-400/50 mr-2">{a.nom}</span>)} Ses usages, ses documents et ses logiciels s'ajoutent à chaque agent.</>
-              : "Votre activité n'est pas encore dans nos 282 : les agents travaillent quand même, et elle se précise à l'entretien d'embauche."}
+              : `Votre activité n'est pas parmi nos ${statistiquesCatalogue(agents).activites} activités nommées : les agents travaillent quand même, et elle se précise à l'entretien d'embauche.`}
           </p>
         )}
       </div>

@@ -9,10 +9,10 @@ const ETAPES = [
   ['Enrichissement', 'fait'],
   ['Contact', 'en-cours'],
   ['Relance', 'accord'],
-  ['Rendez-vous', 'a-venir'],
+  ['Rendez-vous', 'ensuite'],
 ];
 
-const COULEUR = { fait: 'var(--cyan)', 'en-cours': 'var(--cyan)', accord: '#e5007e', 'a-venir': 'rgba(140,190,255,.35)' };
+const COULEUR = { fait: 'var(--cyan)', 'en-cours': 'var(--cyan)', accord: '#e5007e', ensuite: 'rgba(140,190,255,.35)' };
 
 /** Scene 09 — you set the result, the agent works the path, live. */
 export default function Proactivity() {
@@ -53,13 +53,13 @@ export default function Proactivity() {
               <ol className="relative grid grid-cols-3 md:grid-cols-6 gap-y-6">
                 {ETAPES.map(([nom, etat]) => (
                   <li key={nom} className="pa-etape flex flex-col items-center text-center gap-2">
-                    <span className={`w-7 h-7 rounded-full flex items-center justify-center ${etat === 'en-cours' ? 'pulse-lent' : ''}`} style={{ border: `1.5px solid ${COULEUR[etat]}`, background: etat === 'fait' ? 'rgba(3,243,255,.18)' : etat === 'accord' ? 'rgba(229,0,126,.18)' : 'var(--fond)', boxShadow: etat === 'a-venir' ? 'none' : `0 0 14px ${COULEUR[etat]}` }}>
+                    <span className={`w-7 h-7 rounded-full flex items-center justify-center ${etat === 'en-cours' ? 'pulse-lent' : ''}`} style={{ border: `1.5px solid ${COULEUR[etat]}`, background: etat === 'fait' ? 'rgba(3,243,255,.18)' : etat === 'accord' ? 'rgba(229,0,126,.18)' : 'var(--fond)', boxShadow: etat === 'ensuite' ? 'none' : `0 0 14px ${COULEUR[etat]}` }}>
                       {etat === 'fait' && <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10" stroke="#03f3ff" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                       {etat === 'en-cours' && <span className="w-2 h-2 rounded-full bg-[var(--cyan)]" />}
                       {etat === 'accord' && <span className="text-[0.7rem] font-bold text-[#ff6fb5]">!</span>}
                     </span>
                     <span className="text-[0.82rem] text-white">{nom}</span>
-                    <span className="text-[0.66rem] uppercase tracking-[0.14em]" style={{ color: COULEUR[etat] }}>{{ fait: 'fait', 'en-cours': 'en cours', accord: 'votre accord', 'a-venir': 'à venir' }[etat]}</span>
+                    <span className="text-[0.66rem] uppercase tracking-[0.14em]" style={{ color: COULEUR[etat] }}>{{ fait: 'fait', 'en-cours': 'en cours', accord: 'votre accord', ensuite: 'ensuite' }[etat]}</span>
                   </li>
                 ))}
               </ol>

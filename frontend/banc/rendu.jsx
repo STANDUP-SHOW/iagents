@@ -25,7 +25,7 @@ import { execSync } from 'node:child_process';
 import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE, logicielsDeLActivite, optionsActivites } from '../src/data/recherche.js';
 import { IDS_DU_COEUR, coeurDeLActivite, personnelDeLActivite, SECTEURS_TRANSVERSAUX, estTransversal } from '../src/data/activites-recherche.js';
 import { specialiser, nomSpecialise } from '../src/data/specialisation.js';
-import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, euros as eurosTarif } from '../src/data/tarifs.js';
+import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, STATUTS, euros as eurosTarif } from '../src/data/tarifs.js';
 import Page from '../src/pages/Page.jsx';
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
 
@@ -269,12 +269,12 @@ for (const page of PAGES) {
   const absents = [...BOX_PUBLIQUES.map((b) => b.mensuel), ...tarifs.agents.paliers.map((p) => p.mensuel)].filter((x) => tarifs.agents.affichage === 'paliers' || x < 100).filter((x) => !tarifsHtml.includes(String(x)));
   if (absents.length) echoue(`la page Tarifs ne montre pas ${absents.join(', ')}`);
   else ok('la page Tarifs montre la grille de tarifs.json');
-  // Le téléphone n'est pas construit : aucune offre Voice ne se vend comme disponible.
+  // Les offres Voice se vendent au tarif pilote, comme le reste de la grille (max, 10/10).
   const voixHtml = renderToString(<Page nom="voice" />);
-  const vendues = tarifs.voice.offres.filter((o) => !['bientot', 'sur-devis'].includes(o.statut));
+  const inconnus = tarifs.voice.offres.filter((o) => !STATUTS[o.statut]);
   const manquants = tarifs.voice.offres.filter((o) => o.mensuel ?? o.aPartirDe).filter((o) => !voixHtml.includes(String(o.mensuel ?? o.aPartirDe)));
-  if (vendues.length || manquants.length || !voixHtml.includes('Bientôt')) echoue(`page Voice : ${vendues.map((o) => o.id).join(', ')} vendues, ${manquants.map((o) => o.id).join(', ')} absentes`);
-  else ok('la page Voice montre ses prix, tous marqués « bientôt »');
+  if (inconnus.length || manquants.length) echoue(`page Voice : statut inconnu pour ${inconnus.map((o) => o.id).join(', ')}, prix absents pour ${manquants.map((o) => o.id).join(', ')}`);
+  else ok('la page Voice montre ses prix, chacun avec un statut de la grille');
   // Starter = Box 36 mois + 1 Essential (max, 07/10) : le prix est la somme, jamais recopié.
   const starter = tarifs.packs.find((p) => p.id === 'starter');
   const attendu = tarifs.box.find((b) => b.id === 'box-commander-36').mensuel + tarifs.agents.paliers.find((p) => p.id === 'essential').mensuel;
@@ -369,6 +369,13 @@ for (const page of PAGES) {
   const telechargeurs = execSync("grep -rlE 'releases/(latest/)?download|\\.msi|T[eé]l[eé]charger' src seo || true", { encoding: 'utf8' }).trim();
   if (telechargeurs) echoue(`un bouton fait encore télécharger l'application : ${telechargeurs.split('\n').join(', ')}`);
   else ok('aucun bouton du site ne fait télécharger l’application');
+
+  // Le site présente un produit terminé (max, 10/10) : aucune page n'annonce
+  // une fonction pour plus tard. Le catalogue (data/*.json) décrit les tâches
+  // des agents et n'est pas concerné.
+  const avenir = execSync("grep -rniE 'bient[oô]t|prochainement|en pr[ée]vision|arrive progressivement|arrivera|arriveront|à venir|en cours de d[ée]veloppement|pas encore (branch|construit|disponible)' src/pages src/accueil src/components src/App.jsx src/data/tarifs.json seo/generer.mjs || true", { encoding: 'utf8' }).trim();
+  if (avenir) echoue(`une page annonce encore une fonction pour plus tard : ${avenir.split('\n').map((l) => l.slice(0, 120)).join(' ; ')}`);
+  else ok('aucune page ne renvoie une fonction à plus tard');
 }
 
 console.log(process.exitCode ? `\n${n} attentes tenues, au moins une faute ci-dessus — boutique REFUSÉE` : `\n${n} attentes tenues — boutique ok`);
