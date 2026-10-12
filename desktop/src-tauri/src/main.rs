@@ -494,8 +494,10 @@ async fn repondre(
     fiche_id: String,
     prompt_systeme: String,
     enonce: String,
+    historique: Option<Vec<llm::Message>>,
     state: State<'_, AppState>,
 ) -> Result<ReponseAgent, String> {
+    let historique = historique.unwrap_or_default();
     let _travail = mise_a_jour::travail()?;
     // On a provisioned Box, no right, no answer (plateforme.rs).
     plateforme::autoriser(&fiche_id).await?;
@@ -520,11 +522,11 @@ async fn repondre(
         cle_api: llm::cle_api().is_some(),
         memoire_insuffisante: jauge::memoire_insuffisante_pour(&fiche_id),
     };
-    let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_API)?;
+    let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_ORAL)?;
 
     let texte = match &choix.voie {
         modele::Voie::Local { modele: nom } => {
-            modele::repondre_en_local(modele::ADRESSE_LOCALE, nom, &prompt_systeme, &enonce).await?
+            modele::repondre_en_local_avec(modele::ADRESSE_LOCALE, nom, &prompt_systeme, &historique, &enonce).await?
         }
         modele::Voie::Api { .. } => {
             let llm_service = {
@@ -533,13 +535,7 @@ async fn repondre(
                     .ok_or("aucune cle d API n est enregistree sur cet ordinateur")?
                     .clone()
             };
-            let persona = AgentPersona {
-                id: prenom.clone(),
-                name: prenom,
-                role: String::new(),
-                system_prompt: prompt_systeme,
-            };
-            llm_service.call_agent_llm(&persona, &enonce).await?
+            llm_service.repondre_a_l_oral(&prompt_systeme, &historique, &enonce).await?
         }
     };
 

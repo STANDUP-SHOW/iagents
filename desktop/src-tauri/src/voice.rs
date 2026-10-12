@@ -479,11 +479,11 @@ pub fn chemin_modele_ecoute() -> std::path::PathBuf {
 /// The agent speaks: through the client's voice API when a key is saved,
 /// locally otherwise. When the API fails, the local voice takes over and the
 /// reason is said, so a dead key never silences the agent without a word.
-/// Most sentences an agent says aloud; the rest of its answer stays written
+/// Most sentences an agent says aloud (two, as max asked on 12/10/2026); the rest of its answer stays written
 /// on the screen. Measured on max's PC, 12/10/2026: the online voice made the
 /// whole answer before saying a word, about 7 s for one short sentence, so a
 /// status report took over a minute to start, read with its markdown.
-const PHRASES_A_DIRE: usize = 3;
+const PHRASES_A_DIRE: usize = 2;
 const CARACTERES_A_DIRE: usize = 450;
 const LE_RESTE_EST_ECRIT: &str = "Le détail est à l'écran.";
 
@@ -833,11 +833,11 @@ mod tests {
     }
 
     #[test]
-    fn une_longue_reponse_se_dit_en_trois_phrases_et_renvoie_a_l_ecran() {
+    fn une_longue_reponse_se_dit_en_deux_phrases_et_renvoie_a_l_ecran() {
         let texte = "## Où en est l'équipe\n\n**Hugo** a fini la note. Nora prépare la liste.\n\n- Point 1 : les [investisseurs](https://x.fr) sont relancés.\n- Point 2 : le `dossier` est prêt.\n\n| a | b |\n|---|---|\n";
         let m = a_dire(texte);
         assert_eq!(m[0], "Où en est l'équipe.");
-        assert_eq!(m[1], "Hugo a fini la note. Nora prépare la liste. Le détail est à l'écran.");
+        assert_eq!(m[1], "Hugo a fini la note. Le détail est à l'écran.");
         assert!(!m.join(" ").contains(['*', '#', '|', '`', '[']));
     }
 

@@ -38,6 +38,46 @@ pub struct ResponseContent {
 /// le meme pour reference : c'est sur lui que l'argument economique est calcule.
 pub const MODELE_API: &str = "claude-sonnet-5";
 
+/// The model an agent speaks with. Measured on max's PC, 12/10/2026: the
+/// working model took 6 to 8 s to write an answer said aloud, on top of the
+/// voice; a colleague answers in a breath. The working model stays for tasks.
+pub const MODELE_ORAL: &str = "claude-haiku-5-5";
+
+/// How many earlier messages of the conversation go with a spoken request.
+/// Without them every sentence reached the agent alone, and Victor answered
+/// each one with the same team report (max, 12/10/2026: « un robot qui répète »).
+pub const ECHANGES_GARDES: usize = 10;
+
+/// The messages sent for a spoken request: the last exchanges, cleaned so the
+/// API accepts them (starting with the client, alternating, nothing empty),
+/// then the request itself.
+pub fn messages_oraux(historique: &[Message], enonce: &str) -> Vec<Message> {
+    let mut messages: Vec<Message> = Vec::new();
+    for m in historique.iter().rev().take(ECHANGES_GARDES).rev() {
+        if m.content.trim().is_empty() || !(m.role == "user" || m.role == "assistant") {
+            continue;
+        }
+        if messages.is_empty() && m.role != "user" {
+            continue;
+        }
+        match messages.last_mut() {
+            Some(d) if d.role == m.role => {
+                d.content.push_str("\n");
+                d.content.push_str(&m.content);
+            }
+            _ => messages.push(m.clone()),
+        }
+    }
+    match messages.last_mut() {
+        Some(d) if d.role == "user" => {
+            d.content.push_str("\n");
+            d.content.push_str(enonce);
+        }
+        _ => messages.push(Message { role: "user".to_string(), content: enonce.to_string() }),
+    }
+    messages
+}
+
 #[derive(Clone)]
 pub struct LLMService {
     api_key: String,
@@ -144,6 +184,22 @@ impl LLMService {
         })
     }
 
+    /// A spoken answer: the fast model, the conversation so far, a short reply.
+    pub async fn repondre_a_l_oral(
+        &self,
+        systeme: &str,
+        historique: &[Message],
+        enonce: &str,
+    ) -> Result<String, String> {
+        let request = serde_json::json!({
+            "model": MODELE_ORAL,
+            "max_tokens": 400,
+            "system": systeme,
+            "messages": messages_oraux(historique, enonce),
+        });
+        self.envoyer(&request).await
+    }
+
     pub async fn call_agent_llm(
         &self,
         agent_persona: &AgentPersona,
@@ -168,14 +224,17 @@ impl LLMService {
             "system": agent_persona.system_prompt,
             "messages": messages,
         });
+        self.envoyer(&request).await
+    }
 
+    async fn envoyer(&self, request: &serde_json::Value) -> Result<String, String> {
         // Make HTTP request
         let client = reqwest::Client::new();
         let response = client
             .post(&self.api_url)
             .header("x-api-key", &self.api_key)
             .header("anthropic-version", "2023-06-01")
-            .json(&request)
+            .json(request)
             .send()
             .await
             .map_err(|e| format!("API request failed: {}", e))?;
@@ -207,6 +266,30 @@ impl LLMService {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn m(role: &str, content: &str) -> Message {
+        Message { role: role.to_string(), content: content.to_string() }
+    }
+
+    #[test]
+    fn une_demande_orale_part_avec_les_echanges_d_avant() {
+        let h = vec![m("user", "Victor, tu m'entends ?"), m("assistant", "Oui, je t'entends.")];
+        let dit = messages_oraux(&h, "En combien de temps aurons-nous des retours ?");
+        assert_eq!(dit.len(), 3);
+        assert_eq!(dit[2].content, "En combien de temps aurons-nous des retours ?");
+    }
+
+    #[test]
+    fn l_historique_est_remis_en_forme_pour_l_api() {
+        // Starts with the agent, two client turns in a row, an empty answer.
+        let h = vec![m("assistant", "Bonjour."), m("user", "Un"), m("assistant", " "), m("user", "Deux")];
+        let dit = messages_oraux(&h, "Trois");
+        assert_eq!(dit.len(), 1);
+        assert_eq!(dit[0].role, "user");
+        assert_eq!(dit[0].content, "Un\nDeux\nTrois");
+        let long: Vec<Message> = (0..30).map(|i| m(if i % 2 == 0 { "user" } else { "assistant" }, "x")).collect();
+        assert!(messages_oraux(&long, "fin").len() <= ECHANGES_GARDES + 1);
+    }
 
     #[test]
     fn une_cle_vide_ne_se_range_pas() {

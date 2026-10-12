@@ -133,6 +133,9 @@ function App() {
   // Who is speaking aloud, once the answer is written: « Réflexion… » stayed on
   // screen for the whole reading, over a minute on max's PC (12/10/2026).
   const [parle, setParle] = useState<string | null>(null)
+  // What was said with each agent, so a spoken request reaches it with the
+  // conversation so far (`llm::messages_oraux` keeps the last ten).
+  const echangesRef = useRef(new Map<string, { role: 'user' | 'assistant'; content: string }[]>())
   const [lastResponse, setLastResponse] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [moteur, setMoteur] = useState<ConversationEngine | null>(null)
@@ -464,7 +467,7 @@ function App() {
       // Said aloud, a written answer is cut after three sentences (`voice::a_dire`):
       // the essential has to come first.
       promptSysteme +=
-        "\n\nOn vous parle à voix haute. Commencez par l'essentiel en deux ou trois phrases simples, sans titre ni liste : c'est tout ce qui sera dit. Répondez à la question posée, sans refaire le point de toute l'équipe si on ne vous le demande pas. Le détail peut suivre, il restera écrit à l'écran."
+        "\n\nOn vous parle à voix haute. Répondez comme un collègue, en deux phrases simples, sans titre ni liste : c'est tout ce qui sera dit. Répondez à la question posée, sans répéter ce que vous avez déjà dit ni refaire le point de toute l'équipe si on ne vous le demande pas. Le détail peut suivre, il restera écrit à l'écran."
 
       const reponse = await invoke<{ texte: string; motif: string; bascule: boolean }>(
         'repondre',
@@ -473,8 +476,12 @@ function App() {
           ficheId: agent.fiche.id,
           promptSysteme,
           enonce: utterance || command,
+          historique: echangesRef.current.get(agent.prenom) ?? [],
         }
       )
+      const echanges = echangesRef.current.get(agent.prenom) ?? []
+      echanges.push({ role: 'user', content: utterance || command }, { role: 'assistant', content: reponse.texte })
+      echangesRef.current.set(agent.prenom, echanges.slice(-20))
 
       setLastResponse(reponse.texte)
       publier({ type: 'voix', agent: agent.prenom, texte: `${agent.prenom} vous a répondu`, gravite: 'info' })

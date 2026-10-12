@@ -456,7 +456,7 @@ pub async fn parler_avec(
 /// The voice of `prenom` through the client's APIs, as WAV bytes; `None` when
 /// no voice key is saved (the caller then speaks locally).
 pub async fn parler(prenom: Option<&str>, texte: &str) -> Option<Result<Parole, String>> {
-    let moteurs = moteurs_du_poste();
+    let moteurs = plus_vite_a_voix_egale(moteurs_du_poste());
     if moteurs.is_empty() {
         return None;
     }
@@ -467,6 +467,23 @@ pub async fn parler(prenom: Option<&str>, texte: &str) -> Option<Result<Parole, 
     let prenom = prenom.unwrap_or("");
     let (voix, sexe) = agent_de(&installation, prenom);
     parler_avec(&ADRESSES, &moteurs, prenom, voix.as_deref(), sexe.as_deref(), texte).await
+}
+
+/// Google Text-to-Speech speaks with the same Chirp 3 voice as Gemini
+/// (`voix_de` maps one to the other) and starts in well under a second, where
+/// Gemini took about 7 s for one short sentence on max's PC (12/10/2026). So
+/// when both keys are there, the same voice comes from the faster one, and
+/// Gemini becomes the spare.
+pub fn plus_vite_a_voix_egale<T>(mut moteurs: Vec<(Moteur, T)>) -> Vec<(Moteur, T)> {
+    let gemini = moteurs.iter().position(|(m, _)| *m == Moteur::Gemini);
+    let google = moteurs.iter().position(|(m, _)| *m == Moteur::GoogleTts);
+    if let (Some(g), Some(t)) = (gemini, google) {
+        if t > g {
+            let rapide = moteurs.remove(t);
+            moteurs.insert(g, rapide);
+        }
+    }
+    moteurs
 }
 
 // ---------------------------------------------------------------------------
@@ -588,6 +605,16 @@ mod tests {
         assert_eq!(moteurs_retenus(&[Mistral, Gemini], None), vec![Mistral, Gemini]);
         assert_eq!(moteurs_retenus(&[Gemini], None), vec![Gemini]);
         assert_eq!(moteurs_retenus(&[], None), vec![]);
+    }
+
+    #[test]
+    fn a_voix_egale_google_parle_avant_gemini() {
+        use Moteur::*;
+        let ordre = |v: Vec<Moteur>| plus_vite_a_voix_egale(v.into_iter().map(|m| (m, ())).collect()).into_iter().map(|(m, _)| m).collect::<Vec<_>>();
+        assert_eq!(ordre(vec![Gemini, GoogleTts]), vec![GoogleTts, Gemini]);
+        assert_eq!(ordre(vec![ElevenLabs, Gemini, GoogleTts]), vec![ElevenLabs, GoogleTts, Gemini]);
+        assert_eq!(ordre(vec![Gemini]), vec![Gemini]);
+        assert_eq!(ordre(vec![GoogleTts, Gemini]), vec![GoogleTts, Gemini]);
     }
 
     #[test]

@@ -308,6 +308,17 @@ pub async fn repondre_en_local(
     prompt_systeme: &str,
     enonce: &str,
 ) -> Result<String, String> {
+    repondre_en_local_avec(adresse, modele, prompt_systeme, &[], enonce).await
+}
+
+/// Same, with the conversation so far.
+pub async fn repondre_en_local_avec(
+    adresse: &str,
+    modele: &str,
+    prompt_systeme: &str,
+    historique: &[crate::llm::Message],
+    enonce: &str,
+) -> Result<String, String> {
     let client = reqwest::Client::builder()
         .timeout(DELAI)
         .build()
@@ -315,10 +326,10 @@ pub async fn repondre_en_local(
     let demande = serde_json::json!({
         "model": modele,
         "stream": false,
-        "messages": [
-            { "role": "system", "content": prompt_systeme },
-            { "role": "user", "content": enonce },
-        ],
+        "messages": std::iter::once(serde_json::json!({ "role": "system", "content": prompt_systeme }))
+            .chain(crate::llm::messages_oraux(historique, enonce).into_iter()
+                .map(|m| serde_json::json!({ "role": m.role, "content": m.content })))
+            .collect::<Vec<_>>(),
     });
     let reponse = client
         .post(format!("{}/api/chat", adresse))
