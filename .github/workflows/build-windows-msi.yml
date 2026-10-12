@@ -112,7 +112,13 @@ jobs:
           set -- $url
           curl -sSfL -o "$IAGENT_MODELE_ECOUTE" "$1"
           echo "$2  $IAGENT_MODELE_ECOUTE" | sha256sum -c -
-          cargo test --release banc_vitesse_ecoute -- --ignored --nocapture
+          # Annotations, not just the log: they stay readable from the PR.
+          set +e
+          cargo test --release banc_vitesse_ecoute -- --ignored --nocapture 2>&1 | tee banc.txt
+          code=${PIPESTATUS[0]}
+          set -e
+          grep -E "transcrites|panicked|Error|erreur" banc.txt | while read -r l; do echo "::notice title=Banc d'écoute::$l"; done
+          exit $code
 
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4
