@@ -137,12 +137,45 @@ fn agent_nomme(mot: &str, prenoms: &[String]) -> Option<String> {
     }
 }
 
+/// What was heard minus Whisper's annotations of non-speech: anything between
+/// parentheses, brackets, asterisks or music notes.
+fn sans_annotations(texte: &str) -> String {
+    let mut sortie = String::with_capacity(texte.len());
+    let mut fermeture: Option<char> = None;
+    for c in texte.chars() {
+        match fermeture {
+            Some(f) if c == f => {
+                fermeture = None;
+                sortie.push(' ');
+            }
+            Some(_) => {}
+            None => match c {
+                '(' => fermeture = Some(')'),
+                '[' => fermeture = Some(']'),
+                '*' => fermeture = Some('*'),
+                // Sung words come back between notes: a song, not a call.
+                '♪' => fermeture = Some('♪'),
+                '♫' => fermeture = Some('♫'),
+                _ => sortie.push(c),
+            },
+        }
+    }
+    sortie
+}
+
 /// Ce que l'écoute conclut de ce qu'elle vient d'entendre.
 ///
 /// Rend le nouvel état et ce qu'il faut en faire. Deux chemins mènent à un
 /// appel, parce que le client fait les deux : « Voice Robert ! » d'un trait, ou
 /// « Voice » puis, l'application ayant répondu qu'elle écoute, « Robert ».
 pub fn entendu(etat: &Etat, texte: &str, prenoms: &[String]) -> (Etat, Reaction) {
+    // Whisper writes what it hears that is not speech as annotations:
+    // « (Voix de la porte) », « [Musique] », « *sifflement* », « ♪ … ♪ ».
+    // Seen on max's PC on 12/10/2026 with music on: « (Voix de la porte) »
+    // woke the station and it answered « Personne ne s'appelle « de » ici ».
+    // None of it was said to an agent, so none of it is read.
+    let propre = sans_annotations(texte);
+    let texte = propre.as_str();
     // Two views of the same words: the bare form to recognise the wake word
     // and the first name, the words as said to pass on to the agent. Handing
     // the bare form on turned « Présente-toi en deux phrases. » into
@@ -188,10 +221,15 @@ pub fn entendu(etat: &Etat, texte: &str, prenoms: &[String]) -> (Etat, Reaction)
                         Etat::Dormante,
                         Reaction::Appel { prenom, demande: demande(2) },
                     ),
-                    None => (
+                    // « voix » is everyday French (« la voix de Carla »):
+                    // only the English « voice », which nobody says by chance,
+                    // earns an answer when no agent follows. Otherwise the
+                    // room is talking, and the station stays quiet.
+                    None if mots[0] == "voice" => (
                         Etat::Dormante,
                         Reaction::AucunAgentDeCeNom { entendu: suivant.clone() },
                     ),
+                    None => (Etat::Dormante, Reaction::Rien),
                 },
                 // « Voice » seul : on attend le prénom.
                 None => (Etat::Eveillee, Reaction::Reveillee),
@@ -403,5 +441,20 @@ mod tests {
         let (etat, reaction) = entendu(&Etat::Dormante, "Voice Robert", &[]);
         assert_eq!(etat, Etat::Dormante);
         assert!(matches!(reaction, Reaction::AucunAgentDeCeNom { .. }));
+    }
+
+    #[test]
+    fn les_bruits_notes_par_l_ecoute_ne_reveillent_rien() {
+        // Heard on max's PC, 12/10/2026, music playing.
+        for dit in ["(Voix de la porte)", "[Musique]", "*sifflement*", "♪ voice of the night ♪"] {
+            let (etat, reaction) = entendu(&Etat::Dormante, dit, &maison());
+            assert_eq!((etat, reaction), (Etat::Dormante, Reaction::Rien), "{dit}");
+        }
+        // « voix » followed by anything but an agent is the room talking.
+        let (_, reaction) = entendu(&Etat::Dormante, "Voix de la porte", &maison());
+        assert_eq!(reaction, Reaction::Rien);
+        // An annotation around a real call does not hide it.
+        let (_, reaction) = entendu(&Etat::Dormante, "[Musique] Voice, Robert, bonjour", &maison());
+        assert!(matches!(reaction, Reaction::Appel { ref prenom, .. } if prenom == "Robert"), "{reaction:?}");
     }
 }
