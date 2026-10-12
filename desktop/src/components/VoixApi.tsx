@@ -4,8 +4,9 @@ import { invoke } from '@tauri-apps/api/core'
 /**
  * La voix de vos agents : celle du poste par défaut, ou un moteur en ligne si
  * le client range sa clé. Ranger une clé, c'est choisir ce moteur : Rust
- * (`voix_api::moteur_retenu`) dit lequel parle quand il y en a plusieurs, et
- * revient à la voix du poste en disant pourquoi si l'appel échoue.
+ * (`voix_api::moteurs_retenus`) dit dans quel ordre ils parlent quand il y en a
+ * plusieurs, passe au suivant si l'un échoue, puis revient à la voix du poste,
+ * en disant chaque fois pourquoi. Le client peut faire passer une voix devant.
  *
  * Mêmes règles que la clé Anthropic : le coffre du système, jamais réaffichée.
  * Les champs gardent les noms de Rust (pas de `rename_all`).
@@ -15,10 +16,18 @@ interface Etat {
   elevenlabs: boolean
   mistral: boolean
   gemini: boolean
+  google_tts: boolean
+  prefere: string | null
   parle: string
 }
 
-const MOTEURS: { compte: 'mistral' | 'elevenlabs' | 'google-ai-studio'; cle: keyof Etat; nom: string; quoi: string; ou: string }[] = [
+const MOTEURS: {
+  compte: 'mistral' | 'elevenlabs' | 'google-ai-studio' | 'google-text-to-speech'
+  cle: 'elevenlabs' | 'mistral' | 'gemini' | 'google_tts'
+   nom: string
+  quoi: string
+  ou: string
+}[] = [
   {
     compte: 'google-ai-studio',
     cle: 'gemini',
@@ -39,6 +48,13 @@ const MOTEURS: { compte: 'mistral' | 'elevenlabs' | 'google-ai-studio'; cle: key
     nom: 'ElevenLabs',
     quoi: 'La plus expressive du marché : elle rit, chuchote, change de ton. La plus chère.',
     ou: 'elevenlabs.io, rubrique API Keys',
+  },
+  {
+    compte: 'google-text-to-speech',
+    cle: 'google_tts',
+    nom: 'Google Text-to-Speech',
+    quoi: 'La voix de secours : si Gemini ne répond pas, elle prend le relais avec la même voix, d’homme ou de femme selon l’agent. Un autre service de Google, avec sa propre clé.',
+    ou: 'console.cloud.google.com, en activant « Cloud Text-to-Speech API » puis rubrique Identifiants',
   },
 ]
 
@@ -69,6 +85,19 @@ export default function VoixApi() {
     }
   }
 
+  const preferer = async (compte: string | null) => {
+    setDit('')
+    setRefus('')
+    try {
+      setDit(await invoke<string>('voix_api_preferer', { compte }))
+      await relire()
+    } catch (e) {
+      setRefus(String(e))
+    }
+  }
+
+  const ranges = etat ? MOTEURS.filter((m) => etat[m.cle]).length : 0
+
   const retirer = async (compte: string) => {
     setDit('')
     setRefus('')
@@ -97,6 +126,12 @@ export default function VoixApi() {
           {etat?.[m.cle] ? (
             <div className="cle-api-rangee">
               <p className="cle-api-etat">Une clé est rangée.</p>
+              {ranges > 1 &&
+                (etat?.prefere === m.compte ? (
+                  <button onClick={() => preferer(null)}>Revenir à l’ordre habituel</button>
+                ) : (
+                  <button onClick={() => preferer(m.compte)}>Parler d’abord avec celle-ci</button>
+                ))}
               <button onClick={() => retirer(m.compte)}>La retirer</button>
             </div>
           ) : (

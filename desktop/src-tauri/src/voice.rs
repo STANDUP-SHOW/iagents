@@ -356,12 +356,21 @@ pub async fn parler(prenom: Option<&str>, text: &str) -> Result<String, String> 
     }
     let motif = match crate::voix_api::parler(prenom, text).await {
         None => None,
-        Some(Ok(wav)) => {
+        Some(Ok(parole)) => {
             let fichier = std::env::temp_dir().join(format!("iagent-api-{}.wav", std::process::id()));
-            std::fs::write(&fichier, &wav).map_err(|_| "le son reçu n'a pas pu être posé sur le poste".to_string())?;
+            std::fs::write(&fichier, &parole.wav)
+                .map_err(|_| "le son reçu n'a pas pu être posé sur le poste".to_string())?;
             let joue = jouer_wav(&fichier);
             let _ = std::fs::remove_file(&fichier);
             match joue {
+                // A spare engine spoke: say which, and why the first did not.
+                Ok(()) if !parole.echecs.is_empty() => {
+                    return Ok(format!(
+                        "texte prononcé avec {}, faute de mieux : {}",
+                        parole.moteur.nom(),
+                        parole.echecs.join(" ; ")
+                    ))
+                }
                 Ok(()) => return Ok("texte prononcé".to_string()),
                 Err(e) => Some(e),
             }

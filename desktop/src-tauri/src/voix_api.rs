@@ -11,11 +11,21 @@
 //! - **Gemini Flash TTS** (`gemini-3.8-flash-tts`): third of the arena, French
 //!   among 130 languages, about $16 per million characters. Its delivery is
 //!   directed by a sentence (`speech_metadata.style`), never by the text.
+//! - **Google Cloud Text-to-Speech** (Chirp 3 HD, 12/10/2026): the spare
+//!   voice. Another Google service than Gemini (Cloud console, its own key and
+//!   bill). Its Chirp 3 HD voices carry the same names as Gemini's (Kore,
+//!   Charon…), so an agent keeps the same voice when it takes over. Request
+//!   shape read in the REST reference (`v1/text:synthesize`) on 12/10/2026;
+//!   an invalid key answers 400 `API_KEY_INVALID`, seen on the real endpoint.
+//!
+//! Every engine with a key is tried in turn: the client's preferred one first
+//! (`config/voix-api.json`), then the order of `ORDRE`. The first that answers
+//! speaks; the reasons of those that failed are said, never swallowed.
 //!
 //! Keys live in the system keychain under `iagent-api`, accounts
-//! `elevenlabs`, `mistral` and `google-ai-studio` — the same entries as the AI engines
+//! `elevenlabs`, `mistral`, `google-ai-studio` and `google-text-to-speech` — the same entries as the AI engines
 //! screen, so a key saved there is used here. They never come back to the
-//! screen. All three engines return WAV, which `voice::jouer_wav` already plays.
+//! screen. All four engines return WAV, which `voice::jouer_wav` already plays.
 //!
 //! Nothing here was heard on a real machine yet: the request shapes were read
 //! in each vendor's API reference on 06/10/2026.
@@ -26,11 +36,15 @@ const SERVICE_TROUSSEAU: &str = "iagent-api";
 pub const COMPTE_ELEVENLABS: &str = "elevenlabs";
 pub const COMPTE_GEMINI: &str = "google-ai-studio";
 pub const COMPTE_MISTRAL: &str = "mistral";
+pub const COMPTE_GOOGLE_TTS: &str = "google-text-to-speech";
 
 const ADRESSE_ELEVENLABS: &str = "https://api.elevenlabs.io/v1/text-to-speech";
 const MODELE_ELEVENLABS: &str = "eleven_v4";
 const ADRESSE_GEMINI: &str = "https://generativelanguage.googleapis.com/v1beta/interactions";
 const MODELE_GEMINI: &str = "gemini-3.8-flash-tts";
+const ADRESSE_GOOGLE_TTS: &str = "https://texttospeech.googleapis.com/v1/text:synthesize";
+/// Chirp 3 HD voice names are `<locale>-Chirp3-HD-<voice>`.
+const PREFIXE_GOOGLE_TTS: &str = "fr-FR-Chirp3-HD-";
 const ADRESSE_MISTRAL: &str = "https://api.mistral.ai/v1/audio/speech";
 const MODELE_MISTRAL: &str = "voxtral-mini-tts-2603";
 /// The one French preset slug found in the documentation; not heard here.
@@ -52,7 +66,11 @@ pub enum Moteur {
     ElevenLabs,
     Mistral,
     Gemini,
+    GoogleTts,
 }
+
+/// The order engines are tried in when the client prefers none.
+pub const ORDRE: [Moteur; 4] = [Moteur::ElevenLabs, Moteur::Mistral, Moteur::Gemini, Moteur::GoogleTts];
 
 impl Moteur {
     pub fn compte(self) -> &'static str {
@@ -60,6 +78,7 @@ impl Moteur {
             Moteur::ElevenLabs => COMPTE_ELEVENLABS,
             Moteur::Mistral => COMPTE_MISTRAL,
             Moteur::Gemini => COMPTE_GEMINI,
+            Moteur::GoogleTts => COMPTE_GOOGLE_TTS,
         }
     }
     pub fn nom(self) -> &'static str {
@@ -67,6 +86,7 @@ impl Moteur {
             Moteur::ElevenLabs => "ElevenLabs",
             Moteur::Mistral => "Mistral",
             Moteur::Gemini => "Gemini",
+            Moteur::GoogleTts => "Google Text-to-Speech",
         }
     }
 }
@@ -84,33 +104,39 @@ fn cle(moteur: Moteur) -> Option<String> {
         .filter(|c| !c.is_empty())
 }
 
-/// Which engine speaks, from which keys are saved. ElevenLabs first: it is
-/// the dearer one, so a client who saved its key asked for it. Then Mistral,
-/// French and European, then Gemini.
-pub fn moteur_retenu(elevenlabs: bool, mistral: bool, gemini: bool) -> Option<Moteur> {
-    if elevenlabs {
-        Some(Moteur::ElevenLabs)
-    } else if mistral {
-        Some(Moteur::Mistral)
-    } else if gemini {
-        Some(Moteur::Gemini)
-    } else {
-        None
+/// Which engines speak, in the order they are tried, from which keys are
+/// saved. ElevenLabs first: it is the dearer one, so a client who saved its
+/// key asked for it. Then Mistral, French and European, then Gemini, then
+/// Google Text-to-Speech, the spare. An engine the client prefers goes first,
+/// but only if its key is saved: a preference never speaks without a key.
+pub fn moteurs_retenus(avec_cle: &[Moteur], prefere: Option<Moteur>) -> Vec<Moteur> {
+    let mut ordre: Vec<Moteur> = ORDRE.iter().copied().filter(|m| avec_cle.contains(m)).collect();
+    if let Some(p) = prefere.filter(|p| ordre.contains(p)) {
+        ordre.retain(|m| *m != p);
+        ordre.insert(0, p);
     }
+    ordre
 }
 
-/// The engine and its key, if the client saved one.
-pub fn moteur_du_poste() -> Option<(Moteur, String)> {
-    let e = cle(Moteur::ElevenLabs);
-    let mi = cle(Moteur::Mistral);
-    let g = cle(Moteur::Gemini);
-    let m = moteur_retenu(e.is_some(), mi.is_some(), g.is_some())?;
-    let k = match m {
-        Moteur::ElevenLabs => e,
-        Moteur::Mistral => mi,
-        Moteur::Gemini => g,
-    }?;
-    Some((m, k))
+fn fichier_preference() -> std::path::PathBuf {
+    crate::chemins::pour_ecrire("config/voix-api.json")
+}
+
+/// The engine the client asked to hear first, if any.
+fn moteur_prefere() -> Option<Moteur> {
+    let texte = std::fs::read_to_string(fichier_preference()).ok()?;
+    let v: Value = serde_json::from_str(&texte).ok()?;
+    moteur_nomme(v.get("prefere")?.as_str()?).ok()
+}
+
+/// The engines with a saved key, in the order they are tried, with their key.
+pub fn moteurs_du_poste() -> Vec<(Moteur, String)> {
+    let cles: Vec<(Moteur, String)> = ORDRE.iter().filter_map(|m| cle(*m).map(|k| (*m, k))).collect();
+    let avec_cle: Vec<Moteur> = cles.iter().map(|(m, _)| *m).collect();
+    moteurs_retenus(&avec_cle, moteur_prefere())
+        .into_iter()
+        .filter_map(|m| cles.iter().find(|(n, _)| *n == m).cloned())
+        .collect()
 }
 
 /// What the hiring saved about an agent's voice: `voix` and `sexe`.
@@ -201,6 +227,12 @@ pub fn voix_de(moteur: Moteur, prenom: &str, voix: Option<&str>, sexe: Option<&s
             .filter(|v| v.starts_with("fr_"))
             .unwrap_or(MISTRAL_DEFAUT)
             .to_string(),
+        // Same voices as Gemini under their Cloud name: an agent that falls
+        // back from Gemini keeps its voice.
+        Moteur::GoogleTts => {
+            let nom = voix.map(|v| v.strip_prefix(PREFIXE_GOOGLE_TTS).unwrap_or(v));
+            format!("{}{}", PREFIXE_GOOGLE_TTS, voix_de(Moteur::Gemini, prenom, nom, sexe))
+        }
         Moteur::Gemini => {
             let toutes: Vec<&str> = GEMINI_FEMMES.iter().chain(GEMINI_HOMMES.iter()).copied().collect();
             if let Some(v) = voix.and_then(|v| toutes.iter().find(|t| t.eq_ignore_ascii_case(v))) {
@@ -240,6 +272,14 @@ pub fn corps_gemini(texte: &str, voix: &str) -> Value {
     })
 }
 
+pub fn corps_google_tts(texte: &str, voix: &str) -> Value {
+    json!({
+        "input": { "text": texte },
+        "voice": { "languageCode": "fr-FR", "name": voix },
+        "audioConfig": { "audioEncoding": "LINEAR16" }
+    })
+}
+
 /// The last audio part of a Gemini answer, decoded.
 pub fn audio_de_gemini(reponse: &Value) -> Option<Vec<u8>> {
     let donnees = reponse
@@ -254,7 +294,19 @@ pub fn audio_de_gemini(reponse: &Value) -> Option<Vec<u8>> {
     decoder(donnees)
 }
 
-fn refus(moteur: Moteur, statut: reqwest::StatusCode) -> String {
+/// Why the engine said no, in French. `corps` is the error body: Google
+/// answers a wrong key with 400 `API_KEY_INVALID`, not 401, and a Cloud API
+/// left off with 403 `SERVICE_DISABLED`. The body is read, never repeated.
+fn refus(moteur: Moteur, statut: reqwest::StatusCode, corps: &str) -> String {
+    if corps.contains("API_KEY_INVALID") {
+        return format!("la clé {} est refusée : vérifiez-la dans « Vos connexions »", moteur.nom());
+    }
+    if corps.contains("SERVICE_DISABLED") || corps.contains("has not been used in project") {
+        return format!(
+            "{} n'est pas activé sur le projet Google de cette clé : activez « Cloud Text-to-Speech API » dans console.cloud.google.com",
+            moteur.nom()
+        );
+    }
     match statut.as_u16() {
         401 | 403 => format!("la clé {} est refusée : vérifiez-la dans « Vos connexions »", moteur.nom()),
         402 | 429 => format!("{} refuse pour l'instant : crédit épuisé ou trop de demandes", moteur.nom()),
@@ -272,12 +324,14 @@ pub struct Adresses<'a> {
     pub elevenlabs: &'a str,
     pub mistral: &'a str,
     pub gemini: &'a str,
+    pub google_tts: &'a str,
 }
 
 pub const ADRESSES: Adresses<'static> = Adresses {
     elevenlabs: ADRESSE_ELEVENLABS,
     mistral: ADRESSE_MISTRAL,
     gemini: ADRESSE_GEMINI,
+    google_tts: ADRESSE_GOOGLE_TTS,
 };
 
 /// Speaks `texte` through the engine, returns WAV bytes.
@@ -303,7 +357,8 @@ pub async fn synthetiser(
                 .await
                 .map_err(injoignable)?;
             if !r.status().is_success() {
-                return Err(refus(moteur, r.status()));
+                let statut = r.status();
+                return Err(refus(moteur, statut, &r.text().await.unwrap_or_default()));
             }
             r.bytes().await.map(|b| b.to_vec()).map_err(injoignable)
         }
@@ -316,7 +371,8 @@ pub async fn synthetiser(
                 .await
                 .map_err(injoignable)?;
             if !r.status().is_success() {
-                return Err(refus(moteur, r.status()));
+                let statut = r.status();
+                return Err(refus(moteur, statut, &r.text().await.unwrap_or_default()));
             }
             let v: Value = r.json().await.map_err(|_| "Mistral a rendu une réponse illisible".to_string())?;
             v.get("audio_data")
@@ -333,26 +389,84 @@ pub async fn synthetiser(
                 .await
                 .map_err(injoignable)?;
             if !r.status().is_success() {
-                return Err(refus(moteur, r.status()));
+                let statut = r.status();
+                return Err(refus(moteur, statut, &r.text().await.unwrap_or_default()));
             }
             let v: Value = r.json().await.map_err(|_| "Gemini a rendu une réponse illisible".to_string())?;
             audio_de_gemini(&v).ok_or_else(|| "Gemini n'a rendu aucun son".to_string())
         }
+        Moteur::GoogleTts => {
+            let r = client
+                .post(adresses.google_tts)
+                .header("x-goog-api-key", cle)
+                .json(&corps_google_tts(texte, voix))
+                .send()
+                .await
+                .map_err(injoignable)?;
+            if !r.status().is_success() {
+                let statut = r.status();
+                return Err(refus(moteur, statut, &r.text().await.unwrap_or_default()));
+            }
+            let v: Value = r
+                .json()
+                .await
+                .map_err(|_| "Google Text-to-Speech a rendu une réponse illisible".to_string())?;
+            // LINEAR16 comes with its WAV header, per the REST reference.
+            v.get("audioContent")
+                .and_then(Value::as_str)
+                .and_then(decoder)
+                .filter(|son| son.starts_with(b"RIFF"))
+                .ok_or_else(|| "Google Text-to-Speech n'a rendu aucun son".to_string())
+        }
     }
 }
 
-/// The voice of `prenom` through the client's API, as WAV bytes; `None` when
+/// What an API voice gave: the sound, who spoke, and why the engines tried
+/// before it did not.
+pub struct Parole {
+    pub wav: Vec<u8>,
+    pub moteur: Moteur,
+    pub echecs: Vec<String>,
+}
+
+/// Tries each engine in turn until one speaks. All failures are kept, in
+/// order, so the caller can say why the voice changed.
+pub async fn parler_avec(
+    adresses: &Adresses<'_>,
+    moteurs: &[(Moteur, String)],
+    prenom: &str,
+    voix: Option<&str>,
+    sexe: Option<&str>,
+    texte: &str,
+) -> Option<Result<Parole, String>> {
+    if moteurs.is_empty() {
+        return None;
+    }
+    let mut echecs = Vec::new();
+    for (moteur, cle) in moteurs {
+        let v = voix_de(*moteur, prenom, voix, sexe);
+        match synthetiser(adresses, *moteur, cle, &v, texte).await {
+            Ok(wav) => return Some(Ok(Parole { wav, moteur: *moteur, echecs })),
+            Err(e) => echecs.push(e),
+        }
+    }
+    Some(Err(echecs.join(" ; ")))
+}
+
+/// The voice of `prenom` through the client's APIs, as WAV bytes; `None` when
 /// no voice key is saved (the caller then speaks locally).
-pub async fn parler(prenom: Option<&str>, texte: &str) -> Option<Result<Vec<u8>, String>> {
-    let (moteur, cle) = moteur_du_poste()?;
+pub async fn parler(prenom: Option<&str>, texte: &str) -> Option<Result<Parole, String>> {
+    let moteurs = moteurs_du_poste();
+    if moteurs.is_empty() {
+        return None;
+    }
     let installation: Value = crate::fiches::lire_installation()
         .ok()
         .and_then(|t| serde_json::from_str(&t).ok())
         .unwrap_or(Value::Null);
     let prenom = prenom.unwrap_or("");
     let (voix, sexe) = agent_de(&installation, prenom);
-    let voix = voix_de(moteur, prenom, voix.as_deref(), sexe.as_deref());
-    Some(synthetiser(&ADRESSES, moteur, &cle, &voix, texte).await)
+    parler_avec(&ADRESSES, &moteurs, prenom, voix.as_deref(), sexe.as_deref(), texte).await
 }
 
 // ---------------------------------------------------------------------------
@@ -364,6 +478,7 @@ fn moteur_nomme(compte: &str) -> Result<Moteur, String> {
         COMPTE_ELEVENLABS => Ok(Moteur::ElevenLabs),
         COMPTE_MISTRAL => Ok(Moteur::Mistral),
         COMPTE_GEMINI => Ok(Moteur::Gemini),
+        COMPTE_GOOGLE_TTS => Ok(Moteur::GoogleTts),
         _ => Err("ce service ne fait pas parler les agents".to_string()),
     }
 }
@@ -373,20 +488,69 @@ pub struct EtatVoixApi {
     pub elevenlabs: bool,
     pub mistral: bool,
     pub gemini: bool,
+    pub google_tts: bool,
+    /// The account of the engine the client asked to hear first, if any.
+    pub prefere: Option<String>,
     /// The engine that will speak, in words.
     pub parle: String,
 }
 
+/// The engines in the order they are tried, said to the client.
+pub fn phrase_de_l_ordre(ordre: &[Moteur]) -> String {
+    match ordre {
+        [] => "Vos agents parlent avec la voix installée sur ce poste.".to_string(),
+        [seul] => format!(
+            "Vos agents parlent avec {}. S'il ne répond pas, ils reprennent la voix du poste.",
+            seul.nom()
+        ),
+        [premier, reste @ ..] => format!(
+            "Vos agents parlent avec {}. S'il ne répond pas, {} prend le relais, puis la voix du poste.",
+            premier.nom(),
+            reste.iter().map(|m| m.nom()).collect::<Vec<_>>().join(", puis ")
+        ),
+    }
+}
+
 #[tauri::command]
 pub fn voix_api_etat() -> EtatVoixApi {
-    let elevenlabs = cle(Moteur::ElevenLabs).is_some();
-    let mistral = cle(Moteur::Mistral).is_some();
-    let gemini = cle(Moteur::Gemini).is_some();
-    let parle = match moteur_retenu(elevenlabs, mistral, gemini) {
-        Some(m) => format!("Vos agents parlent avec {}.", m.nom()),
-        None => "Vos agents parlent avec la voix installée sur ce poste.".to_string(),
-    };
-    EtatVoixApi { elevenlabs, mistral, gemini, parle }
+    let avec_cle: Vec<Moteur> = ORDRE.iter().copied().filter(|m| cle(*m).is_some()).collect();
+    let prefere = moteur_prefere();
+    let ordre = moteurs_retenus(&avec_cle, prefere);
+    EtatVoixApi {
+        elevenlabs: avec_cle.contains(&Moteur::ElevenLabs),
+        mistral: avec_cle.contains(&Moteur::Mistral),
+        gemini: avec_cle.contains(&Moteur::Gemini),
+        google_tts: avec_cle.contains(&Moteur::GoogleTts),
+        prefere: prefere.filter(|p| avec_cle.contains(p)).map(|p| p.compte().to_string()),
+        parle: phrase_de_l_ordre(&ordre),
+    }
+}
+
+/// The client chooses which voice speaks first; `None` goes back to the
+/// usual order. Only a voice engine can be named.
+#[tauri::command]
+pub fn voix_api_preferer(compte: Option<String>) -> Result<String, String> {
+    let chemin = fichier_preference();
+    match compte {
+        None => {
+            match std::fs::remove_file(&chemin) {
+                Ok(()) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => return Err(format!("retrait du choix de voix : {}", e)),
+            }
+            Ok("Vos agents reprennent l'ordre habituel des voix.".to_string())
+        }
+        Some(c) => {
+            let moteur = moteur_nomme(&c)?;
+            if cle(moteur).is_none() {
+                return Err(format!("rangez d'abord la clé {} : sans elle, cette voix ne peut pas parler", moteur.nom()));
+            }
+            crate::chemins::preparer(&chemin)?;
+            std::fs::write(&chemin, json!({ "prefere": moteur.compte() }).to_string())
+                .map_err(|e| format!("enregistrement du choix de voix : {}", e))?;
+            Ok(format!("Vos agents parlent d'abord avec {}.", moteur.nom()))
+        }
+    }
 }
 
 #[tauri::command]
@@ -419,10 +583,60 @@ mod tests {
 
     #[test]
     fn la_cle_elevenlabs_l_emporte_et_sans_cle_on_parle_en_local() {
-        assert_eq!(moteur_retenu(true, true, true), Some(Moteur::ElevenLabs));
-        assert_eq!(moteur_retenu(false, true, true), Some(Moteur::Mistral));
-        assert_eq!(moteur_retenu(false, false, true), Some(Moteur::Gemini));
-        assert_eq!(moteur_retenu(false, false, false), None);
+        use Moteur::*;
+        assert_eq!(moteurs_retenus(&[GoogleTts, Gemini, Mistral, ElevenLabs], None), vec![ElevenLabs, Mistral, Gemini, GoogleTts]);
+        assert_eq!(moteurs_retenus(&[Mistral, Gemini], None), vec![Mistral, Gemini]);
+        assert_eq!(moteurs_retenus(&[Gemini], None), vec![Gemini]);
+        assert_eq!(moteurs_retenus(&[], None), vec![]);
+    }
+
+    #[test]
+    fn google_tts_prend_le_relais_de_gemini_et_passe_devant_si_le_client_le_choisit() {
+        use Moteur::*;
+        // Gemini speaks, Google Text-to-Speech is the spare: the default stays.
+        assert_eq!(moteurs_retenus(&[Gemini, GoogleTts], None), vec![Gemini, GoogleTts]);
+        // Alone, it speaks.
+        assert_eq!(moteurs_retenus(&[GoogleTts], None), vec![GoogleTts]);
+        // Chosen by the client, it goes first and Gemini becomes the spare.
+        assert_eq!(moteurs_retenus(&[Gemini, GoogleTts], Some(GoogleTts)), vec![GoogleTts, Gemini]);
+        // A preference without its key changes nothing and speaks with nothing.
+        assert_eq!(moteurs_retenus(&[Gemini], Some(GoogleTts)), vec![Gemini]);
+        assert_eq!(moteur_nomme(COMPTE_GOOGLE_TTS), Ok(GoogleTts));
+    }
+
+    #[test]
+    fn l_ordre_se_dit_au_client() {
+        use Moteur::*;
+        assert_eq!(phrase_de_l_ordre(&[]), "Vos agents parlent avec la voix installée sur ce poste.");
+        let p = phrase_de_l_ordre(&[Gemini, GoogleTts]);
+        assert!(p.starts_with("Vos agents parlent avec Gemini.") && p.contains("Google Text-to-Speech prend le relais"), "{p}");
+    }
+
+    #[test]
+    fn google_tts_garde_la_voix_de_gemini_et_le_genre_de_l_agent() {
+        for prenom in ["Victor", "Hugo", "Paul", "Louis", "Malik", "Adam", "Jean-Marc"] {
+            let v = voix_de(Moteur::GoogleTts, prenom, None, None);
+            let nom = v.strip_prefix(PREFIXE_GOOGLE_TTS).expect(&v);
+            assert!(GEMINI_HOMMES.contains(&nom), "{prenom} : {v}");
+            assert_eq!(nom, voix_de(Moteur::Gemini, prenom, None, None), "{prenom}");
+        }
+        for prenom in ["Léa", "Sarah", "Nora", "Inès", "Jeanne", "Clara", "Marie Claire"] {
+            let v = voix_de(Moteur::GoogleTts, prenom, None, None);
+            assert!(GEMINI_FEMMES.contains(&v.strip_prefix(PREFIXE_GOOGLE_TTS).unwrap()), "{prenom} : {v}");
+        }
+        // The gender the hiring saved wins over the name.
+        let v = voix_de(Moteur::GoogleTts, "Victor", None, Some("femme"));
+        assert!(GEMINI_FEMMES.contains(&v.strip_prefix(PREFIXE_GOOGLE_TTS).unwrap()), "{v}");
+        // A Gemini voice the client chose is kept, under its Cloud name.
+        assert_eq!(voix_de(Moteur::GoogleTts, "Léa", Some("aoede"), None), "fr-FR-Chirp3-HD-Aoede");
+        assert_eq!(voix_de(Moteur::GoogleTts, "Léa", Some("fr-FR-Chirp3-HD-Leda"), None), "fr-FR-Chirp3-HD-Leda");
+        // A voice of another engine is not sent.
+        assert!(voix_de(Moteur::GoogleTts, "Hugo", Some("ZQe5CZNOzWyzChESwQEW"), None).starts_with(PREFIXE_GOOGLE_TTS));
+        let c = corps_google_tts("Bonjour Max.", "fr-FR-Chirp3-HD-Charon");
+        assert_eq!(c["input"]["text"], "Bonjour Max.");
+        assert_eq!(c["voice"]["languageCode"], "fr-FR");
+        assert_eq!(c["voice"]["name"], "fr-FR-Chirp3-HD-Charon");
+        assert_eq!(c["audioConfig"]["audioEncoding"], "LINEAR16");
     }
 
     #[test]
@@ -517,7 +731,7 @@ mod tests {
     #[tokio::test]
     async fn elevenlabs_recoit_sa_cle_dans_l_en_tete_et_rend_le_wav() {
         let (adresse, requete) = serveur(200, b"RIFF....WAVE".to_vec(), "audio/wav").await;
-        let son = synthetiser(&Adresses { elevenlabs: &adresse, mistral: "", gemini: "" }, Moteur::ElevenLabs, "cle-de-banc", ELEVENLABS_FEMME, "Bonjour").await.unwrap();
+        let son = synthetiser(&Adresses { elevenlabs: &adresse, mistral: "", gemini: "", google_tts: "" }, Moteur::ElevenLabs, "cle-de-banc", ELEVENLABS_FEMME, "Bonjour").await.unwrap();
         assert_eq!(son, b"RIFF....WAVE");
         let vu = requete.await.unwrap().to_ascii_lowercase();
         assert!(vu.contains(&format!("post /{}?output_format=wav_24000", ELEVENLABS_FEMME.to_ascii_lowercase())));
@@ -527,7 +741,7 @@ mod tests {
     #[tokio::test]
     async fn une_cle_refusee_se_dit_en_francais_sans_la_recopier() {
         let (adresse, _r) = serveur(401, b"{}".to_vec(), "application/json").await;
-        let e = synthetiser(&Adresses { elevenlabs: "", mistral: "", gemini: &adresse }, Moteur::Gemini, "cle-secrete-de-banc", "Kore", "Bonjour").await.unwrap_err();
+        let e = synthetiser(&Adresses { elevenlabs: "", mistral: "", gemini: &adresse, google_tts: "" }, Moteur::Gemini, "cle-secrete-de-banc", "Kore", "Bonjour").await.unwrap_err();
         assert!(e.contains("refusée") && e.contains("Vos connexions"), "{e}");
         assert!(!e.contains("cle-secrete"));
     }
@@ -536,7 +750,7 @@ mod tests {
     async fn gemini_rend_le_son_decode() {
         let corps = serde_json::to_vec(&json!({ "steps": [{ "type": "model_output", "content": [{ "type": "audio", "data": "UklGRg==" }] }] })).unwrap();
         let (adresse, requete) = serveur(200, corps, "application/json").await;
-        let son = synthetiser(&Adresses { elevenlabs: "", mistral: "", gemini: &adresse }, Moteur::Gemini, "k-de-banc-gemini", "Kore", "Bonjour").await.unwrap();
+        let son = synthetiser(&Adresses { elevenlabs: "", mistral: "", gemini: &adresse, google_tts: "" }, Moteur::Gemini, "k-de-banc-gemini", "Kore", "Bonjour").await.unwrap();
         assert_eq!(son, b"RIFF");
         assert!(requete.await.unwrap().to_ascii_lowercase().contains("x-goog-api-key: k-de-banc-gemini"));
     }
@@ -545,15 +759,82 @@ mod tests {
     async fn mistral_recoit_sa_cle_en_porteur_et_rend_le_son_decode() {
         let corps = serde_json::to_vec(&json!({ "audio_data": "UklGRg==" })).unwrap();
         let (adresse, requete) = serveur(200, corps, "application/json").await;
-        let son = synthetiser(&Adresses { elevenlabs: "", mistral: &adresse, gemini: "" }, Moteur::Mistral, "k-mistral-banc", MISTRAL_DEFAUT, "Bonjour").await.unwrap();
+        let son = synthetiser(&Adresses { elevenlabs: "", mistral: &adresse, gemini: "", google_tts: "" }, Moteur::Mistral, "k-mistral-banc", MISTRAL_DEFAUT, "Bonjour").await.unwrap();
         assert_eq!(son, b"RIFF");
         let vu = requete.await.unwrap();
         assert!(vu.to_ascii_lowercase().contains("authorization: bearer k-mistral-banc"));
         assert!(vu.contains("\"response_format\":\"wav\""), "{vu}");
     }
 
+    #[tokio::test]
+    async fn google_tts_recoit_sa_cle_dans_l_en_tete_et_rend_le_wav() {
+        let corps = serde_json::to_vec(&json!({ "audioContent": "UklGRiQAAABXQVZF" })).unwrap();
+        let (adresse, requete) = serveur(200, corps, "application/json").await;
+        let a = Adresses { elevenlabs: "", mistral: "", gemini: "", google_tts: &adresse };
+        let son = synthetiser(&a, Moteur::GoogleTts, "k-de-banc-tts", "fr-FR-Chirp3-HD-Charon", "Bonjour").await.unwrap();
+        assert!(son.starts_with(b"RIFF") && son.ends_with(b"WAVE"));
+        let vu = requete.await.unwrap();
+        assert!(vu.to_ascii_lowercase().contains("x-goog-api-key: k-de-banc-tts"));
+        assert!(vu.contains("fr-FR-Chirp3-HD-Charon") && vu.contains("LINEAR16"), "{vu}");
+    }
+
+    #[tokio::test]
+    async fn google_tts_sans_son_ne_se_dit_pas_reussi() {
+        let corps = serde_json::to_vec(&json!({ "audioContent": "" })).unwrap();
+        let (adresse, _r) = serveur(200, corps, "application/json").await;
+        let a = Adresses { elevenlabs: "", mistral: "", gemini: "", google_tts: &adresse };
+        let e = synthetiser(&a, Moteur::GoogleTts, "k", "fr-FR-Chirp3-HD-Kore", "Bonjour").await.unwrap_err();
+        assert_eq!(e, "Google Text-to-Speech n'a rendu aucun son");
+    }
+
+    #[tokio::test]
+    async fn une_cle_google_invalide_rend_400_et_se_dit_refusee() {
+        // The real endpoint answers a wrong key this way (seen on 12/10/2026).
+        let corps = br#"{"error":{"code":400,"status":"INVALID_ARGUMENT","details":[{"reason":"API_KEY_INVALID"}]}}"#.to_vec();
+        let (adresse, _r) = serveur(400, corps, "application/json").await;
+        let a = Adresses { elevenlabs: "", mistral: "", gemini: "", google_tts: &adresse };
+        let e = synthetiser(&a, Moteur::GoogleTts, "cle-secrete-tts", "fr-FR-Chirp3-HD-Kore", "Bonjour").await.unwrap_err();
+        assert!(e.contains("Google Text-to-Speech est refusée") && e.contains("Vos connexions"), "{e}");
+        assert!(!e.contains("cle-secrete") && !e.contains("API_KEY_INVALID"));
+    }
+
+    #[tokio::test]
+    async fn une_api_google_non_activee_dit_quoi_faire() {
+        let corps = br#"{"error":{"code":403,"status":"PERMISSION_DENIED","details":[{"reason":"SERVICE_DISABLED"}]}}"#.to_vec();
+        let (adresse, _r) = serveur(403, corps, "application/json").await;
+        let a = Adresses { elevenlabs: "", mistral: "", gemini: "", google_tts: &adresse };
+        let e = synthetiser(&a, Moteur::GoogleTts, "k", "fr-FR-Chirp3-HD-Kore", "Bonjour").await.unwrap_err();
+        assert!(e.contains("Cloud Text-to-Speech API") && e.contains("console.cloud.google.com"), "{e}");
+    }
+
+    #[tokio::test]
+    async fn quand_gemini_echoue_google_tts_parle_avec_la_meme_voix_et_l_echec_reste_dit() {
+        let (gemini, _g) = serveur(429, b"{}".to_vec(), "application/json").await;
+        let corps = serde_json::to_vec(&json!({ "audioContent": "UklGRiQAAABXQVZF" })).unwrap();
+        let (tts, requete) = serveur(200, corps, "application/json").await;
+        let a = Adresses { elevenlabs: "", mistral: "", gemini: &gemini, google_tts: &tts };
+        let moteurs = vec![(Moteur::Gemini, "k-gemini".to_string()), (Moteur::GoogleTts, "k-tts".to_string())];
+        let p = parler_avec(&a, &moteurs, "Victor", None, None, "Bonjour").await.unwrap().unwrap();
+        assert_eq!(p.moteur, Moteur::GoogleTts);
+        assert_eq!(p.echecs.len(), 1);
+        assert!(p.echecs[0].starts_with("Gemini refuse"), "{:?}", p.echecs);
+        let attendu = format!("{}{}", PREFIXE_GOOGLE_TTS, voix_de(Moteur::Gemini, "Victor", None, None));
+        assert!(requete.await.unwrap().contains(&attendu));
+    }
+
+    #[tokio::test]
+    async fn quand_toutes_les_voix_echouent_chaque_raison_est_dite() {
+        let (gemini, _g) = serveur(500, b"{}".to_vec(), "application/json").await;
+        let (tts, _t) = serveur(403, br#"{"details":[{"reason":"SERVICE_DISABLED"}]}"#.to_vec(), "application/json").await;
+        let a = Adresses { elevenlabs: "", mistral: "", gemini: &gemini, google_tts: &tts };
+        let moteurs = vec![(Moteur::Gemini, "k".to_string()), (Moteur::GoogleTts, "k".to_string())];
+        let e = parler_avec(&a, &moteurs, "Léa", None, None, "Bonjour").await.unwrap().err().unwrap();
+        assert!(e.contains("Gemini n'a pas su") && e.contains("Google Text-to-Speech n'est pas activé"), "{e}");
+        assert!(parler_avec(&a, &[], "Léa", None, None, "Bonjour").await.is_none());
+    }
+
     #[test]
-    fn seuls_les_trois_moteurs_de_voix_se_rangent_ici() {
+    fn seuls_les_quatre_moteurs_de_voix_se_rangent_ici() {
         assert!(moteur_nomme("openai").is_err());
         assert!(voix_api_ranger("elevenlabs".into(), "a b".into()).is_err());
     }
