@@ -567,6 +567,35 @@ fn jouer_wav(chemin: &std::path::Path) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    /// The listening engine must keep up with speech on the client's PC.
+    /// Ignored by default (needs the real model): CI runs it on the Windows
+    /// build with IAGENT_MODELE_ECOUTE set. On 12/10/2026 an 8 s window took
+    /// 99 s on max's i5-4460 because ggml was built without AVX2; whisper pads
+    /// every window to 30 s, so the content of the samples barely matters.
+    #[test]
+    #[ignore]
+    fn banc_vitesse_ecoute() {
+        let chemin = chemin_modele_ecoute();
+        let contexte = WhisperContext::new_with_params(
+            &chemin.to_string_lossy(),
+            WhisperContextParameters::default(),
+        )
+        .expect("modèle d'écoute");
+        let n = 8 * TAUX_WHISPER as usize;
+        let son: Vec<f32> = (0..n)
+            .map(|i| 0.1 * ((i as f32) * 0.05).sin() * ((i as f32) * 0.0007).sin())
+            .collect();
+        let limite: f64 = std::env::var("IAGENT_BANC_ECOUTE_SECONDES")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(10.0);
+        let debut = std::time::Instant::now();
+        transcrire(&contexte, &son).expect("transcription");
+        let duree = debut.elapsed().as_secs_f64();
+        println!("8 s d'écoute transcrites en {:.2} s ({})", duree, chemin.display());
+        assert!(duree < limite, "8 s d'écoute transcrites en {:.1} s, limite {} s", duree, limite);
+    }
+
     #[test]
     fn le_silence_n_est_pas_transcrit_la_voix_si() {
         let n = TAUX_WHISPER as usize;

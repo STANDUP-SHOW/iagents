@@ -98,6 +98,22 @@ jobs:
             echo "an AVX-512 compile flag is still present"; exit 1
           fi
 
+      # Flags in the CMake cache are not a speed. On 12/10/2026 an 8 s window
+      # took 99 s to transcribe on max's i5-4460 and the agent never heard a
+      # word: time the real listening model on this build, same binary flags.
+      - name: Listening speed bench
+        shell: bash
+        working-directory: desktop/src-tauri
+        env:
+          IAGENT_MODELE_ECOUTE: ${{ runner.temp }}/ggml-small-q5_1.bin
+          IAGENT_BANC_ECOUTE_SECONDES: '10'
+        run: |
+          url=$(node -e 'const s=require("./sources-ressources.json");const r=s.pieces.find(x=>x.chemin==="modeles/ggml-small-q5_1.bin");console.log(r.url+" "+r.sha256)')
+          set -- $url
+          curl -sSfL -o "$IAGENT_MODELE_ECOUTE" "$1"
+          echo "$2  $IAGENT_MODELE_ECOUTE" | sha256sum -c -
+          cargo test --release banc_vitesse_ecoute -- --ignored --nocapture
+
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4
         with:
