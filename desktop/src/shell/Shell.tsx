@@ -586,7 +586,7 @@ export function PiedSysteme({ pied, voix, ouvrir }: { pied: Pied; voix: EtatVoix
       o: 'box',
     },
     {
-      titre: 'Voice',
+      titre: 'Écoute',
       valeur: voix.motif ? 'indisponible' : voix.active ? 'à l’écoute' : 'coupée',
       ton: voix.motif ? 'alerte' : voix.active ? 'ok' : 'neutre',
       o: 'voice',

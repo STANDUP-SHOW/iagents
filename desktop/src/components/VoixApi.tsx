@@ -53,7 +53,7 @@ const MOTEURS: {
     compte: 'google-text-to-speech',
     cle: 'google_tts',
     nom: 'Google Text-to-Speech',
-    quoi: 'La voix de secours : si Gemini ne répond pas, elle prend le relais avec la même voix, d’homme ou de femme selon l’agent. Un autre service de Google, avec sa propre clé.',
+    quoi: 'Facultative : inutile quand Gemini est branché. C’est une voix de secours : si Gemini ne répond pas, elle prend le relais avec la même voix, d’homme ou de femme selon l’agent. Un autre service de Google, avec sa propre clé.',
     ou: 'console.cloud.google.com, en activant « Cloud Text-to-Speech API » puis rubrique Identifiants',
   },
 ]
@@ -97,6 +97,8 @@ export default function VoixApi() {
   }
 
   const ranges = etat ? MOTEURS.filter((m) => etat[m.cle]).length : 0
+  // Shown first: the services with a key, or Gemini, our choice, when none has one.
+  const enAvant = (m: (typeof MOTEURS)[number]) => (ranges ? !!etat?.[m.cle] : m.compte === 'google-ai-studio')
 
   const retirer = async (compte: string) => {
     setDit('')
@@ -119,7 +121,8 @@ export default function VoixApi() {
       </p>
       {etat && <p className="cle-api-etat">{etat.parle}</p>}
 
-      {MOTEURS.map((m) => (
+      {[MOTEURS.filter(enAvant), MOTEURS.filter((m) => !enAvant(m))].map((groupe, g) => {
+        const cartes = groupe.map((m) => (
         <div key={m.compte} className="voix-api-moteur">
           <h4>{m.nom}</h4>
           <p className="cle-api-explication">{m.quoi}</p>
@@ -151,7 +154,19 @@ export default function VoixApi() {
             </div>
           )}
         </div>
-      ))}
+        ))
+        if (!cartes.length) return null
+        // A client with one key sees one service, not three empty boxes that
+        // read like the same key switched off elsewhere (max, 12/10/2026).
+        return g === 0 ? (
+          <div key="en-avant">{cartes}</div>
+        ) : (
+          <details key="autres" className="voix-api-autres">
+            <summary>{ranges ? 'Autres voix, facultatives : inutiles tant que la vôtre répond' : 'Autres voix possibles'}</summary>
+            {cartes}
+          </details>
+        )
+      })}
 
       {dit && <p className="succes">{dit}</p>}
       {refus && <p className="refus">{refus}</p>}
