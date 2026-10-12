@@ -64,6 +64,19 @@ const AVANT_LE_PRENOM: [&str; 16] = [
     "bon", "et", "ecoute",
 ];
 
+/// Past this many words, what follows a first name is a story, not a request
+/// to an assistant. Long requests stay possible inside an open conversation.
+const MOTS_D_UNE_DEMANDE: usize = 40;
+
+/// Words that, right after a first name with no pause, show the speaker is
+/// talking about the agent rather than to it: « Nora elle revient le 17 »,
+/// « Victor m'a dit », « Hugo qui passe ». Compared in their bare form.
+const A_PROPOS_DE: &[&str] = &[
+    "il", "elle", "lui", "qui", "que", "et", "a", "est", "etait", "avait", "sera", "va",
+    "vient", "revient", "dit", "disait", "pense", "fait", "ma", "mavait", "nous", "vous", "leur",
+    "aussi", "non", "pas", "ne", "na", "nest", "sest", "son", "sa", "ses", "de", "du",
+];
+
 /// Ce qui ferme une conversation, quand c'est toute la phrase.
 const CONGES: [&str; 9] = [
     "au revoir",
@@ -255,6 +268,24 @@ pub fn entendu(etat: &Etat, texte: &str, prenoms: &[String]) -> (Etat, Reaction)
         })
         .filter(|(p, _)| !p.is_empty())
     });
+    // Said to an agent, not about someone: the first name stands apart (a
+    // comma, a pause the transcription marks, or nothing after it), and what
+    // follows is not someone telling a story. Seen on max's PC, 12/10/2026: a
+    // private conversation transcribed « Nora, Et là, il a bougé après ? Non,
+    // j'ai dit : « Écoute, je suis pas là… » » went to Nora, who answered twice.
+    let appel = appel.filter(|(_, i)| {
+        // The word as written carries its own comma (« Victor, »); a spaced
+        // one (« Victor , ») is the next word. Without any, the transcription
+        // may simply have dropped it, so only a word that shows we are
+        // talking about the agent (« Nora elle revient », « Victor m'a dit »)
+        // rules the call out.
+        let ponctue = |m: &str| m.trim_end_matches(['»', '"', ')']).ends_with([',', '.', '?', '!', ':', ';', '…']);
+        let detache = ponctue(dits[*i])
+            || dits.get(i + 1).map_or(true, |m| ponctue(m) || !A_PROPOS_DE.contains(&mots[i + 1].as_str()));
+        let suite = demande(i + 1);
+        let recit = suite.contains(['«', '»', '"', '“', '”']) || suite.split_whitespace().count() > MOTS_D_UNE_DEMANDE;
+        detache && !recit
+    });
     if let Some((prenom, i)) = appel {
         return (
             Etat::EnConversation { prenom: prenom.clone() },
@@ -383,6 +414,22 @@ mod tests {
         let courts: Vec<String> = ["Luc", "Lea"].iter().map(|p| p.to_string()).collect();
         let (_, reaction) = entendu(&Etat::Dormante, "Lud, viens", &courts);
         assert_eq!(reaction, Reaction::Rien);
+    }
+
+    #[test]
+    fn une_conversation_privee_qui_commence_par_un_prenom_n_appelle_personne() {
+        // Seen on max's PC, 12/10/2026: it went to Nora, and so to Google.
+        for dit in [
+            "Nora, Et là, il a bougé après ? Non, j'ai dit : « Écoute, je suis pas là… » Mais c'est un malade, lui…",
+            "Nora elle revient le 17",
+            "Victor m'a dit qu'il passerait",
+        ] {
+            let (etat, reaction) = entendu(&Etat::Dormante, dit, &maison());
+            assert_eq!((etat, reaction), (Etat::Dormante, Reaction::Rien), "« {dit} »");
+        }
+        // Une vraie demande, même longue, passe.
+        let (_, reaction) = entendu(&Etat::Dormante, "Victor, fais-moi un brief des directives pour l'équipe, avec ce qui reste à faire cette semaine.", &maison());
+        assert!(matches!(reaction, Reaction::Appel { .. }));
     }
 
     #[test]

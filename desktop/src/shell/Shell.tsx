@@ -25,6 +25,8 @@ export interface EtatVoix {
   /** The agent a conversation is open with: it hears without being named. */
   avec: string | null
   reflexion: boolean
+  /** Speaking aloud: a first name, '' for the application itself, null when silent. */
+  parle: string | null
   /** Why listening cannot start, in French; null when it can. */
   motif: string | null
   partiel: string
@@ -286,10 +288,11 @@ export function DockVocal({
   onDire: (phrase: string) => void
 }) {
   const [ecrit, setEcrit] = useState('')
-  const etat = voix.motif ? 'indisponible' : voix.reflexion ? 'reflexion' : voix.avec ? 'eveil' : voix.active ? 'ecoute' : 'repos'
+  const etat = voix.motif ? 'indisponible' : voix.reflexion ? 'reflexion' : voix.parle !== null ? 'parle' : voix.avec ? 'eveil' : voix.active ? 'ecoute' : 'repos'
   const libelle = {
     indisponible: 'Écoute indisponible',
     reflexion: 'Réflexion…',
+    parle: voix.parle ? `${voix.parle} parle…` : 'Je parle…',
     eveil: `En conversation avec ${voix.avec}`,
     ecoute: 'En écoute…',
     repos: 'Écoute coupée',

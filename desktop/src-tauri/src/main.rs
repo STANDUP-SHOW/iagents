@@ -83,7 +83,11 @@ impl Ecoute {
     /// Closes a conversation the client left: nothing said to the agent for
     /// `CONVERSATION_OUVERTE` since it last spoke or was last spoken to.
     fn fermer_si_delaissee(&mut self) {
-        if matches!(self.ou_en_est, reveil::Etat::Dormante) {
+        // Never while the agent is still speaking: a long answer outlasted the
+        // window, and the client's follow-ups were lost (max, 12/10/2026).
+        if matches!(self.ou_en_est, reveil::Etat::Dormante)
+            || voice::EN_TRAIN_DE_PARLER.load(std::sync::atomic::Ordering::Acquire)
+        {
             return;
         }
         let parle = *voice::FIN_DE_PAROLE.lock().unwrap();
@@ -112,7 +116,7 @@ impl EcouteVue {
 /// How long an open conversation waits for the client once the agent has
 /// spoken (or, before it speaks, once it was called). After that the next
 /// sentence needs the agent's first name again.
-const CONVERSATION_OUVERTE: std::time::Duration = std::time::Duration::from_secs(30);
+const CONVERSATION_OUVERTE: std::time::Duration = std::time::Duration::from_secs(60);
 
 /// L'etat de l'ecoute, pour le bouton VOICE (vert = actif, rouge = inactif).
 #[tauri::command]
@@ -214,6 +218,10 @@ async fn voix_entendu(texte: String, parle: bool, state: State<'_, AppState>) ->
                 let (a, r) = reveil::entendu(&avant, &mieux, &prenoms);
                 if matches!(r, reveil::Reaction::Appel { .. }) {
                     (apres, reaction) = (a, r);
+                } else if matches!(avant, reveil::Etat::Dormante) {
+                    // Two ears must hear the call: when Gemini does not hear
+                    // a first name opening the sentence, nobody was called.
+                    (apres, reaction) = (reveil::Etat::Dormante, reveil::Reaction::Rien);
                 } else if let reveil::Reaction::Appel { prenom, .. } = &reaction {
                     // Gemini heard the sentence without the first name the
                     // PC heard: same agent, Gemini's words.

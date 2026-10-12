@@ -130,6 +130,9 @@ function App() {
   const [dernierEntendu, setDernierEntendu] = useState('')
   const [partialResult, setPartialResult] = useState<string>('')
   const [isProcessing, setIsProcessing] = useState(false)
+  // Who is speaking aloud, once the answer is written: « Réflexion… » stayed on
+  // screen for the whole reading, over a minute on max's PC (12/10/2026).
+  const [parle, setParle] = useState<string | null>(null)
   const [lastResponse, setLastResponse] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [moteur, setMoteur] = useState<ConversationEngine | null>(null)
@@ -458,6 +461,11 @@ function App() {
         promptSysteme += contexteDuTeamHolder(equipe, lectures, changements)
       }
 
+      // Said aloud, a written answer is cut after three sentences (`voice::a_dire`):
+      // the essential has to come first.
+      promptSysteme +=
+        "\n\nOn vous parle à voix haute. Commencez par l'essentiel en deux ou trois phrases simples, sans titre ni liste : c'est tout ce qui sera dit. Le détail peut suivre, il restera écrit à l'écran."
+
       const reponse = await invoke<{ texte: string; motif: string; bascule: boolean }>(
         'repondre',
         {
@@ -479,6 +487,8 @@ function App() {
       // disait encore « vérifier que piper et sa voix sont présents » alors que
       // la voix, elle, se télécharge depuis le 24/09 et qu'il ne manque plus
       // que le moteur. Le client lisait donc un conseil faux.
+      setIsProcessing(false)
+      setParle(agent.prenom)
       await invoke('text_to_speech', { text: reponse.texte, prenom: agent.prenom }).catch((err) => {
         setError(String(err))
       })
@@ -488,13 +498,17 @@ function App() {
       console.error('Failed to process voice command:', err)
     } finally {
       setIsProcessing(false)
+      setParle(null)
     }
   }
 
   // Ce que l'application dit à voix haute, affiché aussi pour qui ne l'entend pas.
   const dire = async (texte: string) => {
     setLastResponse(texte)
+    setIsProcessing(false)
+    setParle('')
     await invoke('text_to_speech', { text: texte }).catch(() => {})
+    setParle(null)
   }
 
   // Le client a dit oui (à voix haute ou sur l'écran « Votre équipe ») : le
@@ -628,6 +642,7 @@ function App() {
     active: ecoute.active,
     avec: ecoute.ou_en_est === 'en-conversation' ? ecoute.avec : null,
     reflexion: isProcessing,
+    parle,
     motif: motifEcoute,
     partiel: partialResult,
     niveau: niveauMicro,
@@ -638,7 +653,7 @@ function App() {
 
   const module = moduleDe(activeTab)
   const infos = MODULES.find((m) => m.id === module)
-  const etatTexte = isProcessing ? 'Réflexion…' : ecoute.ou_en_est === 'en-conversation' && ecoute.avec ? `Avec ${ecoute.avec}` : ecoute.active ? 'À l’écoute' : 'Prêt'
+  const etatTexte = isProcessing ? 'Réflexion…' : parle !== null ? (parle ? `${parle} parle…` : 'Je parle…') : ecoute.ou_en_est === 'en-conversation' && ecoute.avec ? `Avec ${ecoute.avec}` : ecoute.active ? 'À l’écoute' : 'Prêt'
 
   // Pages that keep their existing screen get the new header and sub-pages around it.
   const cadre = (contenu: JSX.Element, onglet: Onglet = activeTab) => (

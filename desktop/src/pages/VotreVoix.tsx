@@ -115,7 +115,7 @@ export default function VotreVoix({
             <div className="reglage-carte">
               <span className="etiquette">Pour appeler un agent</span>
               <strong>Son prénom</strong>
-              <span className="precision">Dites son prénom au début de la phrase : « Victor, où en es-tu ? ». Il vous écoute ensuite sans qu’on le rappelle, jusqu’à « merci, c’est tout » ou trente secondes de silence. Un prénom cité au milieu d’une phrase n’appelle personne.</span>
+              <span className="precision">Dites son prénom au début de la phrase : « Victor, où en es-tu ? ». Il vous écoute ensuite sans qu’on le rappelle, jusqu’à « merci, c’est tout » ou une minute de silence après sa réponse. Un prénom cité au milieu d’une phrase n’appelle personne.</span>
             </div>
             <div className="reglage-carte">
               <span className="etiquette">Langue d’écoute</span>

@@ -479,34 +479,167 @@ pub fn chemin_modele_ecoute() -> std::path::PathBuf {
 /// The agent speaks: through the client's voice API when a key is saved,
 /// locally otherwise. When the API fails, the local voice takes over and the
 /// reason is said, so a dead key never silences the agent without a word.
-pub async fn parler(prenom: Option<&str>, text: &str) -> Result<String, String> {
-    if text.trim().is_empty() {
-        return Ok("rien à prononcer".to_string());
-    }
-    let motif = match crate::voix_api::parler(prenom, text).await {
-        None => None,
-        Some(Ok(parole)) => {
-            let fichier = std::env::temp_dir().join(format!("iagent-api-{}.wav", std::process::id()));
-            std::fs::write(&fichier, &parole.wav)
-                .map_err(|_| "le son reçu n'a pas pu être posé sur le poste".to_string())?;
-            let joue = jouer_wav(&fichier);
-            let _ = std::fs::remove_file(&fichier);
-            match joue {
-                // A spare engine spoke: say which, and why the first did not.
-                Ok(()) if !parole.echecs.is_empty() => {
-                    return Ok(format!(
-                        "texte prononcé avec {}, faute de mieux : {}",
-                        parole.moteur.nom(),
-                        parole.echecs.join(" ; ")
-                    ))
+/// Most sentences an agent says aloud; the rest of its answer stays written
+/// on the screen. Measured on max's PC, 12/10/2026: the online voice made the
+/// whole answer before saying a word, about 7 s for one short sentence, so a
+/// status report took over a minute to start, read with its markdown.
+const PHRASES_A_DIRE: usize = 3;
+const CARACTERES_A_DIRE: usize = 450;
+const LE_RESTE_EST_ECRIT: &str = "Le détail est à l'écran.";
+
+/// What is said aloud of a written answer, in the pieces it is made in: the
+/// first sentence alone, so the voice starts as soon as it is ready, then the
+/// rest of the spoken part. Titles, lists, emphasis and links lose their
+/// marks; tables and code are not read.
+pub fn a_dire(texte: &str) -> Vec<String> {
+    let mut phrases: Vec<String> = Vec::new();
+    let mut dans_le_code = false;
+    for ligne in texte.lines() {
+        let ligne = ligne.trim();
+        if ligne.starts_with("```") {
+            dans_le_code = !dans_le_code;
+            continue;
+        }
+        if dans_le_code || ligne.starts_with('|') || ligne.chars().all(|c| "-*_=#> ".contains(c)) {
+            continue;
+        }
+        let ligne = ligne
+            .trim_start_matches(|c: char| c == '#' || c == '>' || c.is_whitespace())
+            .trim_start_matches(|c: char| c == '-' || c == '*' || c == '•')
+            .trim_start();
+        let ligne = sans_marques(ligne);
+        let mut phrase = String::new();
+        let mut caracteres = ligne.chars().peekable();
+        while let Some(c) = caracteres.next() {
+            phrase.push(c);
+            if matches!(c, '.' | '!' | '?' | '…') && caracteres.peek().map_or(true, |s| s.is_whitespace()) {
+                if !phrase.trim().is_empty() {
+                    phrases.push(phrase.trim().to_string());
                 }
-                Ok(()) => return Ok("texte prononcé".to_string()),
-                Err(e) => Some(e),
+                phrase.clear();
             }
         }
-        Some(Err(e)) => Some(e),
+        if !phrase.trim().is_empty() {
+            // A line without a full stop (a title, a list item) is still a
+            // sentence to the ear.
+            let mut fin = phrase.trim().trim_end_matches([':', ';', ',']).to_string();
+            if !fin.ends_with(['.', '!', '?', '…']) {
+                fin.push('.');
+            }
+            phrases.push(fin);
+        }
+    }
+
+    let mut dites: Vec<String> = Vec::new();
+    let mut longueur = 0;
+    for phrase in &phrases {
+        if dites.len() == PHRASES_A_DIRE || (!dites.is_empty() && longueur + phrase.chars().count() > CARACTERES_A_DIRE) {
+            break;
+        }
+        longueur += phrase.chars().count();
+        dites.push(phrase.clone());
+    }
+    let coupe = dites.len() < phrases.len();
+    let mut morceaux = Vec::new();
+    if let Some(premiere) = dites.first() {
+        morceaux.push(premiere.clone());
+    }
+    let mut suite = dites.iter().skip(1).cloned().collect::<Vec<_>>().join(" ");
+    if coupe {
+        if !suite.is_empty() {
+            suite.push(' ');
+        }
+        suite.push_str(LE_RESTE_EST_ECRIT);
+    }
+    if !suite.is_empty() {
+        morceaux.push(suite);
+    }
+    morceaux
+}
+
+/// `**gras**`, `_italique_`, `` `code` `` and `[lien](adresse)` as the ear
+/// should hear them.
+fn sans_marques(ligne: &str) -> String {
+    let mut sortie = String::with_capacity(ligne.len());
+    let mut reste = ligne;
+    while let Some(c) = reste.chars().next() {
+        if c == '[' {
+            if let Some(fin) = reste.find("](") {
+                if let Some(ferme) = reste[fin..].find(')') {
+                    sortie.push_str(&reste[1..fin]);
+                    reste = &reste[fin + ferme + 1..];
+                    continue;
+                }
+            }
+        }
+        if !matches!(c, '*' | '`') && !(c == '_' && (sortie.is_empty() || sortie.ends_with(' ') || reste[1..].starts_with([' ', '.', ',']) || reste.len() == 1)) {
+            sortie.push(c);
+        }
+        reste = &reste[c.len_utf8()..];
+    }
+    sortie
+}
+
+pub async fn parler(prenom: Option<&str>, text: &str) -> Result<String, String> {
+    let morceaux = a_dire(text);
+    if morceaux.is_empty() {
+        return Ok("rien à prononcer".to_string());
+    }
+    // Each piece is made while the one before it plays.
+    let prenom = prenom.map(str::to_string);
+    let fabriquer = |texte: String| {
+        let prenom = prenom.clone();
+        tokio::spawn(async move { crate::voix_api::parler(prenom.as_deref(), &texte).await })
     };
-    match (text_to_speech(text).await, motif) {
+    let mut suivant = Some(fabriquer(morceaux[0].clone()));
+    let mut _parle: Option<Parle> = None;
+    let mut secours: Vec<String> = Vec::new();
+    let mut motif = None;
+    let mut depuis = 0;
+    while let Some(en_cours) = suivant.take() {
+        let i = depuis;
+        let recu = en_cours.await.unwrap_or_else(|_| Some(Err("la voix s'est interrompue".to_string())));
+        if i + 1 < morceaux.len() {
+            suivant = Some(fabriquer(morceaux[i + 1].clone()));
+        }
+        let parole = match recu {
+            None => break,
+            Some(Err(e)) => {
+                motif = Some(e);
+                break;
+            }
+            Some(Ok(parole)) => parole,
+        };
+        _parle.get_or_insert_with(Parle::commencer);
+        let fichier = std::env::temp_dir().join(format!("iagent-api-{}-{}.wav", std::process::id(), i));
+        std::fs::write(&fichier, &parole.wav)
+            .map_err(|_| "le son reçu n'a pas pu être posé sur le poste".to_string())?;
+        let a_jouer = fichier.clone();
+        let joue = tokio::task::spawn_blocking(move || jouer_wav(&a_jouer))
+            .await
+            .unwrap_or_else(|_| Err("la lecture s'est interrompue".to_string()));
+        let _ = std::fs::remove_file(&fichier);
+        if let Err(e) = joue {
+            motif = Some(e);
+            break;
+        }
+        if !parole.echecs.is_empty() {
+            secours.push(format!("{}, faute de mieux : {}", parole.moteur.nom(), parole.echecs.join(" ; ")));
+        }
+        depuis = i + 1;
+    }
+    if let Some(reste) = suivant.take() {
+        reste.abort();
+    }
+    if depuis == morceaux.len() {
+        return Ok(match secours.first() {
+            Some(s) => format!("texte prononcé avec {}", s),
+            None => "texte prononcé".to_string(),
+        });
+    }
+    // What the online voice did not say, the PC's own voice says.
+    let reste = morceaux[depuis..].join(" ");
+    match (text_to_speech(&reste).await, motif) {
         (Ok(_), Some(m)) => Ok(format!("voix du poste, faute de mieux : {}", m)),
         (Ok(r), None) => Ok(r),
         (Err(e), Some(m)) => Err(format!("{} ; et la voix du poste non plus : {}", m, e)),
@@ -579,8 +712,14 @@ pub async fn text_to_speech(text: &str) -> Result<String, String> {
 /// the playing ends.
 struct Parle;
 
+/// How many `Parle` guards are alive: a whole answer holds one while each of
+/// its pieces holds its own, and the microphone must stay shut in the gap
+/// between two pieces.
+static PAROLES: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
 impl Parle {
     fn commencer() -> Self {
+        PAROLES.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
         EN_TRAIN_DE_PARLER.store(true, std::sync::atomic::Ordering::Release);
         Parle
     }
@@ -588,10 +727,15 @@ impl Parle {
 
 impl Drop for Parle {
     fn drop(&mut self) {
+        if PAROLES.fetch_sub(1, std::sync::atomic::Ordering::AcqRel) > 1 {
+            return;
+        }
         // The room keeps the voice a moment after the last sample left.
         std::thread::sleep(std::time::Duration::from_millis(250));
-        EN_TRAIN_DE_PARLER.store(false, std::sync::atomic::Ordering::Release);
-        *FIN_DE_PAROLE.lock().unwrap() = Some(std::time::Instant::now());
+        if PAROLES.load(std::sync::atomic::Ordering::Acquire) == 0 {
+            EN_TRAIN_DE_PARLER.store(false, std::sync::atomic::Ordering::Release);
+            *FIN_DE_PAROLE.lock().unwrap() = Some(std::time::Instant::now());
+        }
     }
 }
 
@@ -681,6 +825,42 @@ fn jouer_wav(chemin: &std::path::Path) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn la_premiere_phrase_part_seule_pour_que_la_voix_commence_tot() {
+        let m = a_dire("Bonjour, je suis Victor. Test de délai.");
+        assert_eq!(m, vec!["Bonjour, je suis Victor.".to_string(), "Test de délai.".to_string()]);
+    }
+
+    #[test]
+    fn une_longue_reponse_se_dit_en_trois_phrases_et_renvoie_a_l_ecran() {
+        let texte = "## Où en est l'équipe\n\n**Hugo** a fini la note. Nora prépare la liste.\n\n- Point 1 : les [investisseurs](https://x.fr) sont relancés.\n- Point 2 : le `dossier` est prêt.\n\n| a | b |\n|---|---|\n";
+        let m = a_dire(texte);
+        assert_eq!(m[0], "Où en est l'équipe.");
+        assert_eq!(m[1], "Hugo a fini la note. Nora prépare la liste. Le détail est à l'écran.");
+        assert!(!m.join(" ").contains(['*', '#', '|', '`', '[']));
+    }
+
+    #[test]
+    fn une_reponse_courte_se_dit_en_entier_sans_renvoi() {
+        let m = a_dire("Oui, je t'entends. Que veux-tu ?");
+        assert_eq!(m.join(" "), "Oui, je t'entends. Que veux-tu ?");
+        assert!(a_dire("  \n```\ncode\n```").is_empty());
+    }
+
+    #[test]
+    fn un_mot_avec_un_tiret_bas_le_garde() {
+        assert_eq!(sans_marques("_vraiment_ le fichier mon_dossier"), "vraiment le fichier mon_dossier");
+    }
+
+    #[test]
+    fn la_parole_d_une_reponse_tient_le_micro_ferme_entre_deux_morceaux() {
+        let toute = Parle::commencer();
+        drop(Parle::commencer());
+        assert!(EN_TRAIN_DE_PARLER.load(std::sync::atomic::Ordering::Acquire));
+        drop(toute);
+        assert!(!EN_TRAIN_DE_PARLER.load(std::sync::atomic::Ordering::Acquire));
+    }
     use super::*;
 
     /// The listening engine must keep up with speech on the client's PC.
