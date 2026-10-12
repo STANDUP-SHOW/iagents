@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import moteurs from '../../../plateforme/voix/moteurs.json'
 import VoiceTraining from '../components/VoiceTraining'
@@ -45,6 +45,16 @@ export default function VotreVoix({
 }) {
   const [sousVue, setSousVue] = useState<'hub' | 'empreinte'>('hub')
   const [test, setTest] = useState<Record<string, string>>({})
+  // Which voice keys are in the system vault, read where they are kept
+  // (`voix_api_etat`). The cards used to say « Non branché » for every engine
+  // but the local one, whatever was stored: max had stored his Gemini key and
+  // still read « Gemini Live : non branché » (12/10/2026).
+  const [cles, setCles] = useState<{ gemini: boolean; elevenlabs: boolean; mistral: boolean; parle: string } | null>(null)
+  useEffect(() => {
+    invoke<{ gemini: boolean; elevenlabs: boolean; mistral: boolean; parle: string }>('voix_api_etat')
+      .then(setCles)
+      .catch(() => setCles(null))
+  }, [])
   const chef = installes.find((a) => estTeamHolder(a)) ?? installes[0] ?? null
   const liste = Object.entries((moteurs as { moteurs: Record<string, Moteur> }).moteurs).sort((a, b) => a[1].qualite - b[1].qualite)
 
@@ -122,12 +132,15 @@ export default function VotreVoix({
           <h2 className="titre-section">Fournisseurs voix et IA</h2>
           <div className="grille-fournisseurs">
             {liste.map(([id, m]) => {
-              const branche = m.local ? !voix.motif : false
+              const cleRangee = !m.local && Boolean(cles?.[id as 'gemini' | 'elevenlabs' | 'mistral'])
+              const branche = m.local ? !voix.motif : cleRangee
               return (
                 <div key={id} className={`fournisseur ${branche ? 'fournisseur-branche' : ''}`}>
                   <div className="fournisseur-tete">
                     <Onde vivante={false} barres={5} />
-                    <strong>{m.libelle}</strong>
+                    {/* « Gemini Live » is Google's real-time conversation, which this
+                        workstation does not use: the key gives the agents their voice. */}
+                    <strong>{id === 'gemini' ? 'Google Gemini' : m.libelle}</strong>
                   </div>
                   <span className="precision">{DESCRIPTIONS[id] ?? ''}</span>
                   <span className="precision">
@@ -135,9 +148,15 @@ export default function VotreVoix({
                   </span>
                   <span className={`statut-ligne ${branche ? 'statut-actif' : 'statut-pause'}`}>
                     <span className="point" />
-                    {m.local ? (branche ? 'Disponible sur ce poste' : 'Pièces manquantes') : 'Non branché'}
+                    {m.local ? (branche ? 'Disponible sur ce poste' : 'Pièces manquantes') : cleRangee ? 'Clé rangée' : 'Aucune clé'}
                   </span>
-                  {!m.local && <span className="precision">Se branche sur la plateforme iAgent quand sa clé y est posée.</span>}
+                  {!m.local && (
+                    <span className="precision">
+                      {cleRangee
+                        ? `Donne leur voix à vos agents quand ils vous répondent. ${cles?.parle ?? ''} Votre voix à vous est écoutée sur ce poste.`
+                        : 'Rangez sa clé dans « Vos connexions » pour que vos agents parlent avec elle.'}
+                    </span>
+                  )}
                 </div>
               )
             })}

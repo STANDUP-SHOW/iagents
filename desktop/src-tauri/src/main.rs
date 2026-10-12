@@ -294,7 +294,7 @@ async fn get_partial_result(state: State<'_, AppState>) -> Result<Option<String>
         };
         voice.instantane_partiel()
     };
-    if echantillons.is_empty() {
+    if echantillons.is_empty() || !voice::quelqu_un_parle(&echantillons) {
         return Ok(Some(String::new()));
     }
     // Une transcription tourne deja : on ne l'attend pas, on rend « rien de
@@ -310,6 +310,13 @@ async fn get_partial_result(state: State<'_, AppState>) -> Result<Option<String>
     resultat
         .map_err(|e| format!("transcription interrompue : {}", e))?
         .map(Some)
+}
+
+/// Le niveau du micro, de 0 a 1, pour la jauge de l'ecran. `None` quand
+/// l'ecoute n'est pas prete.
+#[tauri::command]
+fn voix_niveau(state: State<AppState>) -> Option<f32> {
+    state.voice.lock().unwrap().as_ref().map(|v| v.niveau())
 }
 
 /// Oublie ce qui a ete entendu, une fois la phrase traitee : sinon elle serait
@@ -843,6 +850,7 @@ fn main() {
             process_voice_audio,
             get_partial_result,
             voix_oublier,
+            voix_niveau,
             text_to_speech,
             empreinte_capturer,
             empreinte_oublier,

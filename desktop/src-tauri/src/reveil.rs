@@ -161,6 +161,21 @@ pub fn entendu(etat: &Etat, texte: &str, prenoms: &[String]) -> (Etat, Reaction)
 
     match etat {
         Etat::Dormante => {
+            // The microphone hears a rolling window, not sentences: what comes
+            // back from the transcription often starts with the tail of the
+            // room or a word the model hallucinated on silence (« Merci. »),
+            // and « Voice » is no longer first. Seen on max's PC on 12/10/2026:
+            // « Voice, Victor » woke nothing. So the wake word may also sit
+            // inside what was heard, but only when the very next word names a
+            // hired agent: two coincidences in a row, as the rule wants.
+            if let Some(i) = (1..mots.len().saturating_sub(1)).find(|&i| {
+                MOTS_DE_REVEIL.contains(&mots[i].as_str()) && agent_nomme(&mots[i + 1], prenoms).is_some()
+            }) {
+                if !commence_par_le_reveil(&mots) {
+                    let prenom = agent_nomme(&mots[i + 1], prenoms).unwrap_or_default();
+                    return (Etat::Dormante, Reaction::Appel { prenom, demande: demande(i + 2) });
+                }
+            }
             if !commence_par_le_reveil(&mots) {
                 // Le cas de loin le plus fréquent : on entend la pièce, et on
                 // n'en fait rien.
@@ -279,6 +294,18 @@ mod tests {
         let (etat, reaction) = entendu(&Etat::Dormante, "je trouve que la voix de Carla est trop lente", &maison());
         assert_eq!(reaction, Reaction::Rien);
         assert_eq!(etat, Etat::Dormante);
+    }
+
+    #[test]
+    fn le_reveil_suivi_d_un_prenom_compte_meme_apres_un_debut_parasite() {
+        // What the rolling window gives back: the end of the room, or a word
+        // the model invents on silence, before « Voice ».
+        let (etat, reaction) = entendu(&Etat::Dormante, "Merci. Voice, Robert, où en es-tu ?", &maison());
+        assert_eq!(reaction, Reaction::Appel { prenom: "Robert".into(), demande: "où en es-tu ?".into() });
+        assert_eq!(etat, Etat::Dormante);
+        // Without a hired name right after it, the word stays an ordinary word.
+        let (_, rien) = entendu(&Etat::Dormante, "il a une belle voix vraiment", &maison());
+        assert_eq!(rien, Reaction::Rien);
     }
 
     #[test]
