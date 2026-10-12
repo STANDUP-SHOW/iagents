@@ -186,6 +186,13 @@ pub fn transcrire(contexte: &WhisperContext, echantillons: &[f32]) -> Result<Str
 
         let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
         params.set_language(Some("fr"));
+        // Whisper pads every window to 30 s and encodes all of it. Encoding only
+        // what was heard (50 frames per second, plus a margin) is what makes an
+        // 8 s window cost a fraction of a 30 s one on a 4-core office PC.
+        let secondes = echantillons.len() as f32 / TAUX_WHISPER as f32;
+        params.set_audio_ctx(((secondes * 50.0).ceil() as i32 + 64).min(1500));
+        let coeurs = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
+        params.set_n_threads(coeurs.clamp(1, 8) as i32);
         params.set_print_special(false);
         params.set_print_progress(false);
         params.set_print_realtime(false);
