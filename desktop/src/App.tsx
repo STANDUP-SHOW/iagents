@@ -135,6 +135,10 @@ function App() {
   const [parle, setParle] = useState<string | null>(null)
   // What was said with each agent, so a spoken request reaches it with the
   // conversation so far (`llm::messages_oraux` keeps the last ten).
+  // The request being answered and what the client added to it meanwhile; the
+  // requests for another agent wait their turn.
+  const enCoursRef = useRef<{ prenom: string; ajouts: string[] } | null>(null)
+  const fileRef = useRef<{ prenom: string; demande: string; parle: boolean }[]>([])
   const echangesRef = useRef(new Map<string, { role: 'user' | 'assistant'; content: string }[]>())
   const [lastResponse, setLastResponse] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
@@ -247,9 +251,9 @@ function App() {
 
     let vivant = true
 
-    // One question at a time: the next one leaves only once the previous one
-    // has answered. Rust hands back a sentence only once it is finished (the
-    // client spoke, then paused), transcribed whole: it is handled at once.
+    // Rust hands back a sentence only once it is finished (the client spoke,
+    // then paused 0.8 s), transcribed whole: it is handled at once. The loop
+    // waits for the transcription, never for the answer (`repondreA`).
     // Before 12/10/2026 the screen took the last 8 seconds again and again and
     // waited for a second without change, which cut long sentences.
     const interroger = async () => {
@@ -258,7 +262,7 @@ function App() {
           const phrase = await invoke<string | null>('get_partial_result')
           if (phrase && phrase.trim()) {
             setPartialResult(phrase)
-            setDernierEntendu(phrase)
+            // Waits for the transcription only, never for the answer.
             await processVoiceCommand(phrase)
           }
         } catch (err) {
@@ -390,8 +394,6 @@ function App() {
     if (!command.trim()) return
 
     try {
-      setIsProcessing(true)
-      setPartialResult('')
 
       // Le mot de réveil d'abord, et c'est Rust qui tranche (`reveil.rs`).
       // Avant le 24/09/2026 ce bloc prenait le PREMIER MOT de tout ce qui
@@ -416,7 +418,34 @@ function App() {
         setLastResponse(`À bientôt. ${reaction.prenom} reste joignable par son prénom.`)
         return
       }
-      if (parle) setDernierEntendu(reaction.prenom + (reaction.demande ? `, ${reaction.demande}` : ''))
+      // The listening loop does not wait for the answer: what the client says
+      // while it is prepared joins the request instead of replacing it
+      // (max, 12/10/2026: « si je laisse un blanc et que je reparle, ça efface
+      // la phrase d'avant »). Nothing heard is thrown away.
+      const enCours = enCoursRef.current
+      if (enCours) {
+        if (enCours.prenom === reaction.prenom) {
+          if (reaction.demande) enCours.ajouts.push(reaction.demande)
+        } else {
+          fileRef.current.push({ prenom: reaction.prenom, demande: reaction.demande, parle })
+        }
+        return
+      }
+      void repondreA(reaction.prenom, reaction.demande, parle)
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err)
+      setError(errMsg)
+      console.error('Failed to process voice command:', err)
+    }
+  }
+
+  /** Answers one request, re-asking while the client keeps adding to it, then
+   * takes the next request waiting for another agent. */
+  const repondreA = async (prenom: string, premiere: string, parle: boolean) => {
+    enCoursRef.current = { prenom, ajouts: [] }
+    try {
+      setIsProcessing(true)
+      if (parle) setDernierEntendu(prenom + (premiere ? `, ${premiere}` : ''))
 
       // `agents` est la liste AFFICHÉE ({ id, name, ... }) : elle n'a ni
       // `prenom` ni `fiche`. Le premier jet la cherchait quand même, donc
@@ -424,9 +453,9 @@ function App() {
       // Rien ne le signalait : la liste était typée `any[]`, ce qui rend le
       // compilateur aveugle sur exactement ce genre de faute. Elle est typée
       // maintenant, et c'est le moteur qu'on interroge — lui porte le prénom.
-      const agent = moteur?.getAllAgents().find((a) => a.prenom === reaction.prenom)
+      const agent = moteur?.getAllAgents().find((a) => a.prenom === prenom)
       if (!agent) return
-      const utterance = reaction.demande
+      let utterance = premiere
       setActiveAgent(agent.fiche.id)
       const equipe = moteur!.getAllAgents()
       let promptSysteme = moteur!.formatSystemPrompt(agent.fiche.id)
@@ -469,18 +498,24 @@ function App() {
       promptSysteme +=
         "\n\nOn vous parle à voix haute. Répondez comme un collègue, en deux phrases simples, sans titre ni liste : c'est tout ce qui sera dit. Répondez à la question posée, sans répéter ce que vous avez déjà dit ni refaire le point de toute l'équipe si on ne vous le demande pas. Le détail peut suivre, il restera écrit à l'écran."
 
-      const reponse = await invoke<{ texte: string; motif: string; bascule: boolean }>(
-        'repondre',
-        {
+      let reponse: { texte: string; motif: string; bascule: boolean }
+      for (;;) {
+        reponse = await invoke<{ texte: string; motif: string; bascule: boolean }>('repondre', {
           prenom: agent.prenom,
           ficheId: agent.fiche.id,
           promptSysteme,
-          enonce: utterance || command,
+          enonce: utterance || prenom,
           historique: echangesRef.current.get(agent.prenom) ?? [],
-        }
-      )
+        })
+        // The client went on talking while the answer was written: it answers
+        // half a sentence, so the whole sentence is asked again.
+        const ajouts = enCoursRef.current?.ajouts.splice(0) ?? []
+        if (!ajouts.length) break
+        utterance = [utterance, ...ajouts].filter(Boolean).join(' ')
+        if (parle) setDernierEntendu(`${prenom}, ${utterance}`)
+      }
       const echanges = echangesRef.current.get(agent.prenom) ?? []
-      echanges.push({ role: 'user', content: utterance || command }, { role: 'assistant', content: reponse.texte })
+      echanges.push({ role: 'user', content: utterance || prenom }, { role: 'assistant', content: reponse.texte })
       echangesRef.current.set(agent.prenom, echanges.slice(-20))
 
       setLastResponse(reponse.texte)
@@ -506,6 +541,13 @@ function App() {
     } finally {
       setIsProcessing(false)
       setParle(null)
+      const fini = enCoursRef.current
+      enCoursRef.current = null
+      // Said while the agent was speaking: the next request, not lost.
+      const reste = fini?.ajouts.join(' ')
+      if (reste) fileRef.current.unshift({ prenom, demande: reste, parle })
+      const suivant = fileRef.current.shift()
+      if (suivant) void repondreA(suivant.prenom, suivant.demande, suivant.parle)
     }
   }
 
