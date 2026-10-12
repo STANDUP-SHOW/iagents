@@ -592,7 +592,7 @@ mod tests {
         let debut = std::time::Instant::now();
         transcrire(&contexte, &son).expect("transcription");
         let duree = debut.elapsed().as_secs_f64();
-        println!("8 s d'écoute transcrites en {:.2} s ({})", duree, chemin.display());
+        println!("8 s d'écoute transcrites en {:.2} s ; {}", duree, whisper_rs::print_system_info());
         assert!(duree < limite, "8 s d'écoute transcrites en {:.1} s, limite {} s", duree, limite);
     }
 

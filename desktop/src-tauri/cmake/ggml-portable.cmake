@@ -18,3 +18,17 @@ set(GGML_AVX  ON CACHE BOOL "" FORCE)
 set(GGML_AVX2 ON CACHE BOOL "" FORCE)
 set(GGML_FMA  ON CACHE BOOL "" FORCE)
 set(GGML_F16C ON CACHE BOOL "" FORCE)
+
+# The real cause of the 99 s (12/10/2026, measured 79 s on the CI runner
+# with AVX2 already on): with MSVC and the Visual Studio generator, the cmake
+# crate writes CMAKE_<LANG>_FLAGS_RELEASE itself, from cc's flags with every
+# /O flag removed ("let cmake deal with optimization"). That replaces CMake's
+# "/O2 /Ob2 /DNDEBUG", so whisper and ggml were compiled WITHOUT optimisation.
+# Put it back; the CI speed bench catches a regression.
+if(MSVC)
+  foreach(lang C CXX)
+    if(NOT CMAKE_${lang}_FLAGS_RELEASE MATCHES "/O2")
+      string(APPEND CMAKE_${lang}_FLAGS_RELEASE " /O2 /Ob2 /DNDEBUG")
+    endif()
+  endforeach()
+endif()
