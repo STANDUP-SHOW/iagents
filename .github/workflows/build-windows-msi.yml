@@ -93,6 +93,7 @@ jobs:
           grep -E "^GGML_(NATIVE|AVX2|AVX512):" "$cache"
           grep -q "^GGML_NATIVE:BOOL=OFF" "$cache" || { echo "ggml compiled for the build machine (GGML_NATIVE)"; exit 1; }
           grep -q "^GGML_AVX512:BOOL=OFF" "$cache" || { echo "ggml compiled with AVX-512"; exit 1; }
+          for f in AVX AVX2 FMA F16C; do grep -q "^GGML_$f:BOOL=ON" "$cache" || { echo "ggml compiled without $f: listening is too slow to be usable"; exit 1; }; done
           if grep -rlE "arch:AVX512|AdvancedVectorExtensions512" --include=*.vcxproj "$(dirname "$cache")"; then
             echo "an AVX-512 compile flag is still present"; exit 1
           fi
