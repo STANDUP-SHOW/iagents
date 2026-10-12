@@ -271,6 +271,16 @@ pub fn transcrire(contexte: &WhisperContext, echantillons: &[f32]) -> Result<Str
         params.set_audio_ctx(((secondes * 50.0).ceil() as i32 + 64).min(1500));
         let coeurs = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
         params.set_n_threads(coeurs.clamp(1, 8) as i32);
+        // One pass, bounded. When a pass looks unsure, Whisper decodes again at
+        // a higher temperature, up to five times, and a pass that loops runs
+        // to its token limit: the CI bench went from 3 s to 99 s on the same
+        // 8 s of sound (12/10/2026). A sentence for an agent is short; a
+        // doubtful one is better handed on as is, and Gemini retranscribes it.
+        params.set_temperature_inc(0.0);
+        params.set_no_context(true);
+        params.set_max_tokens((secondes * 16.0) as i32 + 32);
+        // No « *musique* » or « [Applaudissements] » for what is not speech.
+        params.set_suppress_nst(true);
         params.set_print_special(false);
         params.set_print_progress(false);
         params.set_print_realtime(false);
