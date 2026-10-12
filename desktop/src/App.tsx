@@ -464,7 +464,7 @@ function App() {
       // Said aloud, a written answer is cut after three sentences (`voice::a_dire`):
       // the essential has to come first.
       promptSysteme +=
-        "\n\nOn vous parle à voix haute. Commencez par l'essentiel en deux ou trois phrases simples, sans titre ni liste : c'est tout ce qui sera dit. Le détail peut suivre, il restera écrit à l'écran."
+        "\n\nOn vous parle à voix haute. Commencez par l'essentiel en deux ou trois phrases simples, sans titre ni liste : c'est tout ce qui sera dit. Répondez à la question posée, sans refaire le point de toute l'équipe si on ne vous le demande pas. Le détail peut suivre, il restera écrit à l'écran."
 
       const reponse = await invoke<{ texte: string; motif: string; bascule: boolean }>(
         'repondre',

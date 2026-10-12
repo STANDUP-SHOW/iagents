@@ -241,7 +241,8 @@ async fn voix_entendu(texte: String, parle: bool, state: State<'_, AppState>) ->
     }
 
     let mut e = state.ecoute.lock().unwrap();
-    if matches!(reaction, reveil::Reaction::Appel { .. }) {
+    // Every sentence said in the conversation keeps it open, not only the call.
+    if matches!(apres, reveil::Etat::EnConversation { .. }) {
         e.dernier_echange = Some(std::time::Instant::now());
     }
     e.ou_en_est = apres;
