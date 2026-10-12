@@ -125,6 +125,15 @@ impl VoiceState {
         (Arc::clone(&self.contexte), t[debut..].to_vec())
     }
 
+    /// How loud the microphone is right now: the RMS of the last fifth of a
+    /// second, 0 when nothing arrives. The screen draws it, so the client sees
+    /// whether his voice reaches the application at all.
+    pub fn niveau(&self) -> f32 {
+        let t = self.tampon.lock().unwrap();
+        let debut = t.len().saturating_sub(TAUX_WHISPER as usize / 5);
+        rms(&t[debut..])
+    }
+
     /// Forgets what was heard: once a sentence has been handled, it must not
     /// be transcribed and handled again on the next poll.
     pub fn oublier(&self) {
@@ -134,6 +143,31 @@ impl VoiceState {
     fn transcrire(&self, echantillons: &[f32]) -> Result<String, String> {
         transcrire(&self.contexte, echantillons)
     }
+}
+
+fn rms(e: &[f32]) -> f32 {
+    if e.is_empty() {
+        return 0.0;
+    }
+    (e.iter().map(|v| v * v).sum::<f32>() / e.len() as f32).sqrt()
+}
+
+/// Whether a window holds something worth transcribing: a tenth of a second
+/// clearly above the room's own floor. Whisper fed with silence does not
+/// return nothing, it invents (« Merci. », « Sous-titres… »), and on max's
+/// i5-4460 transcribing the empty room five times a second kept the processor
+/// busy while he spoke. Relative to the floor, not to a fixed level, because
+/// microphones differ by ten times; the absolute floor only rules out a dead
+/// input.
+pub fn quelqu_un_parle(echantillons: &[f32]) -> bool {
+    let morceaux: Vec<f32> = echantillons.chunks(TAUX_WHISPER as usize / 10).map(rms).collect();
+    let (Some(fond), Some(crete)) = (
+        morceaux.iter().copied().reduce(f32::min),
+        morceaux.iter().copied().reduce(f32::max),
+    ) else {
+        return false;
+    };
+    crete > 0.003 && crete > 3.0 * fond.max(0.0005)
 }
 
 /// Transcribes 16 kHz mono samples. A free function so that it can run on a
@@ -523,6 +557,23 @@ fn jouer_wav(chemin: &std::path::Path) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn le_silence_n_est_pas_transcrit_la_voix_si() {
+        let n = TAUX_WHISPER as usize;
+        // A room: steady low hiss.
+        let piece: Vec<f32> = (0..2 * n).map(|i| 0.002 * ((i as f32) * 0.37).sin()).collect();
+        assert!(!quelqu_un_parle(&piece));
+        assert!(!quelqu_un_parle(&vec![0.0; 2 * n]));
+        // The same room, then someone speaks at an ordinary level.
+        let mut dit = piece.clone();
+        dit.extend((0..n).map(|i| 0.08 * ((i as f32) * 0.05).sin()));
+        assert!(quelqu_un_parle(&dit));
+        // A quiet microphone still counts, as long as the voice stands out.
+        let mut doux = vec![0.0004; n];
+        doux.extend((0..n).map(|i| 0.006 * ((i as f32) * 0.05).sin()));
+        assert!(quelqu_un_parle(&doux));
+    }
 
     #[test]
     fn le_tampon_ne_garde_que_la_fin() {

@@ -126,6 +126,8 @@ function App() {
   const [reveillee, setReveillee] = useState(false)
   // Ce que Rust dit de l'écoute : micro allumé ou non, mot de réveil entendu ou non.
   const [ecoute, setEcoute] = useState<EcouteEtat>({ active: false, ou_en_est: 'dormante' })
+  const [niveauMicro, setNiveauMicro] = useState<number | null>(null)
+  const [dernierEntendu, setDernierEntendu] = useState('')
   const [partialResult, setPartialResult] = useState<string>('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState<string>('')
@@ -211,6 +213,26 @@ function App() {
     }
   }, [])
 
+  // The microphone's level, for the gauge: the client must be able to see
+  // whether his voice reaches the application at all (max, 12/10/2026:
+  // « aucun contrôle de ma voix »).
+  useEffect(() => {
+    if (!ecoute.active) {
+      setNiveauMicro(null)
+      return
+    }
+    let vivant = true
+    const lire = () =>
+      invoke<number | null>('voix_niveau')
+        .then((n) => vivant && setNiveauMicro(n))
+        .catch(() => vivant && setNiveauMicro(null))
+    const minuterie = setInterval(lire, 150)
+    return () => {
+      vivant = false
+      clearInterval(minuterie)
+    }
+  }, [ecoute.active])
+
   useEffect(() => {
     if (!ecoute.active) {
       setPartialResult('')
@@ -242,6 +264,7 @@ function App() {
                 lastResult = ''
                 // Heard once, handled once: the next poll must not find it again.
                 invoke('voix_oublier').catch(() => {})
+                setDernierEntendu(phrase)
                 processVoiceCommand(phrase)
               }
             }, 1000)
@@ -623,6 +646,8 @@ function App() {
     reflexion: isProcessing,
     motif: motifEcoute,
     partiel: partialResult,
+    niveau: niveauMicro,
+    entendu: dernierEntendu,
     reponse: lastResponse,
     onBasculer: basculerVoix,
   }

@@ -27,6 +27,10 @@ export interface EtatVoix {
   /** Why listening cannot start, in French; null when it can. */
   motif: string | null
   partiel: string
+  /** Microphone level, 0 to 1; null when listening is off or not ready. */
+  niveau: number | null
+  /** The last sentence the microphone gave, kept on screen once handled. */
+  entendu: string
   reponse: string
   onBasculer: () => void
 }
@@ -371,6 +375,21 @@ export function DockVocal({
         <button className="bouton-contour" onClick={() => ouvrir('embauche')}>
           Embaucher un premier agent
         </button>
+      )}
+
+      {voix.active && !voix.motif && voix.niveau !== null && (
+        <div className="dock-niveau" title="Ce que le micro capte en ce moment">
+          <span className="etiquette">Micro</span>
+          <span className="niveau-piste">
+            {/* RMS of speech sits around 0.02–0.3: a square root spreads it across the bar. */}
+            <span className="niveau-barre" style={{ width: `${Math.min(100, Math.round(Math.sqrt(voix.niveau) * 180))}%` }} />
+          </span>
+        </div>
+      )}
+      {voix.entendu && !voix.partiel && (
+        <p className="dock-entendu">
+          <span className="etiquette">Entendu</span>« {voix.entendu} »
+        </p>
       )}
 
       {/* Le motif dit pourquoi le micro est coupé ; il ne doit pas cacher la
