@@ -105,7 +105,7 @@ export default function VotreVoix({
             </div>
             <button className="scene-statut" onClick={voix.onBasculer} disabled={!!voix.motif}>
               <span className="point" />
-              {voix.motif ? 'Écoute indisponible' : voix.reflexion ? 'Je réfléchis…' : voix.eveillee ? 'Quel agent ?' : voix.active ? 'Je vous écoute…' : 'Touchez pour m’allumer'}
+              {voix.motif ? 'Écoute indisponible' : voix.reflexion ? 'Je réfléchis…' : voix.avec ? `En conversation avec ${voix.avec}` : voix.active ? 'Je vous écoute…' : 'Touchez pour m’allumer'}
             </button>
             <blockquote>« Une conversation suffit pour passer de l’idée à l’action. »</blockquote>
           </section>
@@ -113,14 +113,19 @@ export default function VotreVoix({
 
           <div className="voix-reglages">
             <div className="reglage-carte">
-              <span className="etiquette">Mot d’activation</span>
-              <strong>« Voice » + prénom</strong>
-              <span className="precision">L’application n’est dérangée que par ce mot, puis par le prénom d’un agent.</span>
+              <span className="etiquette">Pour appeler un agent</span>
+              <strong>Son prénom</strong>
+              <span className="precision">Dites son prénom au début de la phrase : « Victor, où en es-tu ? ». Il vous écoute ensuite sans qu’on le rappelle, jusqu’à « merci, c’est tout » ou trente secondes de silence. Un prénom cité au milieu d’une phrase n’appelle personne.</span>
             </div>
             <div className="reglage-carte">
               <span className="etiquette">Langue d’écoute</span>
               <strong>Français (FR)</strong>
               <span className="precision">Seule langue installée sur ce poste.</span>
+            </div>
+            <div className="reglage-carte">
+              <span className="etiquette">Ce qui comprend vos phrases</span>
+              <strong>Google Gemini, sinon ce poste</strong>
+              <span className="precision">Avec la clé Google AI Studio rangée dans « Vos connexions », la phrase que vous adressez à un agent est transcrite par Gemini, bien plus fidèle. Seule cette phrase part chez Google, jamais ce qui se dit dans la pièce. Sans clé ou sans réseau, ce poste transcrit seul.</span>
             </div>
             <button className="reglage-carte" onClick={() => setSousVue('empreinte')}>
               <span className="etiquette">Empreinte vocale</span>

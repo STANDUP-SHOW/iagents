@@ -33,6 +33,7 @@ mod mise_a_jour;
 mod partage;
 mod mission;
 mod voix_api;
+mod transcription;
 mod plateforme;
 mod administration;
 
@@ -67,27 +68,58 @@ struct Ecoute {
     /// rien n'est ecoute, meme pas le mot de reveil.
     active: bool,
     ou_en_est: reveil::Etat,
+    /// Quand le client a parle a un agent pour la derniere fois.
+    dernier_echange: Option<std::time::Instant>,
 }
 
 impl Default for Ecoute {
     fn default() -> Self {
         // Allumee par defaut : le produit se vend sur le fait qu'on lui parle.
-        Ecoute { active: true, ou_en_est: reveil::Etat::Dormante }
+        Ecoute { active: true, ou_en_est: reveil::Etat::Dormante, dernier_echange: None }
+    }
+}
+
+impl Ecoute {
+    /// Closes a conversation the client left: nothing said to the agent for
+    /// `CONVERSATION_OUVERTE` since it last spoke or was last spoken to.
+    fn fermer_si_delaissee(&mut self) {
+        if matches!(self.ou_en_est, reveil::Etat::Dormante) {
+            return;
+        }
+        let parle = *voice::FIN_DE_PAROLE.lock().unwrap();
+        let depuis = [self.dernier_echange, parle].into_iter().flatten().max();
+        if depuis.is_none_or(|t| t.elapsed() > CONVERSATION_OUVERTE) {
+            self.ou_en_est = reveil::Etat::Dormante;
+        }
     }
 }
 
 /// Ce que l'ecran lit pour peindre le bouton VOICE et le noyau anime.
+/// `avec` : l'agent avec qui la conversation est ouverte.
 #[derive(serde::Serialize)]
 struct EcouteVue {
     active: bool,
-    ou_en_est: reveil::Etat,
+    ou_en_est: &'static str,
+    avec: Option<String>,
 }
+
+impl EcouteVue {
+    fn de(e: &Ecoute) -> Self {
+        EcouteVue { active: e.active, ou_en_est: e.ou_en_est.nom(), avec: e.ou_en_est.avec() }
+    }
+}
+
+/// How long an open conversation waits for the client once the agent has
+/// spoken (or, before it speaks, once it was called). After that the next
+/// sentence needs the agent's first name again.
+const CONVERSATION_OUVERTE: std::time::Duration = std::time::Duration::from_secs(30);
 
 /// L'etat de l'ecoute, pour le bouton VOICE (vert = actif, rouge = inactif).
 #[tauri::command]
 fn voix_ecoute_etat(state: State<'_, AppState>) -> EcouteVue {
-    let e = state.ecoute.lock().unwrap();
-    EcouteVue { active: e.active, ou_en_est: e.ou_en_est.clone() }
+    let mut e = state.ecoute.lock().unwrap();
+    e.fermer_si_delaissee();
+    EcouteVue::de(&e)
 }
 
 /// Allume ou coupe l'ecoute. Couper rendort aussi le mot de reveil : sinon
@@ -121,7 +153,7 @@ fn voix_ecoute_basculer(active: bool, state: State<'_, AppState>) -> Result<Ecou
     let mut e = state.ecoute.lock().unwrap();
     e.active = active;
     e.ou_en_est = reveil::Etat::Dormante;
-    Ok(EcouteVue { active: e.active, ou_en_est: e.ou_en_est.clone() })
+    Ok(EcouteVue::de(&e))
 }
 
 /// Allume ou coupe le micro. `Err` quand l'ecoute n'est pas prete sur ce poste
@@ -134,22 +166,78 @@ fn micro(state: &State<'_, AppState>, allume: bool) -> Result<String, String> {
     if allume { voice.start_listening() } else { voice.stop_listening() }
 }
 
+/// Ce que l'ecoute conclut de ce qu'elle vient d'entendre, et par qui la
+/// phrase a ete transcrite.
+#[derive(serde::Serialize)]
+struct Entendu {
+    #[serde(flatten)]
+    reaction: reveil::Reaction,
+    /// « google » quand Gemini a transcrit la phrase, « poste » sinon.
+    transcrite_par: &'static str,
+    /// Pourquoi Gemini n'a pas transcrit alors qu'une cle est rangee.
+    motif: Option<String>,
+}
+
 /// Ce que l'ecoute conclut de ce qu'elle vient d'entendre.
 ///
-/// L'ecran transcrit et passe le texte ici ; c'est Rust qui decide, parce que
-/// c'est la regle de max et qu'une regle tenue par l'ecran se perd au premier
-/// rechargement. Les prenoms viennent de `installation.json`, jamais de
+/// L'ecran passe le texte que le poste a transcrit ; c'est Rust qui decide,
+/// parce que c'est la regle de max et qu'une regle tenue par l'ecran se perd au
+/// premier rechargement. Les prenoms viennent de `installation.json`, jamais de
 /// l'ecran : un agent qu'on n'a pas embauche ne repond pas.
+///
+/// Quand la phrase s'adresse a un agent et qu'une cle Google AI Studio est
+/// rangee, elle est retranscrite par Gemini (decision de max, 12/10/2026) :
+/// seule cette phrase part, jamais la piece. Si Gemini echoue, la phrase du
+/// poste sert, et le motif est rendu.
 #[tauri::command]
-fn voix_entendu(texte: String, state: State<'_, AppState>) -> reveil::Reaction {
-    let mut e = state.ecoute.lock().unwrap();
-    if !e.active {
-        return reveil::Reaction::Rien;
-    }
+async fn voix_entendu(texte: String, parle: bool, state: State<'_, AppState>) -> Result<Entendu, String> {
     let prenoms = prenoms_embauches();
-    let (apres, reaction) = reveil::entendu(&e.ou_en_est, &texte, &prenoms);
+    let avant = {
+        let mut e = state.ecoute.lock().unwrap();
+        if !e.active {
+            return Ok(Entendu { reaction: reveil::Reaction::Rien, transcrite_par: "poste", motif: None });
+        }
+        e.fermer_si_delaissee();
+        e.ou_en_est.clone()
+    };
+    let (mut apres, mut reaction) = reveil::entendu(&avant, &texte, &prenoms);
+    let mut transcrite_par = "poste";
+    let mut motif = None;
+
+    // A typed sentence has no sound: the last one heard belongs to something else.
+    let phrase = if parle { state.voice.lock().unwrap().as_ref().and_then(|v| v.derniere_phrase()) } else { None };
+    if let (reveil::Reaction::Appel { .. }, Some(son), true) =
+        (&reaction, phrase, transcription::en_ligne())
+    {
+        match transcription::transcrire(&son, &prenoms).await {
+            Ok(mieux) => {
+                let (a, r) = reveil::entendu(&avant, &mieux, &prenoms);
+                if matches!(r, reveil::Reaction::Appel { .. }) {
+                    (apres, reaction) = (a, r);
+                } else if let reveil::Reaction::Appel { prenom, .. } = &reaction {
+                    // Gemini heard the sentence without the first name the
+                    // PC heard: same agent, Gemini's words.
+                    let demande = match &avant {
+                        reveil::Etat::EnConversation { .. } => mieux.clone(),
+                        reveil::Etat::Dormante => mieux
+                            .split_once(|c: char| c == ',' || c.is_whitespace())
+                            .map(|(_, reste)| reste.trim().to_string())
+                            .unwrap_or_default(),
+                    };
+                    reaction = reveil::Reaction::Appel { prenom: prenom.clone(), demande };
+                }
+                transcrite_par = "google";
+            }
+            Err(m) => motif = Some(m),
+        }
+    }
+
+    let mut e = state.ecoute.lock().unwrap();
+    if matches!(reaction, reveil::Reaction::Appel { .. }) {
+        e.dernier_echange = Some(std::time::Instant::now());
+    }
     e.ou_en_est = apres;
-    reaction
+    Ok(Entendu { reaction, transcrite_par, motif })
 }
 
 /// Les prenoms que ce client a donnes a SES agents. Une installation illisible
@@ -270,40 +358,45 @@ fn process_voice_audio(audio_data: Vec<i16>, state: State<AppState>) -> Result<O
     }
 }
 
-/// Vrai pendant qu'une transcription partielle tourne : l'ecran interroge
-/// toutes les 200 ms, et une transcription prend plus longtemps que ca sur un
-/// processeur modeste. Sans ce garde, les appels s'empilaient.
+/// Vrai pendant qu'une transcription tourne : l'ecran interroge toutes les
+/// 200 ms, et une transcription prend plus longtemps que ca sur un processeur
+/// modeste. Pendant ce temps le micro continue de remplir le tampon, et la
+/// phrase suivante attend son tour au lieu d'etre perdue.
 static TRANSCRIPTION_EN_COURS: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
 
-/// Ce qui vient d'etre entendu, transcrit hors du fil de la fenetre.
+/// La phrase que le client vient de finir, transcrite sur le poste ; vide tant
+/// que personne n'a parle puis ne s'est tu.
+///
+/// Rien n'est transcrit tant que la phrase n'est pas finie (`voice::Decoupeur`)
+/// : avant le 12/10/2026 l'ecran transcrivait les 8 dernieres secondes cinq
+/// fois par seconde, coupait le debut des phrases longues, et occupait deux
+/// coeurs a transcrire la piece vide.
 ///
 /// `async` n'est pas un detail : une commande Tauri synchrone tourne sur le fil
-/// de la fenetre, et celle-ci transcrivait tout ce qui avait ete entendu depuis
-/// l'ouverture du micro, cinq fois par seconde. Sur Big Work (i5-4460) la
-/// fenetre passait en « ne repond pas » des le lancement, puisque l'ecoute
-/// demarre seule (10/10/2026).
+/// de la fenetre, et une transcription la gelait (Big Work, 10/10/2026).
 #[tauri::command]
 async fn get_partial_result(state: State<'_, AppState>) -> Result<Option<String>, String> {
     use std::sync::atomic::Ordering;
 
-    let (contexte, echantillons) = {
+    if TRANSCRIPTION_EN_COURS.load(Ordering::Acquire) {
+        return Ok(None);
+    }
+    let (contexte, phrase) = {
         let voice_guard = state.voice.lock().unwrap();
         let Some(voice) = voice_guard.as_ref() else {
             return Err("L'écoute n'est pas prête sur ce poste.".to_string());
         };
-        voice.instantane_partiel()
+        voice.phrase_finie()
     };
-    if echantillons.is_empty() || !voice::quelqu_un_parle(&echantillons) {
+    let Some(phrase) = phrase else {
         return Ok(Some(String::new()));
-    }
-    // Une transcription tourne deja : on ne l'attend pas, on rend « rien de
-    // neuf » et l'ecran redemandera.
+    };
     if TRANSCRIPTION_EN_COURS.swap(true, Ordering::AcqRel) {
         return Ok(None);
     }
     let resultat = tauri::async_runtime::spawn_blocking(move || {
-        voice::transcrire(&contexte, &echantillons)
+        voice::transcrire(&contexte, &phrase)
     })
     .await;
     TRANSCRIPTION_EN_COURS.store(false, Ordering::Release);
@@ -317,15 +410,6 @@ async fn get_partial_result(state: State<'_, AppState>) -> Result<Option<String>
 #[tauri::command]
 fn voix_niveau(state: State<AppState>) -> Option<f32> {
     state.voice.lock().unwrap().as_ref().map(|v| v.niveau())
-}
-
-/// Oublie ce qui a ete entendu, une fois la phrase traitee : sinon elle serait
-/// retranscrite, et retraitee, a l'interrogation suivante.
-#[tauri::command]
-fn voix_oublier(state: State<AppState>) {
-    if let Some(voice) = state.voice.lock().unwrap().as_ref() {
-        voice.oublier();
-    }
 }
 
 #[tauri::command]
@@ -849,7 +933,6 @@ fn main() {
             stop_voice_recognition,
             process_voice_audio,
             get_partial_result,
-            voix_oublier,
             voix_niveau,
             text_to_speech,
             empreinte_capturer,

@@ -32,7 +32,7 @@ const MOTEURS: {
     compte: 'google-ai-studio',
     cle: 'gemini',
     nom: 'Google Gemini (conseillée)',
-    quoi: 'Notre choix : parmi les meilleures à l’écoute, cinq fois moins chère qu’ElevenLabs, et on lui donne le ton en une phrase.',
+    quoi: 'Notre choix : parmi les meilleures à l’écoute, cinq fois moins chère qu’ElevenLabs, et on lui donne le ton en une phrase. La même clé sert aussi à bien comprendre ce que vous dites : seule la phrase que vous adressez à un agent part chez Google pour être transcrite, jamais ce qui se dit dans la pièce.',
     ou: 'aistudio.google.com, rubrique Get API key',
   },
   {

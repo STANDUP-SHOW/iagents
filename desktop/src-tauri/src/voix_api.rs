@@ -96,7 +96,7 @@ fn entree(compte: &str) -> Result<keyring::Entry, String> {
         .map_err(|e| format!("coffre du système indisponible : {}", e))
 }
 
-fn cle(moteur: Moteur) -> Option<String> {
+pub fn cle(moteur: Moteur) -> Option<String> {
     entree(moteur.compte())
         .ok()
         .and_then(|e| e.get_password().ok())
@@ -297,7 +297,7 @@ pub fn audio_de_gemini(reponse: &Value) -> Option<Vec<u8>> {
 /// Why the engine said no, in French. `corps` is the error body: Google
 /// answers a wrong key with 400 `API_KEY_INVALID`, not 401, and a Cloud API
 /// left off with 403 `SERVICE_DISABLED`. The body is read, never repeated.
-fn refus(moteur: Moteur, statut: reqwest::StatusCode, corps: &str) -> String {
+pub fn refus(moteur: Moteur, statut: reqwest::StatusCode, corps: &str) -> String {
     if corps.contains("API_KEY_INVALID") {
         return format!("la clé {} est refusée : vérifiez-la dans « Vos connexions »", moteur.nom());
     }

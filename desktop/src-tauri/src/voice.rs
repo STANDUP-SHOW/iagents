@@ -8,16 +8,104 @@ use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextPar
 /// Whisper travaille en 16 kHz mono : tout ce qui entre est ramené à ce taux.
 const TAUX_WHISPER: u32 = 16_000;
 
-/// What a partial transcription looks at: the last few seconds, not
-/// everything heard since the microphone opened. Transcribing the whole buffer
-/// on every poll made each call longer than the last, until one took longer
-/// than the polling interval and the window stopped answering (Big Work,
-/// 10/10/2026: "ne répond pas" right after "En écoute…").
-const FENETRE_PARTIELLE: usize = 8 * TAUX_WHISPER as usize;
+/// The buffer never holds more than this: a room nobody polls must not fill
+/// memory. The cutter below empties it far sooner.
+const TAMPON_MAXIMUM: usize = 60 * TAUX_WHISPER as usize;
 
-/// The buffer never holds more than this: a room nobody speaks in must not
-/// fill memory, and a sentence longer than this is not a voice command.
-const TAMPON_MAXIMUM: usize = 30 * TAUX_WHISPER as usize;
+/// The cutter looks at the sound a tenth of a second at a time.
+const MORCEAU: usize = TAUX_WHISPER as usize / 10;
+/// How long a pause ends a sentence. Shorter cuts people who breathe between
+/// two clauses; longer makes the agent seem slow to answer.
+const PAUSE_DE_FIN: usize = 8;
+/// Below this much speech, what stood out was a click or a cough.
+const PAROLE_MINIMUM: usize = 3;
+/// A sentence longer than this is cut and handed on anyway.
+const PHRASE_MAXIMUM: usize = 25 * TAUX_WHISPER as usize;
+/// Sound kept before the first loud tenth of a second: the start of a word is
+/// quieter than its middle, and Whisper needs it to hear the first syllable.
+const AVANT_LA_PAROLE: usize = 3 * MORCEAU;
+/// What the listening keeps while nobody speaks.
+const ATTENTE_GARDEE: usize = 5 * MORCEAU;
+
+/// True while the application speaks: what the microphone hears then is the
+/// agent's own voice, and fed back to the listening it would answer itself as
+/// soon as a conversation is open.
+pub static EN_TRAIN_DE_PARLER: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// When the application last stopped speaking: an open conversation waits
+/// for the client from there, not from when the question was asked.
+pub static FIN_DE_PAROLE: Mutex<Option<std::time::Instant>> = Mutex::new(None);
+
+/// Cuts what the microphone hears into whole sentences.
+///
+/// Before 12/10/2026 the screen transcribed the last 8 seconds five times a
+/// second and took the last result after a second without change. A sentence
+/// longer than the window lost its start (« Vait Victorstellen » on max's PC),
+/// the same words were transcribed over and over, and the empty room was
+/// transcribed too, keeping two cores busy. Now nothing is transcribed until
+/// someone has spoken and stopped, and then the whole sentence is, once.
+///
+/// Speech is told from the room by its level against the room's own floor,
+/// which follows the room slowly: microphones differ by ten times, and a fan
+/// that starts must not read as someone speaking for ever.
+#[derive(Debug, Default)]
+pub struct Decoupeur {
+    fond: Option<f32>,
+    vus: usize,
+    debut: Option<usize>,
+    derniere: usize,
+    parles: usize,
+}
+
+impl Decoupeur {
+    /// Reads what arrived since the last call. Returns a whole sentence when
+    /// one has just ended, and drops from `tampon` what can no longer be part
+    /// of one.
+    pub fn avancer(&mut self, tampon: &mut Vec<f32>) -> Option<Vec<f32>> {
+        if self.vus > tampon.len() {
+            // The buffer was cut behind our back (nobody polled for a minute).
+            *self = Decoupeur { fond: self.fond, ..Default::default() };
+        }
+        while self.vus + MORCEAU <= tampon.len() {
+            let niveau = rms(&tampon[self.vus..self.vus + MORCEAU]);
+            let fond = *self.fond.get_or_insert(niveau);
+            if niveau > (3.0 * fond).max(0.004) {
+                self.debut.get_or_insert(self.vus);
+                self.derniere = self.vus + MORCEAU;
+                self.parles += 1;
+            } else {
+                self.fond = Some(if niveau < fond { niveau } else { fond * 0.98 + niveau * 0.02 });
+            }
+            self.vus += MORCEAU;
+
+            let Some(debut) = self.debut else { continue };
+            let fini = self.vus - self.derniere >= PAUSE_DE_FIN * MORCEAU;
+            let trop_long = self.vus - debut >= PHRASE_MAXIMUM;
+            if !(fini || trop_long) {
+                continue;
+            }
+            let phrase = (self.parles >= PAROLE_MINIMUM).then(|| {
+                let de = debut.saturating_sub(AVANT_LA_PAROLE);
+                let a = if trop_long { self.vus } else { (self.derniere + 2 * MORCEAU).min(self.vus) };
+                tampon[de..a].to_vec()
+            });
+            let jusque = if trop_long { self.vus } else { self.derniere };
+            tampon.drain(..jusque);
+            self.vus -= jusque;
+            self.debut = None;
+            self.parles = 0;
+            if phrase.is_some() {
+                return phrase;
+            }
+        }
+        if self.debut.is_none() && tampon.len() > ATTENTE_GARDEE {
+            let trop = tampon.len() - ATTENTE_GARDEE;
+            tampon.drain(..trop);
+            self.vus = self.vus.saturating_sub(trop);
+        }
+        None
+    }
+}
 
 /// Keeps only the end of the buffer.
 fn garder_la_fin(t: &mut Vec<f32>, garder: usize) {
@@ -31,6 +119,9 @@ pub struct VoiceState {
     contexte: Arc<WhisperContext>,
     /// Audio capté depuis le dernier vidage, déjà ramené en 16 kHz mono.
     tampon: Arc<Mutex<Vec<f32>>>,
+    decoupeur: Mutex<Decoupeur>,
+    /// The last whole sentence, kept for a better transcription online.
+    derniere: Mutex<Option<Vec<f32>>>,
     pub is_listening: Arc<Mutex<bool>>,
     pub audio_stream: Arc<Mutex<Option<Stream>>>,
 }
@@ -58,6 +149,8 @@ impl VoiceState {
         Ok(VoiceState {
             contexte: Arc::new(contexte),
             tampon: Arc::new(Mutex::new(Vec::new())),
+            decoupeur: Mutex::new(Decoupeur::default()),
+            derniere: Mutex::new(None),
             is_listening: Arc::new(Mutex::new(false)),
             audio_stream: Arc::new(Mutex::new(None)),
         })
@@ -79,6 +172,7 @@ impl VoiceState {
     pub fn stop_listening(&self) -> Result<String, String> {
         *self.is_listening.lock().unwrap() = false;
         self.audio_stream.lock().unwrap().take();
+        self.oublier();
         Ok("écoute arrêtée".to_string())
     }
 
@@ -107,22 +201,22 @@ impl VoiceState {
         self.transcrire(&echantillons).map(Some)
     }
 
-    /// Transcrit ce qui a été capté sans vider le tampon.
-    pub fn get_partial_result(&self) -> Result<String, String> {
-        let (contexte, echantillons) = self.instantane_partiel();
-        if echantillons.is_empty() {
-            return Ok(String::new());
+    /// The model and the sentence just finished, if one is: the caller
+    /// transcribes it WITHOUT holding any lock, since that takes seconds on a
+    /// modest processor and everything else waiting on the voice would wait
+    /// with it.
+    pub fn phrase_finie(&self) -> (Arc<WhisperContext>, Option<Vec<f32>>) {
+        let mut t = self.tampon.lock().unwrap();
+        let phrase = self.decoupeur.lock().unwrap().avancer(&mut t);
+        if phrase.is_some() {
+            *self.derniere.lock().unwrap() = phrase.clone();
         }
-        transcrire(&contexte, &echantillons)
+        (Arc::clone(&self.contexte), phrase)
     }
 
-    /// The model and the last seconds heard, so the caller can transcribe
-    /// WITHOUT holding any lock: a transcription takes seconds on a modest
-    /// processor, and everything else waiting on the voice would wait with it.
-    pub fn instantane_partiel(&self) -> (Arc<WhisperContext>, Vec<f32>) {
-        let t = self.tampon.lock().unwrap();
-        let debut = t.len().saturating_sub(FENETRE_PARTIELLE);
-        (Arc::clone(&self.contexte), t[debut..].to_vec())
+    /// The sentence `phrase_finie` last handed on.
+    pub fn derniere_phrase(&self) -> Option<Vec<f32>> {
+        self.derniere.lock().unwrap().clone()
     }
 
     /// How loud the microphone is right now: the RMS of the last fifth of a
@@ -134,10 +228,12 @@ impl VoiceState {
         rms(&t[debut..])
     }
 
-    /// Forgets what was heard: once a sentence has been handled, it must not
-    /// be transcribed and handled again on the next poll.
+    /// Forgets what was heard: a microphone switched off and on again must not
+    /// hand back half a sentence from before.
     pub fn oublier(&self) {
         self.tampon.lock().unwrap().clear();
+        let mut d = self.decoupeur.lock().unwrap();
+        *d = Decoupeur { fond: d.fond, ..Default::default() };
     }
 
     fn transcrire(&self, echantillons: &[f32]) -> Result<String, String> {
@@ -150,24 +246,6 @@ fn rms(e: &[f32]) -> f32 {
         return 0.0;
     }
     (e.iter().map(|v| v * v).sum::<f32>() / e.len() as f32).sqrt()
-}
-
-/// Whether a window holds something worth transcribing: a tenth of a second
-/// clearly above the room's own floor. Whisper fed with silence does not
-/// return nothing, it invents (« Merci. », « Sous-titres… »), and on max's
-/// i5-4460 transcribing the empty room five times a second kept the processor
-/// busy while he spoke. Relative to the floor, not to a fixed level, because
-/// microphones differ by ten times; the absolute floor only rules out a dead
-/// input.
-pub fn quelqu_un_parle(echantillons: &[f32]) -> bool {
-    let morceaux: Vec<f32> = echantillons.chunks(TAUX_WHISPER as usize / 10).map(rms).collect();
-    let (Some(fond), Some(crete)) = (
-        morceaux.iter().copied().reduce(f32::min),
-        morceaux.iter().copied().reduce(f32::max),
-    ) else {
-        return false;
-    };
-    crete > 0.003 && crete > 3.0 * fond.max(0.0005)
 }
 
 /// Transcribes 16 kHz mono samples. A free function so that it can run on a
@@ -260,7 +338,7 @@ fn ouvrir_entree(
         SampleFormat::F32 => peripherique.build_input_stream(
             &config,
             move |donnees: &[f32], _: &cpal::InputCallbackInfo| {
-                if !*actif_f32.lock().unwrap() {
+                if !*actif_f32.lock().unwrap() || EN_TRAIN_DE_PARLER.load(std::sync::atomic::Ordering::Acquire) {
                     return;
                 }
                 let mut t = tampon_f32.lock().unwrap();
@@ -273,7 +351,7 @@ fn ouvrir_entree(
         SampleFormat::I16 => peripherique.build_input_stream(
             &config,
             move |donnees: &[i16], _: &cpal::InputCallbackInfo| {
-                if !*actif.lock().unwrap() {
+                if !*actif.lock().unwrap() || EN_TRAIN_DE_PARLER.load(std::sync::atomic::Ordering::Acquire) {
                     return;
                 }
                 let en_f32: Vec<f32> = donnees
@@ -487,7 +565,28 @@ pub async fn text_to_speech(text: &str) -> Result<String, String> {
     Ok("texte prononcé".to_string())
 }
 
+/// Marks the application as speaking for as long as it lives, whatever way
+/// the playing ends.
+struct Parle;
+
+impl Parle {
+    fn commencer() -> Self {
+        EN_TRAIN_DE_PARLER.store(true, std::sync::atomic::Ordering::Release);
+        Parle
+    }
+}
+
+impl Drop for Parle {
+    fn drop(&mut self) {
+        // The room keeps the voice a moment after the last sample left.
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        EN_TRAIN_DE_PARLER.store(false, std::sync::atomic::Ordering::Release);
+        *FIN_DE_PAROLE.lock().unwrap() = Some(std::time::Instant::now());
+    }
+}
+
 fn jouer_wav(chemin: &std::path::Path) -> Result<(), String> {
+    let _parle = Parle::commencer();
     let mut lecteur = hound::WavReader::open(chemin)
         .map_err(|e| format!("lecture du son synthétisé : {}", e))?;
     let spec = lecteur.spec();
@@ -603,21 +702,82 @@ mod tests {
         assert!(duree < limite, "8 s d'écoute transcrites en {:.1} s, limite {} s", duree, limite);
     }
 
+    /// A room's hiss, then `voix` seconds of speech, then `apres` seconds of room.
+    fn piece_puis_parole(avant: f32, voix: f32, apres: f32) -> Vec<f32> {
+        let n = TAUX_WHISPER as f32;
+        let mut s: Vec<f32> = (0..(avant * n) as usize).map(|i| 0.002 * ((i as f32) * 0.37).sin()).collect();
+        s.extend((0..(voix * n) as usize).map(|i| 0.08 * ((i as f32) * 0.05).sin()));
+        s.extend((0..(apres * n) as usize).map(|i| 0.002 * ((i as f32) * 0.37).sin()));
+        s
+    }
+
+    /// Feeds `son` to the cutter the way the microphone does, a fifth of a
+    /// second at a time, and collects the sentences it hands back.
+    fn decouper(son: &[f32]) -> (Vec<Vec<f32>>, usize) {
+        let mut d = Decoupeur::default();
+        let mut tampon = Vec::new();
+        let mut phrases = Vec::new();
+        for paquet in son.chunks(TAUX_WHISPER as usize / 5) {
+            tampon.extend_from_slice(paquet);
+            while let Some(p) = d.avancer(&mut tampon) {
+                phrases.push(p);
+            }
+        }
+        (phrases, tampon.len())
+    }
+
     #[test]
-    fn le_silence_n_est_pas_transcrit_la_voix_si() {
+    fn le_silence_n_est_jamais_transcrit() {
+        // Seen on max's PC, 12/10/2026: the empty room transcribed as
+        // « *musique* » and « ... », two cores busy doing it.
+        let (phrases, garde) = decouper(&piece_puis_parole(10.0, 0.0, 0.0));
+        assert!(phrases.is_empty());
+        assert!(garde <= ATTENTE_GARDEE + TAUX_WHISPER as usize / 5, "le tampon garde {} échantillons", garde);
+        let (phrases, _) = decouper(&vec![0.0; 5 * TAUX_WHISPER as usize]);
+        assert!(phrases.is_empty());
+    }
+
+    #[test]
+    fn une_phrase_est_rendue_entiere_une_fois_finie() {
+        // Twelve seconds of speech: longer than the old 8 s window, which lost
+        // the start of the sentence and the first name with it.
+        let (phrases, _) = decouper(&piece_puis_parole(2.0, 12.0, 0.5));
+        assert!(phrases.is_empty(), "rien avant la pause de fin");
+        let (phrases, _) = decouper(&piece_puis_parole(2.0, 12.0, 1.5));
+        assert_eq!(phrases.len(), 1);
+        let secondes = phrases[0].len() as f32 / TAUX_WHISPER as f32;
+        assert!((12.0..13.0).contains(&secondes), "phrase de {secondes} s");
+    }
+
+    #[test]
+    fn deux_phrases_separees_d_une_pause_sont_deux_phrases() {
+        let mut son = piece_puis_parole(1.0, 2.0, 1.5);
+        son.extend(piece_puis_parole(0.0, 3.0, 1.5));
+        let (phrases, _) = decouper(&son);
+        assert_eq!(phrases.len(), 2);
+    }
+
+    #[test]
+    fn un_clic_n_est_pas_une_phrase() {
+        let (phrases, _) = decouper(&piece_puis_parole(1.0, 0.15, 2.0));
+        assert!(phrases.is_empty());
+    }
+
+    #[test]
+    fn une_voix_douce_compte_si_elle_se_detache_de_la_piece() {
         let n = TAUX_WHISPER as usize;
-        // A room: steady low hiss.
-        let piece: Vec<f32> = (0..2 * n).map(|i| 0.002 * ((i as f32) * 0.37).sin()).collect();
-        assert!(!quelqu_un_parle(&piece));
-        assert!(!quelqu_un_parle(&vec![0.0; 2 * n]));
-        // The same room, then someone speaks at an ordinary level.
-        let mut dit = piece.clone();
-        dit.extend((0..n).map(|i| 0.08 * ((i as f32) * 0.05).sin()));
-        assert!(quelqu_un_parle(&dit));
-        // A quiet microphone still counts, as long as the voice stands out.
-        let mut doux = vec![0.0004; n];
-        doux.extend((0..n).map(|i| 0.006 * ((i as f32) * 0.05).sin()));
-        assert!(quelqu_un_parle(&doux));
+        let mut son = vec![0.0004; 2 * n];
+        son.extend((0..2 * n).map(|i| 0.01 * ((i as f32) * 0.05).sin()));
+        son.extend(vec![0.0004; 2 * n]);
+        let (phrases, _) = decouper(&son);
+        assert_eq!(phrases.len(), 1);
+    }
+
+    #[test]
+    fn qui_parle_sans_s_arreter_est_coupe_quand_meme() {
+        let (phrases, _) = decouper(&piece_puis_parole(1.0, 30.0, 0.0));
+        assert_eq!(phrases.len(), 1);
+        assert!(phrases[0].len() <= PHRASE_MAXIMUM + AVANT_LA_PAROLE);
     }
 
     #[test]
@@ -629,12 +789,4 @@ mod tests {
         assert_eq!(t.len(), 4, "un tampon plus court que la limite reste entier");
     }
 
-    #[test]
-    fn la_transcription_partielle_regarde_quelques_secondes_au_plus() {
-        // Le gel de Big Work : chaque interrogation transcrivait tout depuis
-        // l'ouverture du micro. La fenêtre doit tenir sous le plafond du
-        // tampon, et rester de l'ordre d'une phrase.
-        assert!(FENETRE_PARTIELLE <= TAMPON_MAXIMUM);
-        assert!(FENETRE_PARTIELLE <= 10 * TAUX_WHISPER as usize);
-    }
 }

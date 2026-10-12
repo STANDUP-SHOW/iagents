@@ -22,7 +22,8 @@ export interface Alerte {
 
 export interface EtatVoix {
   active: boolean
-  eveillee: boolean
+  /** The agent a conversation is open with: it hears without being named. */
+  avec: string | null
   reflexion: boolean
   /** Why listening cannot start, in French; null when it can. */
   motif: string | null
@@ -281,15 +282,15 @@ export function DockVocal({
   ouvrir: (o: Onglet) => void
   replie: boolean
   onReplier: () => void
-  /** A sentence typed or tapped goes the same way as a spoken one: « Voice », a first name, the request. */
+  /** A sentence typed or tapped goes the same way as a spoken one: a first name, then the request. */
   onDire: (phrase: string) => void
 }) {
   const [ecrit, setEcrit] = useState('')
-  const etat = voix.motif ? 'indisponible' : voix.reflexion ? 'reflexion' : voix.eveillee ? 'eveil' : voix.active ? 'ecoute' : 'repos'
+  const etat = voix.motif ? 'indisponible' : voix.reflexion ? 'reflexion' : voix.avec ? 'eveil' : voix.active ? 'ecoute' : 'repos'
   const libelle = {
     indisponible: 'Écoute indisponible',
     reflexion: 'Réflexion…',
-    eveil: 'J’écoute. Quel agent ?',
+    eveil: `En conversation avec ${voix.avec}`,
     ecoute: 'En écoute…',
     repos: 'Écoute coupée',
   }[etat]
@@ -303,7 +304,7 @@ export function DockVocal({
   const destinataire = interlocuteur?.prenom ?? prenoms[0]
   const envoyer = () => {
     if (!ecrit.trim() || !destinataire) return
-    onDire(`Voice ${destinataire}, ${ecrit.trim()}`)
+    onDire(`${destinataire}, ${ecrit.trim()}`)
     setEcrit('')
   }
 
@@ -411,15 +412,15 @@ export function DockVocal({
           )}
         </div>
       ) : voix.motif ? null : (
-        <p className="dock-aide">Dites « Voice », puis le prénom de l’agent. Ou écrivez-lui, ou touchez une phrase ci-dessous.</p>
+        <p className="dock-aide">Appelez l’agent par son prénom, au début de la phrase : il vous écoute ensuite sans qu’on le rappelle. Ou écrivez-lui, ou touchez une phrase ci-dessous.</p>
       )}
 
       {exemples.length > 0 && (
         <ul className="dock-exemples">
           {exemples.map((e) => (
             <li key={e.prenom + e.demande}>
-              <button onClick={() => onDire(`Voice ${e.prenom}, ${e.demande}`)} disabled={voix.reflexion}>
-                « Voice, {e.prenom}, {e.demande} »
+              <button onClick={() => onDire(`${e.prenom}, ${e.demande}`)} disabled={voix.reflexion}>
+                « {e.prenom}, {e.demande} »
               </button>
             </li>
           ))}

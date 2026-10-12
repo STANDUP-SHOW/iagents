@@ -97,7 +97,7 @@ export default function Centre({
     },
     { module: 'navigateur', valeur: tiret(lu.sites), detail: lu.sites === 1 ? 'compte connecté' : 'comptes connectés' },
     { module: 'courriel', valeur: tiret(lu.envois), detail: lu.envois === 1 ? 'envoi consigné' : 'envois consignés' },
-    { module: 'voice', valeur: etatCentre === 'ecoute' ? 'ON' : '—', detail: etatCentre === 'ecoute' ? 'à l’écoute' : 'Voice + prénom' },
+    { module: 'voice', valeur: etatCentre === 'ecoute' ? 'ON' : '—', detail: etatCentre === 'ecoute' ? 'à l’écoute' : 'prénom de l’agent' },
     {
       module: 'machine',
       valeur: jauge?.charge != null ? `${Math.round(jauge.charge * 100)} %` : '—',

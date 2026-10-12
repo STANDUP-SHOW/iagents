@@ -60,7 +60,9 @@ import VotreVoix from './pages/VotreVoix'
 /** `voix_ecoute_etat` et `voix_ecoute_basculer`, noms de champs figés par un banc Rust. */
 interface EcouteEtat {
   active: boolean
-  ou_en_est: 'dormante' | 'eveillee'
+  ou_en_est: 'dormante' | 'en-conversation'
+  /** The agent the conversation is open with. */
+  avec: string | null
 }
 
 
@@ -122,10 +124,8 @@ function App() {
    */
   const [agents, setAgents] = useState<AgentAffiche[]>([])
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
-  // Le mot de réveil a été entendu, on attend le prénom d'un agent.
-  const [reveillee, setReveillee] = useState(false)
-  // Ce que Rust dit de l'écoute : micro allumé ou non, mot de réveil entendu ou non.
-  const [ecoute, setEcoute] = useState<EcouteEtat>({ active: false, ou_en_est: 'dormante' })
+  // Ce que Rust dit de l'écoute : micro allumé ou non, conversation ouverte ou non.
+  const [ecoute, setEcoute] = useState<EcouteEtat>({ active: false, ou_en_est: 'dormante', avec: null })
   const [niveauMicro, setNiveauMicro] = useState<number | null>(null)
   const [dernierEntendu, setDernierEntendu] = useState('')
   const [partialResult, setPartialResult] = useState<string>('')
@@ -239,35 +239,21 @@ function App() {
       return
     }
 
-    let silenceTimeout: NodeJS.Timeout | null = null
-    let lastResult = ''
     let vivant = true
 
     // One question at a time: the next one leaves only once the previous one
-    // has answered. A transcription can take longer than 200 ms on a modest
-    // processor, and a setInterval piled the calls up behind it.
+    // has answered. Rust hands back a sentence only once it is finished (the
+    // client spoke, then paused), transcribed whole: it is handled at once.
+    // Before 12/10/2026 the screen took the last 8 seconds again and again and
+    // waited for a second without change, which cut long sentences.
     const interroger = async () => {
       while (vivant) {
         try {
-          const result = await invoke<string | null>('get_partial_result')
-          if (result && result !== lastResult) {
-            setPartialResult(result)
-            lastResult = result
-
-            // Reset silence timer when we get new speech
-            if (silenceTimeout) clearTimeout(silenceTimeout)
-
-            // If we've been silent for 1 second, treat it as end of speech
-            silenceTimeout = setTimeout(() => {
-              if (lastResult && lastResult.trim()) {
-                const phrase = lastResult
-                lastResult = ''
-                // Heard once, handled once: the next poll must not find it again.
-                invoke('voix_oublier').catch(() => {})
-                setDernierEntendu(phrase)
-                processVoiceCommand(phrase)
-              }
-            }, 1000)
+          const phrase = await invoke<string | null>('get_partial_result')
+          if (phrase && phrase.trim()) {
+            setPartialResult(phrase)
+            setDernierEntendu(phrase)
+            await processVoiceCommand(phrase)
           }
         } catch (err) {
           console.log('Failed to get partial result:', err)
@@ -279,7 +265,6 @@ function App() {
 
     return () => {
       vivant = false
-      if (silenceTimeout) clearTimeout(silenceTimeout)
     }
   }, [ecoute.active, activeAgent, agents])
 
@@ -393,7 +378,9 @@ function App() {
     // coupe ou le rallume.
   }
 
-  const processVoiceCommand = async (command: string) => {
+  /** `parle` : the sentence was spoken, so Rust may transcribe its sound again
+   * online; a typed one has no sound. */
+  const processVoiceCommand = async (command: string, parle = true) => {
     if (!command.trim()) return
 
     try {
@@ -410,23 +397,20 @@ function App() {
       // La décision n'est pas ici parce qu'un état gardé dans React se perd au
       // premier rechargement de la page, et parce qu'elle s'éprouve sans micro.
       const reaction = await invoke<
-        | { quoi: 'rien' }
-        | { quoi: 'reveillee' }
-        | { quoi: 'appel'; prenom: string; demande: string }
-        | { quoi: 'aucun-agent-de-ce-nom'; entendu: string }
-      >('voix_entendu', { texte: command })
+        ({ quoi: 'rien' } | { quoi: 'appel'; prenom: string; demande: string } | { quoi: 'conge'; prenom: string }) & {
+          transcrite_par: 'google' | 'poste'
+          motif: string | null
+        }
+      >('voix_entendu', { texte: command, parle })
+      invoke<EcouteEtat>('voix_ecoute_etat').then(setEcoute).catch(() => {})
 
+      if (reaction.motif) console.warn('Transcription sur le poste, Google n’a pas répondu :', reaction.motif)
       if (reaction.quoi === 'rien') return
-      if (reaction.quoi === 'reveillee') {
-        // Elle attend le prénom : le dire à l'écran, sans faire parler personne.
-        setReveillee(true)
+      if (reaction.quoi === 'conge') {
+        setLastResponse(`À bientôt. ${reaction.prenom} reste joignable par son prénom.`)
         return
       }
-      setReveillee(false)
-      if (reaction.quoi === 'aucun-agent-de-ce-nom') {
-        setLastResponse(`Personne ne s'appelle « ${reaction.entendu} » ici.`)
-        return
-      }
+      if (parle) setDernierEntendu(reaction.prenom + (reaction.demande ? `, ${reaction.demande}` : ''))
 
       // `agents` est la liste AFFICHÉE ({ id, name, ... }) : elle n'a ni
       // `prenom` ni `fiche`. Le premier jet la cherchait quand même, donc
@@ -557,7 +541,7 @@ function App() {
   }
 
   // « Parler à » : the agent is switched on, and the microphone too when it
-  // can be. The user then says « Voice » and the first name.
+  // can be. The user then calls the agent by its first name.
   const parlerA = async (a: { fiche: { id: string } }) => {
     if (agents.find((x) => x.id === a.fiche.id)?.status !== 'active') {
       await toggleAgentStatus(a.fiche.id, 'inactive')
@@ -642,7 +626,7 @@ function App() {
 
   const voix: EtatVoix = {
     active: ecoute.active,
-    eveillee: ecoute.ou_en_est === 'eveillee' || reveillee,
+    avec: ecoute.ou_en_est === 'en-conversation' ? ecoute.avec : null,
     reflexion: isProcessing,
     motif: motifEcoute,
     partiel: partialResult,
@@ -654,7 +638,7 @@ function App() {
 
   const module = moduleDe(activeTab)
   const infos = MODULES.find((m) => m.id === module)
-  const etatTexte = isProcessing ? 'Réflexion…' : ecoute.ou_en_est === 'eveillee' ? 'Quel agent ?' : ecoute.active ? 'À l’écoute' : 'Prêt'
+  const etatTexte = isProcessing ? 'Réflexion…' : ecoute.ou_en_est === 'en-conversation' && ecoute.avec ? `Avec ${ecoute.avec}` : ecoute.active ? 'À l’écoute' : 'Prêt'
 
   // Pages that keep their existing screen get the new header and sub-pages around it.
   const cadre = (contenu: JSX.Element, onglet: Onglet = activeTab) => (
@@ -703,7 +687,7 @@ function App() {
         prenoms={installes.map((a) => a.prenom)}
         ouvrir={ouvrir}
         replie={dockReplie}
-        onDire={(phrase) => void processVoiceCommand(phrase)}
+        onDire={(phrase) => void processVoiceCommand(phrase, false)}
         onReplier={() =>
           setDockReplie((r) => {
             poserPreference('iagent-dock-replie', !r)
