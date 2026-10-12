@@ -27,6 +27,8 @@ const etat = {
   opportunites: structuredClone(banc.opportunites) as Doc[],
   etudes: [structuredClone(banc.etude)] as Doc[],
   audit: structuredClone(banc.audit) as Doc[],
+  jetonsUsine: structuredClone(banc.jetonsUsine) as Doc[],
+  rapportsUsine: structuredClone(banc.rapportsUsine) as Doc[],
 };
 let compte = 100;
 const id = (prefixe: string) => `${prefixe}-${++compte}`;
@@ -55,7 +57,7 @@ const doublures: Record<string, Route['traiter']> = {
     const b = etat.boxes.find((x) => x.device_id === c.params.id);
     if (!b) return refus(404, "Cette Box n'existe pas.");
     const { statut, motif } = corps(c);
-    if (!['active', 'suspendue', 'restituee', 'remplacee'].includes(statut)) return refus(400, `Le statut « ${statut} » n'existe pas : active, suspendue, restituee ou remplacee.`);
+    if (!['stock', 'expediee', 'active', 'suspendue', 'restituee', 'remplacee'].includes(statut)) return refus(400, `Le statut « ${statut} » n'existe pas : stock, expediee, active, suspendue, restituee ou remplacee.`);
     if (!motif) return refus(400, 'Le motif manque : il entre au journal d’audit.');
     b.statut = statut;
     tracer(b.tenant_id, 'box.statut', b.device_id, `${statut} : ${motif}`);
@@ -84,6 +86,21 @@ const doublures: Record<string, Route['traiter']> = {
   },
   'GET /controle/compteur': () => ok(banc.compteur),
   'GET /controle/audit': (c) => ok(parTenant(c, etat.audit)),
+  // The factory (box/) : tokens, reports and labels, as the real controle module serves them.
+  'GET /controle/usine/jetons': () => ok(etat.jetonsUsine),
+  'POST /controle/usine/jetons': (c) => {
+    const b = corps(c);
+    if (!b.operateur) return refus(400, 'Le champ « operateur » est obligatoire.');
+    const j = { id: id('JU'), operateur: b.operateur, lot: b.lot ?? null, tenant_id: b.tenant_id ?? null, plan_id: b.plan_id ?? null, cree_le: new Date().toISOString(), expire_le: new Date(Date.now() + 24 * 3600_000).toISOString(), utilisations_max: Number(b.utilisations_max ?? 10), utilisations: 0 };
+    etat.jetonsUsine.push(j);
+    tracer(j.tenant_id, 'usine.jeton', j.id, `opérateur ${j.operateur}`);
+    return ok({ ...j, jeton: `UF-banc-${j.id}` }, 201);
+  },
+  'GET /controle/boxes/:id/rapports': (c) => (etat.boxes.some((b) => b.device_id === c.params.id) ? ok(etat.rapportsUsine.filter((r) => r.device_id === c.params.id)) : refus(404, "Cette Box n'existe pas.")),
+  'GET /controle/boxes/:id/etiquette': (c) => {
+    const b = etat.boxes.find((x) => x.device_id === c.params.id);
+    return b ? ok({ reference: b.reference, device_id: b.device_id, gamme: b.gamme, serial: b.serial, qr: b.reference }) : refus(404, "Cette Box n'existe pas.");
+  },
   'GET /tarifs/plans/tous': () => ok(etat.plans),
   'GET /tarifs/plans': () => ok(etat.plans.filter((p) => p.public_visibility && !p.legacy_flag && !p.effective_to)),
   'POST /tarifs/plans': (c) => {

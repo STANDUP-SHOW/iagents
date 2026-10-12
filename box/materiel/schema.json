@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://iagent.agency/schemas/profil-materiel.json",
+  "title": "Profil matériel d'une Box iAgent (brief Factory Installer §7)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "nom", "gammes", "cpu", "memoire_go", "disque_go_min", "reseau", "tpm", "uefi", "secure_boot", "audio", "tests_obligatoires", "source", "releve_le", "a_confirmer"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,40}$" },
+    "nom": { "type": "string", "minLength": 2, "maxLength": 80 },
+    "gammes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["business", "home"] } },
+    "cpu": {
+      "type": "object", "additionalProperties": false, "required": ["modele_regex", "coeurs_min"],
+      "properties": { "modele_regex": { "type": "string", "minLength": 1 }, "coeurs_min": { "type": "integer", "minimum": 1, "maximum": 256 } }
+    },
+    "memoire_go": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "integer", "minimum": 1, "maximum": 4096 } },
+    "disque_go_min": { "type": "integer", "minimum": 1 },
+    "reseau": {
+      "type": "object", "additionalProperties": false, "required": ["ethernet", "wifi", "bluetooth"],
+      "properties": { "ethernet": { "type": "integer", "minimum": 0, "maximum": 8 }, "wifi": { "type": "boolean" }, "bluetooth": { "type": "boolean" } }
+    },
+    "tpm": { "const": "2.0" },
+    "uefi": { "const": true },
+    "secure_boot": { "type": "boolean" },
+    "audio": {
+      "type": "object", "additionalProperties": false, "required": ["sortie", "micro"],
+      "properties": { "sortie": { "type": "boolean" }, "micro": { "type": "boolean" } }
+    },
+    "tests_obligatoires": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,39}$" } },
+    "source": { "type": "string", "minLength": 10 },
+    "releve_le": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "a_confirmer": { "type": "boolean" }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "_note": "La seule liste de ce qui tourne sur iAgent OS (brief §16). Un service « reel » a un binaire livré (son code est dans `source`) et une unité qui le lance ; un service « absent » a une unité dont ExecStart est iagent-absent, qui refuse en français et sort en 78 : rien ne fait semblant de tourner (règle du mémo, 24/09/2026). check-systemd.ts tient les unités à cette liste, check-profils.ts refuse d'activer un service absent.",
+  "version_os": "0.1.0",
+  "journaux": ["device", "runtime", "browser", "voice", "update", "security", "factory"],
+  "absent": { "binaire": "/usr/lib/iagent/iagent-absent", "source": "box/services/absent/iagent-absent.sh" },
+  "services": {
+    "iagent-device": { "etat": "reel", "binaire": "/usr/bin/iagent-device", "source": "box/services/agent-device/Cargo.toml", "journal": "device", "role": "Agent de la Box : identité, inventaire, enrôlement, télémétrie, relevé des mises à jour, dépôt du rapport d'usine (Rust)." },
+    "iagent-usine": { "etat": "reel", "binaire": "/usr/lib/iagent/iagent-usine.sh", "source": "box/os/kiosque/iagent-usine.sh", "journal": "factory", "role": "Mode usine du premier démarrage : iagent-device sert l'interface opérateur sur 127.0.0.1 et conduit les tests, cog l'affiche dans cage ; ne démarre plus une fois la Box qualifiée." },
+    "iagent-commander": { "etat": "reel", "binaire": "/usr/lib/iagent/iagent-commander.sh", "source": "box/os/kiosque/iagent-commander.sh", "journal": "runtime", "role": "Le kiosque : cage puis iagent-desktop (édition Box) sur tty1, une fois la Box qualifiée." },
+    "iagent-updater": { "etat": "reel", "binaire": "/usr/bin/iagent-updater", "source": "box/services/updater/Cargo.toml", "journal": "update", "role": "Relève, vérifie (empreinte et signature) et pose les paquets .deb publiés par la plateforme ; garde le précédent pour revenir en arrière (Rust)." },
+    "iagent-watchdog": { "etat": "reel", "binaire": "/usr/bin/iagent-watchdog", "source": "box/services/watchdog/Cargo.toml", "journal": "device", "role": "Surveille les services réels ; trois échecs en dix minutes → alerte portée par la télémétrie (Rust)." },
+    "iagent-agent-runtime": { "etat": "absent", "journal": "runtime", "pourquoi": "Le moteur d'exécution des agents sur Linux n'est pas livré dans iAgent OS 0.1.0 : il vit dans iagent-desktop (Tauri) et n'a pas encore été séparé en service." },
+    "iagent-browser": { "etat": "absent", "journal": "browser", "pourquoi": "Le gestionnaire d'espaces de navigateur par agent (brief §18-§19, Playwright) n'est pas écrit ; le desktop n'a qu'un profil (navigateur.rs)." },
+    "iagent-connectors": { "etat": "absent", "journal": "runtime", "pourquoi": "Le moteur de connecteurs (MCP, OAuth, webhooks) vit dans iagent-desktop ; rien n'est séparé en service." },
+    "iagent-voice": { "etat": "absent", "journal": "voice", "pourquoi": "Le moteur de voix sur Linux (Piper, whisper) n'est pas livré : l'archive Piper Linux n'est pas posée par l'image (ressources.rs le dit)." },
+    "iagent-vault": { "etat": "absent", "journal": "security", "pourquoi": "Le coffre (brief §20) n'existe pas en service ; les secrets passent par le trousseau du système (Secret Service), que iagent-commander lance dans sa session." },
+    "iagent-backup": { "etat": "absent", "journal": "device", "pourquoi": "La sauvegarde (brief §34) n'est pas écrite." }
+  }
+}

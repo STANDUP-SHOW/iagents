@@ -4,11 +4,53 @@ import { useState } from 'react';
 import { useAction, useLecture } from '../donnees.jsx';
 import { Bouton, Champ, Lecture, Panneau, Pastille, Resultat, Tableau, date, dateHeure, lignesDe, nombre } from '../composants.jsx';
 import { Apercu, ChoixClient, useTenants } from './commun.jsx';
+// The same QR encoder as the factory screen (box/usine/ui): one encoder, the reference only (brief §42).
+import { qrSvg } from '../../../box/usine/ui/src/qr.js';
 
 export const lectures = [['boxes', {}], ['tenants', {}]];
 
-export const STATUTS_BOX = ['active', 'suspendue', 'restituee', 'remplacee'];
-const TON_STATUT = { stock: 'neutre', provisionnee: 'info', active: 'succes', suspendue: 'alerte', restituee: 'neutre', remplacee: 'neutre' };
+const MOT_VERDICT = { passe: 'PASS', echec: 'FAIL', non_constate: 'NON CONSTATÉ' };
+const TON_VERDICT = { passe: 'succes', echec: 'alerte', non_constate: 'info' };
+
+/** The factory reports of a Box: the last one in full, the others as a line. */
+export function RapportsUsine({ rapports }) {
+  if (!rapports?.length) return <p className="discret">Aucun rapport d'usine : Box provisionnée à la main, ou jamais passée par le Factory Installer.</p>;
+  const dernier = rapports[rapports.length - 1];
+  return (
+    <>
+      <p>
+        <Pastille ton={TON_VERDICT[dernier.verdict]}>{MOT_VERDICT[dernier.verdict] ?? dernier.verdict}</Pastille>{' '}
+        rapport du {dateHeure(dernier.recu_le)} · opérateur {dernier.operateur} · lot {dernier.lot ?? '—'} · installateur {dernier.installateur?.version ?? '?'} ({dernier.installateur?.commit ?? '?'}) · profil {dernier.profil_materiel}
+      </p>
+      <Tableau
+        vide="Aucun test dans ce rapport."
+        lignes={dernier.tests ?? []}
+        cle={(t) => t.id}
+        colonnes={[
+          { titre: 'Contrôle', rendu: (t) => t.libelle },
+          { titre: 'Verdict', rendu: (t) => <Pastille ton={TON_VERDICT[t.verdict] ?? 'neutre'}>{MOT_VERDICT[t.verdict] ?? t.verdict}</Pastille> },
+          { titre: 'Détail', rendu: (t) => <span className="petit">{t.detail ?? ''}</span> },
+        ]}
+      />
+      {rapports.length > 1 ? <p className="discret">{nombre(rapports.length - 1)} rapport(s) antérieur(s) : {rapports.slice(0, -1).map((r) => `${MOT_VERDICT[r.verdict]} le ${dateHeure(r.recu_le)}`).join(' · ')}</p> : null}
+    </>
+  );
+}
+
+/** What goes on the label and in its QR: the reference, nothing else. */
+export function Etiquette({ etiquette }) {
+  if (!etiquette?.reference) return <p className="discret">Pas d'étiquette : la Box n'a pas de référence.</p>;
+  return (
+    <div className="etiquette-box">
+      <div dangerouslySetInnerHTML={{ __html: qrSvg(etiquette.qr ?? etiquette.reference, 140) }} />
+      <p><strong>{etiquette.reference}</strong><br /><span className="petit">{etiquette.serial} · {etiquette.gamme}</span></p>
+      <Bouton onClick={() => (typeof window !== 'undefined' ? window.print() : null)}>Imprimer l'étiquette</Bouton>
+    </div>
+  );
+}
+
+export const STATUTS_BOX = ['stock', 'expediee', 'active', 'suspendue', 'restituee', 'remplacee'];
+const TON_STATUT = { usine: 'alerte', qualifiee: 'info', stock: 'neutre', provisionnee: 'info', expediee: 'info', active: 'succes', suspendue: 'alerte', restituee: 'neutre', remplacee: 'neutre' };
 
 export function garantieDe(box, jour = new Date().toISOString().slice(0, 10)) {
   if (!box.garantie_jusqu_au) return { ton: 'neutre', libelle: 'non renseignée' };
@@ -130,6 +172,8 @@ export default function Boxes({ boxInitiale = '' }) {
   const { lecture: lectureTenants, tenants, nomDe } = useTenants();
   const [choisie, setChoisie] = useState(boxInitiale);
   const fiche = useLecture('box', { params: { id: choisie } }, Boolean(choisie));
+  const rapports = useLecture('rapportsBox', { params: { id: choisie } }, Boolean(choisie));
+  const etiquette = useLecture('etiquetteBox', { params: { id: choisie } }, Boolean(choisie));
   const boxes = lignesDe(lecture.donnees, 'boxes') ?? [];
   const recharger = () => { lecture.recharger(); lectureTenants.recharger(); };
   return (
@@ -142,6 +186,7 @@ export default function Boxes({ boxInitiale = '' }) {
               lignes={boxes}
               cle={(b) => b.device_id}
               colonnes={[
+                { titre: 'Référence', rendu: (b) => <strong>{b.reference ?? '—'}</strong> },
                 { titre: 'Série', rendu: (b) => <><strong>{b.serial}</strong><br /><code>{b.device_id}</code></> },
                 { titre: 'Client', rendu: (b) => (b.tenant_id ? nomDe(b.tenant_id) : <span className="discret">en stock</span>) },
                 { titre: 'Gamme', rendu: (b) => b.gamme },
@@ -160,6 +205,16 @@ export default function Boxes({ boxInitiale = '' }) {
         <Panneau titre={`Fiche de la Box ${choisie}`} sousTitre="GET /controle/boxes/:id" actions={<Bouton onClick={() => setChoisie('')}>Fermer</Bouton>}>
           <Lecture lecture={fiche}>{(b) => <Apercu valeur={{ ...b, identite_publique: b.identite_publique ? 'clé publique Ed25519 enregistrée' : 'absente' }} />}</Lecture>
         </Panneau>
+      ) : null}
+      {choisie ? (
+        <div className="colonnes">
+          <Panneau titre="Rapports d'usine" sousTitre="GET /controle/boxes/:id/rapports — le verdict est celui que la plateforme a recalculé.">
+            <Lecture lecture={rapports}>{(r) => <RapportsUsine rapports={r} />}</Lecture>
+          </Panneau>
+          <Panneau titre="Étiquette" sousTitre="GET /controle/boxes/:id/etiquette — référence seule dans le QR, jamais de clé ni d'adresse MAC.">
+            <Lecture lecture={etiquette}>{(e) => <Etiquette etiquette={e} />}</Lecture>
+          </Panneau>
+        </div>
       ) : null}
       <div className="colonnes">
         <Panneau titre="Provisionner une Box" sousTitre="Statut de départ : stock."><Provisionner onFini={recharger} /></Panneau>

@@ -1,0 +1,34 @@
+[package]
+name = "iagent-updater"
+description = "iAgent Box - mises a jour signees : releve, verification (empreinte et signature), pose du .deb, sante, retour arriere"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "iagent-updater"
+path = "src/main.rs"
+
+[dependencies]
+iagent-identite-box = { path = "../identite-box" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+chrono = { workspace = true }
+ureq = { workspace = true }
+ring = { workspace = true }
+
+[dev-dependencies]
+base64 = { workspace = true }
+
+[package.metadata.deb]
+maintainer = "STANDUP-SHOW <contact@iagent.agency>"
+copyright = "2026, STANDUP-SHOW"
+extended-description = "Releve les mises a jour que le Control Plane vise pour cette Box, verifie l'empreinte SHA-256 et la signature Ed25519 de la plateforme, pose le paquet .deb, controle la sante des services et revient au paquet precedent sinon."
+section = "admin"
+priority = "optional"
+depends = "$auto, apt, systemd"
+assets = [["target/release/iagent-updater", "usr/bin/", "755"]]

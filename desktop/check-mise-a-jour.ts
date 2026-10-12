@@ -92,6 +92,21 @@ verifier(tauri.bundle.targets.includes('nsis'), "l'installeur NSIS est construit
 const capacites = readFileSync(new URL('./src-tauri/capabilities/default.json', import.meta.url), 'utf8');
 verifier(!capacites.includes('updater'), "l'écran ne peut ni chercher ni installer : seul le cœur décide");
 
+// La Box (box/) : Desktop Commander y est un .deb posé par iagent-updater, et
+// l'updater Tauri se tait en édition Box sous Linux. Un seul updater par machine.
+verifier(!('linux-x86_64' in m.platforms), "le manifeste latest.json ne vise aucun poste Linux : la Box a son propre updater");
+const linux = JSON.parse(readFileSync(new URL('./src-tauri/tauri.linux.conf.json', import.meta.url), 'utf8'));
+verifier(JSON.stringify(linux.bundle?.targets) === '["deb"]', 'sous Linux, la seule cible est le .deb (tauri.linux.conf.json)');
+const dependancesDev = readFileSync(new URL('./dependances-systeme.txt', import.meta.url), 'utf8').split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+const familles = (l: string) => l.replace(/-dev$/, '').replace(/^lib/, '').replace(/[-\d.t]+$/, '');
+const dependancesDeb: string[] = linux.bundle?.linux?.deb?.depends ?? [];
+verifier(
+  dependancesDev.every((d) => dependancesDeb.some((r) => familles(r).startsWith(familles(d).slice(0, 8)))),
+  `chaque bibliothèque -dev de dependances-systeme.txt a sa bibliothèque d'exécution dans le .deb (manquent : ${dependancesDev.filter((d) => !dependancesDeb.some((r) => familles(r).startsWith(familles(d).slice(0, 8)))).join(', ') || 'aucune'})`,
+);
+const rust = readFileSync(new URL('./src-tauri/src/mise_a_jour.rs', import.meta.url), 'utf8');
+verifier(/box_figee && cfg!\(target_os = "linux"\)/.test(rust), "mise_a_jour.rs se tait en édition Box sous Linux : un seul updater sur la Box");
+
 if (fautes > 0) {
   console.error(`check-mise-a-jour : ${fautes} faute(s)`);
   process.exit(1);

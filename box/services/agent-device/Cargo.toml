@@ -1,0 +1,37 @@
+[package]
+name = "iagent-device"
+description = "iAgent Box - agent de la Box : identite, inventaire, enrolement, telemetrie, rapport d'usine, mode usine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "iagent-device"
+path = "src/main.rs"
+
+[dependencies]
+iagent-identite-box = { path = "../identite-box" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+chrono = { workspace = true }
+ureq = { workspace = true }
+# Type=notify et WatchdogSec de iagent-device.service.
+sd-notify = "0.4"
+ring = { workspace = true }
+
+# cargo-deb (build-linux-deb.yml) : le binaire seul ; les unités et scripts sont posés par l'ISO depuis box/os/.
+[package.metadata.deb]
+maintainer = "STANDUP-SHOW <contact@iagent.agency>"
+copyright = "2026, STANDUP-SHOW"
+extended-description = "L'agent de la Box iAgent : identite Ed25519, inventaire materiel, enrolement a l'usine, telemetrie signee vers le Control Plane, releve des mises a jour, rapport d'usine et ecran operateur du premier demarrage."
+section = "admin"
+priority = "optional"
+depends = "$auto, python3, dmidecode, util-linux, iproute2"
+assets = [
+  ["target/release/iagent-device", "usr/bin/", "755"],
+  ["CONTRAT.md", "usr/share/doc/iagent/CONTRAT.md", "644"],
+]

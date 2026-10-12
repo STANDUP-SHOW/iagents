@@ -1,0 +1,159 @@
+#cloud-config
+# L'installation sans personne devant (brief §2, §8, §9) : Ubuntu Server 24.04
+# LTS minimal, découpé en EFI / SYSTEM_A / SYSTEM_B / RECOVERY / DATA, DATA
+# chiffrée en LUKS2 avec une clé d'usine aléatoire (écrite par construire-iso.sh
+# dans /cdrom/nocloud/cle-usine, remplacée puis effacée par tard/30-tpm.sh), puis
+# les services iAgent, le durcissement et l'armement du mode usine.
+#
+# Le fichier est lu par subiquity (autoinstall) ; box/check-autoinstall.ts le
+# relit à chaque `npm run controle` : cinq partitions, DATA sur dm_crypt, aucun
+# serveur SSH, aucun mot de passe, la liste de paquets égale à
+# box/os/base/paquets.txt, chaque script de late-commands présent.
+autoinstall:
+  version: 1
+  interactive-sections: []
+  locale: fr_FR.UTF-8
+  keyboard:
+    layout: fr
+  timezone: Europe/Paris
+  refresh-installer:
+    update: false
+  source:
+    id: ubuntu-server-minimal
+    search_drivers: true
+  updates: security
+  network:
+    version: 2
+    ethernets:
+      tout:
+        match:
+          name: "en*"
+        dhcp4: true
+        dhcp6: false
+  storage:
+    swap:
+      size: 0
+    config:
+      - type: disk
+        id: disque
+        ptable: gpt
+        match:
+          size: largest
+        wipe: superblock-recursive
+        preserve: false
+        grub_device: true
+      - type: partition
+        id: p-efi
+        device: disque
+        size: 1G
+        flag: boot
+        grub_device: true
+        partition_name: EFI
+      - type: partition
+        id: p-sys-a
+        device: disque
+        size: 32G
+        partition_name: SYSTEM_A
+      - type: partition
+        id: p-sys-b
+        device: disque
+        size: 32G
+        partition_name: SYSTEM_B
+      - type: partition
+        id: p-rec
+        device: disque
+        size: 8G
+        partition_name: RECOVERY
+      - type: partition
+        id: p-data
+        device: disque
+        size: -1
+        partition_name: DATA
+      - type: dm_crypt
+        id: c-data
+        volume: p-data
+        dm_name: donnees
+        keyfile: /cdrom/nocloud/cle-usine
+      - type: format
+        id: f-efi
+        volume: p-efi
+        fstype: fat32
+        label: EFI
+      - type: format
+        id: f-sys-a
+        volume: p-sys-a
+        fstype: ext4
+        label: SYSTEM_A
+      - type: format
+        id: f-rec
+        volume: p-rec
+        fstype: ext4
+        label: RECOVERY
+      - type: format
+        id: f-data
+        volume: c-data
+        fstype: ext4
+        label: DATA
+      - type: mount
+        id: m-sys-a
+        device: f-sys-a
+        path: /
+      - type: mount
+        id: m-efi
+        device: f-efi
+        path: /boot/efi
+      - type: mount
+        id: m-rec
+        device: f-rec
+        path: /recovery
+      - type: mount
+        id: m-data
+        device: f-data
+        path: /var/lib/iagent
+  identity:
+    hostname: iagent-box
+    username: iagent-usine
+    # Compte verrouillé (« ! » : aucun mot de passe ne l'ouvre) et retiré par
+    # tard/20-durcissement.sh. Il n'existe que parce que subiquity exige un compte.
+    password: "!"
+  ssh:
+    install-server: false
+    allow-pw: false
+  # La même liste que box/os/base/paquets.txt, à l'identique : check-autoinstall.ts refuse l'écart.
+  packages:
+    - cage
+    - libwebkit2gtk-4.1-0
+    - libjavascriptcoregtk-4.1-0
+    - libgtk-3-0
+    - libayatana-appindicator3-1
+    - librsvg2-2
+    - libsoup-3.0-0
+    - cog
+    - gnome-keyring
+    - dbus-user-session
+    - libasound2t64
+    - alsa-utils
+    - cryptsetup
+    - tpm2-tools
+    - nftables
+    - dmidecode
+    - pciutils
+    - usbutils
+    - lm-sensors
+    - mokutil
+    - efibootmgr
+    - python3
+    - stress-ng
+    - fio
+    - iperf3
+    - curl
+    - ca-certificates
+  late-commands:
+    # Ce que l'ISO porte pour la Box : binaires, paquets, profils, tests, unités, scripts.
+    - mkdir -p /target/opt/iagent-usine
+    - cp -a /cdrom/nocloud/iagent/. /target/opt/iagent-usine/
+    - curtin in-target --target=/target -- sh /opt/iagent-usine/tard/10-services.sh
+    - curtin in-target --target=/target -- sh /opt/iagent-usine/tard/20-durcissement.sh
+    - curtin in-target --target=/target -- sh /opt/iagent-usine/tard/30-tpm.sh
+    - curtin in-target --target=/target -- sh /opt/iagent-usine/tard/40-usine.sh
+  shutdown: reboot
