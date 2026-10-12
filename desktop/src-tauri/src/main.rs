@@ -903,6 +903,7 @@ fn main() {
             voix_api::voix_api_etat,
             voix_api::voix_api_ranger,
             voix_api::voix_api_retirer,
+            voix_api::voix_api_preferer,
             tache::dossier_de_travail,
             tache::montrer_resultat,
             repondre,
