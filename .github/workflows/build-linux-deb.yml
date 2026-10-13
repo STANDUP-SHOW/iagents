@@ -70,6 +70,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: desktop/src-tauri
+      # The cache brings back whisper-rs-sys already compiled, and its build
+      # script never reruns on a CMake setting (.cargo/config.toml): rebuild it,
+      # the check after the build proves what was compiled.
+      - name: Recompiler whisper pour le processeur du client
+        run: cargo clean -p whisper-rs-sys --release
+        working-directory: desktop/src-tauri
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
