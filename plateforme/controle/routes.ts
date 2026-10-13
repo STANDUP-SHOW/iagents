@@ -58,7 +58,7 @@ class Refus extends Error {
   statut: number;
   constructor(statut: number, message: string) { super(message); this.statut = statut; }
 }
-const non = (statut: number, message: string): never => { throw new Refus(statut, message); };
+function non(statut: number, message: string): never { throw new Refus(statut, message); }
 
 function objet(corps: unknown): Record<string, unknown> {
   if (!corps || typeof corps !== 'object' || Array.isArray(corps)) non(400, 'Le corps de la requête doit être un objet JSON.');
