@@ -5,7 +5,8 @@
 # /var/lib/iagent/usine/qualifiee, and iagent-commander takes tty1 at next boot.
 # Installed as /usr/lib/iagent/iagent-usine.sh.
 set -eu
-export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export XDG_RUNTIME_DIR
 /usr/bin/iagent-device usine --ecouter 127.0.0.1:8787 &
 agent=$!
 trap 'kill "$agent" 2>/dev/null || true' EXIT INT TERM

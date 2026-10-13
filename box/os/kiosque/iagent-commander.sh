@@ -5,7 +5,8 @@
 # terminal reachable from the screen. Started by iagent-commander.service on tty1.
 # Installed as /usr/lib/iagent/iagent-commander.sh.
 set -eu
-export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export XDG_RUNTIME_DIR
 export GDK_BACKEND=wayland
 # Where iagent-desktop reads what the image ships, and where it writes (chemins.rs: two roots).
 export IAGENT_RESSOURCES=/opt/iagent/desktop
