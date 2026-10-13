@@ -8,11 +8,9 @@
 //         nom is a key of routes.json; rejects with ErreurPlateforme;
 //     jeton:   { present(): Promise<boolean>, poser(j): Promise<string>, oublier(): Promise<string> },
 //     adresse: { lire(): Promise<string>, poser(a): Promise<string> },
-//     courriel: {           the e-mail studio's mailbox (OVH SMTP), see admin/src/courriel.rs
-//       reglages(): Promise<{hote,port,securite,utilisateur,expediteur_nom,expediteur_adresse,mot_de_passe_present}>,
-//       poserReglages(r), poserMotDePasse(m), oublierMotDePasse(),
-//       envoyer(envoi): Promise<{message, empreinte}>, journal(): Promise<Array>
-//     },
+//     courriel?: the e-mail studio's mailbox, see src/emails/client.js. Only the
+//                back-office app adds it: a host without it (the Desktop
+//                Commander) does not show the studio.
 //   }
 //
 // Rule (MASTER §15, CLAUDE.md): a platform error is shown exactly as the
@@ -20,6 +18,7 @@
 // into a success. Anything other than a 2xx JSON answer without `erreur` is
 // an ErreurPlateforme.
 import { chemin as construire } from './routes.js';
+import { courrielWeb } from './emails/client.js';
 
 export class ErreurPlateforme extends Error {
   constructor(message, statut, plateforme = true) {
@@ -114,21 +113,6 @@ export function creerClientWeb({ adresse: adresseDepart, jeton: jetonDepart = ''
   };
 }
 
-/** Mailbox settings exist only in the desktop app; in a browser nothing is ever sent. */
-export const REGLAGES_SMTP_OVH = { hote: 'ssl0.ovh.net', port: 465, securite: 'ssl', utilisateur: 'contact@iagent.agency', expediteur_nom: 'iAgent', expediteur_adresse: 'contact@iagent.agency', mot_de_passe_present: false };
-function courrielWeb() {
-  let reglages = { ...REGLAGES_SMTP_OVH };
-  const refus = "Dans le navigateur, rien ne part : l'envoi passe par l'application Windows, qui tient le mot de passe dans le coffre du système.";
-  return {
-    reglages: async () => ({ ...reglages }),
-    poserReglages: async (r) => { reglages = { ...reglages, ...r, mot_de_passe_present: false }; return 'Réglages gardés pour cette page seulement.'; },
-    poserMotDePasse: async () => { throw new Error(refus); },
-    oublierMotDePasse: async () => 'Aucun mot de passe n’est rangé dans le navigateur.',
-    envoyer: async () => { throw new Error(refus); },
-    journal: async () => [],
-  };
-}
-
 /**
  * Desktop Client: every call goes through the Rust command
  * `plateforme_appeler`, which reads the token from the system keyring and
@@ -153,14 +137,6 @@ export function creerClientTauri(invoke) {
     adresse: {
       lire: () => appel('adresse_lire'),
       poser: (a) => appel('adresse_poser', { adresse: String(a ?? '') }),
-    },
-    courriel: {
-      reglages: () => appel('smtp_reglages'),
-      poserReglages: (r) => appel('smtp_poser_reglages', { reglages: r }),
-      poserMotDePasse: (m) => appel('smtp_poser_mot_de_passe', { motDePasse: String(m ?? '') }),
-      oublierMotDePasse: () => appel('smtp_oublier_mot_de_passe'),
-      envoyer: (envoi) => appel('courriel_envoyer', { envoi }),
-      journal: () => appel('courriel_journal'),
     },
   };
 }

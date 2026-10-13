@@ -13,6 +13,7 @@
 //! No Tauri here: the back-office app and the Desktop Commander both wrap these
 //! functions in their own commands.
 
+#[cfg(feature = "courriel")]
 pub mod courriel;
 
 use serde::Serialize;

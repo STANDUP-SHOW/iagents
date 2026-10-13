@@ -28,7 +28,7 @@ import { corpsNouvelleVersion, etatVersion } from '../src/ecrans/Plans.jsx';
 import { corpsDevis } from '../src/ecrans/Devis.jsx';
 import { corpsProfil } from '../src/ecrans/Personas.jsx';
 import { DECISIONS } from '../src/ecrans/Skills.jsx';
-import { REGLAGES_SMTP_OVH } from '../src/api.js';
+import { REGLAGES_SMTP_OVH } from '../src/emails/client.js';
 import { MODELES, CATALOGUE, IMAGES_ENVOI, brouillonDepuis, rendreHtml, rendreTexte, manques, preparerEnvoi, empreinteSource, sha256HexNavigateur, numeroDePortrait, agentsDuBrouillon } from '../src/emails/modeles.js';
 import { construire as construireCatalogueEmails } from './catalogue-emails.mjs';
 import temoinEmpreinte from '../temoins/empreinte.json';
@@ -202,6 +202,10 @@ console.log('\nStudio e-mail');
   let refus = '';
   try { await web.courriel.envoyer(p); } catch (e) { refus = e.message; }
   verifier(refus.includes('rien ne part'), 'dans un navigateur, aucun e-mail ne part');
+  // The Desktop Commander mounts these screens with a client that has no mailbox: no studio there.
+  const sansBoite = { ...clientBanc(reponsesDeBanc()), courriel: undefined };
+  const dc = rendre('administration sans boîte', <Administration client={sansBoite} initial={{}} ecranInitial="emails" />);
+  verifier(dc && !dc.texte.includes('Studio e-mail') && dc.texte.includes('Plans et prix'), 'sans boîte e-mail (Desktop Commander), le studio n’est pas proposé');
 }
 
 console.log('\nUne erreur de la plateforme s’affiche telle quelle');

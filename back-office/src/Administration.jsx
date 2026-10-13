@@ -62,7 +62,9 @@ export default function Administration({ client, initial = {}, ecranInitial = 'p
     globalThis.addEventListener?.('hashchange', suivre);
     return () => globalThis.removeEventListener?.('hashchange', suivre);
   }, []);
-  const actif = ECRANS.find((e) => e.id === ecran) ?? ECRANS[0];
+  // The studio needs the mailbox commands, which only the back-office app has.
+  const ecrans = ECRANS.filter((e) => e.id !== 'emails' || client?.courriel);
+  const actif = ecrans.find((e) => e.id === ecran) ?? ecrans[0];
   const { Composant } = actif;
   return (
     <ContextePlateforme.Provider value={{ client, initial }}>
@@ -75,7 +77,7 @@ export default function Administration({ client, initial = {}, ecranInitial = 'p
             </div>
             {entete}
             <ul>
-              {ECRANS.map((e) => (
+              {ecrans.map((e) => (
                 <li key={e.id}>
                   <a href={`#/${e.id}`} className={e.id === actif.id ? 'actif' : undefined} aria-current={e.id === actif.id ? 'page' : undefined}
                     onClick={() => setEcran(e.id)}>{e.titre}</a>
