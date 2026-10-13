@@ -1,11 +1,12 @@
-// The standalone back-office: asks for the platform address and the admin
-// token once, then mounts the screens. The token is handed to the Client
+// The standalone back-office (« Admin plateforme »): mounts the screens at once.
+// The e-mail studio works without the platform; the platform screens ask for
+// its address and the admin token, typed once. The token is handed to the Client
 // (Rust keyring on desktop, page memory on the web) and never rendered again:
 // after it is set, the screen only knows whether one is present.
 import { useEffect, useState } from 'react';
 import Administration from './Administration.jsx';
 
-export function Connexion({ client, adresseDepart, onConnecte }) {
+export function Connexion({ client, adresseDepart, onConnecte, onRetour }) {
   const [adresse, setAdresse] = useState(adresseDepart ?? '');
   const [jeton, setJeton] = useState('');
   const [erreur, setErreur] = useState('');
@@ -28,7 +29,7 @@ export function Connexion({ client, adresseDepart, onConnecte }) {
   return (
     <div className="bo bo-connexion">
       <form className="panneau connexion" onSubmit={valider}>
-        <div className="bo-marque grande"><span className="bo-logo">iAgent</span><span className="bo-sous-marque">Back-office</span></div>
+        <div className="bo-marque grande"><span className="bo-logo">iAgent</span><span className="bo-sous-marque">Admin plateforme</span></div>
         <p className="discret">Application interne. Elle ne parle qu'aux routes d'administration et publiques de la plateforme ; sans le jeton du back-office, elle ne montre rien.</p>
         <label className="champ"><span className="champ-libelle">Adresse de la plateforme</span>
           <input value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder="https://plateforme…" required autoComplete="url" /></label>
@@ -36,7 +37,10 @@ export function Connexion({ client, adresseDepart, onConnecte }) {
           <input type="password" value={jeton} onChange={(e) => setJeton(e.target.value)} required autoComplete="off" spellCheck={false} />
           <span className="champ-aide">Saisi une fois : il est rangé hors de l'écran et n'est plus jamais affiché.</span></label>
         {erreur ? <div className="erreur" role="alert"><strong>Rien n'est enregistré :</strong> <span className="erreur-texte">{erreur}</span></div> : null}
-        <button type="submit" className="bouton bouton-principal" disabled={enCours}>Ouvrir le back-office</button>
+        <div className="rangee">
+          <button type="submit" className="bouton bouton-principal" disabled={enCours}>Brancher la plateforme</button>
+          {onRetour ? <button type="button" className="bouton" onClick={onRetour}>Revenir au studio e-mail</button> : null}
+        </div>
       </form>
     </div>
   );
@@ -67,19 +71,29 @@ export default function App({ client, etatInitial = null, initial, ecranInitial,
     }
   };
   useEffect(() => { if (!etatInitial) relire(); }, []);
+  const [brancher, setBrancher] = useState(false);
   if (!etat) return <div className="bo bo-connexion"><p className="discret" aria-busy="true">Ouverture…</p></div>;
-  if (!etat.connecte) {
+  if (!etat.connecte && brancher) {
     return (
       <>
         {etat.erreur ? <div className="bo"><div className="erreur" role="alert">{etat.erreur}</div></div> : null}
-        <Connexion client={client} adresseDepart={etat.adresse} onConnecte={relire} />
+        <Connexion client={client} adresseDepart={etat.adresse} onConnecte={() => { setBrancher(false); relire(); }} onRetour={() => setBrancher(false)} />
       </>
     );
   }
+  const entete = etat.connecte
+    ? <Reglages client={client} adresse={etat.adresse} onDeconnecte={relire} />
+    : (
+      <div className="bo-reglages">
+        <p className="petit">Plateforme non branchée : le studio e-mail marche sans elle, les autres écrans la lisent.</p>
+        <button type="button" className="bouton petit" onClick={() => setBrancher(true)}>Brancher la plateforme</button>
+      </div>
+    );
   return (
     <Administration
-      client={client} initial={initial} ecranInitial={ecranInitial} propsEcran={propsEcran}
-      entete={<Reglages client={client} adresse={etat.adresse} onDeconnecte={relire} />}
+      client={client} initial={initial} propsEcran={propsEcran}
+      ecranInitial={ecranInitial ?? (etat.connecte ? 'plans' : 'emails')}
+      entete={entete}
     />
   );
 }

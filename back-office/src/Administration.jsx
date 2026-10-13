@@ -23,8 +23,10 @@ import Etudes, { lectures as lEtudes } from './ecrans/Etudes.jsx';
 import Devis, { lectures as lDevis } from './ecrans/Devis.jsx';
 import Audit, { lectures as lAudit } from './ecrans/Audit.jsx';
 import Usine, { lectures as lUsine } from './ecrans/Usine.jsx';
+import Emails, { lectures as lEmails } from './ecrans/Emails.jsx';
 
 export const ECRANS = [
+  { id: 'emails', titre: 'Studio e-mail', Composant: Emails, lectures: lEmails, horsPlateforme: true },
   { id: 'plans', titre: 'Plans et prix', Composant: Plans, lectures: lPlans },
   { id: 'boxes', titre: 'Boxes', Composant: Boxes, lectures: lBoxes },
   { id: 'usine', titre: 'Usine', Composant: Usine, lectures: lUsine },
@@ -69,7 +71,7 @@ export default function Administration({ client, initial = {}, ecranInitial = 'p
           <nav className="bo-nav" aria-label="Écrans du back-office">
             <div className="bo-marque">
               <span className="bo-logo">iAgent</span>
-              <span className="bo-sous-marque">Back-office</span>
+              <span className="bo-sous-marque">Admin plateforme</span>
             </div>
             {entete}
             <ul>

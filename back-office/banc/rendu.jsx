@@ -28,6 +28,10 @@ import { corpsNouvelleVersion, etatVersion } from '../src/ecrans/Plans.jsx';
 import { corpsDevis } from '../src/ecrans/Devis.jsx';
 import { corpsProfil } from '../src/ecrans/Personas.jsx';
 import { DECISIONS } from '../src/ecrans/Skills.jsx';
+import { REGLAGES_SMTP_OVH } from '../src/api.js';
+import { MODELES, CATALOGUE, IMAGES_ENVOI, brouillonDepuis, rendreHtml, rendreTexte, manques, preparerEnvoi, empreinteSource, sha256HexNavigateur, numeroDePortrait, agentsDuBrouillon } from '../src/emails/modeles.js';
+import { construire as construireCatalogueEmails } from './catalogue-emails.mjs';
+import temoinEmpreinte from '../temoins/empreinte.json';
 import { reponsesDeBanc, JETON_DE_BANC, plans, etude, boxes, opportunites } from './donnees-de-banc.mjs';
 import temoinsAdresses from '../temoins/adresses.json';
 import temoinsReponses from '../temoins/reponses.json';
@@ -88,6 +92,7 @@ const clientBanc = (table) => creerClientWeb({ adresse: '/plateforme', jeton: JE
 
 // What each screen must show from the bench answers: its proof of reading them.
 const ATTENDU = {
+  emails: ['Prospection · Agents par métier', 'Investisseurs · Dossier premium', 'À propos · Notre différence', 'Aucun envoi groupé', 'une adresse de destinataire valide', 'Aucun e-mail envoyé', 'Remettre le texte du modèle'],
   plans: ['agent-essential', 'masqué', 'legacy', 'ancienne', 'à venir', 'sur devis', 'BE', 'Aucune route de remise'],
   boxes: ['IAB-2026-0001', 'IA-FR-CMD-00000001', 'IA-FR-HOME-00000001', 'Boulangerie Martin (banc)', 'suspendue', 'en stock', 'échue le', 'CPU 23', 'jamais remontée'],
   usine: ['Léa (banc)', 'L-2026-10-A', '3 / 10', 'expiré le', 'Famille Durand (banc)', 'home-box', 'Émettre le jeton', 'usine', 'qualifiee', 'expediee'],
@@ -137,6 +142,68 @@ console.log('\nÉtats ouverts (formulaires, fiches, relectures)');
   }
 }
 
+console.log('\nStudio e-mail');
+{
+  const client = clientBanc(reponsesDeBanc());
+  const smtp = { ...REGLAGES_SMTP_OVH };
+  const pret = { ...brouillonDepuis('prospection-metier'), champs: { ...brouillonDepuis('prospection-metier').champs, destinataire: 'camille@imprimerie-martin.fr', prenom: 'Camille', entreprise: 'Imprimerie Martin' } };
+  const cas = [
+    [{ smtpInitial: smtp }, ['ssl0.ovh.net', 'contact@iagent.agency', 'mot de passe à saisir', 'Régler la boîte']],
+    [{ smtpInitial: { ...smtp, mot_de_passe_present: true }, journalInitial: [{ quand: 1760000000, destinataire: 'a@b.fr', objet: 'Objet de banc', modele: 'bienvenue', empreinte: 'e1', reponse_serveur: '250 2.0.0 Ok' }] }, ['mot de passe enregistré', 'Objet de banc', '250 2.0.0 Ok']],
+    [{ smtpInitial: smtp, ongletInitial: 'agents' }, ['Imprimerie offset et numérique', 'Commercial en imprimerie', 'Deviseur', 'AG-1212']],
+    [{ smtpInitial: smtp, brouillonInitial: pret }, ['Envoyer à camille@imprimerie-martin.fr', 'Imprimerie Martin — rencontrez vos futurs collaborateurs IA']],
+  ];
+  for (const [props, attendus] of cas) {
+    const r = rendre(`studio ${Object.keys(props).join(',')}`, <Administration client={client} initial={{}} ecranInitial="emails" propsEcran={props} />);
+    if (!r) continue;
+    const manquants = attendus.filter((m) => !r.texte.includes(m));
+    verifier(!manquants.length, `studio e-mail ${Object.keys(props).join(', ')} se rend`, `studio e-mail ${Object.keys(props).join(', ')} : absent → ${manquants.join(' | ')}`);
+  }
+
+  // Each of the ten templates renders, for preview and for sending, without poison.
+  const images = { logo: 'logo.png', hero: { investor: 'i.jpg', client: 'c.jpg', marketing: 'm.jpg' }, portrait: (n) => `https://iagent.agency/portraits/agents/${n}.webp` };
+  let propres = 0;
+  for (const m of MODELES) {
+    const b = brouillonDepuis(m.id);
+    for (const html of [rendreHtml(b, images), rendreHtml(b, IMAGES_ENVOI)]) {
+      const t = texteDe(html) + rendreTexte(b);
+      const poison = ['undefined', 'NaN', '[object Object]', 'null'].find((p) => t.includes(p));
+      if (poison) echoue(`modèle ${m.id} : « ${poison} » dans l'e-mail`); else propres++;
+      if (/<script/i.test(html)) echoue(`modèle ${m.id} : un script dans l'e-mail`);
+    }
+    if (/bient[ôo]t|prochainement|à venir|à compléter|à configurer|à héberger/i.test(texteDe(rendreHtml(b, images)) + rendreTexte(b))) echoue(`modèle ${m.id} : une formulation d'avenir ou un trou « à compléter » dans l'e-mail`);
+  }
+  verifier(propres === MODELES.length * 2, `les ${MODELES.length} modèles se rendent, aperçu et envoi`);
+  const envoi = rendreHtml(brouillonDepuis('prospection-metier'), IMAGES_ENVOI);
+  const sources = [...envoi.matchAll(/src="([^"]+)"/g)].map((x) => x[1]);
+  verifier(sources.length > 3 && sources.every((s) => /^cid:(logo|hero-(investor|welcome|marketing)|portrait-a\d{3})$/.test(s)), `à l'envoi, toutes les images sont jointes (${sources.length} cid:), aucune n'est « à héberger »`, `image non jointe : ${sources.filter((s) => !s.startsWith('cid:')).join(', ')}`);
+  verifier(!/portrait-maquette|assets\//.test(envoi), 'aucun portrait de maquette du kit dans un e-mail');
+
+  // Agents: real fiches, real pages, the site's portrait rule.
+  const cartes = agentsDuBrouillon(brouillonDepuis('prospection-metier'));
+  const fiches = new Set(readdirSync(join(DEPOT, 'agents')).map((f) => f.match(/^(AG-\d+)-(.+)\.json$/)).filter(Boolean).map((m) => `${m[1]} ${m[2]}`));
+  verifier(cartes.length === 3 && cartes.every((a) => fiches.has(`${a.id} ${a.slug}`) && a.page === `https://iagent.agency/agents/${a.slug}`), `les agents proposés sont des fiches du catalogue (${cartes.map((a) => a.id).join(', ')})`);
+  const portraitsSite = readFileSync(join(DEPOT, 'frontend/src/data/portraits.js'), 'utf8');
+  const nSite = Number(portraitsSite.match(/NOMBRE_DE_PORTRAITS = (\d+)/)?.[1]);
+  const regleSite = /\(n \* 37\) % PORTRAITS\.length/.test(portraitsSite);
+  verifier(nSite === 428 && regleSite && numeroDePortrait('AG-0001') === 38 && numeroDePortrait('AG-1212') === ((1212 * 37) % 428) + 1, 'un agent a dans l’e-mail le visage qu’il a sur le site');
+  verifier(construireCatalogueEmails(RACINE) === readFileSync(join(RACINE, 'src/emails/catalogue.json'), 'utf8'), `catalogue des e-mails à jour (${CATALOGUE.activites.length} activités, ${Object.keys(CATALOGUE.agents).length} fiches)`, 'src/emails/catalogue.json est périmé : node banc/catalogue-emails.mjs');
+
+  // What blocks sending, and the fingerprint shared with Rust.
+  verifier(manques(brouillonDepuis('bienvenue')).some((m) => m.includes('destinataire')), 'sans destinataire, rien ne peut partir');
+  verifier(manques({ ...pret, champs: { ...pret.champs, destinataire: 'a@b.fr, c@d.fr' } }).length > 0, 'deux adresses à la fois sont refusées');
+  verifier(manques({ ...pret, champs: { ...pret.champs, prenom: '' } }).some((m) => m.includes('prénom')), 'un {{prenom}} vide bloque l’envoi');
+  verifier(!manques(pret).length, 'un brouillon complet peut partir');
+  const sha = await sha256HexNavigateur(empreinteSource(temoinEmpreinte));
+  verifier(sha === temoinEmpreinte.empreinte, 'même empreinte que Rust (temoins/empreinte.json)');
+  const p = await preparerEnvoi(pret, sha256HexNavigateur);
+  verifier(p.empreinte === await sha256HexNavigateur(empreinteSource(p)) && p.html.includes('cid:logo') && p.destinataire === 'camille@imprimerie-martin.fr', 'ce qui part porte l’empreinte de ce qui a été relu');
+  const web = creerClientWeb({ adresse: '/plateforme', stockage: null });
+  let refus = '';
+  try { await web.courriel.envoyer(p); } catch (e) { refus = e.message; }
+  verifier(refus.includes('rien ne part'), 'dans un navigateur, aucun e-mail ne part');
+}
+
 console.log('\nUne erreur de la plateforme s’affiche telle quelle');
 {
   const PHRASE = 'Accès réservé au back-office.';
@@ -151,7 +218,7 @@ console.log('\nUne erreur de la plateforme s’affiche telle quelle');
     verifier(!/IAB-2026|ent-0001|SP-relances|agent-essential|opp-2026|aud-1|\+3318765/.test(r.texte), `« ${e.titre} » n'affiche aucune donnée après un refus`);
   }
   const client = clientBanc(() => ({ statut: 200, corps: { erreur: 'Refus rendu avec un statut 200.' } }));
-  const initial = await precharger(client, ECRANS[0].lectures);
+  const initial = await precharger(client, ECRANS.find((e) => e.id === 'plans').lectures);
   const r = rendre('refus en 200', <Administration client={client} initial={initial} ecranInitial="plans" />);
   verifier(r && r.texte.includes('Refus rendu avec un statut 200.'), 'un corps « erreur » sous un statut 200 reste une erreur');
 
@@ -209,7 +276,7 @@ console.log('\nLe jeton');
   const c2 = creerClientWeb({ adresse: '/plateforme', jeton: JETON_DE_BANC, fetch: f, stockage: null });
   await c2.appeler('boxes');
   verifier(f.appels[0].init.headers.authorization === `Bearer ${JETON_DE_BANC}`, 'le jeton part en Bearer vers la plateforme');
-  const initial = await precharger(c2, ECRANS[1].lectures);
+  const initial = await precharger(c2, ECRANS.find((e) => e.id === 'boxes').lectures);
   const app = rendre('application connectée', <App client={c2} etatInitial={{ adresse: '/plateforme', connecte: true }} initial={initial} ecranInitial="boxes" />);
   verifier(app && !app.html.includes(JETON_DE_BANC) && app.texte.includes('Jeton posé (jamais affiché)'), 'une fois saisi, le jeton n’apparaît nulle part à l’écran');
   const cx = rendre('connexion', <Connexion client={c2} adresseDepart="https://plateforme.exemple.fr" onConnecte={() => {}} />);
@@ -272,7 +339,7 @@ console.log('\nNe pas être indexé, porter la charte');
   verifier(/#e5007e 0%/.test(css) && /#fdc802 97\.49%/.test(css) && /font-family: Montserrat/.test(css), 'Montserrat, du rose #E5007E au jaune #FDC802');
   const conf = JSON.parse(readFileSync(join(RACINE, 'src-tauri/tauri.conf.json'), 'utf8'));
   const confDesktop = JSON.parse(readFileSync(join(DEPOT, 'desktop/src-tauri/tauri.conf.json'), 'utf8'));
-  verifier(conf.identifier !== confDesktop.identifier && conf.productName === 'iAgent Back-office', `identifiant distinct de l’application client (${conf.identifier})`);
+  verifier(conf.identifier !== confDesktop.identifier && conf.productName === 'iAgent Back-office' && conf.app.windows[0].title === 'iAgent Admin plateforme', `identifiant distinct de l’application client (${conf.identifier})`);
 }
 
 if (fautes) {
