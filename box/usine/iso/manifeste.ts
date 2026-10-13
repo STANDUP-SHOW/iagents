@@ -18,8 +18,15 @@ const json = <T = any>(relatif: string): T => JSON.parse(lire(relatif)) as T;
 /** The `version = "x.y.z"` of a Cargo.toml [package] section, or null when the crate is not in the repository yet. */
 export function versionCargo(relatif: string): string | null {
   try {
-    const m = lire(relatif).match(/^\[package\][\s\S]*?^version\s*=\s*"([^"]+)"/m);
-    return m ? m[1] : null;
+    const texte = lire(relatif);
+    const m = texte.match(/^\[package\][\s\S]*?^version\s*=\s*"([^"]+)"/m);
+    if (m) return m[1];
+    // `version.workspace = true`: the version is the one of the workspace root,
+    // the Cargo.toml one level above the crate's folder.
+    if (!/^\[package\][\s\S]*?^version\.workspace\s*=\s*true/m.test(texte)) return null;
+    const racine = relatif.split('/').slice(0, -2).concat('Cargo.toml').join('/');
+    const w = lire(racine).match(/^\[workspace\.package\][\s\S]*?^version\s*=\s*"([^"]+)"/m);
+    return w ? w[1] : null;
   } catch {
     return null;
   }
