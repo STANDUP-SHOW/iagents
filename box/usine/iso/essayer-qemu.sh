@@ -11,7 +11,8 @@
 # ce script a été écrit sans machine Linux sous la main ; sa première exécution
 # est l'étape 13 du plan.
 set -euo pipefail
-ISO="${1:?chemin de l'ISO}"
+[ $# -ge 1 ] || { echo "usage : essayer-qemu.sh <chemin de l'ISO> [--sans-ecran]" >&2; exit 2; }
+ISO="$1"
 shift || true
 ECRAN="-display gtk"
 for a in "$@"; do [ "$a" = "--sans-ecran" ] && ECRAN="-display none"; done

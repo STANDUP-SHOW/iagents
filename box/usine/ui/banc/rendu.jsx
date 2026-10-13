@@ -18,7 +18,8 @@ import { Ecran } from '../src/App.jsx';
 import { qr, qrSvg } from '../src/qr.js';
 
 const ici = (p) => fileURLToPath(new URL(p, import.meta.url));
-const TEMOINS = ici('../../tests/temoins/');
+// The bench runs from banc/dist/, three levels under box/usine/.
+const TEMOINS = ici('../../../tests/temoins/');
 let n = 0;
 let fautes = 0;
 const verifier = (vrai, m, sinon) => { n++; if (vrai) console.log('  ok  ' + m); else { fautes++; console.error('  ✗   ' + (sinon ?? m)); } };
@@ -91,7 +92,10 @@ console.log('\nQR');
   const viseur = (x0, y0) => [0, 6].every((d) => modules[y0 + d][x0] && modules[y0][x0 + d]) && modules[y0 + 3][x0 + 3];
   verifier(viseur(0, 0) && viseur(taille - 7, 0) && viseur(0, taille - 7), 'les trois viseurs sont aux coins');
   verifier(modules[taille - 8][8] === true, 'le module sombre fixe est posé');
-  verifier([...Array(taille).keys()].every((i) => modules[6][i] === (i % 2 === 0) && modules[i][6] === (i % 2 === 0)), 'les motifs de synchronisation alternent');
+  // Timing patterns run between the separators (ISO/IEC 18004 §6.3.5): modules 8 to size-9;
+  // the rest of row and column 6 belongs to the finders.
+  const synchro = [...Array(taille - 16).keys()].map((k) => k + 8);
+  verifier(synchro.every((i) => modules[6][i] === (i % 2 === 0) && modules[i][6] === (i % 2 === 0)), 'les motifs de synchronisation alternent');
   const svg = qrSvg(ref);
   verifier(svg.startsWith('<svg') && svg.includes(`aria-label="QR ${ref}"`) && !svg.includes('undefined'), 'le SVG se produit et nomme la référence');
   let refuse = false;

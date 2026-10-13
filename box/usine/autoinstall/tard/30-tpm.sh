@@ -22,7 +22,7 @@ JOURNAL="$ETAT/chiffrement.log"
 # /cdrom of the live system is visible from the target through curtin's bind mount.
 [ -f "$CLE_USINE" ] || CLE_USINE=/target/cdrom/nocloud/cle-usine
 if [ ! -f "$CLE_USINE" ]; then
-  echo '{"tpm":"non_constate","motif":"clé d'usine introuvable : le réenrôlement n'a pas eu lieu"}' > "$ETAT/etat.json"
+  printf '%s\n' "{\"tpm\":\"non_constate\",\"motif\":\"clé d'usine introuvable : le réenrôlement n'a pas eu lieu\"}" > "$ETAT/etat.json"
   echo "clé d'usine introuvable, DATA garde la clé de l'ISO" >> "$JOURNAL"
   exit 0
 fi
