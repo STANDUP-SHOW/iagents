@@ -44,6 +44,10 @@ export function construire(racine = RACINE_ICI) {
   return JSON.stringify({ source: 'catalogue/personnel.json, catalogue/activites.json, agents/ (banc/catalogue-emails.mjs)', activites: liste, organigrammes, agents: tries }) + '\n';
 }
 
+// A Windows checkout may turn the final \n into \r\n (core.autocrlf): the
+// content is the same file.
+export const memeContenu = (a, b) => a.replace(/\r\n/g, '\n') === b.replace(/\r\n/g, '\n');
+
 // Bundled into the bench, this file shares the bench's URL: run only when called by name.
 if (process.argv[1]?.endsWith('catalogue-emails.mjs') && fileURLToPath(import.meta.url) === process.argv[1]) {
   const SORTIE = join(RACINE_ICI, 'src/emails/catalogue.json');
@@ -51,7 +55,7 @@ if (process.argv[1]?.endsWith('catalogue-emails.mjs') && fileURLToPath(import.me
   if (process.argv.includes('--verifier')) {
     let present = '';
     try { present = readFileSync(SORTIE, 'utf8'); } catch { /* absent */ }
-    if (present !== attendu) { console.error('src/emails/catalogue.json est périmé : lancer node banc/catalogue-emails.mjs'); process.exit(1); }
+    if (!memeContenu(present, attendu)) { console.error('src/emails/catalogue.json est périmé : lancer node banc/catalogue-emails.mjs'); process.exit(1); }
     console.log('catalogue des e-mails à jour');
   } else {
     writeFileSync(SORTIE, attendu);

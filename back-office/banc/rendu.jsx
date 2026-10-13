@@ -30,7 +30,7 @@ import { corpsProfil } from '../src/ecrans/Personas.jsx';
 import { DECISIONS } from '../src/ecrans/Skills.jsx';
 import { REGLAGES_SMTP_OVH } from '../src/emails/client.js';
 import { MODELES, CATALOGUE, IMAGES_ENVOI, brouillonDepuis, rendreHtml, rendreTexte, manques, preparerEnvoi, empreinteSource, sha256HexNavigateur, numeroDePortrait, agentsDuBrouillon } from '../src/emails/modeles.js';
-import { construire as construireCatalogueEmails } from './catalogue-emails.mjs';
+import { construire as construireCatalogueEmails, memeContenu } from './catalogue-emails.mjs';
 import temoinEmpreinte from '../temoins/empreinte.json';
 import { reponsesDeBanc, JETON_DE_BANC, plans, etude, boxes, opportunites } from './donnees-de-banc.mjs';
 import temoinsAdresses from '../temoins/adresses.json';
@@ -187,7 +187,7 @@ console.log('\nStudio e-mail');
   const nSite = Number(portraitsSite.match(/NOMBRE_DE_PORTRAITS = (\d+)/)?.[1]);
   const regleSite = /\(n \* 37\) % PORTRAITS\.length/.test(portraitsSite);
   verifier(nSite === 428 && regleSite && numeroDePortrait('AG-0001') === 38 && numeroDePortrait('AG-1212') === ((1212 * 37) % 428) + 1, 'un agent a dans l’e-mail le visage qu’il a sur le site');
-  verifier(construireCatalogueEmails(RACINE) === readFileSync(join(RACINE, 'src/emails/catalogue.json'), 'utf8'), `catalogue des e-mails à jour (${CATALOGUE.activites.length} activités, ${Object.keys(CATALOGUE.agents).length} fiches)`, 'src/emails/catalogue.json est périmé : node banc/catalogue-emails.mjs');
+  verifier(memeContenu(construireCatalogueEmails(RACINE), readFileSync(join(RACINE, 'src/emails/catalogue.json'), 'utf8')), `catalogue des e-mails à jour (${CATALOGUE.activites.length} activités, ${Object.keys(CATALOGUE.agents).length} fiches)`, 'src/emails/catalogue.json est périmé : node banc/catalogue-emails.mjs');
 
   // What blocks sending, and the fingerprint shared with Rust.
   verifier(manques(brouillonDepuis('bienvenue')).some((m) => m.includes('destinataire')), 'sans destinataire, rien ne peut partir');
