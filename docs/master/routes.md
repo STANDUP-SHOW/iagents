@@ -116,23 +116,31 @@ machine : `GET /v1/openapi.json` (OpenAPI 3.1).
 | POST | /v1/sessions | public | `{acteur_id, cle, code?}` → jeton (humain 12 h, agent 15 min, service 1 h) ; `code` = second facteur une fois activé ; un seul message de refus |
 | GET | /v1/moi | acteur | qui je suis, mes rôles, second facteur ouvert ou non |
 | GET | /v1/registre | acteur | rôles, permissions, catalogue des actions avec leur risque |
-| POST / GET | /v1/acteurs | core.actor.manage | créer `{type, nom_affiche, roles, autonomie?, budgets?, departement?}` (la clé n'est rendue qu'ici) / lister sans clés |
-| POST | /v1/acteurs/:id/statut | core.actor.manage | `{statut: actif|suspendu|retire, motif}` ; suspendre révoque les jetons |
-| POST | /v1/moi/mfa, /v1/moi/mfa/confirmer | acteur | ouvrir puis confirmer le second facteur (TOTP, application d'authentification) |
-| GET | /v1/vue-ensemble | fleet.device.read | compteurs de la flotte, approbations et incidents ouverts |
-| GET | /v1/devices | fleet.device.read | `?tenant_id&statut&connexion&gamme&curseur&limite` ; limité au périmètre de l'acteur |
-| GET | /v1/devices/:id | fleet.device.read | une Box, sa connexion, sa santé, ses écarts ; jamais de clé |
-| GET / PUT | /v1/devices/:id/desired-state | fleet.device.read / fleet.device.desired.update | état voulu (versions, agents RUN/HOLD/STOP, politiques) ; PUT passe par la passerelle |
+| POST | /v1/acteurs | acteur | core.actor.manage : créer `{type, nom_affiche, roles, autonomie?, budgets?, departement?}` ; la clé n'est rendue qu'ici |
+| GET | /v1/acteurs | acteur | core.actor.manage : lister, sans clés |
+| POST | /v1/acteurs/:id/statut | acteur | core.actor.manage : `{statut: actif|suspendu|retire, motif}` ; suspendre révoque les jetons |
+| POST | /v1/moi/mfa | acteur | ouvrir le second facteur (TOTP, application d'authentification) |
+| POST | /v1/moi/mfa/confirmer | acteur | `{code}` : le confirmer |
+| GET | /v1/vue-ensemble | acteur | fleet.device.read : compteurs de la flotte, approbations et incidents ouverts |
+| GET | /v1/devices | acteur | fleet.device.read : `?q&tenant_id&statut&connexion&gamme&apres&limite` (réponse `{elements, suivant}`), limité au périmètre de l'acteur |
+| GET | /v1/devices/:id | acteur | fleet.device.read : une Box, sa connexion, sa santé, ses écarts ; jamais de clé |
+| GET | /v1/devices/:id/desired-state | acteur | fleet.device.read : état voulu (versions, agents RUN/HOLD/STOP, politiques) |
+| PUT | /v1/devices/:id/desired-state | acteur | fleet.device.desired.update : changer l'état voulu, par la passerelle |
 | POST | /v1/devices/:id/commands | acteur | `{type, parametres, motif, idempotence}` → action de la passerelle (`restart_service`, `restart_box`, `update`, `factory_reset`…) |
 | POST | /v1/devices/:id/diagnostics | acteur | raccourci du diagnostic (R1) |
-| POST | /v1/agents/:id/{pause,resume,suspend,terminate} | acteur | cycle de vie d'un agent (droit d'exécution) |
-| POST / GET | /v1/actions | acteur | `{action, ressource, parametres, motif, idempotence}` / mes actions |
-| GET | /v1/approbations | core.approval.decide | boîte des approbations |
-| POST | /v1/approbations/:id/decision | core.approval.decide | `{decision: approuver|refuser, note}` ; le demandeur ne tranche pas sa propre demande ; R4 = deux personnes |
-| GET | /v1/evenements | core.event.read | `?apres=<seq>&type=` |
-| GET | /v1/incidents, POST /v1/incidents/:id/etat | fleet.device.read / core.incident.manage | incidents et leur cycle |
-| GET | /v1/audit | security.audit.read | journal, avec politique, risque, approbation, résultat, corrélation |
-| POST | /v1/balayage | core.sweep.run | Box sans battement → hors ligne, commandes et approbations expirées, lettres mortes rejouées |
+| POST | /v1/agents/:id/pause | acteur | platform.agent.pause (R2) |
+| POST | /v1/agents/:id/resume | acteur | platform.agent.resume (R2) |
+| POST | /v1/agents/:id/suspend | acteur | platform.agent.suspend (R3) |
+| POST | /v1/agents/:id/terminate | acteur | platform.agent.terminate (R3) |
+| POST | /v1/actions | acteur | `{verbe, parametres, motif, idempotence}` |
+| GET | /v1/actions | acteur | actions visibles par l'acteur |
+| GET | /v1/approbations | acteur | core.approval.decide : boîte des approbations |
+| POST | /v1/approbations/:id/decision | acteur | core.approval.decide : `{decision: approuve|refuse|clarification, note}` ; le demandeur ne tranche pas sa propre demande ; R4 = deux personnes |
+| GET | /v1/evenements | acteur | core.event.read : `?apres=<seq>&type=` |
+| GET | /v1/incidents | acteur | fleet.device.read : incidents |
+| POST | /v1/incidents/:id/etat | acteur | core.incident.manage : `{etat, note}` |
+| GET | /v1/audit | acteur | security.audit.read : journal, avec politique, risque, approbation, résultat, corrélation |
+| POST | /v1/balayage | acteur | core.sweep.run : Box sans battement → hors ligne, commandes et approbations expirées, lettres mortes rejouées |
 | POST | /v1/box/battement | box | `{uptime_s, sante?}` → `{prochain_dans_s}` (60 s ± gigue) |
 | GET | /v1/box/etat-voulu | box | état voulu et sa version |
 | POST | /v1/box/etat-reel | box | `{version_appliquee, reel}` → écarts, `convergee` |
