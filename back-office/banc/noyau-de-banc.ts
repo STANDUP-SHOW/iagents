@@ -10,6 +10,7 @@
 // writes banc/noyau.genere.json, read by banc/rendu.jsx (`npm run banc` runs it first).
 // If the core changes the shape of an answer, the screens are rendered on the new shape.
 import { writeFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { traiterRequete, type Reponse, type Socle } from '../../plateforme/http.ts';
 import { Stockage } from '../../plateforme/stockage.ts';
 import { toutesLesRoutes } from '../../plateforme/assemblage.ts';
@@ -77,7 +78,8 @@ export async function monde({ stockage = new Stockage(null), depart = new Date('
   return { reponses, ids: { fournil: fournil.box.device_id, cabinet: cabinet.box.device_id, neuve: neuve.box.device_id, ines: ines.acteur.id, laura: laura.acteur.id } };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// pathToFileURL, not `file://${argv[1]}`: on Windows argv[1] is D:\… and the test never matched.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const m = await monde();
   writeFileSync(new URL('./noyau.genere.json', import.meta.url), JSON.stringify(m, null, 1) + '\n');
   console.log(`noyau de banc : ${Object.keys(m.reponses).length} réponses du vrai noyau écrites dans banc/noyau.genere.json`);
