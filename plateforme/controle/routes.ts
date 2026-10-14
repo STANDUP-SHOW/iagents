@@ -229,8 +229,27 @@ function jetonUsineDe(stockage: Stockage, entetes: Record<string, string>, maint
   const jeton = stockage.lister<JetonUsine>('jetons_usine').find((j) => memeSecret(j.empreinte, empreinte));
   if (!jeton) non(401, "Enrôlement refusé : ce jeton d'usine n'est pas reconnu.");
   if (Date.parse(jeton!.expire_le) <= maintenant.getTime()) non(401, `Enrôlement refusé : ce jeton d'usine a expiré le ${jeton!.expire_le}. Demandez-en un nouveau au back-office.`);
-  if (jeton!.utilisations >= jeton!.utilisations_max) non(401, `Enrôlement refusé : ce jeton d'usine a servi ses ${jeton!.utilisations_max} fois.`);
   return jeton!;
+}
+
+/**
+ * A Box whose enrolment answer was lost (network cut during the reply) sends the
+ * same request again: same token, same serial, same public key. It gets its own
+ * record back, unchanged: no second reference, no second use of the token
+ * (ADMIN MASTER of 14/10/2026, §22: "Device enrollment 100% idempotent").
+ * The same serial with another key stays a 409 in lireIdentiteBox.
+ */
+function dejaEnrolee(stockage: Stockage, c: Record<string, unknown>, jeton: JetonUsine): Box | null {
+  const serial = typeof c.serial === 'string' ? c.serial : null;
+  const brut = typeof c.identite_publique === 'string' ? c.identite_publique : null;
+  if (!serial || !brut || /PRIVATE KEY/.test(brut)) return null;
+  let empreinte: string;
+  try {
+    empreinte = empreinteCle(createPublicKey(brut).export({ type: 'spki', format: 'pem' }).toString());
+  } catch {
+    return null;
+  }
+  return stockage.lister<Box>('boxes').find((b) => b.serial === serial && b.usine?.jeton_id === jeton.id && empreinteCle(b.identite_publique) === empreinte) ?? null;
 }
 
 /** Rights this Box may use right now: its tenant's active entitlements, in their dates. */
@@ -368,6 +387,9 @@ export const routes: Route[] = [
       const now = maintenant();
       const jeton = jetonUsineDe(stockage, entetes, now);
       const c = objet(corps);
+      const deja = dejaEnrolee(stockage, c, jeton);
+      if (deja) return ok(deja, 200);
+      if (jeton.utilisations >= jeton.utilisations_max) non(401, `Enrôlement refusé : ce jeton d'usine a servi ses ${jeton.utilisations_max} fois.`);
       const identite = lireIdentiteBox(stockage, c);
       const profil_materiel = lireProfilMateriel(c, identite.gamme);
       const inventaire = lireInventaire(c);

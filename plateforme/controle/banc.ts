@@ -377,7 +377,7 @@ export async function lancer(): Promise<number> {
     verifier("enrôler sans jeton est refusé", (await enroler('', machine('SN-U1', kU))).statut === 401);
     verifier("enrôler avec un jeton inconnu est refusé", (await enroler('UF-inconnu', machine('SN-U1', kU))).statut === 401);
     verifier("un profil matériel inconnu de la plateforme est refusé", (await enroler(jetonA, machine('SN-U1', kU, { profil_materiel: 'nuc-13' }))).statut === 400);
-    verifier("un profil qui ne sert pas la gamme est refusé", (await enroler(jetonA, machine('SN-U1', kU, { profil_materiel: 'exr1' }))).statut === 409);
+    verifier("un profil qui ne sert pas la gamme est refusé", (await enroler(jetonA, machine('SN-U1', kU, { profil_materiel: 'exr1-home-v1' }))).statut === 409);
     verifier("une adresse MAC mal formée est refusée", (await enroler(jetonA, machine('SN-U1', kU, { inventaire: { ...inventaire, mac: { ...inventaire.mac, eth0: 'pas-une-mac' } } }))).statut === 400);
     verifier("un installateur sans commit git est refusé", (await enroler(jetonA, machine('SN-U1', kU, { installateur: { version: '0.1.0', build_id: 'x' } }))).statut === 400);
     r = await enroler(jetonA, machine('SN-U1', kU));
@@ -385,6 +385,11 @@ export async function lancer(): Promise<number> {
     verifier("une Box enrôlée par l'usine est « usine », référencée, avec son inventaire et son profil", r.statut === 201 && bU?.statut === 'usine' && bU?.reference === 'IA-FR-CMD-00000004'
       && bU?.profil_materiel === 'vm-qemu' && bU?.inventaire?.mac?.eth0 === 'a8:b1:c2:d3:e4:f5' && bU?.usine?.operateur === 'Léa' && bU?.usine?.lot === 'L-2026-10-A' && bU?.tenant_id === null);
     verifier("la même série ne s'enrôle pas deux fois", (await enroler(jetonA, machine('SN-U1', kV))).statut === 409);
+    // ADMIN MASTER 14/10/2026 §22: the answer was lost, the Box sends the same request again.
+    r = await enroler(jetonA, machine('SN-U1', kU));
+    verifier("la même Box qui renvoie son enrôlement retrouve sa fiche, sans nouvelle référence ni utilisation du jeton",
+      r.statut === 200 && r.corps?.device_id === bU.device_id && r.corps?.reference === bU.reference
+      && (await admin('GET', '/controle/usine/jetons')).corps?.find((j: any) => j.lot === 'L-2026-10-A')?.utilisations === 1);
     verifier("une Box « usine » n'a aucun droit", (await parBox(kU.privateKey, bU.device_id, 'GET', '/controle/box/droits')).statut === 403);
     verifier("une Box « usine » ne s'attribue pas", (await admin('POST', `/controle/boxes/${bU.device_id}/attribuer`, { tenant_id: tA.tenant_id, plan_id: 'box-commander-36' })).statut === 409);
     verifier("usine → stock à la main est refusé : il faut un rapport qui passe", (await admin('POST', `/controle/boxes/${bU.device_id}/statut`, { statut: 'stock', motif: 'essai' })).statut === 409);
@@ -398,7 +403,7 @@ export async function lancer(): Promise<number> {
     });
     const deposer = (k: KeyObject, b: any, corps: unknown) => parBox(k, b.device_id, 'POST', '/controle/box/usine/rapport', corps);
     verifier("un rapport d'une autre gamme est refusé", (await deposer(kU.privateKey, bU, rapport(tousPasses, { gamme: 'home' }))).statut === 409);
-    verifier("un rapport d'un autre profil matériel est refusé", (await deposer(kU.privateKey, bU, rapport(tousPasses, { profil_materiel: 'bosgame-m4-neo' }))).statut === 409);
+    verifier("un rapport d'un autre profil matériel est refusé", (await deposer(kU.privateKey, bU, rapport(tousPasses, { profil_materiel: 'bosgame-m4-neo-v1' }))).statut === 409);
     verifier("un rapport d'une autre série est refusé", (await deposer(kU.privateKey, bU, rapport(tousPasses, { serial: 'SN-U9' }))).statut === 409);
     verifier("un rapport sans test est refusé", (await deposer(kU.privateKey, bU, rapport([]))).statut === 400);
     verifier("un test en double est refusé", (await deposer(kU.privateKey, bU, rapport([...tousPasses, test('disque')]))).statut === 400);
