@@ -25,6 +25,16 @@ async fn plateforme_appeler(app: tauri::AppHandle, nom: String, methode: String,
 }
 
 #[tauri::command]
+async fn session_ouvrir(app: tauri::AppHandle, acteur_id: String, cle: String, code: Option<String>) -> Result<String, admin::ErreurAppel> {
+    let dossier = dossier_reglages(&app).map_err(|e| admin::ErreurAppel { erreur: e, statut: 0, plateforme: false })?;
+    let adresse = admin::adresse_lire(&dossier);
+    if adresse.is_empty() {
+        return Err(admin::ErreurAppel { erreur: "Aucune adresse de plateforme n'est réglée : rien n'a été envoyé.".into(), statut: 0, plateforme: false });
+    }
+    admin::session_ouvrir(&adresse, &acteur_id, &cle, code.as_deref()).await
+}
+
+#[tauri::command]
 fn jeton_poser(jeton: String) -> Result<String, String> {
     admin::jeton_poser(&jeton)
 }
@@ -93,7 +103,7 @@ fn courriel_journal(app: tauri::AppHandle) -> Result<Vec<admin::courriel::Trace>
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            plateforme_appeler, jeton_poser, jeton_present, jeton_oublier, adresse_lire, adresse_poser,
+            plateforme_appeler, session_ouvrir, jeton_poser, jeton_present, jeton_oublier, adresse_lire, adresse_poser,
             smtp_reglages, smtp_poser_reglages, smtp_poser_mot_de_passe, smtp_oublier_mot_de_passe, courriel_envoyer, courriel_journal
         ])
         .run(tauri::generate_context!())

@@ -56,20 +56,27 @@ const capturer = async (nom) => {
 
 try {
   await page.goto(`http://127.0.0.1:${PORT_PAGE}/`);
-  await page.getByLabel('Jeton du back-office').waitFor();
+  await page.getByRole('button', { name: 'Brancher la plateforme' }).click();
+  await page.locator('input[type=password]').waitFor();
   await page.getByLabel('Adresse de la plateforme').fill('/plateforme');
-  await page.getByLabel('Jeton du back-office').fill(JETON_DE_BANC);
+  await page.locator('input[type=password]').fill(JETON_DE_BANC);
   await capturer('connexion');
-  await page.getByRole('button', { name: 'Ouvrir le back-office' }).click();
-  await page.getByRole('navigation').waitFor();
+  await page.getByRole('button', { name: 'Brancher la plateforme' }).click();
+  await page.getByRole('navigation', { name: 'Écrans du back-office' }).waitFor();
   const html = await page.content();
   if (html.includes(JETON_DE_BANC)) throw new Error('le jeton apparaît dans la page après la saisie');
 
-  for (const id of ['plans', 'boxes', 'licences', 'voix', 'catalogue', 'personas', 'skills', 'opportunites', 'etudes', 'devis', 'audit']) {
+  for (const id of ['flotte', 'incidents', 'approbations', 'equipe', 'journal', 'plans', 'boxes', 'licences', 'voix', 'catalogue', 'personas', 'skills', 'opportunites', 'etudes', 'devis', 'audit']) {
     await page.goto(`http://127.0.0.1:${PORT_PAGE}/#/${id}`);
     await page.locator('.bo-titre').waitFor();
     await capturer(id);
   }
+
+  // Fleet: a Box's sheet, and a command left waiting for a second person.
+  await page.goto(`http://127.0.0.1:${PORT_PAGE}/#/flotte`);
+  await page.locator('tr', { hasText: 'IA-FR-CMD-00000001' }).getByRole('button', { name: 'Ouvrir' }).click();
+  await page.getByText('Fiche de la Box').waitFor();
+  await capturer('flotte-fiche');
 
   // Actions: what the platform answers is what is shown.
   await page.goto(`http://127.0.0.1:${PORT_PAGE}/#/opportunites`);

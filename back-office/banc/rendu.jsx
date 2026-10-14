@@ -10,7 +10,7 @@
  * Then the guards, each one failing if its rule is undone:
  *  - a platform error is shown verbatim, never as a success;
  *  - the token is never rendered nor stored in the browser;
- *  - only `admin` and `public` routes of docs/master/routes.md are callable;
+ *  - only `admin`, `public` and `acteur` (core) routes of docs/master/routes.md are callable;
  *  - the web build is noindex;
  *  - the charte gradient is the one of desktop/src/charte.css;
  *  - JS and Rust read addresses and answers the same way (temoins/).
@@ -34,6 +34,11 @@ import { construire as construireCatalogueEmails, memeContenu } from './catalogu
 import temoinEmpreinte from '../temoins/empreinte.json';
 import { reponsesDeBanc, JETON_DE_BANC, plans, etude, boxes, opportunites } from './donnees-de-banc.mjs';
 import temoinsAdresses from '../temoins/adresses.json';
+// Answers of the REAL admin core, written by banc/noyau-de-banc.ts just before this bench.
+import noyau from './noyau.genere.json';
+import { corpsActeur } from '../src/ecrans/Equipe.jsx';
+import { corpsCommande } from '../src/ecrans/Flotte.jsx';
+import { issueAction } from '../src/ecrans/noyau.jsx';
 import temoinsReponses from '../temoins/reponses.json';
 
 const ici = (p) => fileURLToPath(new URL(p, import.meta.url));
@@ -88,6 +93,7 @@ function rendre(quoi, element) {
   }
 }
 
+const avecNoyau = (table) => ({ ...table, ...noyau.reponses });
 const clientBanc = (table) => creerClientWeb({ adresse: '/plateforme', jeton: JETON_DE_BANC, fetch: fauxFetch(table), stockage: null });
 
 // What each screen must show from the bench answers: its proof of reading them.
@@ -105,11 +111,16 @@ const ATTENDU = {
   etudes: ['Nouvelle étude', 'GET /create/projets', 'Secrétariat juridique'],
   devis: ['Aucune route de demande de devis', 'POST /devis/demandes', 'Agent Essential', 'Chiffrer'],
   audit: ['entitlement.revoquer', 'impayé de septembre', 'BOX-7F3A', 'muette depuis', 'GET /controle/telemetrie'],
+  flotte: ['IA-FR-CMD-00000001', 'en ligne', 'hors ligne', 'jamais vue', 'Incidents ouverts', 'Hors état voulu', 'Chercher les Box muettes'],
+  incidents: [`Box ${noyau.ids.cabinet} hors ligne`, 'détecté', 'majeure', 'trié', 'en surveillance', 'Passer'],
+  approbations: ['Accorder une remise', "Remettre la Box en sortie d'usine", 'R4 critique', 'R2 modéré', 'Contrat de trois boutiques', 'Approuver', 'Demander une précision'],
+  equipe: ['Laura Support (banc)', 'Inès (flotte, banc)', 'clé du fondateur', '2 · agit en risque faible', 'Créer l’acteur', 'sales.discount.apply', 'en attente d’approbation', 'exécutée'],
+  journal: ['fleet.device.diagnostic', 'Lenteur signalée au téléphone', 'device.offline', 'actor.created', 'ALLOW'],
 };
 
 console.log('Écrans, avec les réponses de banc');
 for (const e of ECRANS) {
-  const client = clientBanc(reponsesDeBanc());
+  const client = clientBanc(avecNoyau(reponsesDeBanc()));
   const initial = await precharger(client, e.lectures);
   const r = rendre(`écran « ${e.titre} »`, <Administration client={client} initial={initial} ecranInitial={e.id} />);
   if (!r) continue;
@@ -121,8 +132,10 @@ verifier(Object.keys(ATTENDU).length === ECRANS.length && ECRANS.every((e) => AT
 
 console.log('\nÉtats ouverts (formulaires, fiches, relectures)');
 {
-  const client = clientBanc(reponsesDeBanc());
+  const client = clientBanc(avecNoyau(reponsesDeBanc()));
   const cas = [
+    ['flotte', { boxInitiale: noyau.ids.fournil }, [`Fiche de la Box ${noyau.ids.fournil}`, 'AG-0179', 'restart_service simulé : ok', 'Redémarrer un service', 'Mettre fin au contrat', 'rejoint (v1)', 'Envoyer la commande']],
+    ['flotte', { boxInitiale: noyau.ids.cabinet }, [`Fiche de la Box ${noyau.ids.cabinet}`, 'hors ligne', 'Aucun agent sur cette Box', `Box ${noyau.ids.cabinet} hors ligne`]],
     ['plans', { versionInitiale: 'agent-essential' }, ['Nouvelle version de agent-essential', 'rien n\'est écrasé', 'Enregistrer la version']],
     ['plans', { versionInitiale: '' }, ['Nouveau plan : sa première version']],
     ['boxes', { boxInitiale: boxes[0].device_id }, [`Fiche de la Box ${boxes[0].device_id}`, 'clé publique Ed25519 enregistrée', 'box-commander-36', "Rapports d'usine", 'PASS', 'NON CONSTATÉ', '1 rapport(s) antérieur(s)', 'FAIL le', 'IA-FR-CMD-00000001', "Imprimer l'étiquette"]],
@@ -132,8 +145,9 @@ console.log('\nÉtats ouverts (formulaires, fiches, relectures)');
   for (const [id, props, attendus] of cas) {
     const e = ECRANS.find((x) => x.id === id);
     const lectures = [...e.lectures];
-    if (props.boxInitiale) lectures.push(['box', { params: { id: props.boxInitiale } }], ['rapportsBox', { params: { id: props.boxInitiale } }], ['etiquetteBox', { params: { id: props.boxInitiale } }]);
+    if (props.boxInitiale && id === 'boxes') lectures.push(['box', { params: { id: props.boxInitiale } }], ['rapportsBox', { params: { id: props.boxInitiale } }], ['etiquetteBox', { params: { id: props.boxInitiale } }]);
     if (props.etudeInitiale) lectures.push(['etude', { params: { id: props.etudeInitiale } }]);
+    if (id === 'flotte') lectures.push(['v1Device', { params: { id: props.boxInitiale } }]);
     const initial = await precharger(client, lectures);
     const r = rendre(`${id} ${JSON.stringify(props)}`, <Administration client={client} initial={initial} ecranInitial={id} propsEcran={props} />);
     if (!r) continue;
@@ -267,6 +281,43 @@ console.log('\nLes formulaires construisent ce que le contrat attend');
     'la revue propose en-revue, valider, rejeter, retirer');
 }
 
+console.log('\nNoyau : gestes, attentes et comptes personnels');
+{
+  const c = corpsCommande('restart_service', { service: 'iagent-commander', composant: 'desktop', version: '', duree_min: 15 }, 'écran figé', 'k1');
+  verifier(c.type === 'restart_service' && c.parametres.service === 'iagent-commander' && c.parametres.motif === 'écran figé' && c.idempotence === 'k1', 'une commande part avec son service, son motif et sa clé d’idempotence');
+  const attente = { action: { statut: 'en_attente', decision: { motif: 'Action critique (R4)', approbations_requises: 1 } }, approbation: { requises: 1 } };
+  verifier(issueAction(attente).startsWith('en attente') && !/exécutée/.test(issueAction(attente)), 'une action en attente ne se lit jamais « exécutée »');
+  const { IssueAction } = await import('../src/ecrans/noyau.jsx');
+  const r = rendre('issue en attente', <div className="bo"><IssueAction etat={{ statut: 'fait', corps: attente }} /></div>);
+  verifier(r && r.texte.includes('Pas encore faite') && !r.texte.includes('La plateforme a répondu'), 'à l’écran, une action retenue pour approbation dit « Pas encore faite »');
+  let refus = '';
+  try { corpsActeur({ type: 'AGENT', nom_affiche: 'Laura', role: 'SUPPORT_L1', scope: 'TENANT', scope_id: ' ', autonomie: 2, departement: '', remise: '', credit: '', remboursement: '' }); } catch (e) { refus = e.message; }
+  verifier(refus.includes('identifiant'), 'un rôle limité à un client sans identifiant est refusé avant envoi');
+  const a = corpsActeur({ type: 'AGENT', nom_affiche: 'Laura', role: 'SUPPORT_L1', scope: 'TENANT', scope_id: 'T-1', autonomie: '2', departement: 'support', remise: '5', credit: '', remboursement: '0' });
+  verifier(a.autonomie === 2 && a.roles[0].scope.id === 'T-1' && a.budgets.remise_max_pct === 5 && a.budgets.remboursement_max_eur === 0 && !('credit_max_eur' in a.budgets), 'un acteur part avec son périmètre, son autonomie et ses seuls plafonds saisis');
+
+  // A refused action: the core's sentence, verbatim.
+  const refuseCorps = { erreur: "Laura Support n'a pas la permission fleet.device.reset.factory sur ce périmètre." };
+  const cRefus = clientBanc((cle) => (cle.startsWith('POST /v1/devices/') ? { statut: 403, corps: { ...refuseCorps, action: { statut: 'refusee' } } } : { statut: 404, corps: { erreur: 'non' } }));
+  const out = await executer(cRefus.appeler('v1Commande', { params: { id: 'BOX-1' }, corps: corpsCommande('factory_reset', {}, 'x', 'k') }));
+  verifier(!out.ok && out.erreur === refuseCorps.erreur, 'une action refusée par les règles s’affiche avec la phrase du noyau');
+
+  // Personal account: the key goes once to /v1/sessions, without the founder's token; the session token then rides as Bearer.
+  const stock = new Map();
+  const faux = { getItem: (k) => stock.get(k) ?? null, setItem: (k, v) => stock.set(k, String(v)), removeItem: (k) => stock.delete(k) };
+  const JETON_SESSION = 'iat_jeton-de-session-de-banc-0123456789abcdef';
+  const f = fauxFetch((cle) => (cle === 'POST /v1/sessions' ? { statut: 200, corps: { jeton: JETON_SESSION, expire_le: '2026-10-14T20:00:00Z', mfa: true } } : { statut: 200, corps: noyau.reponses['GET /v1/moi'] }));
+  const cp = creerClientWeb({ adresse: '/plateforme', fetch: f, stockage: faux });
+  const msg = await cp.session.ouvrir({ acteur_id: 'HUM-1', cle: 'iak_cle-personnelle-de-banc', code: '123456' });
+  await cp.appeler('v1Moi');
+  const envoi = JSON.parse(f.appels[0].init.body);
+  verifier(!f.appels[0].init.headers.authorization && envoi.cle === 'iak_cle-personnelle-de-banc' && envoi.code === '123456', 'la session s’ouvre sans jeton, avec la clé et le code');
+  verifier(f.appels[1].init.headers.authorization === `Bearer ${JETON_SESSION}` && msg.includes('avec second facteur') && !msg.includes(JETON_SESSION), 'le jeton de session part ensuite en Bearer, et n’est jamais rendu à l’écran');
+  verifier([...stock.values()].every((v) => !v.includes(JETON_SESSION) && !v.includes('iak_')), 'ni la clé ni la session ne sont rangées dans le navigateur');
+  const cx = rendre('connexion personnelle', <Connexion client={cp} adresseDepart="https://plateforme.exemple.fr" onConnecte={() => {}} modeInitial="personnel" />);
+  verifier(cx && cx.texte.includes('Ouvrir ma session') && cx.texte.includes('Code à 6 chiffres') && /type="password"/.test(cx.html), 'le formulaire de compte personnel demande identifiant, clé masquée et code');
+}
+
 console.log('\nLe jeton');
 {
   const stock = new Map();
@@ -282,7 +333,7 @@ console.log('\nLe jeton');
   verifier(f.appels[0].init.headers.authorization === `Bearer ${JETON_DE_BANC}`, 'le jeton part en Bearer vers la plateforme');
   const initial = await precharger(c2, ECRANS.find((e) => e.id === 'boxes').lectures);
   const app = rendre('application connectée', <App client={c2} etatInitial={{ adresse: '/plateforme', connecte: true }} initial={initial} ecranInitial="boxes" />);
-  verifier(app && !app.html.includes(JETON_DE_BANC) && app.texte.includes('Jeton posé (jamais affiché)'), 'une fois saisi, le jeton n’apparaît nulle part à l’écran');
+  verifier(app && !app.html.includes(JETON_DE_BANC) && app.texte.includes('Jeton ou session posé (jamais affiché)'), 'une fois saisi, le jeton n’apparaît nulle part à l’écran');
   const cx = rendre('connexion', <Connexion client={c2} adresseDepart="https://plateforme.exemple.fr" onConnecte={() => {}} />);
   verifier(cx && /type="password"/.test(cx.html) && !cx.html.includes(JETON_DE_BANC), 'la saisie du jeton est masquée et vide');
   const sources = [];
@@ -293,17 +344,17 @@ console.log('\nLe jeton');
   verifier(!fautifs.length, 'aucun écran ne range le jeton dans le navigateur (sessionStorage, cookie)', `stockage du jeton dans ${fautifs.join(', ')}`);
 }
 
-console.log('\nRoutes : admin et public de docs/master/routes.md, rien d’autre');
+console.log('\nRoutes : admin, public et acteur (noyau) de docs/master/routes.md, rien d’autre');
 {
   const contrat = new Map();
   for (const ligne of readFileSync(join(DEPOT, 'docs/master/routes.md'), 'utf8').split('\n')) {
-    const m = ligne.match(/^\|\s*(GET|POST|PUT|DELETE)\s*\|\s*(\/[^\s|]+)\s*\|\s*(public|admin|box)\s*\|/);
+    const m = ligne.match(/^\|\s*(GET|POST|PUT|DELETE)\s*\|\s*(\/[^\s|]+)\s*\|\s*(public|admin|box|acteur)\s*\|/);
     if (m) contrat.set(`${m[1]} ${m[2]}`, m[3]);
   }
   verifier(contrat.size > 40, `${contrat.size} routes lues dans le contrat`);
-  const horsContrat = Object.entries(ROUTES).filter(([, [methode, p]]) => !['admin', 'public'].includes(contrat.get(`${methode} ${p}`)));
-  verifier(!horsContrat.length, `les ${Object.keys(ROUTES).length} routes du back-office sont au contrat, en admin ou public`,
-    `hors contrat ou hors admin/public : ${horsContrat.map(([nom, [m, p]]) => `${nom} (${m} ${p} : ${contrat.get(`${m} ${p}`) ?? 'absente'})`).join(', ')}`);
+  const horsContrat = Object.entries(ROUTES).filter(([, [methode, p]]) => !['admin', 'public', 'acteur'].includes(contrat.get(`${methode} ${p}`)));
+  verifier(!horsContrat.length, `les ${Object.keys(ROUTES).length} routes du back-office sont au contrat, en admin, public ou acteur`,
+    `hors contrat ou hors admin/public/acteur : ${horsContrat.map(([nom, [m, p]]) => `${nom} (${m} ${p} : ${contrat.get(`${m} ${p}`) ?? 'absente'})`).join(', ')}`);
   verifier(!Object.values(ROUTES).some(([, p]) => p.includes('/box/')), 'aucune route `box` dans la table');
   const appelsDirects = [];
   const parcourir = (d) => { for (const x of readdirSync(d)) { const p = join(d, x); if (statSync(p).isDirectory()) parcourir(p); else if (/\.jsx?$/.test(x) && !p.endsWith('api.js') && /\bfetch\(|XMLHttpRequest|WebSocket/.test(readFileSync(p, 'utf8'))) appelsDirects.push(p); } };
