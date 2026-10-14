@@ -19,7 +19,7 @@ import {
   type Battement, type ConsigneAgent, type ContenuEtat, type EtatReel,
 } from './etat.ts';
 import { aRemettre, enregistrerResultat, expirer, servicesRedemarrables, TYPES_COMMANDE, type Commande } from './commandes.ts';
-import { changerIncident, ETATS_INCIDENT, lireEvenements, publier, rejouerLettresMortes, type EtatIncident, type Incident } from './evenements.ts';
+import { changerIncident, ETATS_INCIDENT, TRANSITIONS_INCIDENT, lireEvenements, publier, rejouerLettresMortes, type EtatIncident, type Incident } from './evenements.ts';
 import { CATALOGUE, expirerApprobations, soumettre, trancher, type Action, type Approbation } from './passerelle.ts';
 
 // --- small readers -------------------------------------------------------------------
@@ -167,7 +167,7 @@ export const routes: Route[] = [
       permissions: PERMISSIONS,
       roles: Object.entries(ROLES).map(([id, r]) => ({ id, libelle: r.libelle, permissions: r.permissions })),
       actions: Object.values(CATALOGUE).map((a) => ({ verbe: a.verbe, libelle: a.libelle, permission: a.permission, cible: a.cible, risque_de_base: a.risque({ montant_eur: 0, pourcentage: 0 }) })),
-      commandes: TYPES_COMMANDE, services: servicesRedemarrables(), etats_incident: ETATS_INCIDENT,
+      commandes: TYPES_COMMANDE, services: servicesRedemarrables(), etats_incident: ETATS_INCIDENT, transitions_incident: TRANSITIONS_INCIDENT,
       battement: { periode_s: PERIODE_BATTEMENT_S, manques_hors_ligne: BATTEMENTS_MANQUES_HORS_LIGNE },
     }),
   },
