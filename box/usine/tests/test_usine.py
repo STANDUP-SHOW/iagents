@@ -36,33 +36,33 @@ INVENTAIRE_BOSGAME = {
 
 class Materiel(unittest.TestCase):
     def test_bosgame_conforme(self):
-        self.assertEqual(comparer_materiel(INVENTAIRE_BOSGAME, PROFILS["bosgame-m4-neo"]), [])
+        self.assertEqual(comparer_materiel(INVENTAIRE_BOSGAME, PROFILS["bosgame-m4-neo-v1"]), [])
 
     def test_memoire_32_sur_profil_64_refusee(self):
         inv = {**INVENTAIRE_BOSGAME, "memoire_go": 31.2}
-        ecarts = comparer_materiel(inv, PROFILS["bosgame-m4-neo"])
+        ecarts = comparer_materiel(inv, PROFILS["bosgame-m4-neo-v1"])
         self.assertTrue(any("mémoire" in e for e in ecarts), ecarts)
 
     def test_tolerance_memoire_lue_sous_le_nominal(self):
         inv = {**INVENTAIRE_BOSGAME, "memoire_go": 61.0}
-        self.assertEqual(comparer_materiel(inv, PROFILS["bosgame-m4-neo"]), [])
+        self.assertEqual(comparer_materiel(inv, PROFILS["bosgame-m4-neo-v1"]), [])
 
     def test_un_seul_ethernet_sur_profil_a_deux(self):
         inv = {**INVENTAIRE_BOSGAME, "mac": {**INVENTAIRE_BOSGAME["mac"], "eth1": None}}
-        self.assertTrue(any("Ethernet" in e for e in comparer_materiel(inv, PROFILS["bosgame-m4-neo"])))
+        self.assertTrue(any("Ethernet" in e for e in comparer_materiel(inv, PROFILS["bosgame-m4-neo-v1"])))
 
     def test_tpm_absent_et_secure_boot_inactif(self):
         inv = {**INVENTAIRE_BOSGAME, "tpm": {"present": False, "version": None}, "secure_boot": False}
-        ecarts = comparer_materiel(inv, PROFILS["bosgame-m4-neo"])
+        ecarts = comparer_materiel(inv, PROFILS["bosgame-m4-neo-v1"])
         self.assertEqual(len([e for e in ecarts if "TPM" in e]), 1)
         self.assertEqual(len([e for e in ecarts if "Secure Boot" in e]), 1)
 
     def test_exr1_exige_32_go(self):
         # max, 11/10/2026 : la Box Home a 32 Go (le brief disait 16/32) ; 16 Go est refusé.
         inv = {**INVENTAIRE_BOSGAME, "cpu": "Intel N305", "memoire_go": 31.2, "mac": {"eth0": "00:11:22:33:44:55", "eth1": None, "wifi": "00:11:22:33:44:56"}}
-        self.assertEqual(comparer_materiel(inv, PROFILS["exr1"]), [])
-        self.assertNotEqual(comparer_materiel({**inv, "memoire_go": 15.6}, PROFILS["exr1"]), [])
-        self.assertNotEqual(comparer_materiel({**inv, "memoire_go": 24}, PROFILS["exr1"]), [])
+        self.assertEqual(comparer_materiel(inv, PROFILS["exr1-home-v1"]), [])
+        self.assertNotEqual(comparer_materiel({**inv, "memoire_go": 15.6}, PROFILS["exr1-home-v1"]), [])
+        self.assertNotEqual(comparer_materiel({**inv, "memoire_go": 24}, PROFILS["exr1-home-v1"]), [])
 
     def test_vm_sans_secure_boot_conforme(self):
         inv = {**INVENTAIRE_BOSGAME, "cpu": "QEMU Virtual CPU", "coeurs": 2, "memoire_go": 7.8, "disque": {"modele": "QEMU", "capacite_go": 64},

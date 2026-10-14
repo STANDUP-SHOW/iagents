@@ -18,7 +18,7 @@ Mini-PC neuf → clé Factory (ISO) → autoinstall Ubuntu 24.04 (EFI/SYSTEM_A/S
 
 | Dossier | Contenu | Banc |
 |---|---|---|
-| `materiel/` | profils matériel (JSON) : `bosgame-m4-neo`, `exr1`, `vm-qemu` ; `index.ts` les sert à la plateforme | `check-materiel.ts` |
+| `materiel/` | profils matériel (JSON) : `bosgame-m4-neo-v1`, `exr1-home-v1`, `vm-qemu` ; `index.ts` les sert à la plateforme | `check-materiel.ts` |
 | `profils/` | les deux profils d'OS, `business` et `home` (la gamme de `plateforme/modele.ts`) | `check-profils.ts` |
 | `os/base/paquets.txt` | LA liste apt d'iAgent OS | `check-autoinstall.ts` |
 | `os/systemd/` | 11 unités `iagent-*` + timer ; `SERVICES.json` dit lesquelles sont réelles | `check-systemd.ts` |

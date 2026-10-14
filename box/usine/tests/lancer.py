@@ -1,7 +1,7 @@
 """Lance les tests d'usine d'une Box et écrit son rapport (brief §44-§46).
 
     python3 -I lancer.py --profil-os /opt/iagent/profils/business.json \
-        --profil-materiel /opt/iagent/materiel/bosgame-m4-neo.json \
+        --profil-materiel /opt/iagent/materiel/bosgame-m4-neo-v1.json \
         --inventaire /var/lib/iagent/usine/inventaire.json \
         --device /etc/iagent/device.json --manifeste /opt/iagent/manifeste.json \
         --operateur "Léa" --sortie /var/lib/iagent/usine

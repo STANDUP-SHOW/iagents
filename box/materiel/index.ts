@@ -4,8 +4,8 @@
 // mêmes fichiers pour comparer l'inventaire ; aucun des deux ne recopie un seuil.
 // JSON plutôt que YAML, exprès : la plateforme tourne aussi chez Cloudflare,
 // où rien ne se lit sur disque et où seul un import JSON passe au build.
-import bosgameM4Neo from './bosgame-m4-neo.json' with { type: 'json' };
-import exr1 from './exr1.json' with { type: 'json' };
+import bosgameM4Neo from './bosgame-m4-neo-v1.json' with { type: 'json' };
+import exr1HomeV1 from './exr1-home-v1.json' with { type: 'json' };
 import vmQemu from './vm-qemu.json' with { type: 'json' };
 
 export type ProfilMateriel = {
@@ -30,7 +30,7 @@ export type ProfilMateriel = {
   a_confirmer: boolean;
 };
 
-export const PROFILS_MATERIEL: readonly ProfilMateriel[] = [bosgameM4Neo, exr1, vmQemu] as ProfilMateriel[];
+export const PROFILS_MATERIEL: readonly ProfilMateriel[] = [bosgameM4Neo, exr1HomeV1, vmQemu] as ProfilMateriel[];
 
 export function profilMateriel(id: string): ProfilMateriel | null {
   return PROFILS_MATERIEL.find((p) => p.id === id) ?? null;

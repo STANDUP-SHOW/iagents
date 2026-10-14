@@ -36,8 +36,8 @@ const rien = () => {};
 const temoins = readdirSync(TEMOINS).filter((f) => f.endsWith('.json')).sort().map((f) => JSON.parse(readFileSync(join(TEMOINS, f), 'utf8')));
 verifier(temoins.length >= 3, `${temoins.length} rapports témoins lus`);
 const profilsMateriel = [
-  { id: 'bosgame-m4-neo', nom: 'BOSGAME M4 Neo', gammes: ['business'], a_confirmer: true },
-  { id: 'exr1', nom: 'EXR1 (Box Home)', gammes: ['home'], a_confirmer: true },
+  { id: 'bosgame-m4-neo-v1', nom: 'BOSGAME M4 Neo', gammes: ['business'], a_confirmer: true },
+  { id: 'exr1-home-v1', nom: 'EXR1 (Box Home)', gammes: ['home'], a_confirmer: true },
   { id: 'vm-qemu', nom: 'Machine virtuelle QEMU', gammes: ['business', 'home'], a_confirmer: false },
 ];
 
@@ -51,7 +51,7 @@ for (const r of temoins) {
   verifier(t.includes(r.inventaire.tpm.present ? 'présent' : 'absent'), `${r.reference} : le TPM est dit ${r.inventaire.tpm.present ? 'présent' : 'absent'}`);
 }
 {
-  const sans = rendre('attente sans jeton', <Ecran etat={{ etape: 'attente', profil: 'business', inventaire: temoins[0].inventaire, profils_materiel: profilsMateriel, jeton_present: false }} operateur="Léa" setOperateur={rien} profilMateriel="bosgame-m4-neo" setProfilMateriel={rien} installer={rien} eteindre={rien} />);
+  const sans = rendre('attente sans jeton', <Ecran etat={{ etape: 'attente', profil: 'business', inventaire: temoins[0].inventaire, profils_materiel: profilsMateriel, jeton_present: false }} operateur="Léa" setOperateur={rien} profilMateriel="bosgame-m4-neo-v1" setProfilMateriel={rien} installer={rien} eteindre={rien} />);
   verifier(sans && sans.includes('aucun jeton d’usine'), "sans jeton d'usine sur la clé, l'écran le dit avant de laisser cliquer");
 }
 
