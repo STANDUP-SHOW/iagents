@@ -1,7 +1,9 @@
 # Contrat des routes de la plateforme (à tenir par tous les chantiers)
 
 Accès : `public`, `admin` (Bearer du back-office), `box` (requête signée par la
-Box, voir `plateforme/serveur.ts`). Pour une route `box`, le tenant est
+Box, voir `plateforme/serveur.ts`), `acteur` (jeton de session d'un acteur du
+noyau, ou la clé de secours `PLATEFORME_ADMIN_SECRET` qui vaut le fondateur ;
+voir `docs/admin/noyau.md`). Pour une route `box`, le tenant est
 `ctx.box.tenant_id` : une Box ne voit jamais que son client. Toutes les réponses
 sont du JSON ; une erreur est `{ "erreur": "<phrase en français>" }`.
 
@@ -99,3 +101,41 @@ puissance-3, agent-unique (9,90 €).
 | GET | /create/etudes/:id | public | (identifiant non devinable) |
 | POST | /create/box/projets | box | `{etude_id}` → entreprise composée : 5 phases, équipes du catalogue, budget, jalons |
 | GET | /create/box/projets | box | |
+
+## v1 (noyau de l'admin : ADMIN MASTER §3 à §12, `plateforme/noyau/`)
+Une route `acteur` portant une permission répond 403 si l'acteur ne l'a sur
+aucun périmètre ; le périmètre exact est revérifié sur la ressource. Toute
+action qui change quelque chose passe par la passerelle (`POST /v1/actions` ou
+ses raccourcis) : 200 exécutée, 202 en attente d'approbation, 403 refusée par
+les règles, 422 échouée. `idempotence` et `motif` sont obligatoires ; l'en-tête
+`x-correlation-id` est repris jusque dans l'audit. Contrat lisible par une
+machine : `GET /v1/openapi.json` (OpenAPI 3.1).
+
+| Méthode | Chemin | Accès | Rôle |
+|---|---|---|---|
+| POST | /v1/sessions | public | `{acteur_id, cle, code?}` → jeton (humain 12 h, agent 15 min, service 1 h) ; `code` = second facteur une fois activé ; un seul message de refus |
+| GET | /v1/moi | acteur | qui je suis, mes rôles, second facteur ouvert ou non |
+| GET | /v1/registre | acteur | rôles, permissions, catalogue des actions avec leur risque |
+| POST / GET | /v1/acteurs | core.actor.manage | créer `{type, nom_affiche, roles, autonomie?, budgets?, departement?}` (la clé n'est rendue qu'ici) / lister sans clés |
+| POST | /v1/acteurs/:id/statut | core.actor.manage | `{statut: actif|suspendu|retire, motif}` ; suspendre révoque les jetons |
+| POST | /v1/moi/mfa, /v1/moi/mfa/confirmer | acteur | ouvrir puis confirmer le second facteur (TOTP, application d'authentification) |
+| GET | /v1/vue-ensemble | fleet.device.read | compteurs de la flotte, approbations et incidents ouverts |
+| GET | /v1/devices | fleet.device.read | `?tenant_id&statut&connexion&gamme&curseur&limite` ; limité au périmètre de l'acteur |
+| GET | /v1/devices/:id | fleet.device.read | une Box, sa connexion, sa santé, ses écarts ; jamais de clé |
+| GET / PUT | /v1/devices/:id/desired-state | fleet.device.read / fleet.device.desired.update | état voulu (versions, agents RUN/HOLD/STOP, politiques) ; PUT passe par la passerelle |
+| POST | /v1/devices/:id/commands | acteur | `{type, parametres, motif, idempotence}` → action de la passerelle (`restart_service`, `restart_box`, `update`, `factory_reset`…) |
+| POST | /v1/devices/:id/diagnostics | acteur | raccourci du diagnostic (R1) |
+| POST | /v1/agents/:id/{pause,resume,suspend,terminate} | acteur | cycle de vie d'un agent (droit d'exécution) |
+| POST / GET | /v1/actions | acteur | `{action, ressource, parametres, motif, idempotence}` / mes actions |
+| GET | /v1/approbations | core.approval.decide | boîte des approbations |
+| POST | /v1/approbations/:id/decision | core.approval.decide | `{decision: approuver|refuser, note}` ; le demandeur ne tranche pas sa propre demande ; R4 = deux personnes |
+| GET | /v1/evenements | core.event.read | `?apres=<seq>&type=` |
+| GET | /v1/incidents, POST /v1/incidents/:id/etat | fleet.device.read / core.incident.manage | incidents et leur cycle |
+| GET | /v1/audit | security.audit.read | journal, avec politique, risque, approbation, résultat, corrélation |
+| POST | /v1/balayage | core.sweep.run | Box sans battement → hors ligne, commandes et approbations expirées, lettres mortes rejouées |
+| POST | /v1/box/battement | box | `{uptime_s, sante?}` → `{prochain_dans_s}` (60 s ± gigue) |
+| GET | /v1/box/etat-voulu | box | état voulu et sa version |
+| POST | /v1/box/etat-reel | box | `{version_appliquee, reel}` → écarts, `convergee` |
+| GET | /v1/box/commandes | box | commandes à exécuter (expirées écartées) |
+| POST | /v1/box/commandes/:id/resultat | box | `{reussie, code, duree_ms, sortie}` ; idempotent, sortie caviardée |
+| GET | /v1/openapi.json | public | le contrat |

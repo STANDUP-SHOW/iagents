@@ -8,12 +8,12 @@ import { randomUUID } from 'node:crypto';
 import type { Audit } from '../modele.ts';
 import type { Stockage } from '../stockage.ts';
 
-const RESSEMBLE_A_UN_SECRET = /-----BEGIN|PRIVATE KEY|Bearer\s|[A-Za-z0-9_-]{60,}|\.[A-Za-z0-9_-]{40,}/;
+export const RESSEMBLE_A_UN_SECRET = /-----BEGIN|PRIVATE KEY|Bearer\s|[A-Za-z0-9_-]{60,}|\.[A-Za-z0-9_-]{40,}/;
 
 export function auditer(
   stockage: Stockage,
   maintenant: Date,
-  trace: { tenant_id: string | null; acteur: string; action: string; cible: string; detail: string },
+  trace: { tenant_id: string | null; acteur: string; action: string; cible: string; detail: string } & Partial<Pick<Audit, 'acteur_type' | 'politique' | 'risque' | 'approbation' | 'resultat' | 'correlation_id'>>,
 ): Audit {
   for (const v of Object.values(trace)) {
     if (typeof v === 'string' && RESSEMBLE_A_UN_SECRET.test(v)) {

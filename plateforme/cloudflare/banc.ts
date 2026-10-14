@@ -113,6 +113,14 @@ try {
   const faux = await lire(await fetch(base + '/controle/box/droits', { headers: { 'x-box-id': deviceId, 'x-horodatage': h, 'x-signature': sign(null, Buffer.from(messageASigner('GET', '/controle/box/droits', h, '')), autre.privateKey).toString('base64') } }));
   verifier('une Box qui signe avec une autre clé : refusée', faux.statut === 401);
 
+  // Admin core (/v1): heartbeat, desired state and a command through the action gateway, in workerd.
+  const bat = await parBox('POST', '/v1/box/battement', JSON.stringify({ uptime_s: 60 }));
+  const voulu = await parBox('GET', '/v1/box/etat-voulu');
+  verifier('noyau : battement et état voulu servis par workerd', bat.statut === 200 && voulu.statut === 200 && voulu.corps?.voulu?.agents !== undefined, `${bat.texte} | ${voulu.texte}`);
+  const diag = await admin('POST', `/v1/devices/${deviceId}/diagnostics`, { motif: 'banc cloudflare', idempotence: 'banc-cf-diag-1' });
+  const cmds = await parBox('GET', '/v1/box/commandes');
+  verifier('noyau : un diagnostic passe la passerelle et arrive à la Box', diag.statut === 200 && cmds.corps?.commandes?.some((c: { type: string }) => c.type === 'diagnostic'), `${diag.texte} | ${cmds.texte}`);
+
   // Pricing: the JSON imported into the Worker gives what Node computes from the same files.
   const { serveur } = creerPlateforme({ secretAdmin, fichierDonnees: null });
   await new Promise<void>((r) => serveur.listen(0, '127.0.0.1', r));
@@ -193,6 +201,8 @@ try {
   await demarrer();
   const apres = await parBox('GET', '/controle/box/droits');
   verifier('après redémarrage : la Box, son client et son droit sont toujours là', apres.statut === 200 && String(apres.corps?.jeton ?? '').includes('.'), apres.texte);
+  const audit = await admin('GET', `/v1/audit?tenant_id=${tenant}`);
+  verifier('après redémarrage : l’action du noyau est toujours à l’audit', audit.statut === 200 && JSON.stringify(audit.corps).includes('fleet.device.diagnostic'), audit.texte);
   const sup = await admin('GET', `/voix/appels?tenant_id=${tenant}`);
   verifier('après redémarrage : l’appel est toujours connu de la supervision', sup.statut === 200 && JSON.stringify(sup.corps).includes('+33144444444'), sup.texte);
   const journalCentre = await admin('GET', '/centre/etat');
