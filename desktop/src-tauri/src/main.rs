@@ -921,6 +921,7 @@ fn main() {
             plateforme::plateforme_projet_creer,
             administration::admin_present,
             administration::plateforme_appeler,
+            administration::session_ouvrir,
             administration::jeton_poser,
             administration::jeton_present,
             administration::jeton_oublier,

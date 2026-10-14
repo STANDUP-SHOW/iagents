@@ -44,6 +44,21 @@ pub async fn plateforme_appeler(
     admin::appeler(&adresse, &nom, &methode, &chemin, corps).await
 }
 
+/// Opens a personal session (actor id, personal key, optional 6-digit code):
+/// the session token goes to the keyring like the founder's, never to JavaScript.
+#[tauri::command]
+pub async fn session_ouvrir(acteur_id: String, cle: String, code: Option<String>) -> Result<String, admin::ErreurAppel> {
+    let adresse = admin::adresse_lire(&dossier_reglages());
+    if adresse.is_empty() {
+        return Err(admin::ErreurAppel {
+            erreur: "Aucune adresse de plateforme n'est réglée : rien n'a été envoyé.".into(),
+            statut: 0,
+            plateforme: false,
+        });
+    }
+    admin::session_ouvrir(&adresse, &acteur_id, &cle, code.as_deref()).await
+}
+
 #[tauri::command]
 pub fn jeton_poser(jeton: String) -> Result<String, String> {
     admin::jeton_poser(&jeton)
