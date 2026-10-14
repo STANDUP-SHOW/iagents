@@ -162,7 +162,7 @@ export function ecarts(voulu: ContenuEtat, reel: ContenuEtat | null): Ecart[] {
 export function convergence(stockage: Stockage, deviceId: string): { version_voulue: number | null; version_appliquee: number | null; ecarts: Ecart[]; convergee: boolean } {
   const v = etatVouluDe(stockage, deviceId);
   const r = stockage.lire<EtatReel>('etats_reels', deviceId);
-  if (!v) return { version_voulue: null, version_appliquee: r?.version_appliquee ?? null, ecarts: [], convergee: true };
+  if (!v) return { version_voulue: null, version_appliquee: r?.version_appliquee ?? null, ecarts: [], convergee: !!r };
   const e = ecarts(v.voulu, r?.reel ?? null);
   return { version_voulue: v.version, version_appliquee: r?.version_appliquee ?? null, ecarts: e, convergee: !!r && r.version_appliquee === v.version && e.length === 0 };
 }
