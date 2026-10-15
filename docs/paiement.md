@@ -11,6 +11,13 @@ Stripe** : aucun numéro de carte ne passe par nos pages.
 - Chaque prix est **lu dans `frontend/src/data/tarifs.json`**, chaque nom dans la
   fiche de l'agent. La page n'envoie que des identifiants ; un prix qu'elle
   enverrait n'est pas lu (le banc le vérifie).
+- Un agent se loue aussi **pour 24 heures, 7 jours ou 14 jours** (max,
+  15/10/2026) : un trentième, un quart, la moitié du prix du mois, arrondi au
+  centime (`agents.durees` de `tarifs.json`, calcul dans
+  `frontend/src/data/durees.js`, le même pour le site et pour Stripe). Ces
+  locations se paient **une fois** : seules dans la liste, la page Stripe est un
+  paiement unique ; avec un agent au mois ou une Box, elles s'ajoutent à la
+  première échéance de l'abonnement. Une ligne sans `duree` est au mois.
 - La Box porte son engagement (36 ou 24 mois), écrit au-dessus du bouton de
   paiement et gardé dans les métadonnées de l'abonnement.
 - Le catalogue Stripe se crée tout seul au premier paiement de chaque ligne
@@ -26,7 +33,7 @@ Stripe** : aucun numéro de carte ne passe par nos pages.
 | Route | Rôle |
 |---|---|
 | `GET /api/paiement/etat` | `{ paiement: true\|false, mode: "test"\|"reel"\|null }`. `false` : garder « Demander un devis ». |
-| `POST /api/paiement/session` | Corps `{ lignes: [ { type: "agent", fiche: "AG-0001" ou "secretaire-administratif", palier: "essential"\|"professional"\|"expert", quantite: 1 }, { type: "box", offre: "box-commander-36"\|"box-commander-24", quantite: 1 } ] }`. Réponse `{ url, totalHT }` : envoyer le navigateur sur `url`. Refus : `{ erreur, devis: true }`, phrase en français à afficher telle quelle. |
+| `POST /api/paiement/session` | Corps `{ lignes: [ { type: "agent", fiche: "AG-0001" ou "secretaire-administratif", palier: "essential"\|"professional"\|"expert", duree: "24h"\|"7j"\|"14j"\|"mois", quantite: 1 }, { type: "box", offre: "box-commander-36"\|"box-commander-24", quantite: 1 } ] }`. Réponse `{ url, totalHT }` : envoyer le navigateur sur `url`. Refus : `{ erreur, devis: true }`, phrase en français à afficher telle quelle. |
 | `GET /api/paiement/session?id=cs_…` | Pour la page de retour : `{ statut, paye, totalHT, totalTTC }` (centimes). |
 | `POST /api/paiement/webhook` | Appelé par Stripe seulement. |
 

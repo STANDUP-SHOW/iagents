@@ -6,6 +6,7 @@
 // the agent's own fiche; a price sent by the page is never read at all.
 import tarifs from '../frontend/src/data/tarifs.json' with { type: 'json' };
 import { readdirSync, readFileSync } from 'node:fs';
+import { dureeDe, dureeParDefaut, prixPourDuree } from '../frontend/src/data/durees.js';
 
 // Stripe refuses a subscription of more than 20 items. Past that, the cart
 // stays a quote request: a big team is a conversation anyway.
@@ -65,7 +66,7 @@ export function offreBox(id, t = tarifs) {
 
 /**
  * Cart sent by the site:
- *   { lignes: [ { type: 'agent', fiche: 'AG-0001', palier: 'essential', quantite: 1 },
+ *   { lignes: [ { type: 'agent', fiche: 'AG-0001', palier: 'essential', duree: '7j', quantite: 1 },
  *               { type: 'box', offre: 'box-commander-36', quantite: 1 } ] }
  * Returns the lines to bill, merged by price, or throws RefusPanier with a
  * French sentence the page can show as is.
@@ -87,14 +88,21 @@ export function lignesAFacturer(panier, t = tarifs) {
       if (!fiche) throw new RefusPanier('Un agent de la liste n\'existe pas au catalogue.');
       const prix = prixAgent(l.palier, t);
       if (!prix) throw new RefusPanier('Cette formule d\'agent ne se règle pas en ligne : demandez un devis.');
-      const montant = centimes(prix.mensuel);
+      // No length = the month: the lists saved before 15/10 carry none.
+      const duree = l.duree == null ? dureeParDefaut(t) : dureeDe(t, l.duree);
+      if (l.duree != null && !duree) throw new RefusPanier('Cette durée de location n\'existe pas : choisissez 24 heures, 7 jours, 14 jours ou un mois.');
+      const recurrent = duree ? duree.recurrent : true;
+      const montant = centimes(duree ? prixPourDuree(prix.mensuel, duree) : prix.mensuel);
+      const nom = prix.nomPalier ? `Agent ${fiche.nom} · ${prix.nomPalier}` : `Agent ${fiche.nom}`;
       ligne = {
-        cle: `iagent_agent_${fiche.id}_${prix.palier}_${montant}`,
-        nom: prix.nomPalier ? `Agent ${fiche.nom} · ${prix.nomPalier}` : `Agent ${fiche.nom}`,
+        // The month keeps the key it had before rentals existed, so the Stripe prices already created are found again.
+        cle: recurrent ? `iagent_agent_${fiche.id}_${prix.palier}_${montant}` : `iagent_agent_${fiche.id}_${prix.palier}_${duree.id}_${montant}`,
+        nom: recurrent ? nom : `${nom} · ${duree.nom}`,
         montant,
         quantite,
         type: 'agent',
-        detail: { fiche: fiche.id, palier: prix.palier },
+        recurrent,
+        detail: { fiche: fiche.id, palier: prix.palier, ...(duree ? { duree: duree.id } : {}) },
       };
     } else if (l?.type === 'box') {
       const b = offreBox(l.offre, t);
@@ -106,6 +114,7 @@ export function lignesAFacturer(panier, t = tarifs) {
         montant,
         quantite,
         type: 'box',
+        recurrent: true,
         detail: { offre: b.id, engagementMois: b.engagementMois },
       };
     } else {
@@ -126,7 +135,10 @@ export function lignesAFacturer(panier, t = tarifs) {
   return lignes;
 }
 
-/** Monthly total excluding VAT, in cents (what the page and the bench compare). */
+/** True when something renews every month: Stripe then opens a subscription, otherwise a single payment. */
+export const abonnement = (lignes) => lignes.some((l) => l.recurrent);
+
+/** Total excluding VAT, in cents, monthly and one-off lines together (what the page and the bench compare). */
 export const totalHT = (lignes) => lignes.reduce((s, l) => s + l.montant * l.quantite, 0);
 
 /** Longest Box commitment of the cart, 0 without a Box. */
@@ -135,7 +147,10 @@ export const engagement = (lignes) => Math.max(0, ...lignes.filter((l) => l.type
 /** What Stripe Checkout shows above the pay button. */
 export function texteEngagement(lignes) {
   const mois = engagement(lignes);
-  const base = 'Abonnement mensuel, montants hors taxes, TVA française de 20 % ajoutée.';
+  const ponctuel = lignes.some((l) => !l.recurrent);
+  const base = abonnement(lignes)
+    ? `Abonnement mensuel${ponctuel ? ', locations à la durée payées une fois avec la première échéance' : ''}, montants hors taxes, TVA française de 20 % ajoutée.`
+    : 'Location à la durée, payée une fois, sans engagement ni renouvellement. Montants hors taxes, TVA française de 20 % ajoutée.';
   return mois ? `${base} La Box Commander est louée avec un engagement de ${mois} mois.` : base;
 }
 
@@ -144,7 +159,7 @@ export function metadonnees(lignes) {
   const m = { origine: 'iagent.agency', engagement_box_mois: String(engagement(lignes)) };
   lignes.forEach((l, i) => {
     m[`ligne_${i + 1}`] = l.type === 'agent'
-      ? `agent ${l.detail.fiche} ${l.detail.palier} x${l.quantite}`
+      ? `agent ${l.detail.fiche} ${l.detail.palier}${l.detail.duree ? ` ${l.detail.duree}` : ''} x${l.quantite}`
       : `box ${l.detail.offre} x${l.quantite}`;
   });
   return m;

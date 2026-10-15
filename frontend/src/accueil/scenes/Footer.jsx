@@ -12,6 +12,7 @@ export default function Footer() {
       { nom: 'iAgent Box', href: '/box' },
       { nom: 'Desktop Commander', href: '/#desktop-commander' },
       { nom: 'Tarifs', href: '/pricing' },
+      { nom: 'Temp Agency', href: '/temp-agency' },
       { nom: 'Pourquoi louer', href: '/why-rent' },
       { nom: 'iAgent Voice', href: '/voice' },
       { nom: 'Standard téléphonique', href: '/standard-telephonique' },

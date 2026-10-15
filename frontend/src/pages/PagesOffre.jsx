@@ -1,6 +1,6 @@
 import donnees from 'virtual:accueil';
 import { nombre, LIENS, Icone } from '../accueil/composants.jsx';
-import tarifs, { euros, montant, STATUTS, BOX_PUBLIQUES, BOX_DES, prixAgentEnUneLigne } from '../data/tarifs.js';
+import tarifs, { euros, montant, STATUTS, BOX_PUBLIQUES, BOX_DES, prixAgentEnUneLigne, DUREES, DUREES_COURTES, GRILLE_LOCATION, JOUR_DES } from '../data/tarifs.js';
 import { Voisines, Bouton, Demande } from './blocs.jsx';
 import { Eclat, Heros, Scene, Ecran, Photo, Visage, Collaborateur, Rail, Atouts, Preuves, Liste, Onde, Exemple, Champs, Final, Choix } from './scenes.jsx';
 
@@ -319,6 +319,31 @@ const PALIERS_TEXTE = {
 };
 const PALIERS_ICONE = { essential: 'doc', professional: 'rouage', expert: 'bouclier' };
 
+/** An agent for 24 hours, 7 days, 14 days or a month: every price a rule of three on the month, read from tarifs.json. */
+export function GrilleLocation() {
+  if (!GRILLE_LOCATION.length || !DUREES.length) return null;
+  return (
+    <div className="sc-location sc-verre">
+      <table>
+        <caption>{tarifs.agents.durees.regle} Prix hors taxes par agent, consommation d'IA à part.</caption>
+        <thead>
+          <tr><th scope="col">Agent</th>{DUREES.map((d) => <th key={d.id} scope="col">{d.nom}</th>)}</tr>
+        </thead>
+        <tbody>
+          {GRILLE_LOCATION.map((f) => (
+            <tr key={f.id}>
+              <th scope="row">{f.id === 'unique' ? f.nom : `Agent ${f.nom}`}</th>
+              {f.prix.map(({ duree, montant: m }) => (
+                <td key={duree.id}><b>{euros(m)}</b><small>{duree.recurrent ? 'HT, renouvelé chaque mois' : 'HT, payé une fois'}</small></td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function GrilleTarifs() {
   const a = tarifs.agents;
   return (
@@ -378,6 +403,12 @@ export function Tarifs() {
         </div>
       </Scene>
 
+      <Scene id="location" surtitre="Location à la durée" titre={<>Un agent pour <Eclat>24 heures, 7 jours, 14 jours ou un mois</Eclat></>}
+        texte="Le prix d'une location courte est celui du mois, ramené à sa durée. Elle se règle une fois, sans engagement ni renouvellement."
+        droite={<Bouton href="/temp-agency" variante="contour-cyan">Temp Agency</Bouton>}>
+        <GrilleLocation />
+      </Scene>
+
       <Scene surtitre="Les packs" titre="Box, agents et Commander ensemble">
         <Packs />
       </Scene>
@@ -388,6 +419,58 @@ export function Tarifs() {
         <Bouton href={LIENS.catalogue} variante="contour-cyan" evenement="catalog_click">Explorer les agents</Bouton>
       </Final>
       <Voisines ici="pricing" />
+    </>
+  );
+}
+
+/* -------------------------------------------------------------- temp-agency */
+
+// Temp Agency (max, 15/10/2026): an agent rented for 24 hours, 7 days,
+// 14 days or a month, like a temp worker, without a Box. Structure ready for
+// max's text; every price comes from tarifs.json (agents.durees). The light
+// Desktop Commander max describes (one or two agents on the client's own
+// computer, downloaded from this page) is not built: the page says nothing
+// about it until it exists.
+export function TempAgency() {
+  const courtes = DUREES_COURTES.map((d) => d.nom).join(', ');
+  return (
+    <>
+      <Heros surtitre="Temp Agency" titre={<>L'intérim de l'IA : <Eclat>un agent pour le temps qu'il vous faut.</Eclat></>}
+        texte={`Un pic d'activité, une absence, un projet court : louez un agent iAgent pour ${DUREES.map((d) => d.nom).join(', ').replace(/, ([^,]*)$/, ' ou $1')}, sans Box à installer.${JOUR_DES != null ? ` À partir de ${euros(JOUR_DES)} HT les 24 heures.` : ''}`}
+        actions={<>
+          <Bouton href={LIENS.catalogue} evenement="catalog_click">Choisir un agent</Bouton>
+          <Bouton href="#prix" variante="contour-cyan">Voir les prix</Bouton>
+        </>}
+        preuves={[['agenda', 'À la durée', courtes], ['pieces', 'Payé une fois', 'sans engagement'], ['equipe', 'Un vrai métier', `${nombre(compteurs.fiches)} postes`], ['ecran', 'Sans Box', 'aucun matériel à louer']]} />
+
+      <Scene surtitre="Quand l'intérim s'impose" titre={<>Le bon agent, <Eclat>juste le temps nécessaire</Eclat></>}>
+        <Preuves colonnes={4} items={[
+          ['eclair', "Un pic d'activité", 'Une clôture, une saison, une campagne : du renfort sur quelques jours.'],
+          ['equipe', 'Une absence', 'Le poste continue de tourner pendant un congé ou un arrêt.'],
+          ['cible', 'Un projet court', 'Une étude, un dossier, un lancement : un expert le temps du projet.'],
+          ['idee', 'Essayer avant de recruter', "Voir un agent travailler une semaine avant de l'embaucher au mois."],
+        ]} />
+      </Scene>
+
+      <Scene id="prix" surtitre="Les prix" titre={<>Le prix du mois, <Eclat>ramené à la durée</Eclat></>}
+        texte="24 heures, 7 jours ou 14 jours se règlent une fois, sans engagement ni renouvellement. Le mois se renouvelle chaque mois. L'usage de l'IA se paie à part, au réel.">
+        <GrilleLocation />
+      </Scene>
+
+      <Scene surtitre="Comment ça se passe" titre="De la fiche du métier au travail">
+        <Rail colonnes={4} etapes={[
+          ['Choisissez le métier', `Parmi les ${nombre(compteurs.fiches)} postes du catalogue, celui dont vous avez besoin.`],
+          ['Choisissez la durée', 'Dans votre liste de recrutement, ligne par ligne : 24 heures, 7 jours, 14 jours ou un mois.'],
+          ['Validez votre liste', 'Vous la réglez en ligne, ou vous recevez le devis par écrit.'],
+          ['Votre agent prend son poste', 'Nous vous écrivons pour préparer son entretien d’embauche et le mettre au travail.'],
+        ]} />
+      </Scene>
+
+      <Final titre="Un renfort pour demain ?" texte="Choisissez le métier, choisissez la durée." visage={9}>
+        <Bouton href={LIENS.catalogue} evenement="catalog_click">Choisir un agent</Bouton>
+        <Bouton href="/contact" variante="contour-cyan">Nous écrire</Bouton>
+      </Final>
+      <Voisines ici="temp-agency" />
     </>
   );
 }

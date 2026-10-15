@@ -21,6 +21,7 @@ const ENTREES = [
     ['Activités', '/activites', 'entrez par votre branche'],
     ['Secteurs', '/secteurs', 'les familles de métiers'],
     ['Évolution des agents', '/skills', 'compétences et packs'],
+    ['Temp Agency', '/temp-agency', 'un agent à la durée'],
   ] },
   { libelle: 'Créer', href: '/create', page: 'create', evenement: 'create_company_click', tiroir: [
     ['Créer votre entreprise', '/create', 'de l’idée à l’équipe'],

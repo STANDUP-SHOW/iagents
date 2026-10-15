@@ -60,6 +60,7 @@ const VOISINES = [
   ['/workforce', 'iAgent Workforce'],
   ['/box', 'iAgent Box'],
   ['/pricing', 'Tarifs'],
+  ['/temp-agency', 'Temp Agency'],
   ['/how-it-works', 'Comment ça marche'],
   ['/local-ai', 'IA locale et hybride'],
   ['/security', 'Sécurité et contrôle'],

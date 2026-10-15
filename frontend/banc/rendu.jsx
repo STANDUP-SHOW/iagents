@@ -280,6 +280,17 @@ for (const page of PAGES) {
   const attendu = tarifs.box.find((b) => b.id === 'box-commander-36').mensuel + tarifs.agents.paliers.find((p) => p.id === 'essential').mensuel;
   if (starter.mensuel !== attendu || !tarifsHtml.includes(String(attendu))) echoue(`Starter à ${starter.mensuel} au lieu de ${attendu}`);
   else ok(`le Starter vaut la Box et un Essential : ${attendu} €`);
+  // Location à la durée (max, 15/10) : 24 h, 7 jours, 14 jours au prorata du mois,
+  // montrés sur la page Tarifs et sur Temp Agency, calculés et jamais recopiés.
+  {
+    const attendus = tarifs.agents.paliers.flatMap((p) => tarifs.agents.durees.liste.map((d) => eurosTarif(Math.round((p.mensuel * 100 * d.partDuMois[0]) / d.partDuMois[1]) / 100)));
+    const regle = tarifs.agents.durees.liste.map((d) => `${d.id}=${d.partDuMois.join('/')}`).join(' ');
+    const temp = renderToString(<Page nom="temp-agency" />);
+    const manque = (html) => attendus.filter((x) => !html.includes(x) && !html.includes(x.replace(/\u00a0/g, '&nbsp;')));
+    if (regle !== '24h=1/30 7j=1/4 14j=1/2 mois=1/1') echoue(`durées de location : ${regle}`);
+    else if (manque(tarifsHtml).length || manque(temp).length) echoue(`grille de location incomplète : Tarifs sans ${manque(tarifsHtml).join(', ')} ; Temp Agency sans ${manque(temp).join(', ')}`);
+    else ok(`location 24 h, 7 jours, 14 jours, mois : ${attendus.length} prix sur Tarifs et Temp Agency (Essential ${attendus.slice(0, 4).join(' / ')})`);
+  }
   // Les portraits découpés des planches de max : chaque visage annoncé existe, et
   // le catalogue en montre assez pour que deux fiches voisines ne se ressemblent pas.
   const public_ = 'public'; // the bench runs from frontend/
