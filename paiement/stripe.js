@@ -4,7 +4,7 @@
 // The secret key is read from the environment only (Vercel, typed by max).
 // Without it nothing here is called, and the site keeps its quote request.
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { TVA_FR, metadonnees, texteEngagement } from './panier.js';
+import { TVA_FR, abonnement, metadonnees, texteEngagement } from './panier.js';
 
 const API = 'https://api.stripe.com/v1';
 
@@ -65,7 +65,8 @@ export async function prixStripe(s, ligne) {
     const cree = await s.post('/prices', {
       currency: 'eur',
       unit_amount: ligne.montant,
-      recurring: { interval: 'month' },
+      // A rental of 24 hours, 7 or 14 days is paid once (max, 15/10).
+      recurring: ligne.recurrent === false ? undefined : { interval: 'month' },
       tax_behavior: 'exclusive',
       lookup_key: ligne.cle,
       transfer_lookup_key: true, // two first payments at once must not fail
@@ -107,8 +108,11 @@ export async function creerSession(s, lignes, { origine }) {
     line_items.push({ price: await prixStripe(s, l), quantity: l.quantite, tax_rates: [tva] });
   }
   const meta = metadonnees(lignes);
+  // Only one-off rentals: a single payment. Otherwise a subscription, the
+  // one-off rentals being billed once on its first invoice.
+  const mensuel = abonnement(lignes);
   return s.post('/checkout/sessions', {
-    mode: 'subscription',
+    mode: mensuel ? 'subscription' : 'payment',
     locale: 'fr',
     line_items,
     billing_address_collection: 'required',
@@ -116,7 +120,9 @@ export async function creerSession(s, lignes, { origine }) {
     tax_id_collection: { enabled: true },
     custom_text: { submit: { message: texteEngagement(lignes) } },
     metadata: meta,
-    subscription_data: { metadata: meta, description: 'Recrutement iAgent' },
+    ...(mensuel
+      ? { subscription_data: { metadata: meta, description: 'Recrutement iAgent' } }
+      : { payment_intent_data: { metadata: meta, description: 'Recrutement iAgent' }, invoice_creation: { enabled: true, invoice_data: { metadata: meta } } }),
     success_url: `${origine}/recrutement?paiement=reussi&session={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origine}/recrutement?paiement=annule`,
   });

@@ -2,6 +2,7 @@
 // 07/10, §7: no price is written in a component). Every price stays marked
 // « tarif pilote » while its status says so.
 import tarifs from './tarifs.json';
+import { dureesDe, dureeParDefaut, prixPourDuree } from './durees.js';
 
 // A pack priced as the sum of its parts (« somme ») gets its monthly price from
 // the box and agent prices above, so the two can never disagree (max, 07/10:
@@ -50,3 +51,30 @@ export function prixAgentEnUneLigne() {
 
 /** Installation ids of dimensionnement/offre-box.json that stay unpublished (plan, §6 and §17). */
 export const INSTALLATIONS_MASQUEES = new Set(tarifs.archives.masquees);
+
+/** The rental lengths of an agent (max, 15/10): 24 hours, 7 days, 14 days, a month. */
+export const DUREES = dureesDe(tarifs);
+
+/** The month, the length of the agent subscription. */
+export const DUREE_MOIS = dureeParDefaut(tarifs);
+
+/** The rentals shorter than a month, the ones paid once. */
+export const DUREES_COURTES = DUREES.filter((d) => !d.recurrent);
+
+/** What an agent sold online costs per month, by tier: the tiers, the single price, or nothing on quote. */
+export function formulesAgent() {
+  const a = tarifs.agents;
+  if (a.affichage === 'paliers') return a.paliers;
+  if (a.affichage === 'unique') return [{ id: 'unique', nom: 'Agent', mensuel: a.unique.mensuel, statut: a.unique.statut }];
+  return [];
+}
+
+/** One row per tier, one price per rental length, each a rule of three on the month. */
+export const GRILLE_LOCATION = formulesAgent().map((f) => ({ ...f, prix: DUREES.map((d) => ({ duree: d, montant: prixPourDuree(f.mensuel, d) })) }));
+
+/** The cheapest 24-hour rental, the one a sentence quotes. */
+export const JOUR_DES = (() => {
+  const jour = DUREES.find((d) => d.jours === 1);
+  const f = formulesAgent()[0];
+  return jour && f ? prixPourDuree(f.mensuel, jour) : null;
+})();

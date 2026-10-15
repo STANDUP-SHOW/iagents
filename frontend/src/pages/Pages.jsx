@@ -1,11 +1,11 @@
 import donnees from 'virtual:accueil';
 import { nombre, LIENS, RECRUTER, Fleche } from '../accueil/composants.jsx';
-import tarifs, { euros, montant, STATUTS, BOX_PUBLIQUES, BOX_DES, prixAgentEnUneLigne } from '../data/tarifs.js';
+import tarifs, { euros, montant, STATUTS, BOX_PUBLIQUES, BOX_DES, prixAgentEnUneLigne, DUREES } from '../data/tarifs.js';
 import { Tete, Bande, Cartes, Etapes, Coches, Voisines, Fin, Bouton, Demande } from './blocs.jsx';
 import { COMPOSANTS_BUSINESS } from './PagesBusiness.jsx';
-import { Workforce, Box, Tarifs, CommentCaMarche, IALocale, Securite, Faq } from './PagesOffre.jsx';
+import { Workforce, Box, Tarifs, TempAgency, CommentCaMarche, IALocale, Securite, Faq } from './PagesOffre.jsx';
 import { useEffect, useState } from 'react';
-import { lireListe, ecouterListe, totaux, lignesPourPaiement, listeEnTexte, changerAgent, retirerAgent, choisirBox, viderListe, nombreDAgents, PALIERS, BOX_EN_VENTE } from '../data/liste.js';
+import { lireListe, ecouterListe, totaux, lignesPourPaiement, listeEnTexte, changerAgent, retirerAgent, choisirBox, viderListe, nombreDAgents, PALIERS, BOX_EN_VENTE, dureeDeLigne, prixDeLigne } from '../data/liste.js';
 import { ENTREPRISE, HEBERGEUR, adresseEnUneLigne, dirigeantEnClair } from '../data/entreprise.js';
 
 // The offer pages of max's site plan (07/10). Every claim here is one the
@@ -193,6 +193,13 @@ function ListeRecrutement() {
                       </select>
                     </label>
                   )}
+                  {PALIERS.length > 0 && DUREES.length > 1 && (
+                    <label className="pg-ligne-champ"><span>Durée</span>
+                      <select value={dureeDeLigne(a)?.id ?? ''} onChange={(e) => changerAgent(i, { duree: e.target.value })}>
+                        {DUREES.map((d) => <option key={d.id} value={d.id}>{d.nom} · {euros(prixDeLigne({ ...a, duree: d.id }))} HT</option>)}
+                      </select>
+                    </label>
+                  )}
                   <label className="pg-ligne-champ pg-ligne-n"><span>Nombre</span>
                     <input type="number" min="1" max="20" value={a.quantite ?? 1} onChange={(e) => changerAgent(i, { quantite: Math.max(0, Math.min(20, Number(e.target.value) || 0)) })} />
                   </label>
@@ -218,10 +225,11 @@ function ListeRecrutement() {
           </Bande>
           <Bande titre="Le total">
             <dl className="pg-mentions">
-              <div><dt>Agents</dt><dd>{euros(t.agents)} HT par mois</dd></div>
+              <div><dt>Agents au mois</dt><dd>{euros(t.agents)} HT par mois</dd></div>
+              {t.ponctuel > 0 && <div><dt>Agents à la durée</dt><dd>{euros(t.ponctuel)} HT, payés une fois</dd></div>}
               <div><dt>Box Commander</dt><dd>{t.boxOffre ? `${euros(t.box)} HT par mois sur ${t.boxOffre.engagementMois} mois` : 'aucune'}</dd></div>
               <div><dt>Consommation d'IA</dt><dd>à part, selon l'usage, estimée avec vous avant tout engagement</dd></div>
-              <div><dt>Total</dt><dd><b>{euros(t.total)} HT par mois</b></dd></div>
+              <div><dt>Total</dt><dd><b>{t.total > 0 && `${euros(t.total)} HT par mois`}{t.total > 0 && t.ponctuel > 0 && ' + '}{t.ponctuel > 0 && `${euros(t.ponctuel)} HT une fois`}{!t.total && !t.ponctuel && euros(0)}</b></dd></div>
             </dl>
             {paiement && (
               <div className="mt-6">
@@ -288,6 +296,7 @@ export const COMPOSANTS = {
   workforce: Workforce,
   box: Box,
   pricing: Tarifs,
+  'temp-agency': TempAgency,
   'how-it-works': CommentCaMarche,
   'local-ai': IALocale,
   security: Securite,
