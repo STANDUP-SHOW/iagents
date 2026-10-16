@@ -10,6 +10,8 @@ import { FAMILLES_ACTIVITE } from '../data/activites-recherche.js';
 import { specialiser } from '../data/specialisation.js';
 import { PRIX_AGENT_MOIS, NOTE_ACHAT, prixAgentCourt } from '../data/prix.js';
 import { BoutonRecruter } from '../bibliotheque/composants.jsx';
+import { ChoixDuree, AvecSansBox } from './PrixAgent.jsx';
+import { DUREE_MOIS } from '../data/tarifs.js';
 import { PAGE_LISTE } from '../data/liste.js';
 import logicielsJson from '../../../catalogue/logiciels.json';
 
@@ -179,6 +181,7 @@ function Section({ id, agentId, inscrire, titre, chapeau, children }) {
 export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', installation = null, activite = null, onChoisirActivite = null }) {
   const depart = sectionDe(ongletInitial);
   const [actif, setActif] = useState(depart);
+  const [duree, setDuree] = useState(DUREE_MOIS?.id);
   const defile = useRef(null);
   const fermer = useRef(null);
   const sections = useRef({});
@@ -320,7 +323,8 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
           <div className="fd-tete-mobile">
             <p className="fd-prix">{PRIX_AGENT_MOIS ?? 'Sur devis'}{PRIX_AGENT_MOIS && <span> / mois</span>}</p>
             <p className="fd-note">{NOTE_ACHAT ? `${NOTE_ACHAT} · ` : ''}la Box et la consommation à part</p>
-            <BoutonRecruter agent={agent} activite={activite} className="bouton bouton-plein w-full" />
+            <ChoixDuree duree={duree} onDuree={setDuree} compact />
+            <BoutonRecruter agent={agent} activite={activite} duree={duree} className="bouton bouton-plein w-full" />
             <button type="button" className="bouton bouton-contour w-full" onClick={() => aller('recrutement')}>Personnaliser</button>
           </div>
         </header>
@@ -611,6 +615,8 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                 <div className="fd-bloc"><dt>Capacité</dt><dd>~{nombre(appels)} échanges / jour</dd></div>
               </dl>
               <p className="fd-note">La machine iAgent Box et son abonnement se comptent toujours à part, sur leur propre ligne.</p>
+              <div className="fd-bloc"><ChoixDuree duree={duree} onDuree={setDuree} /></div>
+              <div className="fd-bloc"><AvecSansBox agent={agent} /></div>
 
               <div className="fd-bloc fd-devis">
                 <p className="fd-etiquette">Ce que cet agent vous coûte selon votre installation</p>
@@ -622,7 +628,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                     {devis.map((l) => (
                       <tr key={l.offre} className={l.offre === installation ? 'fd-ligne-votre' : undefined}>
                         <th scope="row" data-label="Installation">{l.nom}{l.offre === installation && <span className="fd-votre"> (la vôtre)</span>}</th>
-                        <td data-label="Où il travaille" title={l.motif}><span className={l.enLocal ? 'fd-niveau fd-niveau-ok' : 'fd-niveau'}>{l.enLocal ? 'chez vous' : 'par API'}</span></td>
+                        <td data-label="Où il travaille" title={l.motif}><span className={l.enLocal || l.enPartie ? 'fd-niveau fd-niveau-ok' : 'fd-niveau'}>{l.enLocal ? 'chez vous' : l.enPartie ? `chez vous à ${Math.round(l.partLocale * 100)} %` : 'par API'}</span></td>
                         <td data-label="Coût de l'agent">{euros(l.coutAgent)}/mois</td>
                         <td data-label="Par API seule" className="fd-attenue">{euros(l.apiSeule)}/mois</td>
                         <td data-label="Économie" className={l.economie > 0 ? 'fd-gain' : 'fd-attenue'}>{l.economie > 0 ? `${euros(l.economie)}/mois` : '—'}</td>
@@ -637,7 +643,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                     {inst.cout.lignes.map((b) => (
                       <p key={b.id}>{b.nom} : {b.id === LOCATION_BOX.id ? `${LOCATION_BOX.phrase}.` : `${euros(b.mensualite)} HT par mois sur ${FINANCEMENT.mois} mois, plus son abonnement de ${euros(b.abonnement)} par mois.`}</p>
                     ))}
-                    {inst.cout.lignes.length > 0 && <p>{ligne.rembourseSeul ? 'Cet agent rembourse à lui seul la machine, son abonnement et son électricité.' : 'Cet agent seul ne rembourse pas la machine : elle se rentabilise avec plusieurs agents.'}</p>}
+                    {inst.cout.lignes.length > 0 && !inst.cout.lignes.some((b) => b.id === LOCATION_BOX.id) && <p>{ligne.rembourseSeul ? 'Cet agent rembourse à lui seul la machine, son abonnement et son électricité.' : 'Cet agent seul ne rembourse pas la machine : elle se rentabilise avec plusieurs agents.'}</p>}
                     {inst.cout.mensualiteAConfirmer && <p className="fd-a-confirmer">Taux du financement à confirmer</p>}
                   </div>
                 ) : (
@@ -661,7 +667,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                   <p className="fd-ajout-titre">Prêt à le rencontrer ?</p>
                   <p className="fd-tache-desc">Ajoutez-le à votre liste de recrutement : une fois la liste validée, il est installé sur votre Box et vous fait passer l'entretien.</p>
                 </div>
-                <BoutonRecruter agent={agent} activite={activite} />
+                <BoutonRecruter agent={agent} activite={activite} duree={duree} />
               </div>
             </Section>
           </div>
@@ -708,8 +714,10 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                   <p className="fd-note">échanges / jour</p>
                 </div>
               </div>
+              <ChoixDuree duree={duree} onDuree={setDuree} compact />
+              <AvecSansBox agent={agent} compact />
 
-              <BoutonRecruter agent={agent} activite={activite} className="bouton bouton-plein w-full" />
+              <BoutonRecruter agent={agent} activite={activite} duree={duree} className="bouton bouton-plein w-full" />
               <div className="fd-a-actions">
                 <button type="button" className="bouton bouton-contour" onClick={() => aller('recrutement')}>Personnaliser</button>
                 <button type="button" className="bouton bouton-contour" onClick={() => aller('recrutement')}>Comparer les coûts</button>
@@ -725,7 +733,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
           <p className="fd-collant-nom">{nom}</p>
           <p className="fd-note">{prixAgentCourt()}</p>
         </div>
-        <BoutonRecruter agent={agent} activite={activite} />
+        <BoutonRecruter agent={agent} activite={activite} duree={duree} />
       </div>
     </div>
   );

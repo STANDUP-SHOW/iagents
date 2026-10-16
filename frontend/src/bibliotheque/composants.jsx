@@ -84,12 +84,12 @@ const ONGLETS_APERCU = [
  * recruitment list, with the activity they chose; the button then leads to
  * the list, where the Box is added and the whole is validated.
  */
-export function BoutonRecruter({ agent, activite = null, className = 'bouton bouton-plein', libelle = 'Recruter cet agent' }) {
+export function BoutonRecruter({ agent, activite = null, duree = undefined, className = 'bouton bouton-plein', libelle = 'Recruter cet agent' }) {
   const [ajoute, setAjoute] = useState(false);
   if (ajoute) return <a href={PAGE_LISTE} className={className}>Ajouté · voir ma liste <Fleche /></a>;
   const recruter = () => {
-    ajouterAgent({ fiche: agent.id, slug: agent.slug, nom: agent.nom, secteur: libelleSecteur(agent.secteur), activite: activite?.nom ?? null, suggestions: activitesDuPoste(agent) });
-    suivre('recruit_agent', { fiche: agent.id });
+    ajouterAgent({ fiche: agent.id, slug: agent.slug, nom: agent.nom, secteur: libelleSecteur(agent.secteur), activite: activite?.nom ?? null, suggestions: activitesDuPoste(agent), duree });
+    suivre('recruit_agent', { fiche: agent.id, duree });
     setAjoute(true);
   };
   return <button type="button" className={className} onClick={recruter}>{libelle} <Fleche /></button>;
@@ -173,7 +173,7 @@ export function Apercu({ agent, installation, onFermer, onFicheComplete, focalis
             <dl className="bi-details">
               <div><dt>Où il travaille</dt><dd>{agent.execution?.defaut === 'local' ? 'Chez vous par défaut, par API si vous le choisissez' : 'Par API'}</dd></div>
               {agent.materiel?.gpu?.libelle && <div><dt>Machine conseillée</dt><dd>{agent.materiel.gpu.libelle}</dd></div>}
-              {ligne && <div><dt>Sur votre {installationDe(installation).nom}</dt><dd>{ligne.enLocal ? 'il travaille chez vous' : 'il passe par l\'API'}, environ {euros(ligne.coutAgent)} / mois de fonctionnement</dd></div>}
+              {ligne && <div><dt>Sur votre {installationDe(installation).nom}</dt><dd>{ligne.enLocal ? 'il travaille chez vous' : ligne.enPartie ? `il fait chez vous ${Math.round(ligne.partLocale * 100)} % de son travail` : 'il passe par l\'API'}, environ {euros(ligne.coutAgent)} / mois de fonctionnement</dd></div>}
               <div><dt>Autonomie</dt><dd>Il travaille seul ; vous choisissez à l'entretien ce qui attend votre accord.</dd></div>
             </dl>
           )}

@@ -139,7 +139,7 @@ export function Workforce() {
       <Scene surtitre="Local, cloud ou hybride" titre="Là où vos données doivent rester"
         texte="Vos agents passent par l'API d'IA, travaillent sur une machine chez vous, ou les deux selon la tâche. Pour une forte puissance locale, l'infrastructure se conçoit sur devis.">
         <Preuves colonnes={3} items={[
-          ['nuage', 'Cloud', "Sans machine de calcul : les agents passent par l'API d'IA.", '/local-ai'],
+          ['nuage', 'Cloud', "Pour un ou deux agents, sans machine : ils passent par l'API d'IA.", '/local-ai'],
           ['serveur', 'Local', 'Les modèles tournent chez vous ; rien ne sort pour être traité.', '/local-ai'],
           ['hybride', 'Hybride', "Le quotidien en local, l'API pour le reste. Vous êtes prévenu avant.", '/local-ai'],
         ]} />
@@ -526,7 +526,7 @@ function Deploiements() {
   const voies = [
     ['local', 'Local', 'Les modèles tournent chez vous ; rien ne sort pour être traité.', <Photo dossier="/accueil" src="box-commander" alt="" largeur={1122} hauteur={570} />, ['Vos fichiers', 'La Box', 'Vos dossiers']],
     ['hybride', 'Hybride', "Le quotidien en local, l'API pour ce que la machine ne porte pas. Vous êtes prévenu avant.", <Icone nom="hybride" taille={64} />, ['La Box', 'Vous êtes prévenu', "L'API d'IA"]],
-    ['cloud', 'Cloud', "Sans machine de calcul : les agents passent par l'API d'IA que vous choisissez.", <Icone nom="nuage" taille={64} />, ['Desktop Commander', "L'API d'IA", 'Vos dossiers']],
+    ['cloud', 'Cloud', "Pour un ou deux agents, sans machine : ils passent par l'API d'IA que vous choisissez.", <Icone nom="nuage" taille={64} />, ['Desktop Commander', "L'API d'IA", 'Vos dossiers']],
   ];
   return (
     <div className="sc-deploiements">
