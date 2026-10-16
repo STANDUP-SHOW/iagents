@@ -14,6 +14,9 @@ mod journal;
 mod mcp;
 mod modele;
 mod navigateur;
+mod pilote;
+mod procedure;
+mod inscriptions;
 mod tache;
 mod equipe;
 mod document;
@@ -1073,6 +1076,12 @@ fn main() {
             navigateur::navigateur_declarer_site,
             navigateur::navigateur_oublier_site,
             navigateur::navigateur_effacer_sessions,
+            procedure::procedure_lancer,
+            procedure::procedure_reprendre,
+            procedure::procedure_abandonner,
+            procedure::procedure_liste,
+            procedure::procedure_dossier_televersements,
+            inscriptions::inscriptions_preparer_visuels,
             mise_a_jour::mise_a_jour_etat,
             plateforme::plateforme_etat,
             plateforme::plateforme_identite,
