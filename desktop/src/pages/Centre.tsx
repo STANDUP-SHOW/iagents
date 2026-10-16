@@ -177,7 +177,6 @@ export default function Centre({
             <circle className="na na-graduation" r="96" />
             <circle className="na na-tirets" r="88" />
             <circle className="na na-arc" r="80" />
-            <circle className="na na-arc-marque" r="72" />
           </svg>
           <span className="noyau-portrait">
             {chef ? <Avatar prenom={chef.prenom} photo={portraitDe(chef)} taille="xl" /> : <img src={puce} alt="" className="noyau-puce-dc" />}
