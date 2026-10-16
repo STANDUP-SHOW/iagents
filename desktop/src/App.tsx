@@ -36,6 +36,7 @@ import {
   type Proposition,
 } from './agents/team-holder'
 import { useEtatPlateforme } from './agents/plateforme'
+import { ConversationDirecte } from './services/conversation-directe'
 import {
   BarreHaute,
   DockVocal,
@@ -140,6 +141,8 @@ function App() {
   const enCoursRef = useRef<{ prenom: string; ajouts: string[] } | null>(null)
   const fileRef = useRef<{ prenom: string; demande: string; parle: boolean }[]>([])
   const echangesRef = useRef(new Map<string, { role: 'user' | 'assistant'; content: string }[]>())
+  // The live conversation with an agent, when one is open (`direct.rs`).
+  const directRef = useRef<ConversationDirecte | null>(null)
   const [lastResponse, setLastResponse] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [moteur, setMoteur] = useState<ConversationEngine | null>(null)
@@ -394,6 +397,8 @@ function App() {
     if (!command.trim()) return
 
     try {
+      // Typed while a live conversation is open: the written way takes over.
+      if (!parle && directRef.current) await directRef.current.fermer()
 
       // Le mot de réveil d'abord, et c'est Rust qui tranche (`reveil.rs`).
       // Avant le 24/09/2026 ce bloc prenait le PREMIER MOT de tout ce qui
@@ -431,11 +436,88 @@ function App() {
         }
         return
       }
+      if (parle && (await parlerEnDirect(reaction.prenom, reaction.demande))) return
       void repondreA(reaction.prenom, reaction.demande, parle)
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err)
       setError(errMsg)
       console.error('Failed to process voice command:', err)
+    }
+  }
+
+  /**
+   * Opens a live conversation with `prenom` (max, 16/10/2026: « on est dans
+   * les années 90, je parle, j'attends trois minutes »). Gemini hears the
+   * client as he speaks and answers aloud at once, and stops when he talks
+   * over it. `false` when it cannot be opened here (no Google key, no
+   * internet, microphone refused): the relay then answers, and the screen
+   * says why.
+   */
+  const parlerEnDirect = async (prenom: string, demande: string): Promise<boolean> => {
+    if (directRef.current) return false
+    if (!(await invoke<boolean>('direct_possible').catch(() => false))) return false
+    const agent = moteur?.getAllAgents().find((a) => a.prenom === prenom)
+    if (!agent) return false
+    const equipe = moteur!.getAllAgents()
+    let consigne = moteur!.formatSystemPrompt(agent.fiche.id)
+    if (estTeamHolder(agent)) {
+      // A setting to change goes through the Team Holder's own rules
+      // (`equipe.rs`), which the live line does not carry.
+      if (propositionRef.current) return false
+      if (demande) {
+        const compris = comprendreDemande(demande, equipe)
+        if ('proposition' in compris || 'deja' in compris) return false
+      }
+      const { lectures, changements } = await rassemblerContexte(invoke, equipe)
+      consigne += contexteDuTeamHolder(equipe, lectures, changements)
+    }
+    const deja = echangesRef.current.get(prenom) ?? []
+    if (deja.length) {
+      consigne +=
+        '\n\nCe que vous vous êtes déjà dit :\n' +
+        deja.map((m) => `${m.role === 'user' ? 'Votre employeur' : 'Vous'} : ${m.content}`).join('\n')
+    }
+    consigne +=
+      "\n\nVous parlez en direct avec votre employeur, à voix haute, en français, comme au téléphone avec un collègue. Répondez tout de suite, en une ou deux phrases courtes, sans titre ni liste. S'il vous coupe la parole, taisez-vous et écoutez-le. Répondez à ce qu'il vient de dire, sans répéter ce que vous avez déjà dit."
+
+    const direct = new ConversationDirecte({
+      entendu: (texte) => setDernierEntendu(`${prenom}, ${texte}`),
+      dit: (texte) => setLastResponse(texte),
+      parle: (oui) => setParle(oui ? prenom : null),
+      echange: (client, reponse) => {
+        const echanges = echangesRef.current.get(prenom) ?? []
+        echanges.push({ role: 'user', content: client || prenom }, { role: 'assistant', content: reponse })
+        echangesRef.current.set(prenom, echanges.slice(-20))
+        if (reponse) publier({ type: 'voix', agent: prenom, texte: `${prenom} vous a répondu`, gravite: 'info' })
+      },
+      autre: (suivant, sademande) => {
+        void parlerEnDirect(suivant, sademande).then((ok) => {
+          if (!ok) void repondreA(suivant, sademande, true)
+        })
+      },
+      fin: (motif) => {
+        if (directRef.current === direct) directRef.current = null
+        setParle(null)
+        if (motif) setError(motif)
+        invoke<EcouteEtat>('voix_ecoute_etat').then(setEcoute).catch(() => {})
+      },
+    })
+    directRef.current = direct
+    try {
+      setActiveAgent(agent.fiche.id)
+      setError(null)
+      setLastResponse('')
+      setDernierEntendu(prenom + (demande ? `, ${demande}` : ''))
+      await direct.ouvrir(prenom, agent.fiche.id, consigne, demande)
+      setVoie(`${prenom} vous parle en direct, par votre clé Google (facturée à l'usage). Coupez-lui la parole quand vous voulez ; « au revoir » ferme la conversation.`)
+      setVoieBascule(false)
+      invoke<EcouteEtat>('voix_ecoute_etat').then(setEcoute).catch(() => {})
+      return true
+    } catch (err) {
+      if (directRef.current === direct) directRef.current = null
+      setVoie(`La conversation en direct n'a pas pu s'ouvrir (${String(err instanceof Error ? err.message : err)}) : ${prenom} répond par écrit puis à voix haute.`)
+      setVoieBascule(true)
+      return false
     }
   }
 

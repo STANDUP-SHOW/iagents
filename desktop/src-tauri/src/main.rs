@@ -34,6 +34,7 @@ mod partage;
 mod mission;
 mod voix_api;
 mod transcription;
+mod direct;
 mod plateforme;
 mod administration;
 
@@ -87,6 +88,7 @@ impl Ecoute {
         // window, and the client's follow-ups were lost (max, 12/10/2026).
         if matches!(self.ou_en_est, reveil::Etat::Dormante)
             || voice::EN_TRAIN_DE_PARLER.load(std::sync::atomic::Ordering::Acquire)
+            || direct::en_cours()
         {
             return;
         }
@@ -247,6 +249,60 @@ async fn voix_entendu(texte: String, parle: bool, state: State<'_, AppState>) ->
     }
     e.ou_en_est = apres;
     Ok(Entendu { reaction, transcrite_par, motif })
+}
+
+/// Whether this PC can talk live with its agents: a Google AI Studio key is
+/// saved. Without one the relay of the listening loop answers.
+#[tauri::command]
+fn direct_possible() -> bool {
+    direct::possible()
+}
+
+/// Opens the live conversation with `prenom` (`direct.rs`). `consigne` is the
+/// agent's instruction as the screen builds it for a spoken answer, `demande`
+/// what the client said after the first name. An error means the screen
+/// answers through the relay instead, and says why.
+#[tauri::command]
+async fn direct_ouvrir(
+    prenom: String,
+    fiche_id: String,
+    consigne: String,
+    demande: String,
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<u64, String> {
+    // On a provisioned Box, no right, no answer (plateforme.rs), as in `repondre`.
+    plateforme::autoriser(&fiche_id).await?;
+    if !prenoms_embauches().contains(&prenom) {
+        return Err(format!("{} n'est pas embauché sur ce poste", prenom));
+    }
+    if consigne.trim().is_empty() {
+        return Err("consigne vide : la fiche n a pas ete chargee".to_string());
+    }
+    let ligne = direct::ouvrir(app, prenom.clone(), consigne, demande).await?;
+    let mut e = state.ecoute.lock().unwrap();
+    e.ou_en_est = reveil::Etat::EnConversation { prenom };
+    e.dernier_echange = Some(std::time::Instant::now());
+    Ok(ligne)
+}
+
+/// A tenth of a second of what the microphone hears, base64 16-bit PCM at
+/// 16 kHz, captured by the screen with echo cancellation.
+#[tauri::command]
+fn direct_son(donnees: String) -> Result<(), String> {
+    direct::envoyer_son(&donnees)
+}
+
+/// Closes the live conversation `ligne`; the next sentence needs a first
+/// name again. A newer line, for another agent, is left open.
+#[tauri::command]
+fn direct_fermer(ligne: u64, state: State<'_, AppState>) {
+    if !direct::fermer(Some(ligne)) {
+        return;
+    }
+    let mut e = state.ecoute.lock().unwrap();
+    e.ou_en_est = reveil::Etat::Dormante;
+    *voice::FIN_DE_PAROLE.lock().unwrap() = Some(std::time::Instant::now());
 }
 
 /// Les prenoms que ce client a donnes a SES agents. Une installation illisible
@@ -933,6 +989,10 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             greet,
+            direct_possible,
+            direct_ouvrir,
+            direct_son,
+            direct_fermer,
             init_voice,
             start_voice_recognition,
             stop_voice_recognition,

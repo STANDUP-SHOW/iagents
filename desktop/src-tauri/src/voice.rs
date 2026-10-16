@@ -32,6 +32,11 @@ const ATTENTE_GARDEE: usize = 5 * MORCEAU;
 /// soon as a conversation is open.
 pub static EN_TRAIN_DE_PARLER: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// True while a live conversation (`direct.rs`) holds the microphone: the
+/// screen captures it then, and what this loop would keep is the same voice,
+/// transcribed for nobody on cores the PC needs.
+pub static EN_DIRECT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// When the application last stopped speaking: an open conversation waits
 /// for the client from there, not from when the question was asked.
 pub static FIN_DE_PAROLE: Mutex<Option<std::time::Instant>> = Mutex::new(None);
@@ -348,7 +353,7 @@ fn ouvrir_entree(
         SampleFormat::F32 => peripherique.build_input_stream(
             &config,
             move |donnees: &[f32], _: &cpal::InputCallbackInfo| {
-                if !*actif_f32.lock().unwrap() || EN_TRAIN_DE_PARLER.load(std::sync::atomic::Ordering::Acquire) {
+                if !*actif_f32.lock().unwrap() || (EN_TRAIN_DE_PARLER.load(std::sync::atomic::Ordering::Acquire) || EN_DIRECT.load(std::sync::atomic::Ordering::Acquire)) {
                     return;
                 }
                 let mut t = tampon_f32.lock().unwrap();
@@ -361,7 +366,7 @@ fn ouvrir_entree(
         SampleFormat::I16 => peripherique.build_input_stream(
             &config,
             move |donnees: &[i16], _: &cpal::InputCallbackInfo| {
-                if !*actif.lock().unwrap() || EN_TRAIN_DE_PARLER.load(std::sync::atomic::Ordering::Acquire) {
+                if !*actif.lock().unwrap() || (EN_TRAIN_DE_PARLER.load(std::sync::atomic::Ordering::Acquire) || EN_DIRECT.load(std::sync::atomic::Ordering::Acquire)) {
                     return;
                 }
                 let en_f32: Vec<f32> = donnees
