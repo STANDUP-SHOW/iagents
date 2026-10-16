@@ -65,7 +65,7 @@ s.poser('boxes', 'BOX-1', { ...box, statut: 'suspendue' });
 verifier('Box suspendue refusée', (await appelBox('{}', new Date().toISOString())).status === 403);
 serveur.close();
 
-for (const m of ['controle', 'voix', 'create', 'tarifs']) {
+for (const m of ['controle', 'voix', 'create', 'tarifs', 'noyau']) {
   const chemin = new URL(`./${m}/banc.ts`, import.meta.url);
   if (existsSync(chemin)) {
     console.log(`\nModule ${m}`);
