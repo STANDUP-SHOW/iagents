@@ -12,7 +12,7 @@ import { readdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { compteur, estMain, lireJson, RACINE, testsUsineConnus, validateur } from './commun.ts';
 import { profilMateriel } from './materiel/index.ts';
-import { REFERENCE_BOX, verdictRapport } from '../plateforme/controle/regles.ts';
+import { CODE_GAMME, REFERENCE_BOX, verdictRapport } from '../plateforme/controle/regles.ts';
 import { detecterDonneeClient, textesDe } from '../plateforme/controle/detecteur.ts';
 import type { RapportUsine } from '../plateforme/modele.ts';
 
@@ -33,7 +33,7 @@ export function lancer(): number {
     verifier(`${f} suit rapport.schema.json`, erreurs.length === 0, erreurs.join(' ; '));
     if (erreurs.length) continue;
     verifier(`${f} : le fichier porte le nom de sa référence`, basename(f, '.json') === r.reference);
-    verifier(`${f} : référence au format du brief et de la gamme`, REFERENCE_BOX.test(r.reference) && r.reference.includes(r.gamme === 'business' ? '-CMD-' : '-HOME-'));
+    verifier(`${f} : référence au format du brief et de la gamme`, REFERENCE_BOX.test(r.reference) && r.reference.includes(`-${CODE_GAMME[r.gamme as keyof typeof CODE_GAMME]}-`));
     const profil = profilMateriel(r.profil_materiel);
     verifier(`${f} : le profil matériel ${r.profil_materiel} existe et sert la gamme`, Boolean(profil) && profil!.gammes.includes(r.gamme));
     if (!profil) continue;

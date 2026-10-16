@@ -64,7 +64,7 @@ Les `.deb` sortent de `build-linux-deb.yml`, l'ISO de `build-factory-iso.yml`
 4. Au redémarrage, l'écran d'usine : vérifier l'appareil détecté, choisir la
    machine, saisir son prénom, **INSTALLER**. Attendre **PRÊTE À EXPÉDIER**.
 5. Exporter le rapport (USB), imprimer l'étiquette depuis la fiche de la Box
-   au back-office (QR = la référence `IA-FR-CMD-00000127`), mettre en carton.
+   au back-office (QR = la référence `IA-FR-BUS-00000127`), mettre en carton.
    Imprimer la clé de secours (`securite/luks-tpm.md`) et l'effacer de la Box.
 
 Au back-office la Box est `qualifiee` (ou `provisionnee` si le jeton portait un

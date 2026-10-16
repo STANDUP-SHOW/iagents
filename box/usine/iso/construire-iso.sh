@@ -39,7 +39,7 @@ while [ $# -gt 0 ]; do
     *) echo "argument inconnu : $1" >&2; exit 2 ;;
   esac
 done
-[ -f "$DEPOT/box/profils/$PROFIL.json" ] || { echo "--profil business|home attendu (lu : « $PROFIL »)" >&2; exit 2; }
+[ -f "$DEPOT/box/profils/$PROFIL.json" ] || { echo "--profil home|pro|business attendu (lu : « $PROFIL »)" >&2; exit 2; }
 for outil in xorriso node git; do command -v "$outil" >/dev/null || { echo "outil manquant : $outil" >&2; exit 2; }; done
 
 VERSION="$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).version)' "$ICI/installateur.json")"

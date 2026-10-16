@@ -41,7 +41,7 @@ void _licencesCompletes;
 
 const COMPOSANTS = ['desktop', 'os', 'skills', 'device'] as const satisfies readonly MiseAJour['composant'][];
 const CANAUX = ['stable', 'beta'] as const;
-const GAMMES = ['business', 'home'] as const satisfies readonly Box['gamme'][];
+const GAMMES = ['home', 'pro', 'business'] as const satisfies readonly Box['gamme'][];
 const VERDICTS = ['passe', 'echec', 'non_constate'] as const satisfies readonly VerdictTest[];
 /** A factory token lives one shift by default and never more than three days (brief §43 : l'image d'usine est générique, le jeton est court). */
 const JETON_USINE_DUREE_H = 24;

@@ -43,7 +43,7 @@ export type Manifeste = {
   composants: Record<string, { version: string | null; source: string; pourquoi?: string }>;
 };
 
-export const NOM_ISO = /^iagent-factory-installer-v(\d+\.\d+\.\d+)-(business|home)\.iso$/;
+export const NOM_ISO = /^iagent-factory-installer-v(\d+\.\d+\.\d+)-(home|pro|business)\.iso$/;
 
 export function construireManifeste(p: { profil: string; iso: string; commit: string; date: string; numero?: string }): Manifeste {
   const installateur = json<{ version: string }>('box/usine/iso/installateur.json');

@@ -6,7 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { qrSvg } from './qr.js';
 
-const LIBELLE_GAMME = { business: 'Business (Desktop Commander)', home: 'Home' };
+const LIBELLE_GAMME = { home: 'Home Box', pro: 'Pro Box', business: 'Business Box' };
 const TON = { passe: 'ok', echec: 'ko', non_constate: 'nc' };
 const MOT = { passe: 'PASS', echec: 'FAIL', non_constate: 'NON CONSTATÉ' };
 

@@ -39,17 +39,20 @@ export const STATUTS_ATTRIBUABLES: StatutBox[] = ['stock', 'qualifiee'];
 export const STATUTS_FERMES: StatutBox[] = ['suspendue', 'restituee', 'remplacee'];
 
 /**
- * The commercial reference printed on the label (brief §12): `IA-FR-CMD-00000127`
- * for business, `IA-FR-HOME-00000128` for home. `CMD` is the brief's own code
- * for the business Box ("Commander" being the desktop application, not a gamme).
- * The counter is per gamme, kept by the platform in `compteurs/reference-box`.
+ * The code of each gamme in the commercial reference printed on the label
+ * (brief §12, codes chosen by max on 14/10/2026 after the names Home Box, Pro Box,
+ * Business Box): `IA-FR-HOME-00000128`, `IA-FR-PRO-00000042`, `IA-FR-BUS-00000127`.
+ * The brief's `CMD` is gone: "Commander" is the desktop application, not a Box.
  */
+export const CODE_GAMME = { home: 'HOME', pro: 'PRO', business: 'BUS' } as const satisfies Record<Box['gamme'], string>;
+
+/** The reference of the n-th Box of a gamme; the counter is per gamme, kept by the platform in `compteurs/reference-box`. */
 export function referenceBox(gamme: Box['gamme'], numero: number): string {
   if (!Number.isInteger(numero) || numero < 1 || numero > 99_999_999) throw new Error(`Numéro de Box hors bornes : ${numero}.`);
-  return `IA-FR-${gamme === 'business' ? 'CMD' : 'HOME'}-${String(numero).padStart(8, '0')}`;
+  return `IA-FR-${CODE_GAMME[gamme]}-${String(numero).padStart(8, '0')}`;
 }
 
-export const REFERENCE_BOX = /^IA-FR-(CMD|HOME)-\d{8}$/;
+export const REFERENCE_BOX = /^IA-FR-(HOME|PRO|BUS)-\d{8}$/;
 
 /**
  * The verdict of a factory report, derived from its tests and the hardware

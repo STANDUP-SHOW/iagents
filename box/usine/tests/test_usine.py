@@ -57,12 +57,16 @@ class Materiel(unittest.TestCase):
         self.assertEqual(len([e for e in ecarts if "TPM" in e]), 1)
         self.assertEqual(len([e for e in ecarts if "Secure Boot" in e]), 1)
 
-    def test_exr1_exige_32_go(self):
-        # max, 11/10/2026 : la Box Home a 32 Go (le brief disait 16/32) ; 16 Go est refusé.
-        inv = {**INVENTAIRE_BOSGAME, "cpu": "Intel N305", "memoire_go": 31.2, "mac": {"eth0": "00:11:22:33:44:55", "eth1": None, "wifi": "00:11:22:33:44:56"}}
+    def test_home_box_exige_16_go(self):
+        # max, 14/10/2026 : Home Box 16 Go, Pro Box 32 Go, Business Box 64 Go.
+        inv = {**INVENTAIRE_BOSGAME, "cpu": "Intel N305", "memoire_go": 15.6, "mac": {"eth0": "00:11:22:33:44:55", "eth1": None, "wifi": "00:11:22:33:44:56"}}
         self.assertEqual(comparer_materiel(inv, PROFILS["exr1-home-v1"]), [])
-        self.assertNotEqual(comparer_materiel({**inv, "memoire_go": 15.6}, PROFILS["exr1-home-v1"]), [])
-        self.assertNotEqual(comparer_materiel({**inv, "memoire_go": 24}, PROFILS["exr1-home-v1"]), [])
+        self.assertNotEqual(comparer_materiel({**inv, "memoire_go": 31.2}, PROFILS["exr1-home-v1"]), [])
+        self.assertNotEqual(comparer_materiel({**inv, "memoire_go": 8}, PROFILS["exr1-home-v1"]), [])
+
+    def test_pro_box_bosgame_32_go(self):
+        self.assertEqual(comparer_materiel({**INVENTAIRE_BOSGAME, "memoire_go": 30.9}, PROFILS["bosgame-m4-neo-pro-v1"]), [])
+        self.assertNotEqual(comparer_materiel(INVENTAIRE_BOSGAME, PROFILS["bosgame-m4-neo-pro-v1"]), [], "64 Go n'est pas une Pro Box")
 
     def test_vm_sans_secure_boot_conforme(self):
         inv = {**INVENTAIRE_BOSGAME, "cpu": "QEMU Virtual CPU", "coeurs": 2, "memoire_go": 7.8, "disque": {"modele": "QEMU", "capacite_go": 64},

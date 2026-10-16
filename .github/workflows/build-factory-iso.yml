@@ -1,7 +1,7 @@
 name: Build Factory ISO
 
-# L'ISO du iAgent Box Factory Installer (brief §5) : une par profil (business,
-# home), nommée iagent-factory-installer-v<version>-<profil>.iso, avec son
+# L'ISO du iAgent Box Factory Installer (brief §5) : une par profil (home, pro,
+# business), nommée iagent-factory-installer-v<version>-<profil>.iso, avec son
 # manifeste (Build ID, commit, versions lues dans leurs fichiers). Elle embarque
 # les .deb construits par build-linux-deb.yml ; l'ISO Ubuntu 24.04.5 source est
 # vérifiée contre box/usine/iso/source.json et gardée en cache par son condensé.
@@ -18,8 +18,8 @@ on:
   workflow_dispatch:
     inputs:
       profils:
-        description: "Profils à construire (business, home, ou les deux séparés par une virgule)"
-        default: "business,home"
+        description: "Profils à construire (home, pro, business, séparés par une virgule)"
+        default: "home,pro,business"
       plateforme:
         description: "Adresse https du Control Plane à graver dans l'ISO (vide : l'enrôlement attendra une adresse)"
         default: ""
@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profil: [business, home]
+        profil: [home, pro, business]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,7 +45,7 @@ jobs:
       - name: Ce profil est-il demandé ?
         id: voulu
         run: |
-          VOULUS="${{ github.event.inputs.profils || 'business,home' }}"
+          VOULUS="${{ github.event.inputs.profils || 'home,pro,business' }}"
           case ",$VOULUS," in *",${{ matrix.profil }},"*) echo "oui=1" >> "$GITHUB_OUTPUT" ;; *) echo "oui=0" >> "$GITHUB_OUTPUT" ;; esac
 
       - uses: actions/setup-node@v4

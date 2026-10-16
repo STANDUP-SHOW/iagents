@@ -10,7 +10,7 @@ sont du JSON ; une erreur est `{ "erreur": "<phrase en français>" }`.
 |---|---|---|---|
 | POST | /controle/tenants | admin | créer un client `{nom, segment, pays, opt_in_skills}` |
 | GET | /controle/tenants | admin | lister |
-| POST | /controle/boxes | admin | provisionner à la main `{serial, gamme, identite_publique, cle_chiffrement_publique?, os, version_desktop}` → statut `stock`, `reference` attribuée (`IA-FR-CMD-00000127` / `IA-FR-HOME-…`, un compteur par gamme) ; `cle_chiffrement_publique` = clé X25519 brute de 32 octets en base64url, sans elle la Box ne reçoit aucun contenu de Skill |
+| POST | /controle/boxes | admin | provisionner à la main `{serial, gamme, identite_publique, cle_chiffrement_publique?, os, version_desktop}` → statut `stock`, `reference` attribuée (`IA-FR-HOME-…`, `IA-FR-PRO-…`, `IA-FR-BUS-00000127`, un compteur par gamme `home | pro | business`) ; `cle_chiffrement_publique` = clé X25519 brute de 32 octets en base64url, sans elle la Box ne reçoit aucun contenu de Skill |
 | GET | /controle/boxes | admin | inventaire |
 | GET | /controle/boxes/:id | admin | une Box |
 | POST | /controle/boxes/:id/attribuer | admin | `{tenant_id, plan_id}` → `provisionnee` (depuis `stock` ou `qualifiee`) |

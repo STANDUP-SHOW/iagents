@@ -72,7 +72,7 @@ function nouvelleBox(stockage: Stockage, id: string, tenant: string | null): Key
     device_id: id, tenant_id: tenant, serial: `SN-${id}`, gamme: 'business', os: 'ubuntu-core',
     identite_publique: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
     version_desktop: '0.2.1', statut: tenant ? 'active' : 'stock', plan_id: null, sante: null, garantie_jusqu_au: null,
-    reference: `IA-FR-CMD-${id.replace(/\D/g, '').padStart(8, '0')}`, profil_materiel: null, inventaire: null, versions: null, usine: null,
+    reference: `IA-FR-BUS-${id.replace(/\D/g, '').padStart(8, '0')}`, profil_materiel: null, inventaire: null, versions: null, usine: null,
   };
   stockage.poser('boxes', id, box);
   return privateKey;

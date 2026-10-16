@@ -36,9 +36,10 @@ const rien = () => {};
 const temoins = readdirSync(TEMOINS).filter((f) => f.endsWith('.json')).sort().map((f) => JSON.parse(readFileSync(join(TEMOINS, f), 'utf8')));
 verifier(temoins.length >= 3, `${temoins.length} rapports témoins lus`);
 const profilsMateriel = [
-  { id: 'bosgame-m4-neo-v1', nom: 'BOSGAME M4 Neo', gammes: ['business'], a_confirmer: true },
-  { id: 'exr1-home-v1', nom: 'EXR1 (Box Home)', gammes: ['home'], a_confirmer: true },
-  { id: 'vm-qemu', nom: 'Machine virtuelle QEMU', gammes: ['business', 'home'], a_confirmer: false },
+  { id: 'bosgame-m4-neo-v1', nom: 'BOSGAME M4 Neo 64 Go (Business Box)', gammes: ['business'], a_confirmer: true },
+  { id: 'bosgame-m4-neo-pro-v1', nom: 'BOSGAME M4 Neo 32 Go (Pro Box)', gammes: ['pro'], a_confirmer: true },
+  { id: 'exr1-home-v1', nom: 'EXR1 16 Go (Home Box)', gammes: ['home'], a_confirmer: true },
+  { id: 'vm-qemu', nom: 'Machine virtuelle QEMU', gammes: ['home', 'pro', 'business'], a_confirmer: false },
 ];
 
 console.log('Attente (appareil détecté)');
@@ -47,7 +48,7 @@ for (const r of temoins) {
   const t = rendre(`attente ${r.reference}`, <Ecran etat={etat} operateur={r.operateur} setOperateur={rien} profilMateriel={r.profil_materiel} setProfilMateriel={rien} installer={rien} eteindre={rien} />);
   if (!t) continue;
   verifier(t.includes(r.inventaire.cpu) && t.includes(`${r.inventaire.memoire_go} Go`) && t.includes('INSTALLER'), `${r.reference} : l'inventaire et le bouton INSTALLER sont à l'écran`);
-  verifier(t.includes(r.gamme === 'business' ? 'Business (Desktop Commander)' : 'Home'), `${r.reference} : la gamme est nommée comme le brief (${r.gamme})`);
+  verifier(t.includes({ home: 'Home Box', pro: 'Pro Box', business: 'Business Box' }[r.gamme]), `${r.reference} : la gamme porte le nom choisi par max le 14/10/2026 (${r.gamme})`);
   verifier(t.includes(r.inventaire.tpm.present ? 'présent' : 'absent'), `${r.reference} : le TPM est dit ${r.inventaire.tpm.present ? 'présent' : 'absent'}`);
 }
 {

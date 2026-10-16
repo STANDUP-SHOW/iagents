@@ -32,22 +32,26 @@ Python (bibliothèque standard) : les tests d'usine, le rapport, le rodage. Bash
 et cloud-init : l'autoinstall. Playwright + TypeScript pour le futur gestionnaire
 d'espaces de navigateur.
 
-## 3. Les deux gammes, un seul OS
+## 3. Les trois gammes, un seul OS
 
-Le brief dit « profil COMMANDER / HOME ». Le dépôt dit **`gamme: business |
-home`** (`plateforme/modele.ts`) et max l'a confirmé : il y a deux gammes,
-business et home ; **Commander est le nom de l'application** (Desktop Commander),
-pas une gamme. Les profils d'OS sont donc `box/profils/business.json` et
-`home.json` ; l'écran dit « Business (Desktop Commander) ». La référence
-commerciale garde les codes du brief : `IA-FR-CMD-00000127` (business),
-`IA-FR-HOME-00000128` (home), un compteur par gamme tenu par la plateforme.
+Le brief disait « profil COMMANDER / HOME ». Depuis le 14/10/2026 (max), il y a
+**trois gammes, `gamme: home | pro | business`** (`plateforme/modele.ts`) :
+**Home Box, Pro Box, Business Box**. **Commander est le nom de l'application**
+(Desktop Commander), pas une gamme. Un profil d'OS par gamme
+(`box/profils/home.json`, `pro.json`, `business.json`). La référence commerciale
+porte le code de la gamme (`CODE_GAMME`) : `IA-FR-HOME-00000128`,
+`IA-FR-PRO-00000042`, `IA-FR-BUS-00000127`, un compteur par gamme tenu par la
+plateforme (le `CMD` du brief a disparu, aucune Box n'était enrôlée).
 
-| | business | home |
-|---|---|---|
-| agents / espaces de navigateur | 8 / 8 | 1 / 1 |
-| voix | activable | démarre seule, test micro + enceintes + AEC |
-| machine | BOSGAME M4 Neo (64 Go, confirmé par max le 11/10) | EXR1 (32 Go, confirmé par max le 11/10 ; le brief disait 16/32) |
-| services réels en 0.1 | iagent-device, iagent-commander, iagent-updater, iagent-watchdog | les mêmes |
+| | Home Box | Pro Box | Business Box |
+|---|---|---|---|
+| agents / espaces de navigateur | 1 / 1 | 4 / 4 | 8 / 8 |
+| voix | démarre seule, test micro + enceintes + AEC | activable | activable |
+| machine | EXR1 16 Go (`exr1-home-v1`) | BOSGAME M4 Neo 32 Go (`bosgame-m4-neo-pro-v1`) | BOSGAME M4 Neo 64 Go (`bosgame-m4-neo-v1`) |
+| services réels en 0.1 | iagent-device, iagent-commander, iagent-updater, iagent-watchdog | les mêmes | les mêmes |
+
+Historique : le 11/10 max avait dit Home 32 Go ; le 14/10 il a posé Home 16 Go,
+Pro 32 Go, Business 64 Go.
 
 ## 4. iAgent OS
 

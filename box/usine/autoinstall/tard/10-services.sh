@@ -6,7 +6,7 @@
 # factory tests and the operator page. Then enable the units of the profile.
 set -eu
 SRC=/opt/iagent-usine
-PROFIL="$(cat "$SRC/profil")"           # business | home, written by construire-iso.sh (one ISO per profile)
+PROFIL="$(cat "$SRC/profil")"           # home | pro | business, written by construire-iso.sh (one ISO per profile)
 MANIFESTE="$SRC/manifeste.json"
 [ -f "$MANIFESTE" ] || { echo "manifeste.json manquant dans l'ISO : installation refusée" >&2; exit 1; }
 [ -f "$SRC/profils/$PROFIL.json" ] || { echo "profil d'OS « $PROFIL » inconnu : installation refusée" >&2; exit 1; }

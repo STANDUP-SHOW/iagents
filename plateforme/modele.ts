@@ -45,8 +45,9 @@ export type Box = {
   serial: string;
   /**
    * Référence commerciale, imprimée sur l'étiquette et dans le QR :
-   * `IA-FR-CMD-00000127` (business) ou `IA-FR-HOME-00000128` (home). Un numéro
-   * d'ordre par gamme, attribué par la plateforme à la création, jamais un secret.
+   * `IA-FR-HOME-00000128` (Home Box), `IA-FR-PRO-00000042` (Pro Box) ou
+   * `IA-FR-BUS-00000127` (Business Box). Un numéro d'ordre par gamme, attribué
+   * par la plateforme à la création, jamais un secret.
    */
   reference: string;
   /** Clé publique Ed25519 de la Box, en PEM. La clé privée ne quitte jamais la Box (TPM visé). */
@@ -56,7 +57,12 @@ export type Box = {
    * Packs à cette Box seule (§6). Absente = la Box ne reçoit aucun contenu de Skill.
    */
   cle_chiffrement_publique?: string | null;
-  gamme: 'business' | 'home';
+  /**
+   * Trois gammes (max, 14/10/2026) : Home Box 16 Go (un agent, la voix
+   * d'abord), Pro Box 32 Go (4 agents), Business Box 64 Go (8 agents).
+   * « Commander » est le nom de l'application (Desktop Commander), pas une gamme.
+   */
+  gamme: 'home' | 'pro' | 'business';
   os: string;
   version_desktop: string;
   statut: StatutBox;

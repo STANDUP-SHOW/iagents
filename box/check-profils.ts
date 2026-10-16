@@ -36,7 +36,8 @@ export function lancer(): number {
     verifier(`${f} : au moins une vraie machine (pas seulement la VM)`, p.materiel.some((id) => id !== 'vm-qemu'));
     verifier(`${f} : un espace de navigateur par agent (brief §18)`, p.espaces_navigateur === p.agents_max);
     if (p.id === 'home') verifier(`${f} : Home = un seul agent (brief §3)`, p.agents_max === 1 && p.voix.demarrage_auto);
-    if (p.id === 'business') verifier(`${f} : Business = plusieurs agents (brief §3)`, p.agents_max >= 2);
+    if (p.id === 'pro') verifier(`${f} : Pro = 4 agents (max, 14/10/2026)`, p.agents_max === 4);
+    if (p.id === 'business') verifier(`${f} : Business = 8 agents (brief §3)`, p.agents_max === 8);
     const micro = materiels.some((m) => m?.audio.micro);
     verifier(`${f} : le test micro/enceintes/AEC suit le matériel (${micro ? 'un micro existe' : 'aucun micro'})`, p.voix.test_micro_hp_aec === micro);
   }

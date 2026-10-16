@@ -78,7 +78,7 @@ function Provisionner({ onFini }) {
     <form className="formulaire" onSubmit={(e) => { e.preventDefault(); lancer('provisionnerBox', { corps: f }, onFini); }}>
       <div className="grille">
         <Champ libelle="Numéro de série"><input value={f.serial} onChange={poser('serial')} required /></Champ>
-        <Champ libelle="Gamme"><select value={f.gamme} onChange={poser('gamme')}><option value="business">business</option><option value="home">home</option></select></Champ>
+        <Champ libelle="Gamme"><select value={f.gamme} onChange={poser('gamme')}><option value="home">Home Box</option><option value="pro">Pro Box</option><option value="business">Business Box</option></select></Champ>
         <Champ libelle="Système"><input value={f.os} onChange={poser('os')} required /></Champ>
         <Champ libelle="Version du Desktop"><input value={f.version_desktop} onChange={poser('version_desktop')} required /></Champ>
       </div>

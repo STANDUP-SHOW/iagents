@@ -92,6 +92,46 @@ que la Box (Factory Installer, fusionné dans `main` par les PR #72 et #75) doit
    correspondance est `box/services/` → `device/`, `box/usine/` → `factory/`,
    `plateforme/` → `services/`, `back-office/` → `apps/`.
 
+## 2 bis. Décisions de max du 14/10/2026 (réponse à ce fichier)
+
+- **Hébergement** : décider sur une mesure, avec le simulateur de Box, pas sur
+  une opinion (§2.1, recommandation retenue).
+- **Connexion des administrateurs** : Cloudflare ou Google, choix laissé au
+  développeur. **Retenu : Cloudflare Access, avec Google comme fournisseur
+  d'identité.** La plateforme tourne déjà chez Cloudflare ; Access arrête toute
+  requête non authentifiée avant le Worker ; le Worker vérifie le jeton signé
+  d'Access (`Cf-Access-Jwt-Assertion`) et prend l'adresse de l'administrateur
+  comme acteur de l'audit, ce qui met fin au secret partagé. Les routes `box`
+  (signées par la Box) et `public` restent hors d'Access. À poser par max chez
+  Cloudflare : l'équipe Zero Trust, Google comme méthode de connexion, la liste
+  des adresses admises ; la double authentification est celle du compte Google
+  de chaque administrateur, à activer. Rien de ceci n'est codé.
+- **Gammes et noms** : Home Box 16 Go, Pro Box 32 Go, Business Box 64 Go
+  (§2.3 et §2.4 tranchés) ; Pro Box = BOSGAME M4 Neo en 32 Go, 4 agents ;
+  références `IA-FR-HOME-…`, `IA-FR-PRO-…`, `IA-FR-BUS-…`. Fait dans le code.
+- **Applications** : Web App, Desktop Commander (le client sur sa Box), et trois
+  Desktop Admin : **Admin Global** (côté iAgent : clients, agents, facturation,
+  ce que les documents appellent Platform Commander), **Admin Box** (la flotte et
+  l'usine, Fleet Commander), **Admin Utilisateur** (la console du client, qui
+  gère ses propres utilisateurs et agents). Séparées quand les rôles existent
+  (§2.7 retenu) ; d'ici là, des espaces dans le back-office actuel.
+- **Suspendre une Box à distance** : obligatoire. `suspendue` reste un état de
+  la Box (§3 F tranché) ; aujourd'hui elle joue au renouvellement de licence
+  (24 h au plus), avec l'état voulu (§3 C) elle jouera au battement suivant.
+- **Langue des routes** : laissée au développeur. **Retenu** : les adresses
+  restent en français (tout le dépôt l'est, `routes.md` est le contrat) ; le
+  protocole de la Box porte sa version (en-tête `x-protocole-box: 1`, refus
+  clair d'une version inconnue) ; une description OpenAPI 3.1 sera générée depuis
+  `routes.md`. À faire avec le Control Plane v1.
+- **Par entreprise** (message dicté, compris ainsi, à confirmer) : le nombre de
+  Box nécessaires (le `boxes_per_customer` des documents) ; le **mode de
+  fonctionnement** : par API (Claude) ou interne et local uniquement ; et des
+  **serveurs de puissance** (calcul) qui viennent **toujours en plus** des Box
+  de contrôle, jamais seuls — c'est déjà la règle des machines Power de
+  `docs/offre-box.md`. Dans le modèle : un mode par client, un type de machine
+  (`box` ou `serveur_puissance`) et la règle « pas de serveur de puissance sans
+  Box ». Pas encore codé.
+
 ## 3. Ce que la Box doit changer (branche `admin-master` et suivantes)
 
 Ordre des documents : le protocole d'abord, l'écran ensuite. Les lettres

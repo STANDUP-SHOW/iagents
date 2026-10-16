@@ -21,7 +21,7 @@ export function lancer(): number {
   verifier('la version de l’installateur est semver', /^\d+\.\d+\.\d+$/.test(installateur.version));
   verifier("la source Ubuntu est une 24.04.x live-server, condensé de 64 hexadécimaux, relevée à une date", /^24\.04\.\d+$/.test(source.version)
     && source.fichier === `ubuntu-${source.version}-live-server-amd64.iso` && /^[0-9a-f]{64}$/.test(source.sha256) && source.url.endsWith(source.fichier) && /^\d{4}-\d{2}-\d{2}$/.test(source.releve_le));
-  for (const profil of ['business', 'home']) {
+  for (const profil of ['home', 'pro', 'business']) {
     const iso = `iagent-factory-installer-v${installateur.version}-${profil}.iso`;
     verifier(`le nom d'ISO ${iso} a la forme du brief`, NOM_ISO.test(iso));
     const m = construireManifeste({ profil, iso, commit: 'ad6c328f0000000000000000000000000000abcd', date: '2026-10-11T12:00:00.000Z', numero: '42.ad6c328' });

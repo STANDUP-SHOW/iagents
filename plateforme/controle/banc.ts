@@ -235,7 +235,7 @@ export async function lancer(): Promise<number> {
     // Status transitions
     verifier('stock → active refusé (il faut attribuer)', (await admin('POST', `/controle/boxes/${b1.device_id}/statut`, { statut: 'active', motif: 'essai' })).statut === 409);
     verifier('un statut hors contrat est refusé', (await admin('POST', `/controle/boxes/${b1.device_id}/statut`, { statut: 'usine', motif: 'essai' })).statut === 400);
-    verifier('une Box provisionnée à la main porte sa référence, numérotée par gamme', b1?.reference === 'IA-FR-CMD-00000001' && b2?.reference === 'IA-FR-CMD-00000002' && b3?.reference === 'IA-FR-CMD-00000003' && b1?.usine === null && b1?.profil_materiel === null);
+    verifier('une Box provisionnée à la main porte sa référence, numérotée par gamme', b1?.reference === 'IA-FR-BUS-00000001' && b2?.reference === 'IA-FR-BUS-00000002' && b3?.reference === 'IA-FR-BUS-00000003' && b1?.usine === null && b1?.profil_materiel === null);
     r = await admin('POST', `/controle/boxes/${b1.device_id}/attribuer`, { tenant_id: tA.tenant_id, plan_id: 'box-commander-36' });
     verifier('attribuer : stock → provisionnee', r.corps?.statut === 'provisionnee' && r.corps?.tenant_id === tA.tenant_id);
     verifier('une Box déjà attribuée ne se réattribue pas', (await admin('POST', `/controle/boxes/${b1.device_id}/attribuer`, { tenant_id: tB.tenant_id, plan_id: 'x' })).statut === 409);
@@ -382,7 +382,7 @@ export async function lancer(): Promise<number> {
     verifier("un installateur sans commit git est refusé", (await enroler(jetonA, machine('SN-U1', kU, { installateur: { version: '0.1.0', build_id: 'x' } }))).statut === 400);
     r = await enroler(jetonA, machine('SN-U1', kU));
     const bU = r.corps;
-    verifier("une Box enrôlée par l'usine est « usine », référencée, avec son inventaire et son profil", r.statut === 201 && bU?.statut === 'usine' && bU?.reference === 'IA-FR-CMD-00000004'
+    verifier("une Box enrôlée par l'usine est « usine », référencée, avec son inventaire et son profil", r.statut === 201 && bU?.statut === 'usine' && bU?.reference === 'IA-FR-BUS-00000004'
       && bU?.profil_materiel === 'vm-qemu' && bU?.inventaire?.mac?.eth0 === 'a8:b1:c2:d3:e4:f5' && bU?.usine?.operateur === 'Léa' && bU?.usine?.lot === 'L-2026-10-A' && bU?.tenant_id === null);
     verifier("la même série ne s'enrôle pas deux fois", (await enroler(jetonA, machine('SN-U1', kV))).statut === 409);
     // ADMIN MASTER 14/10/2026 §22: the answer was lost, the Box sends the same request again.
