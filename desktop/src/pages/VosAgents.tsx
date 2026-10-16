@@ -474,8 +474,8 @@ function Navigateur({ agent, aller }: { agent: AgentInstalle; aller: (c: Cible) 
         </button>
       </div>
       <p className="precision">
-        {agent.prenom} travaille dans les sessions que vous avez ouvertes vous-même. Aucun mot de passe ni jeton n’apparaît ici, seulement le
-        site et le jour où vous l’avez connecté.
+        {agent.prenom} travaille dans les sessions que vous avez ouvertes vous-même : il lit, clique, remplit et vous demande un code quand il
+        lui en faut un. Aucun mot de passe ni jeton n’apparaît ici, seulement le site et le jour où vous l’avez connecté.
       </p>
       {motif && <p className="lecture-refus">{motif}</p>}
       {sites && sites.length === 0 && <p className="vide">Aucun compte connecté dans le navigateur des agents.</p>}

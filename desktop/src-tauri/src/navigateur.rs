@@ -7,16 +7,18 @@
 //! seulement le profil du navigateur sur le disque du poste, pour qu'une
 //! session ouverte une fois le reste au lancement suivant.
 //!
-//! Trois choses n'existent pas dans ce fichier, et c'est délibéré :
-//!   - aucune commande n'injecte de script dans la page. Le cahier des charges
-//!     en proposait une qui interpolait un sélecteur non échappé dans
-//!     `executeJavaScript` : elle donne à n'importe quelle page le contrôle du
-//!     poste, et elle n'entrera pas ici.
+//! Deux choses n'existent pas dans ce fichier, et c'est délibéré :
+//!   - aucune commande ne laisse l'écran injecter un script dans la page. Le
+//!     cahier des charges en proposait une qui interpolait un sélecteur non
+//!     échappé dans `executeJavaScript` : elle donne à n'importe quelle page le
+//!     contrôle du poste, et elle n'entrera pas ici.
 //!   - aucune autorisation n'est accordée d'office. Le même cahier des charges
 //!     répondait `callback(true)` à toute demande de permission ; la page
 //!     obtenait micro et caméra sans que personne ne soit prévenu.
-//!   - rien ne clique, ne remplit ni ne publie. Agir dans la page vient en
-//!     phase C, avec validation humaine avant tout envoi.
+//!
+//! Agir dans la page (lire, cliquer, taper, téléverser) est le travail des
+//! agents depuis le 16/10/2026, et vit dans `pilote.rs` : un code fixe compilé
+//! dans l'application, jamais un texte venu de l'écran ou de la page.
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -24,7 +26,7 @@ use tauri::{AppHandle, Manager, Url, WebviewUrl, WebviewWindowBuilder};
 
 /// Une seule fenêtre de navigation, réutilisée. En ouvrir une par site
 /// multiplierait les profils et ferait perdre les sessions déjà ouvertes.
-const ETIQUETTE: &str = "navigateur";
+pub const ETIQUETTE: &str = "navigateur";
 
 /// Un compte que le client déclare avoir connecté. Aucun identifiant, aucun
 /// mot de passe : seulement de quoi dire à l'agent où il peut travailler.
@@ -89,27 +91,37 @@ fn horodatage() -> u64 {
 
 /// Ouvre le navigateur du client sur une adresse, ou l'y emmène s'il est déjà
 /// ouvert. C'est le client qui se connecte à son compte dans cette fenêtre ;
-/// l'application regarde la page se charger et n'y touche pas.
+/// ses agents y travaillent ensuite par `pilote.rs`.
 #[tauri::command]
 pub fn navigateur_ouvrir(app: AppHandle, adresse: String) -> Result<String, String> {
     let url = adresse_valide(&adresse)?;
+    ouvrir(&app, url.clone(), true)?;
+    Ok(url.to_string())
+}
 
+/// La fenêtre unique du navigateur, ouverte ou emmenée sur `url`. `devant` la
+/// met au premier plan : oui quand le client clique, non quand un agent
+/// travaille pendant que le client fait autre chose.
+pub fn ouvrir(app: &AppHandle, url: Url, devant: bool) -> Result<tauri::WebviewWindow, String> {
     if let Some(fenetre) = app.get_webview_window(ETIQUETTE) {
         fenetre
             .navigate(url.clone())
             .map_err(|e| format!("navigation vers {} : {}", url, e))?;
-        fenetre
-            .set_focus()
-            .map_err(|e| format!("mise au premier plan : {}", e))?;
-        return Ok(url.to_string());
+        if devant {
+            fenetre
+                .set_focus()
+                .map_err(|e| format!("mise au premier plan : {}", e))?;
+        }
+        return Ok(fenetre);
     }
 
-    let profil = dossier_profil(&app)?;
+    let profil = dossier_profil(app)?;
 
-    WebviewWindowBuilder::new(&app, ETIQUETTE, WebviewUrl::External(url.clone()))
+    WebviewWindowBuilder::new(app, ETIQUETTE, WebviewUrl::External(url.clone()))
         .title("Vos comptes — iAgent")
         .inner_size(1280.0, 860.0)
         .resizable(true)
+        .focused(devant)
         // Le profil est persistant : c'est lui qui tient la session ouverte
         // d'un lancement à l'autre, ce que Max a demandé explicitement.
         .data_directory(profil)
@@ -119,9 +131,7 @@ pub fn navigateur_ouvrir(app: AppHandle, adresse: String) -> Result<String, Stri
         // l'application : sans cela, un site visité pourrait lire ses fiches.
         .on_navigation(|url| matches!(url.scheme(), "http" | "https"))
         .build()
-        .map_err(|e| format!("ouverture du navigateur : {}", e))?;
-
-    Ok(url.to_string())
+        .map_err(|e| format!("ouverture du navigateur : {}", e))
 }
 
 /// Ferme la fenêtre sans toucher au profil : les sessions restent ouvertes.

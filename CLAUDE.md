@@ -883,17 +883,27 @@ par WhatsApp et email.
   `npm run controle`, s'arrête sur la moindre divergence. Ce n'est pas une
   signature (tout tourne dans le même processus), c'est un contrôle de
   cohérence. Chaque envoi est consigné dans `config/courriels-envoyes.json`.
-- **Le navigateur intégré (`desktop/src-tauri/src/navigateur.rs`) ouvre, il
-  n'agit pas.** Le client se connecte lui-même à ses comptes dans une fenêtre
-  au profil persistant (`data_directory`), posé dans `app_local_data_dir` et
-  non à côté de l'exécutable, qui n'est pas inscriptible après un MSI. Seuls
-  `http` et `https` s'ouvrent ; la fenêtre n'est pas listée dans
-  `capabilities/default.json`, donc aucun site visité n'atteint une commande.
-  **Aucune commande n'injecte de script dans la page et aucune permission n'est
-  accordée d'office** : les deux motifs du cahier des charges
-  (`setPermissionRequestHandler` → `callback(true)`, sélecteur non échappé dans
-  `executeJavaScript`) sont refusés par construction. Cliquer et remplir vient
-  en phase C, avec validation humaine avant tout envoi.
+- **Le navigateur intégré (`navigateur.rs`) est celui où le client se connecte,
+  et ses agents y travaillent par `pilote.rs`** (16/10/2026, demande de max :
+  « les agents doivent continuer à travailler quand je m'absente »). Profil
+  persistant sous `app_local_data_dir` ; seuls `http` et `https` s'ouvrent ; la
+  fenêtre n'est **toujours pas** listée dans `capabilities/default.json`, donc
+  aucun site visité n'atteint une commande. Le pilotage va de l'application vers
+  la page, jamais l'inverse : le code exécuté dans la page est fixe
+  (`pilote.js`, compilé dans le binaire, joué dans un vrai Chromium par
+  `check-pilote.mjs`) et les valeurs de l'agent y arrivent en argument JSON,
+  jamais collées dans le code ; sous Windows les clics et la frappe sont de vrais
+  événements, par le protocole DevTools de WebView2 appelé de l'intérieur
+  (`CallDevToolsProtocolMethod`), **sans port de débogage ouvert**. Un fichier ne
+  part que de `Documents/iAgent/Televersements` ; LinkedIn est refusé avant
+  chaque geste ; un mot de passe de compte créé est tiré au hasard et rangé au
+  coffre (`iagent-comptes` / hôte) sans passer par le modèle. Aucune permission
+  de page n'est accordée d'office. `procedure.rs` mène une procédure avec le
+  modèle et ses outils ; un code, un captcha ou une décision la met **en
+  attente** avec tout son état sur le disque, et la réponse du client la fait
+  repartir au geste exact, même après un redémarrage. Pas de contournement
+  anti-robot : un captcha se demande au client. **Non constaté : le chemin
+  WebView2 n'a pas encore tourné sur un vrai Windows.**
 
 ## Commandes
 

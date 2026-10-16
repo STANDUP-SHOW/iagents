@@ -106,3 +106,14 @@ jobs:
       # ici : c'est le flux « Build Windows MSI » qui le vérifie.
       - name: Typage de l'interface et bancs Rust
         run: npm run controle-application
+
+      # Le code que l'application exécute dans les pages pour ses agents
+      # (src-tauri/src/pilote.js), joué dans un vrai Chromium, le moteur de
+      # WebView2 : lecture d'un formulaire, saisie vue par le site, liste,
+      # case, fichier joint, vrai clic, numéro périmé refusé.
+      - name: Pilote du navigateur dans Chromium
+        working-directory: desktop
+        run: |
+          npm i --no-save --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+          node check-pilote.mjs

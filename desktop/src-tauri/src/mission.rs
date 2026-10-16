@@ -41,7 +41,7 @@ const REPRISES_MAX: usize = 5;
 /// au point de faire exploser la requête.
 const EXTRAIT_PAR_COLLEGUE: usize = 8_000;
 /// La règle de max : aucun recueil automatique sur LinkedIn.
-const DOMAINES_INTERDITS: [&str; 1] = ["linkedin.com"];
+pub(crate) const DOMAINES_INTERDITS: [&str; 1] = ["linkedin.com"];
 
 /// Un agent de l'équipe, tel que le chef le connaît.
 #[derive(Debug, Clone)]
