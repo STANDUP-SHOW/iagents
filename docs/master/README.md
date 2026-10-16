@@ -30,6 +30,10 @@ commandes). Texte dans `ADMIN-MASTER-1.0-2026-10.txt` et
 `ADMIN-MASTER-1.1-2026-10.txt` ; ce qui est conforme, ce qui contredit le dépôt
 et ce que la Box doit changer : [`admin.md`](admin.md).
 
+**Quantum-Ready et Station Gen 1 (16/10/2026).** Crypto-agilité (ML-KEM,
+ML-DSA), PKI, profils crypto ; et une Station 27" à micros en champ lointain :
+[`quantique-station.md`](quantique-station.md).
+
 ## §6 : fait et reste
 
 Fait par la plateforme (`plateforme/controle/`, banc dans `npm run controle`) :

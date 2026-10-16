@@ -1,0 +1,228 @@
+
+iAgent Quantum-Ready Security Architecture
+Dossier explicatif, architecture technique, spécification développeur et intégration Factory / Fleet
+Objectif — Rendre toute la flotte iAgent crypto-agile et prête à migrer vers la cryptographie post-quantique sans remplacement matériel massif, tout en conservant une chaîne de confiance auditable de la Factory jusqu'au Control Plane.
+ |
+Ce dossier sert de référence commune au développeur système, au développeur Control Plane/Fleet, au responsable Factory, aux intégrateurs et aux futurs partenaires cyber. Il ne suppose pas qu'un ordinateur quantique opérationnel soit installé dans la Box : le sujet est la résistance future de la cryptographie et la capacité de migration.
+1. Principes directeurs
+Crypto-agility : aucun service métier ne dépend directement d'un algorithme cryptographique codé en dur.
+Hybridation pendant la transition : combiner mécanismes classiques éprouvés et mécanismes post-quantiques lorsque la pile logicielle le permet.
+Identité forte de chaque Box : identité matérielle, certificat, TPM 2.0, attestation et mTLS.
+Chaîne de boot et d'update vérifiable : Secure Boot, images signées, manifestes OTA signés, rollback contrôlé.
+Inventaire cryptographique du parc : savoir quelles primitives, bibliothèques, certificats et profils sont déployés sur chaque appareil.
+Migration pilotée par politique : les profils cryptographiques sont versionnés et déployés par le Control Plane.
+Pas de dépendance irréversible à un fournisseur de TPM, de cloud ou de bibliothèque crypto.
+2. Standards de référence à supporter
+Besoin
+ | Référence cible
+ | Rôle dans iAgent
+ | KEM / établissement de secret
+ | ML-KEM (FIPS 203)
+ | Canal hybride Box <-> Control Plane, renouvellement de secrets
+ | Signature post-quantique
+ | ML-DSA (FIPS 204)
+ | Code signing, manifests OTA, signatures d'identité et éventuellement audit
+ | Signature alternative
+ | SLH-DSA (FIPS 205)
+ | Alternative conservatrice pour certains rôles de signature
+ | Symétrique
+ | AES-256 / AEAD moderne
+ | Disques, backups, secrets, données persistantes
+ | Hash
+ | SHA-384/SHA-512 ou famille moderne approuvée
+ | Intégrité, journaux, artefacts
+ | Transport
+ | TLS 1.3 + hybrid PQC quand disponible
+ | API, mTLS, Control Plane, services
+ |
+Le développeur doit maintenir la possibilité de changer ces choix via profil de sécurité. Les versions de bibliothèques et paramètres approuvés doivent être centralisés dans une seule couche de configuration.
+3. Architecture logique
+APPLICATIONS / AGENTS / CONNECTORS             |       iAgent Crypto API             |   +---------+----------+----------------+   |                    |                |Key Exchange        Signatures       SymmetricProvider            Provider         Provider   |                    |                |Classical + PQC     Classical + PQC  AES-256 / AEAD             |     OS / OpenSSL Provider Layer             |      TPM 2.0 / KMS / HSM
+ |
+4. Crypto Provider iAgent
+Créer une bibliothèque/service interne iAgent Crypto Provider. Toutes les applications consomment cette API plutôt que d'appeler directement RSA, ECDSA, X25519, ML-KEM ou ML-DSA.
+API logique
+ | Fonction
+ | Exigence
+ | negotiate_profile()
+ | Choisit le profil autorisé pour un pair
+ | Tenant, région, version, politique
+ | establish_session()
+ | Établit un secret de session
+ | Support hybride
+ | sign_artifact()
+ | Signe firmware/skill/config
+ | Double signature possible
+ | verify_artifact()
+ | Vérifie chaîne et politique
+ | Refus si profil obsolète
+ | seal_secret()
+ | Scelle un secret au device
+ | TPM/KMS
+ | rotate_identity()
+ | Rotation certs/clefs
+ | Sans re-provisioning complet
+ | crypto_inventory()
+ | Expose état cryptographique
+ | Fleet/Compliance
+ |
+5. Profils cryptographiques
+Profil
+ | Usage
+ | Politique
+ | CRYPTO-1
+ | Compatibilité classique contrôlée
+ | Legacy transitoire uniquement
+ | CRYPTO-2
+ | Hybride classique + PQC
+ | Profil par défaut recommandé pour transition
+ | CRYPTO-3
+ | PQC préféré
+ | Quand écosystème et certificats sont stabilisés
+ | CRYPTO-4
+ | Futur
+ | Réservé aux futures recommandations et migrations
+ |
+6. Identité des acteurs et des appareils
+Le modèle iAgent comporte quatre types d'ACTORS : HUMAN, AGENT, SERVICE, DEVICE. Chaque action sensible doit être reliée à un acteur, un tenant, une ressource et un correlation_id.
+Device ID immuable généré en Factory.
+Certificat device émis après enrôlement et lié au TPM.
+Certificats de service courts et renouvelables.
+Identité d'agent distincte de la Box ; un agent déplacé vers une autre Box conserve son identité logique mais renouvelle ses credentials d'exécution.
+Code signing séparé de l'identité de device.
+7. PKI iAgent
+iAgent Root of Trust (offline / HSM)|+-- Device Intermediate CA|   +-- Box certificates|+-- Service Intermediate CA|   +-- Control Plane / APIs / workers|+-- Code Signing CA|   +-- OS images / OTA / Skill Packs / App Bridge|+-- Agent Identity CA    +-- optional agent signing identities
+ |
+Règle — La Root CA ne doit jamais être utilisée par les applications quotidiennes. Les clés racines sont hors ligne ou en HSM/KMS hautement protégé. Les CA intermédiaires sont rotatables.
+ |
+8. Factory Installer — exigences Quantum-Ready
+Qualifier TPM 2.0, Secure Boot, UEFI, IOMMU, RNG et capacité de mise à jour firmware.
+Générer Device UUID et paire de clés initiale dans un contexte protégé.
+Enrôler la Box dans le Control Plane via canal bootstrap à usage limité.
+Installer le Crypto Provider et les profils approuvés.
+Charger les clés Secure Boot iAgent lorsque la plateforme le permet.
+Activer FDE/LUKS2 et sceller les secrets appropriés au TPM.
+Vérifier signature de l'image usine et des packages.
+Exécuter un test de handshake classique + PQC/hybride dans l'environnement de qualification.
+Écrire le rapport Factory avec inventaire crypto et empreintes des composants.
+Passer l'état device à PROVISIONED uniquement si tous les contrôles réussissent.
+9. Desired State et migration de parc
+desired_state.security.crypto_profile = "CRYPTO-2"desired_state.security.min_tls = "1.3"desired_state.security.pqc_kem = "ML-KEM"desired_state.security.pqc_signature = "ML-DSA"desired_state.security.ota_dual_signature = truedesired_state.security.rotation_deadline = "2027-06-30"
+ |
+Le Device Agent réconcilie l'état réel avec l'état désiré. Une Box incompatible ne doit pas être mise hors service brutalement : elle passe dans un état NON_COMPLIANT avec plan de remédiation, sauf vulnérabilité critique nécessitant blocage.
+10. OTA / Code signing
+Manifestes de release versionnés et signés.
+Possibilité de double signature classique + post-quantique.
+Hash de chaque artefact.
+Politique de minimum acceptable par canal DEV/INTERNAL/PILOT/CANARY/STABLE.
+Rollback signé ; jamais de retour vers une version cryptographiquement interdite.
+Rotation des clés de signature sans réinstallation de la flotte.
+Révocation d'urgence d'une clé compromise.
+11. Données, backups et 'harvest now, decrypt later'
+Les données sensibles à longue durée de confidentialité doivent recevoir la priorité. L'objectif n'est pas de 'quantifier' tout le stockage, mais d'éviter que les secrets de long terme dépendent exclusivement d'une clé publique classique.
+FDE AES-256 pour DATA.
+Backups chiffrés avec clés data séparées des clés device.
+Envelope encryption via KMS/Vault.
+Rotation et rewrapping des DEK sans recopier tous les volumes.
+Classification de durée de sensibilité : courte, moyenne, longue.
+Flux à longue sensibilité protégés en priorité par transport hybride PQC.
+12. Fleet Commander — écran Cryptography
+Champ Fleet
+ | Exemple
+ | Crypto profile
+ | CRYPTO-2
+ | TLS
+ | 1.3
+ | KEM
+ | X25519 + ML-KEM
+ | Signature OTA
+ | Classical + ML-DSA
+ | Disk
+ | AES-256 / LUKS2
+ | Device identity
+ | TPM-backed
+ | Last key rotation
+ | 2026-10-16
+ | Compliance
+ | PASS / WARNING / FAIL
+ | Remediation
+ | Rotate / Update / Re-enroll
+ |
+13. Contrôles de développement
+Interdiction des secrets hardcodés dans dépôts, images ou scripts.
+SBOM générée pour chaque release.
+Pinning/versionning des bibliothèques crypto.
+Tests unitaires de négociation de profils.
+Tests de downgrade.
+Tests de révocation.
+Tests de rotation massive.
+Tests de compatibilité mixed-fleet.
+Fuzzing des parsers de certificats/manifests si possible.
+Revue de dépendances cryptographiques avant chaque release stable.
+14. Backlog développeur priorisé
+Priorité
+ | Epic
+ | Livrable
+ | P0
+ | Crypto abstraction
+ | iAgent Crypto Provider + config centralisée
+ | P0
+ | Device identity
+ | TPM-backed enrollment + cert lifecycle
+ | P0
+ | Signed OTA
+ | manifest + signature + rollback
+ | P0
+ | Audit
+ | crypto inventory + correlation IDs
+ | P1
+ | Hybrid transport
+ | pilot ML-KEM hybride
+ | P1
+ | Hybrid code signing
+ | ML-DSA en double signature
+ | P1
+ | Fleet UI
+ | Crypto Compliance screen
+ | P1
+ | Policy
+ | Crypto Profiles versionnés
+ | P2
+ | Agent signatures
+ | signature d'actions à haute valeur
+ | P2
+ | Enterprise export
+ | rapport de conformité client
+ |
+15. Tests d'acceptation
+Test
+ | Pass attendu
+ | Factory enrollment
+ | identité device créée et attestée
+ | Cold boot
+ | Secure Boot + FDE fonctionnels
+ | mTLS
+ | session valide avec rotation
+ | Hybrid handshake
+ | session CRYPTO-2 réussie
+ | OTA valid
+ | mise à jour acceptée
+ | OTA tampered
+ | rejet immédiat
+ | Downgrade
+ | rejet selon politique
+ | Key revoke
+ | device/service remédié
+ | Fleet inventory
+ | algorithmes/versions visibles
+ | Offline mode
+ | comportement sûr et reprise contrôlée
+ |
+16. Gouvernance et financement
+Cette couche peut être présentée comme un actif technologique transversal : sécurisation post-quantique de flottes distribuées d'agents IA. Elle justifie un lot R&D distinct dans les demandes de financement : architecture crypto-agile, PKI, migrations, tests, sécurité, partenaires académiques et certification.
+17. Références normatives de base
+NIST FIPS 203 — Module-Lattice-Based Key-Encapsulation Mechanism Standard (ML-KEM)
+NIST FIPS 204 — Module-Lattice-Based Digital Signature Standard (ML-DSA)
+NIST FIPS 205 — Stateless Hash-Based Digital Signature Standard (SLH-DSA)
+NIST guidance on cryptographic agility and post-quantum migration
+European Commission / EU coordinated roadmap for transition to post-quantum cryptography
