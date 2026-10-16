@@ -176,7 +176,7 @@ function PourquoiLouer() {
             <p className="mq-surtitre">Avec iAgent</p>
             <h3 className="sc-h2">Tout est déjà intégré</h3>
             <div className="sc-integre-corps">
-              <Photo dossier="/accueil" src="box-commander" alt="La Box iAgent Commander" largeur={1122} hauteur={570} />
+              <Photo dossier="/accueil" src="box-commander" alt="La Box iAgent Station en trois finitions" largeur={1122} hauteur={570} />
               <div className="sc-integre-lignes">
                 <div><Icone nom="equipe" taille={20} /><span><b>Des métiers prêts</b><small>Décrits, maintenus, enrichis.</small></span></div>
                 <div><Icone nom="ecran" taille={20} /><span><b>La Box et Desktop Commander</b><small>Préparés et tenus à jour.</small></span></div>

@@ -3,14 +3,13 @@ import { Bouton, LIENS } from '../composants.jsx';
 import { BOX_PUBLIQUES, euros } from '../../data/tarifs.js';
 import { useScene, BUREAU, MOBILE, gsap } from '../mouvement.js';
 
-// What each part of max's Box Commander picture does, placed on the picture
-// (percent of its width and height).
+// What each part of the iAgent Station does, placed on the three-finish picture
+// (percent of its width and height). Labels sit beside the badges, never on them.
 const REPERES = [
-  { nom: 'Voice', detail: 'ils vous répondent à voix haute', x: 15, y: 70 },
-  { nom: 'Listen', detail: 'un micro qui vous entend du bureau', x: 35, y: 50 },
-  { nom: 'Touch', detail: 'le Desktop Commander au doigt', x: 64, y: 22 },
-  // Beside the box, not on it: centred on the box, the label hid its logo (max, 10/10).
-  { nom: 'Box autonome', detail: 'vos agents tournent chez vous', x: 57, y: 93 },
+  { nom: 'Voice', detail: 'ils vous répondent par les haut-parleurs de la base', x: 77, y: 88 },
+  { nom: 'Listen', detail: 'des micros qui vous entendent dans toute la pièce', x: 22, y: 69 },
+  { nom: 'Touch', detail: 'un écran de 27 pouces, le Desktop Commander au doigt', x: 62, y: 14 },
+  { nom: 'Tout-en-un', detail: 'ordinateur, audio, micros et écran en un appareil', x: 34, y: 93 },
 ];
 
 /** Scene 12 — the team gets a place in the office: the real hardware, big. */
@@ -31,14 +30,14 @@ export default function IAgentBox() {
   return (
     <section ref={ref} id="box" className="scene overflow-hidden" aria-labelledby="titre-box">
       <div className="cadre text-center max-w-3xl mx-auto">
-        <p className="surtitre justify-center">iAgent Box Commander</p>
+        <p className="surtitre justify-center">iAgent Box · la Station iAgent</p>
         <h2 id="titre-box" className="titre-display titre-grand mt-4">Donnez une place <span className="degrade">à votre équipe.</span></h2>
-        <p className="chapeau mt-5 mx-auto">Un poste posé dans vos bureaux, qui porte vos agents, leur voix et votre Desktop Commander. Vos données restent chez vous.</p>
+        <p className="chapeau mt-5 mx-auto">Un seul appareil posé dans vos bureaux, qui porte vos agents, leur voix et votre Desktop Commander. Vos données restent chez vous.</p>
       </div>
 
       <figure className="bx-photo relative mt-10 mx-auto w-full max-w-[1500px] px-0 md:px-6">
         <div className="relative overflow-hidden md:rounded-[28px]" style={{ boxShadow: '0 60px 140px -60px rgba(3,243,255,.55), 0 40px 120px -60px rgba(229,0,126,.5)' }}>
-          <img src="/accueil/box-commander.webp" alt="La Box Commander iAgent posée sur un bureau : l'écran tactile avec le Desktop Commander, le boîtier blanc iAgent, un micro et deux enceintes." width="1122" height="570" loading="lazy" decoding="async" className="w-full h-auto block" />
+          <img src="/accueil/box-commander.webp" alt="La Station iAgent en trois finitions, Pearl White, Deep Navy et Brushed Aluminum : écran tactile 27 pouces sur bras articulé, base avec micros, haut-parleurs et anneau lumineux." width="1122" height="570" loading="lazy" decoding="async" className="w-full h-auto block" />
           <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(2,8,23,.35), transparent 25%, transparent 75%, rgba(2,8,23,.6))' }} />
           {REPERES.map((r) => (
             <span key={r.nom} className="bx-repere hidden md:flex absolute -translate-x-1/2 -translate-y-1/2 items-center gap-2" style={{ left: `${r.x}%`, top: `${r.y}%` }}>
