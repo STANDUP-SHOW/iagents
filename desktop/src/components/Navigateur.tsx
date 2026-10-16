@@ -8,6 +8,22 @@ type SiteConnecte = {
   declare_le: number
 }
 
+/** Lecture structurelle : aucune valeur de champ, cookie ou mot de passe. */
+type Observation = {
+  version: number
+  origine: string
+  titre: string
+  titres: string[]
+  elements: Array<{
+    tag: string
+    role: string
+    type_champ: string
+    nom: string
+    requis: boolean
+    inactif: boolean
+  }>
+}
+
 const SUGGESTIONS: { nom: string; adresse: string }[] = [
   { nom: 'Sage', adresse: 'https://www.sage.com/fr-fr/' },
   { nom: 'Cegid', adresse: 'https://www.cegid.com/fr/' },
@@ -30,6 +46,7 @@ export default function Navigateur() {
   const [adresse, setAdresse] = useState('')
   const [erreur, setErreur] = useState('')
   const [occupe, setOccupe] = useState(false)
+  const [observation, setObservation] = useState<Observation | null>(null)
   // La demande d'effacement passe par une confirmation : déconnecter le client
   // de tous ses comptes sur un clic de travers se répare mal.
   const [effacementDemande, setEffacementDemande] = useState(false)
@@ -42,9 +59,23 @@ export default function Navigateur() {
 
   const ouvrir = async (cible: string) => {
     setErreur('')
+    setObservation(null)
     setOccupe(true)
     try {
       await invoke('navigateur_ouvrir', { adresse: cible })
+    } catch (e) {
+      setErreur(String(e))
+    } finally {
+      setOccupe(false)
+    }
+  }
+
+  const observer = async () => {
+    setErreur('')
+    setOccupe(true)
+    setObservation(null)
+    try {
+      setObservation(await invoke<Observation>('navigateur_observer'))
     } catch (e) {
       setErreur(String(e))
     } finally {
@@ -69,6 +100,7 @@ export default function Navigateur() {
 
   const oublier = async (hote: string) => {
     setErreur('')
+    setObservation(null)
     try {
       setSites(await invoke<SiteConnecte[]>('navigateur_oublier_site', { hote }))
     } catch (e) {
@@ -78,6 +110,7 @@ export default function Navigateur() {
 
   const effacer = async () => {
     setErreur('')
+    setObservation(null)
     setOccupe(true)
     try {
       await invoke('navigateur_effacer_sessions')
@@ -172,6 +205,41 @@ export default function Navigateur() {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section className="navigateur-observation">
+        <h3>Analyser la structure de la page ouverte</h3>
+        <p className="precision">
+          Lecture locale des titres, boutons et noms de champs du site HTTPS déclaré.
+          Cette fonction ne lit ni les textes saisis dans les formulaires, ni les mots de passe,
+          ni les cookies, et n'effectue aucune action. Elle ne fonctionne pas sur les pages
+          qui refusent cette lecture.
+        </p>
+        <button disabled={occupe || sites.length === 0} onClick={observer}>
+          {occupe ? 'Lecture en cours…' : 'Analyser la page ouverte'}
+        </button>
+        {observation && (
+          <div className="navigateur-resultat">
+            <p><strong>{observation.titre || 'Page sans titre'}</strong> — {observation.origine}</p>
+            {observation.titres.length > 0 && (
+              <p className="precision">Rubriques : {observation.titres.join(' · ')}</p>
+            )}
+            <p className="precision">
+              {observation.elements.length} élément(s) interactif(s) relevé(s), sans leurs valeurs.
+            </p>
+            <ul>
+              {observation.elements.map((element, index) => (
+                <li key={index}>
+                  <strong>{element.nom || 'Sans libellé'}</strong>
+                  {' — '}{element.role || element.tag}
+                  {element.type_champ ? ' / ' + element.type_champ : ''}
+                  {element.requis ? ' · obligatoire' : ''}
+                  {element.inactif ? ' · inactif' : ''}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </section>
 
