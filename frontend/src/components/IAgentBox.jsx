@@ -58,13 +58,13 @@ export default function IAgentBox({ installation = null, onChoisir }) {
       <div className="card border-2 border-neon-400/60">
         <h2 className="font-display text-2xl text-white mb-1">iAgent Box</h2>
         <p className="text-nuit-300">
-          Choisissez d'abord votre installation : sans machine, ou avec la Box, louée et maintenue par iAgent.
+          Choisissez d'abord votre installation : sans machine pour un ou deux agents, ou la Box 64 Go, louée et maintenue par iAgent, une par dizaine d'agents.
           Pour une forte puissance locale, l'infrastructure se conçoit sur devis.
         </p>
         <div className="grid md:grid-cols-2 gap-4 mt-4">
           <div className="rounded-lg bg-nuit-900 border border-nuit-600 p-4">
-            <p className="text-rose-300 font-semibold">La Box Commandeur</p>
-            <p className="text-sm text-nuit-300">Un poste de commande dédié à vos agents, une rallonge de votre bureau. Elle ne fait pas tourner d'agent à elle seule.</p>
+            <p className="text-rose-300 font-semibold">La Box 64 Go</p>
+            <p className="text-sm text-nuit-300">Assemblée par iAgent, à côté de votre bureau : vos agents y font la majeure partie de leur travail, et chacun coûte au moins 40 % de moins en consommation d'IA qu'en passant tout par l'API.</p>
           </div>
           <a href="/local-ai" className="rounded-lg bg-nuit-900 border border-nuit-600 p-4 block hover:border-neon-400">
             <p className="text-rose-300 font-semibold">La puissance locale</p>

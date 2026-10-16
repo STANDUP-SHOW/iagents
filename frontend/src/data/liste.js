@@ -36,11 +36,12 @@ function ecrire(l) {
 }
 
 /** One line per job and activity: recruiting the same job twice raises its count. */
-export function ajouterAgent({ fiche, slug, nom, secteur, activite = null, suggestions = [] }) {
+export function ajouterAgent({ fiche, slug, nom, secteur, activite = null, suggestions = [], duree = DUREE_DEFAUT }) {
   const l = lireListe();
-  const deja = l.agents.find((a) => a.fiche === fiche && (a.activite ?? null) === (activite ?? null));
+  const d = DUREES.some((x) => x.id === duree) ? duree : DUREE_DEFAUT;
+  const deja = l.agents.find((a) => a.fiche === fiche && (a.activite ?? null) === (activite ?? null) && dureeDeLigne(a)?.id === d);
   if (deja) deja.quantite = Math.min(20, (deja.quantite ?? 1) + 1);
-  else l.agents.push({ fiche, slug, nom, secteur, activite, suggestions: suggestions.slice(0, 8), palier: PALIER_DEFAUT, duree: DUREE_DEFAUT, quantite: 1 });
+  else l.agents.push({ fiche, slug, nom, secteur, activite, suggestions: suggestions.slice(0, 8), palier: PALIER_DEFAUT, duree: d, quantite: 1 });
   return ecrire(l);
 }
 
