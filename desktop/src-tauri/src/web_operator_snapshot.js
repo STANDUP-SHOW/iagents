@@ -31,13 +31,7 @@
       if (!nom && el.labels && el.labels.length) {
         nom = couper(el.labels[0].textContent, 100);
       }
-      if (!nom && el.id) {
-        // Eviter les selecteurs dynamiques et non echappes.
-        var label = document.querySelector('label[for]');
-        // Pour des raisons de surete, ce fallback n'extrait pas un label
-        // arbitraire; aria-label, label associe et placeholder suffisent.
-        void label;
-      }
+      // Pas de selecteur genere a partir d'un ID venant du site.
       if (!nom) nom = couper(el.getAttribute('placeholder'), 100);
       if (!nom && (tag === 'button' || tag === 'a' || el.getAttribute('role') === 'button')) {
         nom = couper(el.textContent, 100);
