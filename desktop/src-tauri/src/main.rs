@@ -14,6 +14,7 @@ mod journal;
 mod mcp;
 mod modele;
 mod navigateur;
+mod web_operator;
 mod tache;
 mod equipe;
 mod document;
