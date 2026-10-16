@@ -60,4 +60,20 @@ Mesuré dans la session (in-process, même fonction que les deux portes) :
   et tickets de l'équipe, connecteurs, limites de débit, NATS.
 - Le balayage (`POST /v1/balayage`) n'est pas encore appelé par une tâche à
   heure fixe chez Cloudflare.
-- Les consoles (écrans) : lot suivant.
+
+## Les consoles (`back-office/`)
+
+L'application admin range ses écrans en trois consoles et un contrôle commun :
+**Fleet Commander** (vue de la flotte avec la fiche de chaque Box, ses agents et
+ses commandes ; incidents ; Boxes ; usine), **Platform Commander** (plans,
+licences, voix, catalogue, Skills, opportunités, études, devis), **iAgent Team**
+(acteurs, rôles, plafonds, second facteur, actions de l'équipe) et **Contrôle**
+(approbations, journal du noyau avec suivi d'une corrélation, audit).
+On s'y connecte avec la clé du fondateur ou avec un compte personnel
+(identifiant, clé, code à 6 chiffres) ; la session est rangée dans le trousseau
+de l'ordinateur comme le jeton. Les écrans du banc sont rendus sur des réponses
+du vrai noyau (`back-office/banc/noyau-de-banc.ts`), pas sur des données écrites
+à la main. Une action retenue pour approbation s'affiche « Pas encore faite ».
+Avec un compte personnel, les écrans de l'ancien contrôle (`/controle/…`)
+répondent par le refus de la plateforme : ils demandent encore la clé du
+fondateur.

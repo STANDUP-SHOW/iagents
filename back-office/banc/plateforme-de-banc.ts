@@ -14,6 +14,7 @@ import { creerPlateforme, toutesLesRoutes, ok, refus, type Route, type Contexte 
 import { Stockage } from '../../plateforme/stockage.ts';
 import * as banc from './donnees-de-banc.mjs';
 import table from '../src/routes.json' with { type: 'json' };
+import { monde } from './noyau-de-banc.ts';
 
 type Doc = Record<string, any>;
 const etat = {
@@ -168,7 +169,10 @@ export function routesDeBanc(): Route[] {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const routes = [...toutesLesRoutes, ...routesDeBanc()];
-  const { serveur } = creerPlateforme({ secretAdmin: banc.JETON_DE_BANC, fichierDonnees: null }, { stockage: new Stockage(null), routes });
+  // The admin core's world (simulated Boxes, actors, approvals), played by the real core and ending now.
+  const stockage = new Stockage(null);
+  await monde({ stockage, depart: new Date(Date.now() - 4.5 * 60_000) });
+  const { serveur } = creerPlateforme({ secretAdmin: banc.JETON_DE_BANC, fichierDonnees: null }, { stockage, routes });
   const port = Number(process.env.PORT ?? 8787);
   serveur.listen(port, '127.0.0.1', () => {
     console.log(`plateforme de banc sur http://127.0.0.1:${port} — ${toutesLesRoutes.length} route(s) réelle(s), ${routes.length - toutesLesRoutes.length} doublure(s)`);

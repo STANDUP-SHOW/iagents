@@ -8,10 +8,12 @@ on:
   pull_request:
     paths:
       - 'back-office/**'
+      - 'plateforme/**'
       - '.github/workflows/build-back-office.yml'
   push:
     paths:
       - 'back-office/**'
+      - 'plateforme/**'
       - '.github/workflows/build-back-office.yml'
   workflow_dispatch:
 
@@ -45,6 +47,11 @@ jobs:
         with:
           node-version: '22'
 
+      # Le banc des écrans fait tourner le vrai noyau de la plateforme
+      # (back-office/banc/noyau-de-banc.ts), qui lit les modules de la racine.
+      - name: Install root dependencies
+        run: npm ci --no-audit --no-fund
+
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
         working-directory: back-office
@@ -58,7 +65,7 @@ jobs:
       # Le trousseau Windows (Credential Manager) est celui qu'emploie le
       # produit : les tests de la crate tournent ici sur la cible réelle.
       - name: Banc Rust (routes, adresses, réponses, appel réel)
-        run: cargo test --manifest-path admin/Cargo.toml
+        run: cargo test --manifest-path admin/Cargo.toml --features courriel
         working-directory: back-office
 
       # tauri build enchaîne le build Vite via beforeBuildCommand.
