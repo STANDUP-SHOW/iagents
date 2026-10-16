@@ -10,7 +10,7 @@ const ENTREES = [
   { libelle: 'Produit', href: '/workforce', page: 'workforce', tiroir: [
     ['Workforce', '/workforce', 'vos experts, métier par métier'],
     ['Desktop Commander', '/#desktop-commander', 'toute l’équipe sur un écran'],
-    ['Box Commander', '/box', 'le poste posé dans vos bureaux'],
+    ['iAgent Station', '/box', 'la Box posée dans vos bureaux'],
     ['Voice', '/voice', 'parlez à vos agents'],
     ['Standard téléphonique', '/standard-telephonique', 'un accueil qui comprend'],
     ['Support Center', '/support-center', 'le service client'],

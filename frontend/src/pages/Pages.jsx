@@ -162,7 +162,7 @@ function ListeRecrutement() {
   return (
     <>
       <Tete surtitre="Recrutement" titre={<>Votre liste<br /><span className="mq-cyan">de recrutement.</span></>}
-        texte="Les agents que vous recrutez, votre Box Commander, chaque prix sur sa ligne. Validez, et nous préparons votre équipe." />
+        texte="Les agents que vous recrutez, votre Station iAgent, chaque prix sur sa ligne. Validez, et nous préparons votre équipe." />
       {retour === 'reussi' && <Bande><p className="pg-note" role="status">Paiement reçu. Nous vous écrivons pour préparer votre Box et l'entretien d'embauche de vos agents.</p></Bande>}
       {retour === 'verification' && <Bande><p className="pg-note" role="status">Vérification de votre paiement…</p></Bande>}
       {retour === 'en-attente' && <Bande><p className="pg-note" role="status">Votre paiement n'est pas encore confirmé. Votre liste reste ici ; nous vous écrivons dès qu'il l'est.</p></Bande>}
@@ -209,7 +209,7 @@ function ListeRecrutement() {
             </ul>
             <p className="pg-texte mt-4"><a href={LIENS.catalogue} className="mq-cyan">+ Recruter un autre agent</a></p>
           </Bande>
-          <Bande titre="Votre Box Commander" texte="Le poste posé dans vos bureaux, qui porte vos agents, leur voix et votre Desktop Commander.">
+          <Bande titre="Votre Station iAgent" texte="Le poste posé dans vos bureaux, qui porte vos agents, leur voix et votre Desktop Commander.">
             <div className="pg-box-choix">
               {BOX_EN_VENTE.map((b) => (
                 <label key={b.id} className={`pg-box-option ${l.box === b.id ? 'choisie' : ''}`}>
@@ -227,7 +227,7 @@ function ListeRecrutement() {
             <dl className="pg-mentions">
               <div><dt>Agents au mois</dt><dd>{euros(t.agents)} HT par mois</dd></div>
               {t.ponctuel > 0 && <div><dt>Agents à la durée</dt><dd>{euros(t.ponctuel)} HT, payés une fois</dd></div>}
-              <div><dt>Box Commander</dt><dd>{t.boxOffre ? `${euros(t.box)} HT par mois sur ${t.boxOffre.engagementMois} mois` : 'aucune'}</dd></div>
+              <div><dt>Station iAgent</dt><dd>{t.boxOffre ? `${euros(t.box)} HT par mois sur ${t.boxOffre.engagementMois} mois` : 'aucune'}</dd></div>
               <div><dt>Consommation d'IA</dt><dd>à part, selon l'usage, estimée avec vous avant tout engagement</dd></div>
               <div><dt>Total</dt><dd><b>{t.total > 0 && `${euros(t.total)} HT par mois`}{t.total > 0 && t.ponctuel > 0 && ' + '}{t.ponctuel > 0 && `${euros(t.ponctuel)} HT une fois`}{!t.total && !t.ponctuel && euros(0)}</b></dd></div>
             </dl>
