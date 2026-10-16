@@ -905,6 +905,23 @@ par WhatsApp et email.
   anti-robot : un captcha se demande au client. **Non constaté : le chemin
   WebView2 n'a pas encore tourné sur un vrai Windows.**
 
+- **Les comptes d'iAgent sur les réseaux viennent du registre de max, pas
+  d'une saisie** (16/10/2026). `desktop/src/inscriptions/registre-source.xlsx`
+  (35 plateformes, 105 textes, 35 premiers messages) est converti par
+  `importer-registre.py` en `registre.json`, qui ajoute seulement qui ouvre le
+  compte : un agent (25), le dirigeant (LinkedIn, WhatsApp Business qui ne
+  s'ouvre que sur le téléphone, Quora qui exige un compte de personne) ou
+  personne pour l'instant (Google Business Profile sans accueil physique, les
+  pages employeur sans recrutement réel, les sites d'avis avant les premiers
+  clients). `consigne.ts` fait la consigne ; `check-inscriptions.ts` vérifie
+  que chaque texte y est recopié tel quel et tient dans son plafond, qu'aucun
+  « [À CONFIRMER] » ne part, que LinkedIn n'est jamais confié (lu dans
+  `DOMAINES_INTERDITS`) et que les images citées sont celles que
+  `inscriptions.rs` embarque. Une information laissée vide (SIREN, année,
+  effectif) n'est jamais devinée : l'agent la demande si un formulaire
+  l'exige. Le premier message n'est publié que si le dirigeant l'a coché.
+  **Non constaté : aucun compte n'a encore été ouvert par un agent.**
+
 ## Commandes
 
 ```bash

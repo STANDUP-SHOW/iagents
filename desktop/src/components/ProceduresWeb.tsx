@@ -17,6 +17,8 @@ export type Procedure = {
   commencee: number
   modifiee: number
   gestes: number
+  modele: string | null
+  adresse: string | null
 }
 
 const STATUTS: Record<string, string> = {
@@ -63,7 +65,7 @@ export default function ProceduresWeb() {
     }
   }, [])
 
-  const agir = async (commande: string, args: Record<string, string>) => {
+  const agir = async (commande: string, args: Record<string, string | null>) => {
     setErreur('')
     try {
       await invoke(commande, args)
@@ -76,7 +78,7 @@ export default function ProceduresWeb() {
   }
 
   const lancer = async () => {
-    if (await agir('procedure_lancer', { titre, consigne })) {
+    if (await agir('procedure_lancer', { titre, consigne, modele: null })) {
       setTitre('')
       setConsigne('')
     }

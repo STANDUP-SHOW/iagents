@@ -75,6 +75,13 @@ pub struct Procedure {
     /// envoyées avec la réponse du client.
     #[serde(default)]
     pub en_suspens: Vec<Value>,
+    /// Le modèle dont l'écran l'a tirée (une plateforme du registre
+    /// d'inscription), pour qu'il retrouve où en est chaque compte.
+    #[serde(default)]
+    pub modele: Option<String>,
+    /// L'adresse publique du compte ouvert, quand l'agent l'a donnée.
+    #[serde(default)]
+    pub adresse: Option<String>,
 }
 
 fn maintenant() -> u64 {
@@ -109,6 +116,8 @@ impl Procedure {
             gestes: 0,
             messages: vec![json!({ "role": "user", "content": format!("Procédure : {}\n\n{}", titre, consigne) })],
             en_suspens: Vec::new(),
+            modele: None,
+            adresse: None,
         })
     }
 
@@ -237,7 +246,7 @@ pub fn outils() -> Value {
         outil("appuyer", "Appuie sur une touche dans l'élément actif : Enter, Tab ou Escape.", json!({ "touche": { "type": "string", "enum": ["Enter", "Tab", "Escape"] } }), &["touche"]),
         outil("capture", "Photographie la page, pour vérifier ce que la lecture ne montre pas (image, mise en page).", json!({}), &[]),
         outil("attendre_humain", "Met la procédure en attente du dirigeant quand il faut ce que vous ne pouvez pas obtenir : un code reçu par e-mail ou SMS, un captcha, une vérification d'identité, un paiement, une information absente de la consigne. Le reste de son travail continue ; sa réponse vous reviendra ici.", json!({ "raison": { "type": "string", "description": "en quelques mots" }, "demande": { "type": "string", "description": "ce qu'il doit vous donner ou faire, en une phrase" } }), &["raison", "demande"]),
-        outil("terminer", "Clôt la procédure avec son compte rendu.", json!({ "reussi": { "type": "boolean" }, "compte_rendu": { "type": "string", "description": "ce qui est fait, l'adresse du compte, l'identifiant employé, ce qui reste à faire" } }), &["reussi", "compte_rendu"]),
+        outil("terminer", "Clôt la procédure avec son compte rendu.", json!({ "reussi": { "type": "boolean" }, "compte_rendu": { "type": "string", "description": "ce qui est fait, l'adresse du compte, l'identifiant employé, ce qui reste à faire" }, "adresse": { "type": "string", "description": "l'adresse publique du compte ou de la page créée, https://…" } }), &["reussi", "compte_rendu"]),
     ])
 }
 
@@ -427,6 +436,7 @@ pub async fn avancer(
                 "terminer" => {
                     let reussi = entree["reussi"].as_bool().unwrap_or(false);
                     p.resultat = Some(texte(entree, "compte_rendu"));
+                    p.adresse = adresse_publique(&texte(entree, "adresse"));
                     p.noter("terminer".into(), if reussi { "réussi" } else { "non abouti" }.into(), reussi);
                     resultats.push(json!({ "type": "tool_result", "tool_use_id": id, "content": "Compte rendu reçu." }));
                     arret = Some(if reussi { "terminee" } else { "echec" });
@@ -599,9 +609,26 @@ fn lancer_en_fond(app: tauri::AppHandle, mut p: Procedure) -> Result<(), String>
     Ok(())
 }
 
+/// Une adresse que l'écran affichera comme lien : `https` seulement, sinon
+/// rien plutôt qu'un lien qui mènerait ailleurs qu'au web.
+fn adresse_publique(a: &str) -> Option<String> {
+    let u = tauri::Url::parse(a.trim()).ok()?;
+    (u.scheme() == "https" && u.host_str().is_some()).then(|| u.to_string())
+}
+
+/// Un nom de modèle court, en minuscules et tirets : il vient de l'écran.
+fn modele_recevable(m: Option<String>) -> Result<Option<String>, String> {
+    match m.map(|m| m.trim().to_string()).filter(|m| !m.is_empty()) {
+        None => Ok(None),
+        Some(m) if m.len() <= 40 && m.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-') => Ok(Some(m)),
+        Some(_) => Err("modèle de procédure inconnu".to_string()),
+    }
+}
+
 #[tauri::command]
-pub fn procedure_lancer(app: tauri::AppHandle, titre: String, consigne: String) -> Result<Procedure, String> {
-    let p = Procedure::nouvelle(&titre, &consigne)?;
+pub fn procedure_lancer(app: tauri::AppHandle, titre: String, consigne: String, modele: Option<String>) -> Result<Procedure, String> {
+    let mut p = Procedure::nouvelle(&titre, &consigne)?;
+    p.modele = modele_recevable(modele)?;
     lancer_en_fond(app, p.clone())?;
     Ok(p.allegee())
 }
@@ -758,10 +785,11 @@ mod tests {
         assert_eq!(p.statut, "en-file");
         let modele = Joue::new(vec![
             tour(vec![appel("f", "saisir", json!({ "ref": 1, "libelle": "Code", "texte": "482913" }))]),
-            tour(vec![appel("g", "terminer", json!({ "reussi": true, "compte_rendu": "Compte créé : https://exemple.fr/iagent" }))]),
+            tour(vec![appel("g", "terminer", json!({ "reussi": true, "compte_rendu": "Compte créé : https://exemple.fr/iagent", "adresse": "https://exemple.fr/iagent" }))]),
         ]);
         avancer(&mut p, &page, &modele, "m", &rien).await;
         assert_eq!(p.statut, "terminee");
+        assert_eq!(p.adresse.as_deref(), Some("https://exemple.fr/iagent"));
         assert_eq!(p.resultat.as_deref(), Some("Compte créé : https://exemple.fr/iagent"));
         // Le modèle a reçu la réponse du client à SA question.
         let premier = &modele.recu.lock().unwrap()[0];
@@ -865,5 +893,23 @@ mod tests {
         assert!(Procedure::nouvelle("", "x").is_err());
         assert!(Procedure::nouvelle("x", "  ").is_err());
         assert!(lire("../../etc/passwd").is_err());
+    }
+
+    #[test]
+    fn seule_une_adresse_https_devient_un_lien() {
+        assert_eq!(adresse_publique(" https://x.com/iagentagency "), Some("https://x.com/iagentagency".to_string()));
+        assert_eq!(adresse_publique("http://x.com/iagent"), None);
+        assert_eq!(adresse_publique("javascript:alert(1)"), None);
+        assert_eq!(adresse_publique("x.com/iagent"), None);
+        assert_eq!(adresse_publique(""), None);
+    }
+
+    #[test]
+    fn le_modele_vient_de_l_ecran_et_reste_un_nom_court() {
+        assert_eq!(modele_recevable(Some("product-hunt".into())), Ok(Some("product-hunt".into())));
+        assert_eq!(modele_recevable(Some("  ".into())), Ok(None));
+        assert_eq!(modele_recevable(None), Ok(None));
+        assert!(modele_recevable(Some("../config".into())).is_err());
+        assert!(modele_recevable(Some("A".repeat(41))).is_err());
     }
 }

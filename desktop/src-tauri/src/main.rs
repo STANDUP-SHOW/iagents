@@ -16,6 +16,7 @@ mod modele;
 mod navigateur;
 mod pilote;
 mod procedure;
+mod inscriptions;
 mod tache;
 mod equipe;
 mod document;
@@ -1080,6 +1081,7 @@ fn main() {
             procedure::procedure_abandonner,
             procedure::procedure_liste,
             procedure::procedure_dossier_televersements,
+            inscriptions::inscriptions_preparer_visuels,
             mise_a_jour::mise_a_jour_etat,
             plateforme::plateforme_etat,
             plateforme::plateforme_identite,

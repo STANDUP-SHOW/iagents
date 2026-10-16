@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import ProceduresWeb from './ProceduresWeb'
+import ComptesIAgent from './ComptesIAgent'
 
 /** Un compte que le client déclare avoir connecté dans le navigateur. */
 type SiteConnecte = {
@@ -107,6 +108,8 @@ export default function Navigateur() {
       {erreur && <div className="error-banner">{erreur}</div>}
 
       <ProceduresWeb />
+
+      <ComptesIAgent />
 
       <section className="navigateur-ouvrir">
         <h3>Ouvrir un site</h3>
