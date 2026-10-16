@@ -63,7 +63,7 @@ export default function IAgentBox() {
             Louée {BOX_PUBLIQUES.map((b) => `${euros(b.mensuel)} par mois sur ${b.engagementMois} mois`).join(' ou ')}.
             <span className="block text-[var(--texte-doux)] text-base font-medium mt-2 tracking-normal">Les agents et l'usage de l'IA restent chacun sur leur ligne.</span>
           </p>
-          <Bouton href={LIENS.box} evenement="box_click" className="pulse-lent">Découvrir la Box Commander</Bouton>
+          <Bouton href={LIENS.box} evenement="box_click" className="pulse-lent">Découvrir la Station iAgent</Bouton>
           <div className="mt-6 flex flex-col items-center gap-4">
             <p className="titre-display titre-petit">Remote Commander</p>
             <p className="note max-w-xl !mt-0">L'application pour suivre votre équipe depuis votre téléphone.</p>

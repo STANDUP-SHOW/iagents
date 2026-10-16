@@ -197,7 +197,7 @@ export function CommentCaMarche() {
 /* ---------------------------------------------------------------------- box */
 
 const PUISSANCES = [
-  ['ecran', 'La Box', 'La Station iAgent : le poste de commande, vos agents surtout par API.', 'Livrée', 'box-commander'],
+  ['ecran', 'La Box', 'La Station iAgent : une part du travail de chaque agent se fait chez vous, le reste par API.', 'Livrée', 'box-commander'],
   ['puce', 'Mémoire unifiée', 'Un boîtier compact pour les modèles de texte.', 'Sur devis'],
   ['eclair', 'Carte graphique dédiée', 'Pour les agents nombreux et les images.', 'Sur devis'],
   ['serveur', 'Serveur', 'Plusieurs cartes, pour une entreprise entière.', 'Sur devis'],
@@ -319,7 +319,7 @@ export function Box() {
           <Bouton href="/pricing" evenement="box_click">Voir les tarifs</Bouton>
           <Bouton href="/contact" variante="contour-cyan" evenement="box_quote">Demander un devis Box</Bouton>
         </>}
-        preuves={[['micro', 'La voix', 'par leur prénom'], ['ecran', 'Tactile', 'au doigt'], ['bouclier', 'Maintenue', 'mises à jour comprises'], ['equipe', "Jusqu'à 20 agents", 'par Box']]}
+        preuves={[['micro', 'La voix', 'par leur prénom'], ['ecran', 'Tactile', 'au doigt'], ['bouclier', 'Maintenue', 'mises à jour comprises'], ['equipe', 'Une dizaine', "d'agents par Box"]]}
         visuel={<Photo src="box-bureau" alt="La Box iAgent Station sur un bureau, en Pearl White, Deep Navy et Brushed Aluminum : écran tactile 27 pouces sur bras articulé, base avec micros et haut-parleurs" largeur={1990} hauteur={940} charger="eager" className="sc-box-heros" />} />
 
       <Scene surtitre="L'expérience" titre={<>On lui parle, on la touche, <Eclat>elle travaille</Eclat></>}>
@@ -353,7 +353,7 @@ export function Box() {
             <Liste items={['La Station iAgent, préparée en usine pour vos agents.', 'Son écran tactile de 27 pouces, sur bras articulé.', 'Ses micros et ses haut-parleurs, intégrés à la base.', 'Un clavier et une souris de secours.', 'Desktop Commander, installé et prêt.']} />
             <p className="mq-surtitre sc-espace">Le service</p>
             <h3 className="sc-h3">Mise à disposition, pas achat</h3>
-            <Liste items={['La Box reste à iAgent et se rend en fin de contrat.', 'Mises à jour automatiques des agents et de l’application.', 'Diagnostic et maintenance selon votre contrat.', 'Jusqu’à 20 agents par Box ; au-delà, une deuxième Box.']} />
+            <Liste items={['La Box reste à iAgent et se rend en fin de contrat.', 'Mises à jour automatiques des agents et de l’application.', 'Diagnostic et maintenance selon votre contrat.', 'Une dizaine d’agents par Box ; au-delà, une deuxième Box.']} />
           </div>
           <Ecran src="dc-vos-agents" alt="Desktop Commander sur l'écran de la Box : vos agents et leur travail" legende="Desktop Commander, installé sur la Box" />
         </div>

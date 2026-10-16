@@ -39,7 +39,7 @@ export default function Tarifs() {
           ))}
           <li className="px-carte neon p-6 flex flex-col" style={{ boxShadow: '0 0 0 1px rgba(229,0,126,.35), 0 30px 80px -40px rgba(229,0,126,.6)' }}>
             <p className="text-[0.66rem] uppercase tracking-[0.24em] text-[#ff6fb5]">Matériel</p>
-            <p className="font-[Montserrat] font-extrabold text-2xl text-white mt-1">Box Commander</p>
+            <p className="font-[Montserrat] font-extrabold text-2xl text-white mt-1">iAgent Station</p>
             <ul className="mt-5 space-y-2">
               {BOX_PUBLIQUES.map((b) => (
                 <li key={b.id}><span className="font-[Montserrat] font-extrabold text-3xl text-white">{euros(b.mensuel)}</span><span className="text-sm text-[var(--texte-doux)]"> / mois sur {b.engagementMois} mois</span></li>
