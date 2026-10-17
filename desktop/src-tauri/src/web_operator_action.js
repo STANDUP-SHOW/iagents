@@ -61,7 +61,7 @@
       }
       var autocomplete = (cible.getAttribute('autocomplete') || '').toLowerCase();
       if (cible.readOnly || cible.disabled ||
-          /(?:^|\s)(?:cc-\S+|current-password|new-password|one-time-code|password|off)(?:\s|$)/.test(autocomplete)) {
+          /(?:^|\s)(?:cc-\S+|current-password|new-password|one-time-code|password)(?:\s|$)/.test(autocomplete)) {
         return { statut: 'refuse', motif: 'champ_protege' };
       }
       if (typeof action.texte !== 'string' || action.texte.length > 2000) {
