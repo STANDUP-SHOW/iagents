@@ -102,22 +102,3 @@ export function placeDansActivite(metier: { metier: string; secteur: string }, a
   }
   return OU[metier.secteur]?.includes(activite.famille) ? 0 : null
 }
-
-/**
- * The activities a search names, best first: a whole word of the name or an
- * alias, then a beginning (« imprim » finds the printing house). Three letters
- * at least, so « co » does not light up half the list.
- */
-export function activitesNommees(texte: string, activites: readonly Activite[]): Activite[] {
-  const t = sansAccents(texte)
-  if (t.length < 3) return []
-  const notes = activites
-    .map((a) => {
-      const mots = [a.nom, ...(a.alias ?? [])].map(sansAccents)
-      const note = mots.some((m) => m === t) ? 0 : mots.some((m) => m.split(/[\s-]+/).some((w) => w.startsWith(t))) ? 1 : mots.some((m) => m.includes(t)) ? 2 : 3
-      return { a, note }
-    })
-    .filter((x) => x.note < 3)
-    .sort((x, y) => x.note - y.note || x.a.nom.localeCompare(y.a.nom, 'fr'))
-  return notes.map((x) => x.a)
-}
