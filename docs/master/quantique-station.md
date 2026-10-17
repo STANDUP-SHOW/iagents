@@ -64,6 +64,38 @@ Ce que le logiciel devra porter le jour où la Station existe :
   tactile, ventilateurs et températures, connecteur de diagnostic ;
 - le numéro de série et l'étiquette suivent le même chemin que la Box.
 
-À trancher par max le moment venu : la Station est-elle une gamme de Box (avec
-quelle mémoire et combien d'agents) ou un appareil à part, et quel document
-d'« intégration simplifiée » fait foi.
+## 3. Station : intégration simplifiée et dossiers fournisseurs (17/10/2026)
+
+Trois documents de plus, recopiés en texte : `STATION-GEN1-INTEGRATION-2026-10.txt`
+(« Intégration simplifiée »), `STATION-PACK-A-2026-10.txt` et
+`STATION-PACK-B-2026-10.txt` (dossiers de consultation fournisseurs, en anglais),
+plus le visuel des trois finitions. La voie retenue pour la V1 est l'**intégration
+de modules du marché** dans une coque iAgent : carte compute Ryzen, SO-DIMM DDR5,
+NVMe, module 4 micros champ lointain avec DSP (AEC, beamforming, AGC, réduction de
+bruit, full duplex), ampli et deux haut-parleurs, écran 27" tactile capacitif,
+bras OEM. Phases : EVT-0 (1), EVT-1 (2-3), pilote (10), PVT (50-100).
+
+**Ce qui contredit le dépôt (à trancher par max).**
+
+| Sujet | Documents Station | Dépôt (décision du 14/10) |
+|---|---|---|
+| Gammes | une seule machine pour tous ; SKU **Station 32** (32 Go, 1 To, Home / petite entreprise), **Station 64** (64 Go, 1 To, Business), **Station 64+** (64 Go, 2 To, Business intensif) ; profils HOME / BUSINESS / ENTERPRISE | Home Box 16 Go (EXR1), Pro Box 32 Go et Business Box 64 Go (BOSGAME M4 Neo) ; pas d'Enterprise, pas de 16 Go dans la Station |
+| Profil de la machine | **même image d'usine pour tous**, le profil injecté au provisioning | une ISO par gamme (`construire-iso.sh --profil`) |
+| Matériel | carte Ryzen d'un fournisseur à choisir (lot 1), pas encore nommée | profils `bosgame-m4-neo-v1`, `bosgame-m4-neo-pro-v1`, `exr1-home-v1` |
+| Site (`main`) | « iAgent Station », « une dizaine d'agents par Box » | 1 / 4 / 8 agents selon la gamme |
+
+**Ce que la Station demande au logiciel, quelle que soit la décision.**
+- Tests d'usine nouveaux, dans l'ordre de l'écran du §13 : écran tactile 27",
+  réseau de micros et DSP, AEC avec lecture, haut-parleurs gauche et droite,
+  LED et bouton micro coupé, Ethernet et Wi-Fi, caméra (optionnelle) ; et les
+  tests V1 du §14 (thermique 4 h, voix à 1/3/5 m et 360°, coupure USB, veille).
+- L'anneau de LED dit l'état de l'agent : écoute (bleu/cyan), traitement
+  (violet), réponse (vert), **rouge réservé au micro coupé**, ambre pour une
+  erreur. `iagent-device` doit le piloter et lire le bouton micro coupé ; un
+  micro coupé doit l'être vraiment, et l'être constaté.
+- Un profil matériel `station-…` qui décrit écran, micros, haut-parleurs,
+  boutons, LED, caméra, et le choix de la RAM et du SSD par SKU.
+- Le provisioning qui pose le profil (HOME / BUSINESS / ENTERPRISE) sur une
+  image commune, si max retient ce point : l'usine actuelle sait déjà enrôler,
+  il faudrait déplacer le choix du profil de l'ISO vers le jeton d'usine ou
+  l'attribution.
