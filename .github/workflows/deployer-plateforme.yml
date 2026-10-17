@@ -64,6 +64,14 @@ jobs:
             echo "pret=oui" >> "$GITHUB_OUTPUT"
           fi
 
+      # The Worker bundles plateforme/, which imports root dependencies (ajv for
+      # plateforme/create/schemas.ts): installing only plateforme/cloudflare made
+      # the first real deploy fail (ERR_MODULE_NOT_FOUND 'ajv', 17/10/2026).
+      - name: Installer (racine du dépôt)
+        if: steps.jeton.outputs.pret == 'oui'
+        working-directory: .
+        run: npm ci --no-audit --no-fund
+
       - name: Installer
         if: steps.jeton.outputs.pret == 'oui'
         run: npm ci --no-audit --no-fund
