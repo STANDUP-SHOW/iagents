@@ -737,7 +737,7 @@ function App() {
   // What needs a look, gathered in the bell instead of stacked banners.
   const alertes: Alerte[] = []
   if (editionBox && relie === false) alertes.push({ texte: 'Box non reliée : aucun agent ne travaille.', gravite: 'danger', onglet: 'box' })
-  if (jauge && jauge.niveau !== 'confortable')
+  if (jauge && jauge.niveau !== 'confortable' && jauge.niveau !== 'par-api')
     alertes.push({
       texte: `${jauge.machine.nom} : ${jauge.message}`,
       gravite: jauge.niveau === 'impossible' || jauge.niveau === 'saturee' ? 'danger' : 'alerte',
@@ -925,7 +925,7 @@ function App() {
           agentsTotal: installes.length,
           connexions: lu.serveurs,
           cle: lu.cle,
-          jauge: jauge ? { niveau: jauge.niveau, libelle: { confortable: 'confortable', chargee: 'chargée', saturee: 'saturée', impossible: 'trop juste', 'memoire-seule': 'charge non jugée' }[jauge.niveau] ?? jauge.niveau } : null,
+          jauge: jauge ? { niveau: jauge.niveau, libelle: { confortable: 'confortable', chargee: 'chargée', saturee: 'saturée', impossible: 'trop juste', 'memoire-seule': 'charge non jugée', 'par-api': 'par API' }[jauge.niveau] ?? jauge.niveau } : null,
           relie,
           editionBox,
         }}

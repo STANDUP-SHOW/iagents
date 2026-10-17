@@ -215,9 +215,11 @@ async fn voix_entendu(texte: String, parle: bool, state: State<'_, AppState>) ->
 
     // A typed sentence has no sound: the last one heard belongs to something else.
     let phrase = if parle { state.voice.lock().unwrap().as_ref().and_then(|v| v.derniere_phrase()) } else { None };
-    if let (reveil::Reaction::Appel { .. }, Some(son), true) =
-        (&reaction, phrase, transcription::en_ligne())
-    {
+    // Gemini hears a call the PC missed too: retranscribing only what the PC
+    // already took for a call left max unheard whenever Whisper lost the name.
+    let a_reecouter = matches!(reaction, reveil::Reaction::Appel { .. })
+        || (matches!(avant, reveil::Etat::Dormante) && reveil::peut_etre_un_appel(&texte, &prenoms));
+    if let (true, Some(son), true) = (a_reecouter, phrase, transcription::en_ligne()) {
         match transcription::transcrire(&son, &prenoms).await {
             Ok(mieux) => {
                 let (a, r) = reveil::entendu(&avant, &mieux, &prenoms);

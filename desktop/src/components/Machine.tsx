@@ -12,6 +12,7 @@ const NIVEAUX: Record<string, string> = {
   saturee: 'Saturée',
   impossible: 'Mémoire insuffisante',
   'memoire-seule': 'Charge non jugée',
+  'par-api': 'Par API',
 }
 
 const go = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Go`

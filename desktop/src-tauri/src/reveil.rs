@@ -227,6 +227,90 @@ fn debuts_de_phrase(dits: &[&str]) -> Vec<usize> {
     debuts
 }
 
+/// Words that, just before a first name ending a sentence, make it the object
+/// of the sentence rather than the person spoken to: « Tu as parlé à Victor ? »,
+/// « Tu as vu Nora ? ». Compared in their bare form.
+const AVANT_UN_PRENOM_CITE: &[&str] = &[
+    "a", "au", "de", "du", "avec", "pour", "chez", "par", "sur", "et", "ou", "que", "qui", "comme",
+    "sans", "vers", "contre", "entre", "dapres", "selon", "vu", "appele", "dit", "demande",
+    "parle", "croise", "entendu", "prevenu", "rappele", "ecrit", "envoye", "laisse",
+];
+
+/// Words that show the sentence speaks to someone: a call at its end is
+/// addressed, not cited (« J'ai vu Victor. » calls nobody).
+const ADRESSE: &[&str] = &["tu", "toi", "te", "ton", "ta", "tes", "vous", "votre", "vos"];
+
+/// A sentence that ends on a hired agent's first name, said to them: either
+/// the name stands after a comma, or the sentence is addressed to someone
+/// (« tu », « vous », an imperative « dis-moi ») and the word before the name
+/// does not make it the object. Returns the agent and the request without
+/// the name, the rest of the utterance following it.
+fn appel_en_fin(texte: &str, dits: &[&str], mots: &[String], prenoms: &[String]) -> Option<(String, String)> {
+    let debuts = debuts_de_phrase(dits);
+    let fins = debuts.iter().skip(1).copied().chain(std::iter::once(dits.len()));
+    debuts.iter().copied().zip(fins).find_map(|(debut, fin)| {
+        let dernier = fin.checked_sub(1)?;
+        if dernier <= debut {
+            return None;
+        }
+        let prenom = agent_nomme(&mots[dernier], prenoms)?;
+        let avant = dits[dernier - 1];
+        let virgule = avant.trim_end_matches(['»', '"', ')']).ends_with(',');
+        let phrase = &mots[debut..dernier];
+        let adressee = phrase.iter().any(|m| ADRESSE.contains(&m.as_str()))
+            || dits[debut..dernier].iter().any(|m| {
+                let m = m.to_lowercase();
+                ["-moi", "-nous", "-toi", "-le", "-la", "-les", "-y", "-en"].iter().any(|t| m.trim_end_matches([',', '?', '!', '.']).ends_with(t))
+            });
+        let cite = AVANT_UN_PRENOM_CITE.contains(&mots[dernier - 1].as_str());
+        if !(virgule || (adressee && !cite)) {
+            return None;
+        }
+        let debut_octet = dits[debut].as_ptr() as usize - texte.as_ptr() as usize;
+        let fin_octet = avant.as_ptr() as usize - texte.as_ptr() as usize + avant.len();
+        let mut demande = texte[debut_octet..fin_octet].trim_end_matches([',', ' ']).to_string();
+        if demande.contains(['«', '»', '"', '“', '”']) || phrase.len() > MOTS_D_UNE_DEMANDE {
+            return None;
+        }
+        // Keep the question or exclamation mark that came with the name.
+        // The mark may be glued to the name (« Victor ? » written « Victor? »)
+        // or stand alone, in which case it is not among `dits`.
+        let apres_nom = dits[dernier].as_ptr() as usize - texte.as_ptr() as usize;
+        let jusque = dits.get(fin).map_or(texte.len(), |m| m.as_ptr() as usize - texte.as_ptr() as usize);
+        if let Some(signe) = texte[apres_nom..jusque].chars().rev().find(|c| ['?', '!', '.', '…'].contains(c)) {
+            demande.push_str(if signe == '?' || signe == '!' { " " } else { "" });
+            demande.push(signe);
+        }
+        if let Some(suite) = dits.get(fin) {
+            let de = suite.as_ptr() as usize - texte.as_ptr() as usize;
+            demande.push(' ');
+            demande.push_str(texte[de..].trim_end());
+        }
+        Some((prenom, demande))
+    })
+}
+
+/// Whether a sentence the PC heard without any call may still be one that
+/// its transcription mangled, and deserves a second ear (Gemini). Seen on
+/// max's PC, 17/10/2026: « Victor, tu m'entends ? » came out « Tu m'entends
+/// vite, », and since only a call was retranscribed, nobody heard it again.
+/// Short, and either speaking to someone, asking something, or holding a word
+/// that sounds near a hired agent's first name.
+pub fn peut_etre_un_appel(texte: &str, prenoms: &[String]) -> bool {
+    let propre = sans_annotations(texte);
+    let mots: Vec<String> = propre.split_whitespace().map(nu).filter(|m| !m.is_empty()).collect();
+    if mots.is_empty() || mots.len() > MOTS_D_UNE_DEMANDE {
+        return false;
+    }
+    let proche = |m: &String| {
+        prenoms.iter().any(|p| {
+            let p = nu(p);
+            m.len() >= 3 && (distance(m, &p) <= 2 || a_l_oreille(m) == a_l_oreille(&p))
+        })
+    };
+    propre.contains('?') || mots.iter().any(|m| ADRESSE.contains(&m.as_str()) || proche(m))
+}
+
 /// Ce que l'écoute conclut de ce qu'elle vient d'entendre.
 ///
 /// Rend le nouvel état et ce qu'il faut en faire. Le prénom d'un agent
@@ -291,6 +375,13 @@ pub fn entendu(etat: &Etat, texte: &str, prenoms: &[String]) -> (Etat, Reaction)
             Etat::EnConversation { prenom: prenom.clone() },
             Reaction::Appel { prenom, demande: demande(i + 1) },
         );
+    }
+
+    // French also calls someone at the end of the sentence: « Tu m'entends,
+    // Victor ? ». Seen on max's PC, 17/10/2026: « Est-ce que tu m'entends
+    // Victor ? » left Victor silent for five minutes.
+    if let Some((prenom, demande)) = appel_en_fin(texte, &dits, &mots, prenoms) {
+        return (Etat::EnConversation { prenom: prenom.clone() }, Reaction::Appel { prenom, demande });
     }
 
     match etat {
@@ -430,6 +521,42 @@ mod tests {
         // Une vraie demande, même longue, passe.
         let (_, reaction) = entendu(&Etat::Dormante, "Victor, fais-moi un brief des directives pour l'équipe, avec ce qui reste à faire cette semaine.", &maison());
         assert!(matches!(reaction, Reaction::Appel { .. }));
+    }
+
+    #[test]
+    fn un_prenom_en_fin_de_phrase_appelle_aussi() {
+        // Seen on max's PC, 17/10/2026: « Est-ce que tu m'entends Victor ? »
+        // left Victor silent; French puts the name at the end as often.
+        for (dit, demande) in [
+            ("Est-ce que tu m'entends Victor ?", "Est-ce que tu m'entends ?"),
+            ("Tu m'entends, Victor ?", "Tu m'entends ?"),
+            ("Où en es-tu, Carla ?", "Où en es-tu ?"),
+            ("Fais-moi le point Nora.", "Fais-moi le point."),
+            ("Merci. Tu peux me résumer la semaine Hugo ?", "Tu peux me résumer la semaine ?"),
+        ] {
+            let (etat, reaction) = entendu(&Etat::Dormante, dit, &maison());
+            assert!(matches!(&reaction, Reaction::Appel { .. }), "« {dit} » : {reaction:?}");
+            if let Reaction::Appel { prenom, demande: d } = reaction {
+                assert_eq!(d, demande, "« {dit} »");
+                assert_eq!(etat, avec(&prenom));
+            }
+        }
+        // Le prénom cité en fin de phrase n'appelle personne.
+        for dit in ["J'ai vu Victor.", "Tu as parlé à Victor ?", "Tu as vu Nora ?", "On déjeune avec Hugo", "Je pense à Carla"] {
+            let (etat, reaction) = entendu(&Etat::Dormante, dit, &maison());
+            assert_eq!((etat, reaction), (Etat::Dormante, Reaction::Rien), "« {dit} »");
+        }
+    }
+
+    #[test]
+    fn une_phrase_mal_transcrite_merite_une_seconde_oreille() {
+        // Seen on max's PC, 17/10/2026: the name was lost by the PC.
+        assert!(peut_etre_un_appel("Tu m'entends vite,", &maison()));
+        assert!(peut_etre_un_appel("Victoire, où en est le dossier", &maison()));
+        assert!(peut_etre_un_appel("Est-ce que c'est prêt ?", &maison()));
+        // La pièce qui parle d'autre chose ne part pas.
+        assert!(!peut_etre_un_appel("Il fait beau aujourd'hui.", &maison()));
+        assert!(!peut_etre_un_appel("", &maison()));
     }
 
     #[test]

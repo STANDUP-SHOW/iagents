@@ -40,6 +40,7 @@ const NIVEAUX: Record<string, string> = {
   saturee: 'saturée',
   impossible: 'trop juste',
   'memoire-seule': 'charge non jugée',
+  'par-api': 'par API',
 }
 
 interface Bulle {
@@ -176,7 +177,6 @@ export default function Centre({
           <svg className="noyau-anneaux" viewBox="-100 -100 200 200" aria-hidden="true">
             <circle className="na na-graduation" r="96" />
             <circle className="na na-tirets" r="88" />
-            <circle className="na na-arc" r="80" />
           </svg>
           <span className="noyau-portrait">
             {chef ? <Avatar prenom={chef.prenom} photo={portraitDe(chef)} taille="xl" /> : <img src={puce} alt="" className="noyau-puce-dc" />}

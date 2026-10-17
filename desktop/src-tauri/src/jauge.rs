@@ -362,6 +362,11 @@ pub enum Niveau {
     /// La mémoire passe, mais la carte n'a pas été identifiée : la charge n'est
     /// pas jugée. Ce n'est pas « confortable », et ça ne doit pas s'y confondre.
     MemoireSeule,
+    /// La mémoire ne porte pas les modèles locaux, mais une clé d'API est
+    /// rangée : `modele::choisir` envoie déjà ces agents par l'API. Rien n'est
+    /// demandé au client. Seen on max's PC, 17/10/2026: a red « Mémoire
+    /// insuffisante, passez un agent en mode API » while his key was saved.
+    ParApi,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -461,6 +466,10 @@ pub fn agents_installes(config: &serde_json::Value) -> (Vec<Modeles>, Vec<String
     let liste = config.get("agents").and_then(serde_json::Value::as_array);
     for a in liste.into_iter().flatten() {
         let Some(id) = a.get("ficheId").and_then(serde_json::Value::as_str) else { continue };
+        // An agent the client sent wholly through the API loads no model here.
+        if a.get("repartition").and_then(serde_json::Value::as_str).map(str::trim) == Some(crate::modele::CLIENT_TOUT_API) {
+            continue;
+        }
         let prenom = a
             .get("prenom")
             .and_then(serde_json::Value::as_str)
@@ -533,7 +542,24 @@ pub fn jauge_etat() -> Result<Verdict, String> {
     let config = installation()?;
     let (agents, _introuvables) = agents_installes(&config);
     let machine = machine_de(&table, &config)?;
-    Ok(jauge(&machine, &besoins(&table, &agents)))
+    Ok(avec_la_cle(jauge(&machine, &besoins(&table, &agents)), crate::llm::cle_api_presente()))
+}
+
+/// What the client is asked to do changes with a saved key: agents the
+/// machine cannot hold locally already go through the API.
+fn avec_la_cle(verdict: Verdict, cle: bool) -> Verdict {
+    if verdict.niveau != Niveau::Impossible || !cle {
+        return verdict;
+    }
+    Verdict {
+        niveau: Niveau::ParApi,
+        message: format!(
+            "Vos agents travaillent par API, avec votre clé : cet ordinateur n'a pas la mémoire de leurs modèles locaux ({} Go demandés, {} disponibles). Rien à faire de votre côté.",
+            arrondi(verdict.memoire_modeles),
+            arrondi(verdict.machine.memoire_modeles)
+        ),
+        ..verdict
+    }
 }
 
 #[cfg(test)]
@@ -590,6 +616,25 @@ mod tests {
 
     /// La règle qui a tout changé : deux agents sur le même palier partagent les
     /// poids. La mémoire ne bouge pas, la charge double.
+    #[test]
+    fn une_cle_rangee_change_l_alerte_en_information() {
+        let t = table_du_depot();
+        let petite = Machine {
+            nom: "Petit poste".into(),
+            ram: 16.0,
+            memoire_modeles: 10.0,
+            memoire_unifiee: true,
+            capacite_gpu: None,
+            origine: "mesuré".into(),
+        };
+        let lourd = besoins(&t, &[agent(&["texte-standard", "image-qualite"], 1.0)]);
+        let sans = avec_la_cle(jauge(&petite, &lourd), false);
+        assert_eq!(sans.niveau, Niveau::Impossible);
+        let avec = avec_la_cle(jauge(&petite, &lourd), true);
+        assert_eq!(avec.niveau, Niveau::ParApi);
+        assert!(avec.message.contains("par API") && !avec.message.contains("Passez"), "{}", avec.message);
+    }
+
     #[test]
     fn deux_agents_du_meme_palier_partagent_le_modele_mais_pas_la_charge() {
         let t = table_du_depot();

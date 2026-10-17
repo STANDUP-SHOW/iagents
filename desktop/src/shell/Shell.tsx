@@ -579,7 +579,7 @@ export function PiedSysteme({ pied, voix, ouvrir }: { pied: Pied; voix: EtatVoix
     {
       titre: 'Machine',
       valeur: pied.jauge?.libelle ?? 'jauge non lue',
-      ton: !pied.jauge ? 'neutre' : pied.jauge.niveau === 'confortable' ? 'ok' : pied.jauge.niveau === 'impossible' || pied.jauge.niveau === 'saturee' ? 'danger' : 'alerte',
+      ton: !pied.jauge ? 'neutre' : pied.jauge.niveau === 'confortable' || pied.jauge.niveau === 'par-api' ? 'ok' : pied.jauge.niveau === 'impossible' || pied.jauge.niveau === 'saturee' ? 'danger' : 'alerte',
       o: 'machine',
     },
     {
