@@ -10,8 +10,14 @@ import { createHash, createPublicKey, timingSafeEqual, verify } from 'node:crypt
 import type { Stockage } from './stockage.ts';
 import type { Box } from './modele.ts';
 import type { ConnexionWs } from './ws.ts';
+import { ACTEUR_FONDATEUR, appelantDuJeton, type Appelant } from './noyau/acteurs.ts';
+import { aLaPermissionQuelquePart, type Permission } from './noyau/permissions.ts';
 
-export type Acces = 'public' | 'admin' | 'box';
+/**
+ * `acteur`: a named actor of the core (noyau/acteurs.ts) — a session or agent
+ * token, or the break-glass secret, which stands for the FOUNDER actor.
+ */
+export type Acces = 'public' | 'admin' | 'box' | 'acteur';
 
 export type Contexte = {
   stockage: Stockage;
@@ -26,7 +32,17 @@ export type Contexte = {
   url: string;
   /** La Box authentifiée, quand l'accès est `box`. */
   box: Box | null;
+  /** L'acteur authentifié, quand l'accès est `acteur`. */
+  appelant: Appelant | null;
+  /** Secret de secours de la plateforme : le noyau en dérive la clé qui scelle les seconds facteurs. */
+  secretPlateforme: string;
   maintenant: () => Date;
+  /**
+   * Fait continuer un travail après la réponse : un webhook d'opérateur attend
+   * un 200 en quelques secondes, le modèle de langage peut en prendre plus. Sous
+   * Node la promesse continue d'elle-même ; chez Cloudflare `waitUntil` la garde.
+   */
+  differer: (travail: Promise<unknown>) => void;
 };
 
 /** `type` : pour répondre autre chose que du JSON (TwiML d'un opérateur) ; `corps` est alors écrit tel quel. */
@@ -36,6 +52,8 @@ export type Route = {
   methode: 'GET' | 'POST' | 'PUT' | 'DELETE';
   chemin: string; // ex. /controle/boxes/:id
   acces: Acces;
+  /** For `acteur` routes: the permission the caller must hold somewhere; the handler narrows it to the resource. */
+  permission?: Permission;
   traiter: (ctx: Contexte) => Reponse | Promise<Reponse>;
 };
 
@@ -112,7 +130,7 @@ export function reglagesDeLEnvironnement(env: Record<string, string | undefined>
 /** Une requête déjà lue : la porte a lu le corps en entier (borné à `CORPS_MAX`). */
 export type Requete = { methode: string; url: string; entetes: Record<string, string>; brut: string };
 
-export type Socle = { reglages: Reglages; stockage: Stockage; maintenant: () => Date; routes: Route[] };
+export type Socle = { reglages: Reglages; stockage: Stockage; maintenant: () => Date; routes: Route[]; differer?: (travail: Promise<unknown>) => void };
 
 export const ACCUEIL: Reponse = { statut: 200, corps: 'plateforme iagent', type: 'text/plain; charset=utf-8' };
 
@@ -137,6 +155,7 @@ export async function traiterRequete(s: Socle, req: Requete): Promise<Reponse> {
   }
 
   let box: Box | null = null;
+  let appelant: Appelant | null = null;
   const { route, params } = trouvee;
   if (route.acces === 'admin') {
     const jeton = (entetes.authorization ?? '').replace(/^Bearer\s+/i, '');
@@ -150,10 +169,19 @@ export async function traiterRequete(s: Socle, req: Requete): Promise<Reponse> {
     if (box.statut === 'suspendue' || box.statut === 'restituee' || box.statut === 'remplacee') {
       return refus(403, "Cette Box n'est plus active : ses agents ne peuvent pas s'exécuter.");
     }
+  } else if (route.acces === 'acteur') {
+    const jeton = (entetes.authorization ?? '').replace(/^Bearer\s+/i, '');
+    if (jeton && memeSecret(s.reglages.secretAdmin, jeton)) appelant = { acteur: ACTEUR_FONDATEUR, mfa: true, secours: true };
+    else if (jeton) appelant = appelantDuJeton(s.stockage, jeton, s.maintenant());
+    if (!appelant) return refus(401, 'Identifiez-vous : session expirée ou jeton inconnu.');
+    if (route.permission && !aLaPermissionQuelquePart(appelant.acteur.roles, route.permission)) {
+      return refus(403, `${appelant.acteur.nom_affiche} n'a pas la permission ${route.permission}.`);
+    }
   }
   try {
     return await route.traiter({
-      stockage: s.stockage, params, query: url.searchParams, corps, brut, entetes, url: req.url || '/', box, maintenant: s.maintenant,
+      stockage: s.stockage, params, query: url.searchParams, corps, brut, entetes, url: req.url || '/', box, appelant, secretPlateforme: s.reglages.secretAdmin, maintenant: s.maintenant,
+      differer: s.differer ?? ((travail) => { void travail.catch(() => {}); }),
     });
   } catch (e) {
     return refus(400, e instanceof Error ? e.message : 'Requête refusée.');

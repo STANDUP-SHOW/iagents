@@ -110,6 +110,13 @@
 }
 .fd-tete-secteur { margin-top: 6px; color: #b8c9e4; font-size: 0.92rem; }
 .fd-tete-statuts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 14px; }
+/* The header's menu: the trade the fiche is read in (max, 10/10). */
+.fd-specialiser { display: grid; gap: 6px; margin: 14px auto 0; max-width: 30rem; text-align: left; }
+.fd-specialiser label { font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cyan); }
+.fd-specialiser select { width: 100%; padding: 10px 12px; border-radius: 12px; font: inherit; font-size: 0.95rem; color: #fff; background: rgba(8, 20, 40, 0.7); border: 1px solid var(--trait-fort); }
+.fd-specialiser select:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.fd-activite { border-color: rgba(3, 243, 255, 0.35); }
+.fd-activite a { color: var(--cyan); text-decoration: underline; }
 .fd-tete-accroche { margin: 14px auto 0; max-width: 44rem; color: var(--texte); font-size: 1.02rem; line-height: 1.6; }
 .fd-tete-texte .fd-note { margin-top: 8px; }
 .fd-tete-mobile { display: grid; gap: 10px; text-align: center; }
@@ -122,6 +129,7 @@
   .fd-tete-texte { text-align: left; }
   .fd-tete-statuts { justify-content: flex-start; }
   .fd-tete-accroche { margin-left: 0; }
+  .fd-specialiser { margin-left: 0; }
   .fd-tete-mobile { display: none; }
 }
 
@@ -235,10 +243,7 @@
 @media (min-width: 560px) { .fd-canaux { grid-template-columns: 1fr 1fr; } }
 @media (min-width: 1200px) { .fd-canaux { grid-template-columns: repeat(3, 1fr); } }
 .fd-canal { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border-radius: 14px; border: 1px solid var(--trait); background: rgba(8, 20, 42, 0.5); }
-.fd-canal-bientot { border-style: dashed; opacity: 0.8; }
 .fd-canal-icone { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; color: var(--cyan); background: rgba(3, 243, 255, 0.07); border: 1px solid rgba(3, 243, 255, 0.25); }
-.fd-canal-bientot .fd-canal-icone { color: var(--texte-doux); background: rgba(140, 190, 255, 0.05); border-color: var(--trait-fort); }
-.fd-bientot { padding: 1px 8px; border-radius: 999px; font-size: 0.64rem; font-weight: 500; color: #ffd2ad; border: 1px solid rgba(242, 142, 68, 0.45); background: rgba(242, 142, 68, 0.08); }
 .fd-ajout, .fd-final {
   margin-top: 16px; padding: 20px 22px; border-radius: 18px;
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
@@ -363,7 +368,6 @@
 .fd-a-badges { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .fd-a-badge { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 4px 10px; border-radius: 8px; font-size: 0.76rem; color: #dbe8ff; border: 1px solid var(--trait-fort); background: rgba(8, 20, 42, 0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: border-color 0.4s, color 0.4s, box-shadow 0.4s; }
 .fd-a-canal { padding: 4px 7px; color: var(--cyan); border-color: rgba(3, 243, 255, 0.3); }
-.fd-a-canal-bientot { color: var(--texte-pale); border-style: dashed; border-color: var(--trait-fort); }
 .fd-a-prix { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; border-color: rgba(3, 243, 255, 0.2); background: rgba(3, 243, 255, 0.04); }
 .fd-a-capacite { text-align: right; white-space: nowrap; }
 .fd-a-capacite-n { font-family: Montserrat, system-ui, sans-serif; font-weight: 600; font-size: 1.2rem; color: #fff; }
@@ -383,7 +387,6 @@
 .fd-voile[data-actif='missions'] .fd-a-missions .fd-etiquette,
 .fd-voile[data-actif='competences'] .fd-a-outils .fd-etiquette { color: var(--cyan); }
 .fd-voile[data-actif='competences'] .fd-a-badge { border-color: rgba(3, 243, 255, 0.45); color: #fff; box-shadow: 0 0 16px -6px rgba(3, 243, 255, 0.8); }
-.fd-voile[data-actif='competences'] .fd-a-canal-bientot { color: var(--texte-pale); box-shadow: none; border-color: var(--trait-fort); }
 .fd-voile[data-actif='capacite'] .fd-a-capacite-n { color: var(--cyan); text-shadow: 0 0 20px rgba(3, 243, 255, 0.6); }
 
 /* ---- sticky hire bar (phone) ---------------------------------------------- */
@@ -409,3 +412,22 @@
 @media (prefers-reduced-motion: reduce) {
   .fd-voile * { transition: none !important; animation: none !important; }
 }
+
+/* ---- rental length and the Box comparison (max, 16/10/2026) ---- */
+.fd-durees { display: flex; flex-direction: column; gap: 8px; }
+.fd-durees .fd-etiquette { margin-bottom: 0; }
+.fd-durees-choix { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.fd-duree { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.03); color: var(--texte-doux); text-align: left; cursor: pointer; min-width: 0; }
+.fd-duree:hover { border-color: rgba(3, 243, 255, 0.45); }
+.fd-duree[aria-checked='true'] { border-color: var(--cyan); background: rgba(3, 243, 255, 0.08); color: var(--texte); box-shadow: 0 0 20px -8px rgba(3, 243, 255, 0.7); }
+.fd-duree:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.fd-duree-nom { font-size: 0.72rem; letter-spacing: 0.04em; }
+.fd-duree-prix { font-family: Montserrat, system-ui, sans-serif; font-weight: 600; font-size: 0.92rem; color: var(--cyan); white-space: nowrap; }
+.fd-durees-compact .fd-durees-choix { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 520px) { .fd-durees-choix { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.fd-box-compare { display: flex; flex-direction: column; gap: 8px; }
+.fd-box-compare .fd-etiquette { margin-bottom: 0; }
+.fd-box-colonnes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fd-box-montant { font-family: Montserrat, system-ui, sans-serif; font-weight: 600; font-size: 1.25rem; color: var(--cyan); }
+.fd-box-montant.fd-attenue { color: var(--texte-pale); text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, 0.35); }
+.fd-box-montant .fd-gain { font-size: 0.8rem; margin-left: 4px; color: #6ee7b7; }

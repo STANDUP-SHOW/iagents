@@ -22,11 +22,18 @@ export interface Alerte {
 
 export interface EtatVoix {
   active: boolean
-  eveillee: boolean
+  /** The agent a conversation is open with: it hears without being named. */
+  avec: string | null
   reflexion: boolean
+  /** Speaking aloud: a first name, '' for the application itself, null when silent. */
+  parle: string | null
   /** Why listening cannot start, in French; null when it can. */
   motif: string | null
   partiel: string
+  /** Microphone level, 0 to 1; null when listening is off or not ready. */
+  niveau: number | null
+  /** The last sentence the microphone gave, kept on screen once handled. */
+  entendu: string
   reponse: string
   onBasculer: () => void
 }
@@ -47,6 +54,7 @@ export const MODULE_ICONE: Record<Module, Exclude<Onglet, 'dashboard'> | 'centre
   travail: 'travail',
   embauche: 'embauche',
   connectors: 'connectors',
+  'catalogue-connecteurs': 'catalogue-connecteurs',
   navigateur: 'navigateur',
   courriel: 'courriel',
   voice: 'voice',
@@ -277,15 +285,16 @@ export function DockVocal({
   ouvrir: (o: Onglet) => void
   replie: boolean
   onReplier: () => void
-  /** A sentence typed or tapped goes the same way as a spoken one: « Voice », a first name, the request. */
+  /** A sentence typed or tapped goes the same way as a spoken one: a first name, then the request. */
   onDire: (phrase: string) => void
 }) {
   const [ecrit, setEcrit] = useState('')
-  const etat = voix.motif ? 'indisponible' : voix.reflexion ? 'reflexion' : voix.eveillee ? 'eveil' : voix.active ? 'ecoute' : 'repos'
+  const etat = voix.motif ? 'indisponible' : voix.reflexion ? 'reflexion' : voix.parle !== null ? 'parle' : voix.avec ? 'eveil' : voix.active ? 'ecoute' : 'repos'
   const libelle = {
     indisponible: 'Écoute indisponible',
     reflexion: 'Réflexion…',
-    eveil: 'J’écoute. Quel agent ?',
+    parle: voix.parle ? `${voix.parle} parle…` : 'Je parle…',
+    eveil: `En conversation avec ${voix.avec}`,
     ecoute: 'En écoute…',
     repos: 'Écoute coupée',
   }[etat]
@@ -299,7 +308,7 @@ export function DockVocal({
   const destinataire = interlocuteur?.prenom ?? prenoms[0]
   const envoyer = () => {
     if (!ecrit.trim() || !destinataire) return
-    onDire(`Voice ${destinataire}, ${ecrit.trim()}`)
+    onDire(`${destinataire}, ${ecrit.trim()}`)
     setEcrit('')
   }
 
@@ -373,9 +382,25 @@ export function DockVocal({
         </button>
       )}
 
-      {voix.motif ? (
-        <p className="dock-motif">{voix.motif}</p>
-      ) : voix.partiel || voix.reponse ? (
+      {voix.active && !voix.motif && voix.niveau !== null && (
+        <div className="dock-niveau" title="Ce que le micro capte en ce moment">
+          <span className="etiquette">Micro</span>
+          <span className="niveau-piste">
+            {/* RMS of speech sits around 0.02–0.3: a square root spreads it across the bar. */}
+            <span className="niveau-barre" style={{ width: `${Math.min(100, Math.round(Math.sqrt(voix.niveau) * 180))}%` }} />
+          </span>
+        </div>
+      )}
+      {voix.entendu && !voix.partiel && (
+        <p className="dock-entendu">
+          <span className="etiquette">Entendu</span>« {voix.entendu} »
+        </p>
+      )}
+
+      {/* Le motif dit pourquoi le micro est coupé ; il ne doit pas cacher la
+          réponse à une question écrite, qui arrive quand même. */}
+      {voix.motif && <p className="dock-motif">{voix.motif}</p>}
+      {voix.partiel || voix.reponse ? (
         <div className="dock-transcription" aria-live="polite">
           {voix.partiel && (
             <p>
@@ -390,16 +415,16 @@ export function DockVocal({
             </p>
           )}
         </div>
-      ) : (
-        <p className="dock-aide">Dites « Voice », puis le prénom de l’agent. Ou écrivez-lui, ou touchez une phrase ci-dessous.</p>
+      ) : voix.motif ? null : (
+        <p className="dock-aide">Appelez l’agent par son prénom, au début de la phrase : il vous écoute ensuite sans qu’on le rappelle. Ou écrivez-lui, ou touchez une phrase ci-dessous.</p>
       )}
 
       {exemples.length > 0 && (
         <ul className="dock-exemples">
           {exemples.map((e) => (
             <li key={e.prenom + e.demande}>
-              <button onClick={() => onDire(`Voice ${e.prenom}, ${e.demande}`)} disabled={voix.reflexion}>
-                « Voice, {e.prenom}, {e.demande} »
+              <button onClick={() => onDire(`${e.prenom}, ${e.demande}`)} disabled={voix.reflexion}>
+                « {e.prenom}, {e.demande} »
               </button>
             </li>
           ))}
@@ -555,7 +580,7 @@ export function PiedSysteme({ pied, voix, ouvrir }: { pied: Pied; voix: EtatVoix
     {
       titre: 'Machine',
       valeur: pied.jauge?.libelle ?? 'jauge non lue',
-      ton: !pied.jauge ? 'neutre' : pied.jauge.niveau === 'confortable' ? 'ok' : pied.jauge.niveau === 'impossible' || pied.jauge.niveau === 'saturee' ? 'danger' : 'alerte',
+      ton: !pied.jauge ? 'neutre' : pied.jauge.niveau === 'confortable' || pied.jauge.niveau === 'par-api' ? 'ok' : pied.jauge.niveau === 'impossible' || pied.jauge.niveau === 'saturee' ? 'danger' : 'alerte',
       o: 'machine',
     },
     {
@@ -565,7 +590,7 @@ export function PiedSysteme({ pied, voix, ouvrir }: { pied: Pied; voix: EtatVoix
       o: 'box',
     },
     {
-      titre: 'Voice',
+      titre: 'Écoute',
       valeur: voix.motif ? 'indisponible' : voix.active ? 'à l’écoute' : 'coupée',
       ton: voix.motif ? 'alerte' : voix.active ? 'ok' : 'neutre',
       o: 'voice',

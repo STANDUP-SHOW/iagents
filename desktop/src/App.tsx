@@ -12,9 +12,11 @@ import { TITRES, type Onglet } from './components/Dashboard'
 import Machine from './components/Machine'
 import { BandeauChiffres, ETAT_DEMO, tiret, useLectures, useTravail, type Chiffre, type Etat } from './components/Chiffres'
 import ConnectorSetup from './components/ConnectorSetup'
+import CatalogueConnecteurs from './pages/CatalogueConnecteurs'
 import Navigateur from './components/Navigateur'
 import Courriel from './components/Courriel'
 import CleApi from './components/CleApi'
+import VoixApi from './components/VoixApi'
 import WhatsApp from './components/WhatsApp'
 import Telegram from './components/Telegram'
 import InstallerVoix from './components/InstallerVoix'
@@ -35,6 +37,7 @@ import {
   type Proposition,
 } from './agents/team-holder'
 import { useEtatPlateforme } from './agents/plateforme'
+import { ConversationDirecte } from './services/conversation-directe'
 import {
   BarreHaute,
   DockVocal,
@@ -59,7 +62,9 @@ import VotreVoix from './pages/VotreVoix'
 /** `voix_ecoute_etat` et `voix_ecoute_basculer`, noms de champs figés par un banc Rust. */
 interface EcouteEtat {
   active: boolean
-  ou_en_est: 'dormante' | 'eveillee'
+  ou_en_est: 'dormante' | 'en-conversation'
+  /** The agent the conversation is open with. */
+  avec: string | null
 }
 
 
@@ -121,12 +126,24 @@ function App() {
    */
   const [agents, setAgents] = useState<AgentAffiche[]>([])
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
-  // Le mot de réveil a été entendu, on attend le prénom d'un agent.
-  const [reveillee, setReveillee] = useState(false)
-  // Ce que Rust dit de l'écoute : micro allumé ou non, mot de réveil entendu ou non.
-  const [ecoute, setEcoute] = useState<EcouteEtat>({ active: false, ou_en_est: 'dormante' })
+  // Ce que Rust dit de l'écoute : micro allumé ou non, conversation ouverte ou non.
+  const [ecoute, setEcoute] = useState<EcouteEtat>({ active: false, ou_en_est: 'dormante', avec: null })
+  const [niveauMicro, setNiveauMicro] = useState<number | null>(null)
+  const [dernierEntendu, setDernierEntendu] = useState('')
   const [partialResult, setPartialResult] = useState<string>('')
   const [isProcessing, setIsProcessing] = useState(false)
+  // Who is speaking aloud, once the answer is written: « Réflexion… » stayed on
+  // screen for the whole reading, over a minute on max's PC (12/10/2026).
+  const [parle, setParle] = useState<string | null>(null)
+  // What was said with each agent, so a spoken request reaches it with the
+  // conversation so far (`llm::messages_oraux` keeps the last ten).
+  // The request being answered and what the client added to it meanwhile; the
+  // requests for another agent wait their turn.
+  const enCoursRef = useRef<{ prenom: string; ajouts: string[] } | null>(null)
+  const fileRef = useRef<{ prenom: string; demande: string; parle: boolean }[]>([])
+  const echangesRef = useRef(new Map<string, { role: 'user' | 'assistant'; content: string }[]>())
+  // The live conversation with an agent, when one is open (`direct.rs`).
+  const directRef = useRef<ConversationDirecte | null>(null)
   const [lastResponse, setLastResponse] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [moteur, setMoteur] = useState<ConversationEngine | null>(null)
@@ -210,41 +227,58 @@ function App() {
     }
   }, [])
 
+  // The microphone's level, for the gauge: the client must be able to see
+  // whether his voice reaches the application at all (max, 12/10/2026:
+  // « aucun contrôle de ma voix »).
+  useEffect(() => {
+    if (!ecoute.active) {
+      setNiveauMicro(null)
+      return
+    }
+    let vivant = true
+    const lire = () =>
+      invoke<number | null>('voix_niveau')
+        .then((n) => vivant && setNiveauMicro(n))
+        .catch(() => vivant && setNiveauMicro(null))
+    const minuterie = setInterval(lire, 150)
+    return () => {
+      vivant = false
+      clearInterval(minuterie)
+    }
+  }, [ecoute.active])
+
   useEffect(() => {
     if (!ecoute.active) {
       setPartialResult('')
       return
     }
 
-    let silenceTimeout: NodeJS.Timeout | null = null
-    let lastResult = ''
+    let vivant = true
 
-    const interval = setInterval(async () => {
-      try {
-        const result = await invoke<string | null>('get_partial_result')
-        if (result) {
-          setPartialResult(result)
-          lastResult = result
-
-          // Reset silence timer when we get new speech
-          if (silenceTimeout) clearTimeout(silenceTimeout)
-
-          // If we've been silent for 1 second, treat it as end of speech
-          silenceTimeout = setTimeout(() => {
-            if (lastResult && lastResult.trim()) {
-              processVoiceCommand(lastResult)
-              lastResult = ''
-            }
-          }, 1000)
+    // Rust hands back a sentence only once it is finished (the client spoke,
+    // then paused 0.8 s), transcribed whole: it is handled at once. The loop
+    // waits for the transcription, never for the answer (`repondreA`).
+    // Before 12/10/2026 the screen took the last 8 seconds again and again and
+    // waited for a second without change, which cut long sentences.
+    const interroger = async () => {
+      while (vivant) {
+        try {
+          const phrase = await invoke<string | null>('get_partial_result')
+          if (phrase && phrase.trim()) {
+            setPartialResult(phrase)
+            // Waits for the transcription only, never for the answer.
+            await processVoiceCommand(phrase)
+          }
+        } catch (err) {
+          console.log('Failed to get partial result:', err)
         }
-      } catch (err) {
-        console.log('Failed to get partial result:', err)
+        await new Promise((r) => setTimeout(r, 200))
       }
-    }, 200)
+    }
+    interroger()
 
     return () => {
-      clearInterval(interval)
-      if (silenceTimeout) clearTimeout(silenceTimeout)
+      vivant = false
     }
   }, [ecoute.active, activeAgent, agents])
 
@@ -358,12 +392,14 @@ function App() {
     // coupe ou le rallume.
   }
 
-  const processVoiceCommand = async (command: string) => {
+  /** `parle` : the sentence was spoken, so Rust may transcribe its sound again
+   * online; a typed one has no sound. */
+  const processVoiceCommand = async (command: string, parle = true) => {
     if (!command.trim()) return
 
     try {
-      setIsProcessing(true)
-      setPartialResult('')
+      // Typed while a live conversation is open: the written way takes over.
+      if (!parle && directRef.current) await directRef.current.fermer()
 
       // Le mot de réveil d'abord, et c'est Rust qui tranche (`reveil.rs`).
       // Avant le 24/09/2026 ce bloc prenait le PREMIER MOT de tout ce qui
@@ -375,23 +411,124 @@ function App() {
       // La décision n'est pas ici parce qu'un état gardé dans React se perd au
       // premier rechargement de la page, et parce qu'elle s'éprouve sans micro.
       const reaction = await invoke<
-        | { quoi: 'rien' }
-        | { quoi: 'reveillee' }
-        | { quoi: 'appel'; prenom: string; demande: string }
-        | { quoi: 'aucun-agent-de-ce-nom'; entendu: string }
-      >('voix_entendu', { texte: command })
+        ({ quoi: 'rien' } | { quoi: 'appel'; prenom: string; demande: string } | { quoi: 'conge'; prenom: string }) & {
+          transcrite_par: 'google' | 'poste'
+          motif: string | null
+        }
+      >('voix_entendu', { texte: command, parle })
+      invoke<EcouteEtat>('voix_ecoute_etat').then(setEcoute).catch(() => {})
 
+      if (reaction.motif) console.warn('Transcription sur le poste, Google n’a pas répondu :', reaction.motif)
       if (reaction.quoi === 'rien') return
-      if (reaction.quoi === 'reveillee') {
-        // Elle attend le prénom : le dire à l'écran, sans faire parler personne.
-        setReveillee(true)
+      if (reaction.quoi === 'conge') {
+        setLastResponse(`À bientôt. ${reaction.prenom} reste joignable par son prénom.`)
         return
       }
-      setReveillee(false)
-      if (reaction.quoi === 'aucun-agent-de-ce-nom') {
-        setLastResponse(`Personne ne s'appelle « ${reaction.entendu} » ici.`)
+      // The listening loop does not wait for the answer: what the client says
+      // while it is prepared joins the request instead of replacing it
+      // (max, 12/10/2026: « si je laisse un blanc et que je reparle, ça efface
+      // la phrase d'avant »). Nothing heard is thrown away.
+      const enCours = enCoursRef.current
+      if (enCours) {
+        if (enCours.prenom === reaction.prenom) {
+          if (reaction.demande) enCours.ajouts.push(reaction.demande)
+        } else {
+          fileRef.current.push({ prenom: reaction.prenom, demande: reaction.demande, parle })
+        }
         return
       }
+      if (parle && (await parlerEnDirect(reaction.prenom, reaction.demande))) return
+      void repondreA(reaction.prenom, reaction.demande, parle)
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err)
+      setError(errMsg)
+      console.error('Failed to process voice command:', err)
+    }
+  }
+
+  /**
+   * Opens a live conversation with `prenom` (max, 16/10/2026: « on est dans
+   * les années 90, je parle, j'attends trois minutes »). Gemini hears the
+   * client as he speaks and answers aloud at once, and stops when he talks
+   * over it. `false` when it cannot be opened here (no Google key, no
+   * internet, microphone refused): the relay then answers, and the screen
+   * says why.
+   */
+  const parlerEnDirect = async (prenom: string, demande: string): Promise<boolean> => {
+    if (directRef.current) return false
+    if (!(await invoke<boolean>('direct_possible').catch(() => false))) return false
+    const agent = moteur?.getAllAgents().find((a) => a.prenom === prenom)
+    if (!agent) return false
+    const equipe = moteur!.getAllAgents()
+    let consigne = moteur!.formatSystemPrompt(agent.fiche.id)
+    if (estTeamHolder(agent)) {
+      // A setting to change goes through the Team Holder's own rules
+      // (`equipe.rs`), which the live line does not carry.
+      if (propositionRef.current) return false
+      if (demande) {
+        const compris = comprendreDemande(demande, equipe)
+        if ('proposition' in compris || 'deja' in compris) return false
+      }
+      const { lectures, changements } = await rassemblerContexte(invoke, equipe)
+      consigne += contexteDuTeamHolder(equipe, lectures, changements)
+    }
+    const deja = echangesRef.current.get(prenom) ?? []
+    if (deja.length) {
+      consigne +=
+        '\n\nCe que vous vous êtes déjà dit :\n' +
+        deja.map((m) => `${m.role === 'user' ? 'Votre employeur' : 'Vous'} : ${m.content}`).join('\n')
+    }
+    consigne +=
+      "\n\nVous parlez en direct avec votre employeur, à voix haute, en français, comme au téléphone avec un collègue. Répondez tout de suite, en une ou deux phrases courtes, sans titre ni liste. S'il vous coupe la parole, taisez-vous et écoutez-le. Répondez à ce qu'il vient de dire, sans répéter ce que vous avez déjà dit."
+
+    const direct = new ConversationDirecte({
+      entendu: (texte) => setDernierEntendu(`${prenom}, ${texte}`),
+      dit: (texte) => setLastResponse(texte),
+      parle: (oui) => setParle(oui ? prenom : null),
+      echange: (client, reponse) => {
+        const echanges = echangesRef.current.get(prenom) ?? []
+        echanges.push({ role: 'user', content: client || prenom }, { role: 'assistant', content: reponse })
+        echangesRef.current.set(prenom, echanges.slice(-20))
+        if (reponse) publier({ type: 'voix', agent: prenom, texte: `${prenom} vous a répondu`, gravite: 'info' })
+      },
+      autre: (suivant, sademande) => {
+        void parlerEnDirect(suivant, sademande).then((ok) => {
+          if (!ok) void repondreA(suivant, sademande, true)
+        })
+      },
+      fin: (motif) => {
+        if (directRef.current === direct) directRef.current = null
+        setParle(null)
+        if (motif) setError(motif)
+        invoke<EcouteEtat>('voix_ecoute_etat').then(setEcoute).catch(() => {})
+      },
+    })
+    directRef.current = direct
+    try {
+      setActiveAgent(agent.fiche.id)
+      setError(null)
+      setLastResponse('')
+      setDernierEntendu(prenom + (demande ? `, ${demande}` : ''))
+      await direct.ouvrir(prenom, agent.fiche.id, consigne, demande)
+      setVoie(`${prenom} vous parle en direct, par votre clé Google (facturée à l'usage). Coupez-lui la parole quand vous voulez ; « au revoir » ferme la conversation.`)
+      setVoieBascule(false)
+      invoke<EcouteEtat>('voix_ecoute_etat').then(setEcoute).catch(() => {})
+      return true
+    } catch (err) {
+      if (directRef.current === direct) directRef.current = null
+      setVoie(`La conversation en direct n'a pas pu s'ouvrir (${String(err instanceof Error ? err.message : err)}) : ${prenom} répond par écrit puis à voix haute.`)
+      setVoieBascule(true)
+      return false
+    }
+  }
+
+  /** Answers one request, re-asking while the client keeps adding to it, then
+   * takes the next request waiting for another agent. */
+  const repondreA = async (prenom: string, premiere: string, parle: boolean) => {
+    enCoursRef.current = { prenom, ajouts: [] }
+    try {
+      setIsProcessing(true)
+      if (parle) setDernierEntendu(prenom + (premiere ? `, ${premiere}` : ''))
 
       // `agents` est la liste AFFICHÉE ({ id, name, ... }) : elle n'a ni
       // `prenom` ni `fiche`. Le premier jet la cherchait quand même, donc
@@ -399,9 +536,9 @@ function App() {
       // Rien ne le signalait : la liste était typée `any[]`, ce qui rend le
       // compilateur aveugle sur exactement ce genre de faute. Elle est typée
       // maintenant, et c'est le moteur qu'on interroge — lui porte le prénom.
-      const agent = moteur?.getAllAgents().find((a) => a.prenom === reaction.prenom)
+      const agent = moteur?.getAllAgents().find((a) => a.prenom === prenom)
       if (!agent) return
-      const utterance = reaction.demande
+      let utterance = premiere
       setActiveAgent(agent.fiche.id)
       const equipe = moteur!.getAllAgents()
       let promptSysteme = moteur!.formatSystemPrompt(agent.fiche.id)
@@ -439,18 +576,43 @@ function App() {
         promptSysteme += contexteDuTeamHolder(equipe, lectures, changements)
       }
 
-      const reponse = await invoke<{ texte: string; motif: string; bascule: boolean }>(
-        'repondre',
-        {
+      // Said aloud, a written answer is cut after three sentences (`voice::a_dire`):
+      // the essential has to come first.
+      promptSysteme +=
+        "\n\nOn vous parle à voix haute. Répondez comme un collègue, en deux phrases simples, sans titre ni liste : c'est tout ce qui sera dit. Répondez à la question posée, sans répéter ce que vous avez déjà dit ni refaire le point de toute l'équipe si on ne vous le demande pas. Le détail peut suivre, il restera écrit à l'écran."
+
+      let reponse: { texte: string; motif: string; bascule: boolean; outils: string[] }
+      for (;;) {
+        reponse = await invoke<{ texte: string; motif: string; bascule: boolean; outils: string[] }>('repondre', {
           prenom: agent.prenom,
           ficheId: agent.fiche.id,
           promptSysteme,
-          enonce: utterance || command,
-        }
-      )
+          enonce: utterance || prenom,
+          historique: echangesRef.current.get(agent.prenom) ?? [],
+        })
+        // The client went on talking while the answer was written: it answers
+        // half a sentence, so the whole sentence is asked again.
+        const ajouts = enCoursRef.current?.ajouts.splice(0) ?? []
+        if (!ajouts.length) break
+        utterance = [utterance, ...ajouts].filter(Boolean).join(' ')
+        if (parle) setDernierEntendu(`${prenom}, ${utterance}`)
+      }
+      const echanges = echangesRef.current.get(agent.prenom) ?? []
+      echanges.push({ role: 'user', content: utterance || prenom }, { role: 'assistant', content: reponse.texte })
+      echangesRef.current.set(agent.prenom, echanges.slice(-20))
 
       setLastResponse(reponse.texte)
       publier({ type: 'voix', agent: agent.prenom, texte: `${agent.prenom} vous a répondu`, gravite: 'info' })
+      // What the agent did with its tools during this turn, one line per call:
+      // the client has the right to read it in the activity feed, refusals first.
+      for (const ligne of reponse.outils ?? []) {
+        publier({
+          type: 'systeme',
+          agent: agent.prenom,
+          texte: `${agent.prenom} — ${ligne}`,
+          gravite: /refus|indisponible|échec|non tenu/.test(ligne) ? 'alerte' : 'info',
+        })
+      }
       setVoie(reponse.motif)
       setVoieBascule(reponse.bascule)
 
@@ -460,7 +622,9 @@ function App() {
       // disait encore « vérifier que piper et sa voix sont présents » alors que
       // la voix, elle, se télécharge depuis le 24/09 et qu'il ne manque plus
       // que le moteur. Le client lisait donc un conseil faux.
-      await invoke('text_to_speech', { text: reponse.texte }).catch((err) => {
+      setIsProcessing(false)
+      setParle(agent.prenom)
+      await invoke('text_to_speech', { text: reponse.texte, prenom: agent.prenom }).catch((err) => {
         setError(String(err))
       })
     } catch (err) {
@@ -469,13 +633,24 @@ function App() {
       console.error('Failed to process voice command:', err)
     } finally {
       setIsProcessing(false)
+      setParle(null)
+      const fini = enCoursRef.current
+      enCoursRef.current = null
+      // Said while the agent was speaking: the next request, not lost.
+      const reste = fini?.ajouts.join(' ')
+      if (reste) fileRef.current.unshift({ prenom, demande: reste, parle })
+      const suivant = fileRef.current.shift()
+      if (suivant) void repondreA(suivant.prenom, suivant.demande, suivant.parle)
     }
   }
 
   // Ce que l'application dit à voix haute, affiché aussi pour qui ne l'entend pas.
   const dire = async (texte: string) => {
     setLastResponse(texte)
+    setIsProcessing(false)
+    setParle('')
     await invoke('text_to_speech', { text: texte }).catch(() => {})
+    setParle(null)
   }
 
   // Le client a dit oui (à voix haute ou sur l'écran « Votre équipe ») : le
@@ -522,7 +697,7 @@ function App() {
   }
 
   // « Parler à » : the agent is switched on, and the microphone too when it
-  // can be. The user then says « Voice » and the first name.
+  // can be. The user then calls the agent by its first name.
   const parlerA = async (a: { fiche: { id: string } }) => {
     if (agents.find((x) => x.id === a.fiche.id)?.status !== 'active') {
       await toggleAgentStatus(a.fiche.id, 'inactive')
@@ -573,7 +748,7 @@ function App() {
   // What needs a look, gathered in the bell instead of stacked banners.
   const alertes: Alerte[] = []
   if (editionBox && relie === false) alertes.push({ texte: 'Box non reliée : aucun agent ne travaille.', gravite: 'danger', onglet: 'box' })
-  if (jauge && jauge.niveau !== 'confortable')
+  if (jauge && jauge.niveau !== 'confortable' && jauge.niveau !== 'par-api')
     alertes.push({
       texte: `${jauge.machine.nom} : ${jauge.message}`,
       gravite: jauge.niveau === 'impossible' || jauge.niveau === 'saturee' ? 'danger' : 'alerte',
@@ -607,17 +782,20 @@ function App() {
 
   const voix: EtatVoix = {
     active: ecoute.active,
-    eveillee: ecoute.ou_en_est === 'eveillee' || reveillee,
+    avec: ecoute.ou_en_est === 'en-conversation' ? ecoute.avec : null,
     reflexion: isProcessing,
+    parle,
     motif: motifEcoute,
     partiel: partialResult,
+    niveau: niveauMicro,
+    entendu: dernierEntendu,
     reponse: lastResponse,
     onBasculer: basculerVoix,
   }
 
   const module = moduleDe(activeTab)
   const infos = MODULES.find((m) => m.id === module)
-  const etatTexte = isProcessing ? 'Réflexion…' : ecoute.ou_en_est === 'eveillee' ? 'Quel agent ?' : ecoute.active ? 'À l’écoute' : 'Prêt'
+  const etatTexte = isProcessing ? 'Réflexion…' : parle !== null ? (parle ? `${parle} parle…` : 'Je parle…') : ecoute.ou_en_est === 'en-conversation' && ecoute.avec ? `Avec ${ecoute.avec}` : ecoute.active ? 'À l’écoute' : 'Prêt'
 
   // Pages that keep their existing screen get the new header and sub-pages around it.
   const cadre = (contenu: JSX.Element, onglet: Onglet = activeTab) => (
@@ -666,7 +844,7 @@ function App() {
         prenoms={installes.map((a) => a.prenom)}
         ouvrir={ouvrir}
         replie={dockReplie}
-        onDire={(phrase) => void processVoiceCommand(phrase)}
+        onDire={(phrase) => void processVoiceCommand(phrase, false)}
         onReplier={() =>
           setDockReplie((r) => {
             poserPreference('iagent-dock-replie', !r)
@@ -710,12 +888,14 @@ function App() {
           cadre(
             <>
               <CleApi />
+              <VoixApi />
               <WhatsApp />
               <Telegram />
               <InstallerVoix apresInstallation={demarrerEcoute} />
               <ConnectorSetup />
             </>
           )}
+        {activeTab === 'catalogue-connecteurs' && <CatalogueConnecteurs aller={aller} />}
         {activeTab === 'navigateur' && cadre(<Navigateur />)}
         {activeTab === 'courriel' && cadre(<Courriel />)}
         {activeTab === 'equipe' &&
@@ -757,7 +937,7 @@ function App() {
           agentsTotal: installes.length,
           connexions: lu.serveurs,
           cle: lu.cle,
-          jauge: jauge ? { niveau: jauge.niveau, libelle: { confortable: 'confortable', chargee: 'chargée', saturee: 'saturée', impossible: 'trop juste', 'memoire-seule': 'charge non jugée' }[jauge.niveau] ?? jauge.niveau } : null,
+          jauge: jauge ? { niveau: jauge.niveau, libelle: { confortable: 'confortable', chargee: 'chargée', saturee: 'saturée', impossible: 'trop juste', 'memoire-seule': 'charge non jugée', 'par-api': 'par API' }[jauge.niveau] ?? jauge.niveau } : null,
           relie,
           editionBox,
         }}

@@ -1,0 +1,319 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-1868",
+  "slug": "charge-affaires-recouvrement-creances-tarification",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "devis-services",
+  "nom": "Chargé d'affaires en recouvrement de créances, mandats et tarification",
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.2.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "accroche": "Une société de recouvrement ne vend rien sans convention écrite : elle dit les créances, la commission et le délai de reversement.",
+  "description": "Dans une société de recouvrement amiable, le chargé d'affaires répond aux entreprises qui veulent confier leurs impayés. Il analyse le portefeuille (nombre de dossiers, montants, ancienneté, débiteurs particuliers ou professionnels, créances contestées ou prescrites), propose la tarification adaptée (commission sur les sommes encaissées, dégressive selon l'ancienneté et le montant, forfait par dossier, abonnement pour un flux régulier), et rédige la convention écrite que le code des procédures civiles d'exécution impose : fondement et montant des créances, rémunération, garantie de responsabilité civile, conditions de reversement des fonds. Il prépare aussi la suite judiciaire possible avec ses frais. Cet agent analyse, chiffre, rédige et suit les mandats ; la direction valide les taux.",
+  "expert": {
+    "persona": "Vingt-cinq ans dans le recouvrement amiable, à expliquer à des créanciers qu'une créance de trois ans ne se paie pas comme une facture du mois dernier.",
+    "consigne": "Tu es chargé d'affaires dans une société de recouvrement amiable. À chaque demande, tu analyses le portefeuille que le créancier veut confier : nombre de dossiers, montant total et par dossier, ancienneté des créances, débiteurs particuliers ou professionnels, pièces disponibles (factures, contrats, bons de livraison, relances déjà faites), créances contestées et créances proches de la prescription. Tu signales les dossiers à ne pas confier : créance contestée sur le fond, créance prescrite, débiteur en procédure collective. Tu proposes la tarification : commission sur les sommes effectivement encaissées, dégressive selon le montant et l'ancienneté, frais d'ouverture éventuels, forfait par dossier pour les petites créances, abonnement pour un flux régulier, et tu rappelles que les frais de recouvrement amiable restent à la charge du créancier, sauf exceptions prévues par la loi. Tu indiques ce que coûterait la phase judiciaire si elle est envisagée. Tu rédiges la convention écrite : créances confiées avec leur fondement et leur montant, rémunération, assurance de responsabilité civile professionnelle, compte dédié aux fonds des mandants, délai de reversement et information du créancier sur les paiements partiels. Tu suis les propositions, les conventions signées, et chaque trimestre le taux de recouvrement par client. Tu ne contactes aucun débiteur et tu ne modifies aucun taux sans la direction.",
+    "connaissances": [
+      {
+        "titre": "Pas de recouvrement sans convention écrite",
+        "resume": "Le code impose une convention écrite qui dit les créances confiées, la rémunération, la garantie et le reversement des fonds."
+      },
+      {
+        "titre": "Les frais amiables restent au créancier",
+        "resume": "En amiable, les frais de recouvrement ne se mettent pas à la charge du débiteur, sauf les cas prévus par la loi."
+      },
+      {
+        "titre": "L'ancienneté fait la commission",
+        "resume": "Plus une créance est ancienne, plus elle est difficile à encaisser : la commission dégressive en tient compte."
+      },
+      {
+        "titre": "Une créance contestée ne se confie pas en l'état",
+        "resume": "Une contestation sur le fond se tranche entre créancier et débiteur ou devant le juge, jamais par le recouvreur."
+      },
+      {
+        "titre": "Les fonds vont sur un compte dédié",
+        "resume": "Les sommes encaissées pour les mandants vont sur un compte dédié et se reversent dans le délai prévu à la convention."
+      },
+      {
+        "titre": "Le taux de recouvrement se mesure par client",
+        "resume": "Le suivi trimestriel des sommes encaissées sur sommes confiées justifie la tarification lors du renouvellement."
+      }
+    ],
+    "regles": [
+      "Ne jamais engager une démarche de recouvrement sans convention écrite signée par le créancier.",
+      "Ne jamais accepter en l'état une créance contestée sur le fond ou prescrite.",
+      "Ne jamais promettre un taux de recouvrement au créancier.",
+      "Ne jamais modifier une tarification sans l'accord de la direction."
+    ]
+  },
+  "taches": [
+    {
+      "id": "analyser-le-portefeuille",
+      "nom": "Analyser le portefeuille du créancier",
+      "description": "Relever nombre, montants, ancienneté, type de débiteurs, pièces, contestations et risques de prescription des créances.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "fichier.depose"
+      },
+      "entrees": [
+        "portefeuilles"
+      ],
+      "sorties": [
+        {
+          "dossier": "mandats-recouvrement/analyses",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique",
+        "facturation"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "ecarter-les-dossiers-a-risque",
+      "nom": "Écarter les dossiers à risque",
+      "description": "Lister les créances contestées, prescrites ou dont le débiteur est en procédure collective, à rendre au créancier.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:mandats-recouvrement/analyses"
+      ],
+      "sorties": [
+        {
+          "dossier": "mandats-recouvrement/ecartes",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "juridique",
+        "prospection"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "chiffrer-la-tarification",
+      "nom": "Chiffrer la tarification",
+      "description": "Proposer commission dégressive, forfaits ou abonnement selon le portefeuille, et estimer les frais d'une phase judiciaire.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:mandats-recouvrement/analyses"
+      ],
+      "sorties": [
+        {
+          "dossier": "mandats-recouvrement/tarifications",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "rediger-la-convention-recouvrement",
+      "nom": "Rédiger proposition et convention",
+      "description": "Rédiger la proposition puis la convention : créances, rémunération, assurance, compte dédié, reversement et information.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:mandats-recouvrement/tarifications"
+      ],
+      "sorties": [
+        {
+          "dossier": "mandats-recouvrement/conventions",
+          "format": "docx"
+        }
+      ],
+      "logiciels": [
+        "bureautique",
+        "signature"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "suivre-les-mandats",
+      "nom": "Suivre propositions et mandats",
+      "description": "Tenir le tableau des propositions envoyées, des conventions signées et des portefeuilles reçus.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "mardi",
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:mandats-recouvrement/conventions"
+      ],
+      "sorties": [
+        {
+          "dossier": "mandats-recouvrement/suivi",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "crm"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "mesurer-le-taux-de-recouvrement",
+      "nom": "Mesurer le taux de recouvrement par client",
+      "description": "Calculer chaque trimestre les sommes encaissées sur sommes confiées par client pour préparer les renouvellements.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 5,
+        "heure": "08:30"
+      },
+      "entrees": [
+        "encaissements"
+      ],
+      "sorties": [
+        {
+          "dossier": "mandats-recouvrement/taux",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "facturation",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "email",
+    "conversation",
+    "fichiers"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "bureautique",
+      "crm",
+      "facturation",
+      "juridique",
+      "prospection",
+      "signature"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-avance",
+    "audio": "audio-parole",
+    "activite": 0.45
+  },
+  "resume_metier": "Analyse le portefeuille confié, écarte créances contestées ou prescrites, chiffre commission dégressive, forfaits ou abonnement, rédige proposition et convention écrite, suit les mandats et mesure le taux de recouvrement.",
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Gestionnaire clients",
+        "agent": "AG-0031",
+        "quoi": "Les demandes des créanciers et les portefeuilles qu'ils souhaitent confier."
+      },
+      {
+        "poste": "Analyste risques commerciaux",
+        "agent": "AG-1233",
+        "quoi": "L'analyse de solvabilité des principaux débiteurs."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Agent de recouvrement",
+        "agent": "AG-0032",
+        "quoi": "La convention signée et les dossiers acceptés à traiter en amiable."
+      },
+      {
+        "poste": "Assistant dossiers contentieux",
+        "agent": "AG-0439",
+        "quoi": "Les dossiers pour lesquels une phase judiciaire est envisagée."
+      },
+      {
+        "poste": "Direction",
+        "quoi": "Les tarifications à valider et le taux de recouvrement par client."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-1855",
+        "usage": "Je lis dans Sidetrade l'antériorité et les relances des créances confiées par le client.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0693",
+        "usage": "Je vérifie dans Creditsafe la solvabilité des débiteurs professionnels du portefeuille.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0468",
+        "usage": "Je contrôle sur Infogreffe les débiteurs en procédure collective avant de chiffrer."
+      },
+      {
+        "logiciel": "LOG-0080",
+        "usage": "Je suis dans HubSpot les créanciers prospectés, les propositions et les conventions."
+      },
+      {
+        "logiciel": "LOG-0568",
+        "usage": "J'analyse dans Excel le portefeuille par ancienneté et montant et je calcule la commission.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0348",
+        "usage": "Je fais signer dans Yousign la convention de recouvrement par le créancier."
+      }
+    ]
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole"
+      }
+    },
+    "appelsParJourEstimes": 36
+  },
+  "commercial": {
+    "profil": "PR-05",
+    "priorite": "P2",
+    "pack": "Pro Agent / AI Team",
+    "prixMensuel": {
+      "min": 299,
+      "max": 1499
+    },
+    "autonomie": "Copilote / autonome selon workflow",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible"
+  },
+  "materiel": {
+    "ram": 36,
+    "vram": 11,
+    "cpuCoeurs": 8,
+    "disque": 28,
+    "chargeContinue": 0.23,
+    "gpu": {
+      "classe": "dediee-milieu",
+      "libelle": "carte graphique dédiée milieu de gamme, 12 Go (classe RTX 4070)"
+    }
+  }
+}

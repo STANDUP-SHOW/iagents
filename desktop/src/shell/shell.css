@@ -110,9 +110,22 @@
     radial-gradient(1px 1px at 43% 4.6%, rgba(255, 220, 140, 0.6), transparent 70%);
   opacity: 0.8;
 }
-.dc > :not(.decor):not(.palette-voile):not(.tiroir-voile) {
+/* Every block of the frame is its own stacking context, so a menu opened
+ * inside one block only rises above its neighbours if the block itself does.
+ * `:where` keeps this rule light, so the layers below can override it. */
+.dc > :where(:not(.decor, .palette-voile, .tiroir-voile)) {
   position: relative;
   z-index: 1;
+}
+/* The layers, low to high: the blocks (1), the top bar and any block with an
+ * open floating menu (30), the drawer (60), the command palette (80). Without
+ * this, the notifications slid under the modules, the voice block and the
+ * clock. Two separate rules: an engine without `:has` drops only the second. */
+.dc > .barre-haute {
+  z-index: 30;
+}
+.dc > :has(.menu-flottant) {
+  z-index: 30;
 }
 
 @keyframes scintille {
@@ -597,7 +610,20 @@ kbd {
   border-radius: 14px;
   border: 1px solid var(--bord-verre);
   background: var(--verre-fort);
+  backdrop-filter: blur(14px);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+/* A glass card is its own stacking context too (backdrop-filter): the one
+ * holding an open menu goes above the cards that follow it on the page. */
+.zone-centrale .carte-verre:has(.menu-flottant) {
+  position: relative;
+  z-index: 30;
+}
+/* The agent's « ⋯ » sits on the left of its card: open towards the right,
+ * or the left half of the menu is cut by the edge of the page. */
+.plus-zone .menu-flottant {
+  right: auto;
+  left: 0;
 }
 .menu-flottant h4 {
   font-size: 12px;
@@ -753,8 +779,6 @@ kbd {
 }
 .anneau-1 {
   inset: 6px;
-  border-top-color: var(--magenta);
-  border-right-color: rgba(200, 107, 255, 0.7);
   animation: tourne 14s linear infinite;
 }
 .anneau-2 {
@@ -846,6 +870,32 @@ kbd {
   color: var(--alerte);
   text-align: left;
   font-size: 12px;
+}
+.dock-niveau {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.niveau-piste {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.niveau-barre {
+  display: block;
+  height: 100%;
+  background: var(--cyan);
+  transition: width 0.12s linear;
+}
+.dock-entendu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--texte-2);
 }
 .dock-transcription {
   display: flex;
@@ -1493,20 +1543,6 @@ kbd {
   stroke-dasharray: 6 4;
   animation: tourne 60s linear infinite;
 }
-.na-arc {
-  stroke: var(--cyan);
-  stroke-width: 2.2;
-  stroke-dasharray: 120 383;
-  filter: drop-shadow(0 0 3px var(--cyan));
-  animation: tourne 18s linear infinite;
-}
-.na-arc-marque {
-  stroke: var(--magenta);
-  stroke-width: 2;
-  stroke-dasharray: 60 392;
-  filter: drop-shadow(0 0 3px var(--magenta));
-  animation: tourne 26s linear infinite reverse;
-}
 .noyau-portrait {
   width: 48%;
   aspect-ratio: 1;
@@ -1569,10 +1605,6 @@ kbd {
 .etat-ecoute .noyau-portrait {
   animation-duration: 1.5s;
 }
-.etat-reflexion .na-arc {
-  stroke: var(--violet-doux);
-  animation-duration: 6s;
-}
 .etat-reflexion .noyau-portrait {
   animation: pense 2.4s ease-in-out infinite;
 }
@@ -1584,13 +1616,6 @@ kbd {
   50% {
     box-shadow: 0 0 46px rgba(229, 0, 126, 0.7);
   }
-}
-.etat-validation .na-arc-marque {
-  stroke: var(--alerte);
-}
-.etat-blocage .na-arc {
-  stroke: var(--danger);
-  animation-play-state: paused;
 }
 .volet-bulle {
   position: absolute;

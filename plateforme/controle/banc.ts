@@ -16,7 +16,7 @@ import { empreinteFiche, signerJetonLicence, verifierJetonLicence, type ContenuJ
 import { cheminFiche, comparerVersions } from './regles.ts';
 import {
   bruteX25519, chiffrerSkill, cleDeriveePourTemoin, clePriveeEd25519DepuisGraine, clePriveeX25519, dechiffrerSkillPourBanc, infoSkill,
-  messageSkill, signerSkill, verifierSignatureSkill,
+  messageSkill, signerSkill, verifierSignatureMiseAJour, verifierSignatureSkill,
 } from './scellement.ts';
 import { auditer } from './audit.ts';
 
@@ -234,7 +234,8 @@ export async function lancer(): Promise<number> {
 
     // Status transitions
     verifier('stock → active refusé (il faut attribuer)', (await admin('POST', `/controle/boxes/${b1.device_id}/statut`, { statut: 'active', motif: 'essai' })).statut === 409);
-    verifier('un statut hors contrat est refusé', (await admin('POST', `/controle/boxes/${b1.device_id}/statut`, { statut: 'stock', motif: 'essai' })).statut === 400);
+    verifier('un statut hors contrat est refusé', (await admin('POST', `/controle/boxes/${b1.device_id}/statut`, { statut: 'usine', motif: 'essai' })).statut === 400);
+    verifier('une Box provisionnée à la main porte sa référence, numérotée par gamme', b1?.reference === 'IA-FR-CMD-00000001' && b2?.reference === 'IA-FR-CMD-00000002' && b3?.reference === 'IA-FR-CMD-00000003' && b1?.usine === null && b1?.profil_materiel === null);
     r = await admin('POST', `/controle/boxes/${b1.device_id}/attribuer`, { tenant_id: tA.tenant_id, plan_id: 'box-commander-36' });
     verifier('attribuer : stock → provisionnee', r.corps?.statut === 'provisionnee' && r.corps?.tenant_id === tA.tenant_id);
     verifier('une Box déjà attribuée ne se réattribue pas', (await admin('POST', `/controle/boxes/${b1.device_id}/attribuer`, { tenant_id: tB.tenant_id, plan_id: 'x' })).statut === 409);
@@ -338,6 +339,102 @@ export async function lancer(): Promise<number> {
     r = await parBox(k1.privateKey, b1.device_id, 'GET', '/controle/box/mises-a-jour');
     const d = r.corps?.mises_a_jour?.find((m: any) => m.composant === 'desktop');
     verifier('la Box voit la version visée sur son canal, et qu’elle est en retard', d?.version === '0.3.0' && d?.a_jour === false && d?.actuelle === '0.2.2');
+    verifier('la mise à jour publiée est signée par la plateforme, et la Box peut le vérifier', typeof d?.signature === 'string' && verifierSignatureMiseAJour('desktop', '0.3.0', 'a'.repeat(64), d.signature, cle.cle_publique)
+      && !verifierSignatureMiseAJour('desktop', '0.3.1', 'a'.repeat(64), d.signature, cle.cle_publique) && !verifierSignatureMiseAJour('desktop', '0.3.0', 'b'.repeat(64), d.signature, cle.cle_publique));
+    verifier('le composant « device » (agent de la Box) se publie', (await maj({ composant: 'device', version: '0.1.0', url: 'https://maj.iagent.agency/iagent-device_0.1.0_amd64.deb' })).statut === 201);
+    {
+      const sauve = process.env.PLATEFORME_CLE_SIGNATURE;
+      delete process.env.PLATEFORME_CLE_SIGNATURE;
+      r = await maj({ version: '0.3.5' });
+      verifier('sans clé de signature, aucune mise à jour ne se publie : refus qui le dit', r.statut === 503 && /PLATEFORME_CLE_SIGNATURE/.test(r.corps?.erreur));
+      process.env.PLATEFORME_CLE_SIGNATURE = sauve;
+    }
+
+    // --- The factory (brief Factory Installer, 11/10/2026) ------------------------
+    const inventaire = {
+      cpu: 'AMD Ryzen 7 7840HS', coeurs: 8, memoire_go: 64, disque: { modele: 'Samsung 980 PRO', capacite_go: 1000 },
+      mac: { eth0: 'A8:B1:C2:D3:E4:F5', eth1: 'a8:b1:c2:d3:e4:f6', wifi: null },
+      bios: { fournisseur: 'American Megatrends', version: 'M4N-1.07', date: '2026-06-02' },
+      tpm: { present: true, version: '2.0' }, uefi: true, secure_boot: true, releve_le: maintenant().toISOString(),
+    };
+    const installateur = { version: '0.1.0', build_id: 'IAGENT-FACTORY-0.1.0+12', commit: 'ad6c328f' };
+    const kU = generateKeyPairSync('ed25519');
+    const kV = generateKeyPairSync('ed25519');
+    const kW = generateKeyPairSync('ed25519');
+    const enroler = async (jeton: string, corps: unknown): Promise<R> =>
+      lire(await fetch(`${base}/controle/usine/enroler`, { method: 'POST', body: JSON.stringify(corps), headers: jeton ? { 'x-jeton-usine': jeton } : {} }));
+    const machine = (serial: string, k: { publicKey: KeyObject }, extra: Record<string, unknown> = {}) =>
+      ({ ...boxDe(serial, k), gamme: 'business', profil_materiel: 'vm-qemu', inventaire, installateur, ...extra });
+    verifier("émettre un jeton d'usine exige le back-office", (await lire(await fetch(`${base}/controle/usine/jetons`, { method: 'POST', body: '{}' }))).statut === 401);
+    verifier("un jeton d'usine sans opérateur est refusé", (await admin('POST', '/controle/usine/jetons', { lot: 'L1' })).statut === 400);
+    verifier("un plan sans client est refusé", (await admin('POST', '/controle/usine/jetons', { operateur: 'Léa', plan_id: 'box-commander-36' })).statut === 400);
+    verifier("un jeton de plus de 72 h est refusé", (await admin('POST', '/controle/usine/jetons', { operateur: 'Léa', duree_h: 100 })).statut === 400);
+    r = await admin('POST', '/controle/usine/jetons', { operateur: 'Léa', lot: 'L-2026-10-A', utilisations_max: 2 });
+    const jetonA: string = r.corps?.jeton;
+    verifier("un jeton d'usine est rendu une fois, avec son expiration à 24 h, sans son empreinte", r.statut === 201 && /^UF-/.test(jetonA) && !('empreinte' in r.corps) && Date.parse(r.corps.expire_le) - horloge === 24 * H);
+    const jetons = (await admin('GET', '/controle/usine/jetons')).corps;
+    verifier('la liste des jetons ne porte ni jeton ni empreinte', jetons?.length === 1 && !('jeton' in jetons[0]) && !('empreinte' in jetons[0]) && jetons[0].utilisations === 0);
+    verifier("enrôler sans jeton est refusé", (await enroler('', machine('SN-U1', kU))).statut === 401);
+    verifier("enrôler avec un jeton inconnu est refusé", (await enroler('UF-inconnu', machine('SN-U1', kU))).statut === 401);
+    verifier("un profil matériel inconnu de la plateforme est refusé", (await enroler(jetonA, machine('SN-U1', kU, { profil_materiel: 'nuc-13' }))).statut === 400);
+    verifier("un profil qui ne sert pas la gamme est refusé", (await enroler(jetonA, machine('SN-U1', kU, { profil_materiel: 'exr1' }))).statut === 409);
+    verifier("une adresse MAC mal formée est refusée", (await enroler(jetonA, machine('SN-U1', kU, { inventaire: { ...inventaire, mac: { ...inventaire.mac, eth0: 'pas-une-mac' } } }))).statut === 400);
+    verifier("un installateur sans commit git est refusé", (await enroler(jetonA, machine('SN-U1', kU, { installateur: { version: '0.1.0', build_id: 'x' } }))).statut === 400);
+    r = await enroler(jetonA, machine('SN-U1', kU));
+    const bU = r.corps;
+    verifier("une Box enrôlée par l'usine est « usine », référencée, avec son inventaire et son profil", r.statut === 201 && bU?.statut === 'usine' && bU?.reference === 'IA-FR-CMD-00000004'
+      && bU?.profil_materiel === 'vm-qemu' && bU?.inventaire?.mac?.eth0 === 'a8:b1:c2:d3:e4:f5' && bU?.usine?.operateur === 'Léa' && bU?.usine?.lot === 'L-2026-10-A' && bU?.tenant_id === null);
+    verifier("la même série ne s'enrôle pas deux fois", (await enroler(jetonA, machine('SN-U1', kV))).statut === 409);
+    verifier("une Box « usine » n'a aucun droit", (await parBox(kU.privateKey, bU.device_id, 'GET', '/controle/box/droits')).statut === 403);
+    verifier("une Box « usine » ne s'attribue pas", (await admin('POST', `/controle/boxes/${bU.device_id}/attribuer`, { tenant_id: tA.tenant_id, plan_id: 'box-commander-36' })).statut === 409);
+    verifier("usine → stock à la main est refusé : il faut un rapport qui passe", (await admin('POST', `/controle/boxes/${bU.device_id}/statut`, { statut: 'stock', motif: 'essai' })).statut === 409);
+    verifier("l'étiquette ne porte que la référence, l'identifiant, la gamme et la série", JSON.stringify((await admin('GET', `/controle/boxes/${bU.device_id}/etiquette`)).corps) === JSON.stringify({ reference: bU.reference, device_id: bU.device_id, gamme: 'business', serial: 'SN-U1', qr: bU.reference }));
+
+    const test = (id: string, verdict = 'passe', detail: string | null = null) => ({ id, libelle: `Contrôle ${id}`, verdict, duree_ms: 1200, detail });
+    const tousPasses = ['materiel', 'disque', 'reseau', 'services', 'controle'].map((id) => test(id));
+    const rapport = (tests: unknown[], extra: Record<string, unknown> = {}) => ({
+      serial: 'SN-U1', gamme: 'business', profil_materiel: 'vm-qemu', installateur, operateur: 'Léa',
+      commence_le: maintenant().toISOString(), termine_le: new Date(horloge + 20 * 60_000).toISOString(), tests, ...extra,
+    });
+    const deposer = (k: KeyObject, b: any, corps: unknown) => parBox(k, b.device_id, 'POST', '/controle/box/usine/rapport', corps);
+    verifier("un rapport d'une autre gamme est refusé", (await deposer(kU.privateKey, bU, rapport(tousPasses, { gamme: 'home' }))).statut === 409);
+    verifier("un rapport d'un autre profil matériel est refusé", (await deposer(kU.privateKey, bU, rapport(tousPasses, { profil_materiel: 'bosgame-m4-neo' }))).statut === 409);
+    verifier("un rapport d'une autre série est refusé", (await deposer(kU.privateKey, bU, rapport(tousPasses, { serial: 'SN-U9' }))).statut === 409);
+    verifier("un rapport sans test est refusé", (await deposer(kU.privateKey, bU, rapport([]))).statut === 400);
+    verifier("un test en double est refusé", (await deposer(kU.privateKey, bU, rapport([...tousPasses, test('disque')]))).statut === 400);
+    r = await deposer(kU.privateKey, bU, rapport([...tousPasses.slice(0, 4), test('controle', 'passe', 'clé lue : sk-ant-abcdefghijklmnopqrstu')]));
+    verifier("un rapport dont un détail porte un secret est refusé sans le recopier", r.statut === 422 && !/sk-ant/.test(r.corps?.erreur));
+    r = await deposer(kU.privateKey, bU, rapport([test('materiel'), test('disque', 'echec', 'DATA non chiffrée'), test('reseau'), test('services'), test('controle')]));
+    verifier("un test échoué : verdict echec, la Box reste « usine »", r.statut === 201 && r.corps?.rapport?.verdict === 'echec' && r.corps?.box?.statut === 'usine' && r.corps?.echoues?.join() === 'disque');
+    r = await deposer(kU.privateKey, bU, rapport([test('materiel'), test('disque'), test('reseau'), test('services'), test('controle', 'non_constate')]));
+    verifier("un test obligatoire non constaté : verdict echec même sans échec", r.statut === 201 && r.corps?.rapport?.verdict === 'echec' && r.corps?.manquants?.join() === 'controle' && r.corps?.box?.statut === 'usine');
+    r = await deposer(kU.privateKey, bU, rapport([test('materiel'), test('disque'), test('reseau'), test('services')]));
+    verifier("un test obligatoire absent : verdict echec", r.statut === 201 && r.corps?.rapport?.verdict === 'echec' && r.corps?.manquants?.join() === 'controle');
+    r = await deposer(kU.privateKey, bU, rapport([...tousPasses, test('audio', 'non_constate', 'pas de carte son sur la VM')], { verdict: 'echec' }));
+    verifier("le verdict se recalcule, il n'est pas lu : tout obligatoire passé → qualifiee, même si le rapport disait echec", r.statut === 201 && r.corps?.rapport?.verdict === 'passe' && r.corps?.box?.statut === 'qualifiee');
+    verifier("quatre rapports gardés, dans l'ordre", (await admin('GET', `/controle/boxes/${bU.device_id}/rapports`)).corps?.map((x: any) => x.verdict).join() === 'echec,echec,echec,passe');
+    verifier("une Box qualifiée ne reçoit plus de rapport", (await deposer(kU.privateKey, bU, rapport(tousPasses))).statut === 409);
+    verifier("qualifiee → stock à la main", (await admin('POST', `/controle/boxes/${bU.device_id}/statut`, { statut: 'stock', motif: 'rodage 24 h fait' })).corps?.statut === 'stock');
+    verifier("le jeton compte ses utilisations", (await admin('GET', '/controle/usine/jetons')).corps?.[0]?.utilisations === 1);
+
+    // A token carrying a client: the Box is assigned the moment it passes.
+    const jetonB: string = (await admin('POST', '/controle/usine/jetons', { operateur: 'Léa', tenant_id: tB.tenant_id, plan_id: 'home-box' })).corps?.jeton;
+    r = await enroler(jetonB, machine('SN-U2', kV, { gamme: 'home' }));
+    const bV = r.corps;
+    verifier("une Box home enrôlée prend une référence HOME", r.statut === 201 && bV?.reference === 'IA-FR-HOME-00000001');
+    r = await deposer(kV.privateKey, bV, rapport(tousPasses, { serial: 'SN-U2', gamme: 'home' }));
+    verifier("rapport passé avec un jeton client : provisionnee, client et plan posés", r.corps?.box?.statut === 'provisionnee' && r.corps?.box?.tenant_id === tB.tenant_id && r.corps?.box?.plan_id === 'home-box');
+    verifier("provisionnee → expediee", (await admin('POST', `/controle/boxes/${bV.device_id}/statut`, { statut: 'expediee', motif: 'colis 6A123' })).corps?.statut === 'expediee');
+    verifier("une Box expédiée n'a pas encore de droits", (await parBox(kV.privateKey, bV.device_id, 'GET', '/controle/box/droits')).statut === 403);
+    r = await parBox(kV.privateKey, bV.device_id, 'POST', '/controle/box/telemetrie', { cpu: 3, version_desktop: '0.2.1', versions: { device: '0.1.0', desktop: '0.2.1' } });
+    verifier("la première télémétrie d'une Box expédiée l'active et pose les versions", r.statut === 200 && r.corps?.statut === 'active' && (await admin('GET', `/controle/boxes/${bV.device_id}`)).corps?.versions?.device === '0.1.0');
+    verifier("une version de service mal formée est refusée", (await parBox(kV.privateKey, bV.device_id, 'POST', '/controle/box/telemetrie', { version_desktop: '0.2.1', versions: { device: 'trois' } })).statut === 400);
+    verifier("le jeton sert encore une fois (2 au plus)", (await enroler(jetonA, machine('SN-U3', kW))).statut === 201);
+    r = await enroler(jetonA, machine('SN-U4', generateKeyPairSync('ed25519')));
+    verifier("l'épuisement du jeton est refusé en le disant", r.statut === 401 && /2 fois/.test(r.corps?.erreur ?? ''));
+    const actionsUsine: string[] = ((await admin('GET', '/controle/audit')).corps ?? []).map((a: any) => a.action);
+    verifier("l'audit garde le jeton, l'enrôlement, l'échec, la qualification, l'attribution par jeton et l'activation",
+      ['usine.jeton', 'box.enrolee', 'box.rapport-echec', 'box.qualifiee', 'box.attribuee', 'box.activee'].every((a) => actionsUsine.includes(a)));
 
     // Skill Packs
     const contenuSkill = 'Rapprocher le relevé bancaire mensuel avec le grand livre, puis lister les écarts par compte.';

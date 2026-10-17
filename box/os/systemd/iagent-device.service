@@ -1,0 +1,29 @@
+# L'agent de la Box (brief §15) : identité, inventaire, télémétrie toutes les
+# cinq minutes, relevé des mises à jour, rapport d'usine. Un seul processus,
+# relancé par systemd s'il tombe, surveillé par son chien de garde (WatchdogSec).
+# Root pour l'instant : dmidecode, tpm2_getcap et dpkg-query l'exigent ; la
+# descente de privilèges viendra avec le relevé sur une vraie machine.
+[Unit]
+Description=iAgent Box - agent de la Box (identite, inventaire, telemetrie, mises a jour)
+Documentation=file:///usr/share/doc/iagent/CONTRAT.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/iagent-device servir
+Restart=on-failure
+RestartSec=5
+WatchdogSec=120
+SyslogIdentifier=device
+StateDirectory=iagent
+RuntimeDirectory=iagent
+Environment=IAGENT_ETAT=/var/lib/iagent
+ProtectSystem=strict
+ReadWritePaths=/var/lib/iagent
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

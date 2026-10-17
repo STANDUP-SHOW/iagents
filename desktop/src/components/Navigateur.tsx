@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import ProceduresWeb from './ProceduresWeb'
+import ComptesIAgent from './ComptesIAgent'
 
 /** Un compte que le client déclare avoir connecté dans le navigateur. */
 type SiteConnecte = {
@@ -99,11 +101,15 @@ export default function Navigateur() {
         L'application ne saisit jamais votre mot de passe et ne le conserve nulle part.
       </p>
       <p className="precision">
-        Vos agents travailleront dans ces sessions. Pour l'instant ils regardent : ils ne
-        cliquent, ne remplissent et ne publient rien sans que vous validiez.
+        Vos agents travaillent dans ces sessions : ils lisent les pages, cliquent, remplissent et
+        joignent des fichiers comme vous le feriez. LinkedIn reste à vous seul.
       </p>
 
       {erreur && <div className="error-banner">{erreur}</div>}
+
+      <ProceduresWeb />
+
+      <ComptesIAgent />
 
       <section className="navigateur-ouvrir">
         <h3>Ouvrir un site</h3>

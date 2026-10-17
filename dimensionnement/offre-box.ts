@@ -34,11 +34,35 @@ export interface OffreBox {
   catalogueId?: string; coutHT?: number; prixTTC?: number; leasingMensuelHT?: number; abonnementMensuel?: number;
   /** The machine agents are placed on. Kept out of machines.json, whose survey backs the 3x rule. */
   machine: Machine | null; avecCommandeur: boolean;
+  /**
+   * Share of an agent's work that stays on the machine even when its full model does not fit
+   * (max, 16/10/2026: at least 40 % on the 64 Go Box). A commercial hypothesis, like
+   * partApiResiduelle, to be replaced by measurement.
+   */
+  partLocaleMinimum?: { valeur: number; source: string; note?: string };
 }
 
 export const OFFRES: OffreBox[] = offreJson.offres as OffreBox[];
 export const FINANCEMENT = offreJson.financement;
 export const COMMANDEUR: OffreBox = OFFRES.find((o) => o.role === 'commande')!;
+
+/** No machine is advised for up to this many agents (max, 16/10/2026: like the light Desktop Commander, 1 or 2 agents). */
+export const AGENTS_SANS_MACHINE_MAX = 2;
+/** One 64 Go Box holds about ten agents, four or five at work at once (max, 16/10/2026). */
+export const AGENTS_PAR_BOX = 10;
+
+/**
+ * What part of an agent's API bill remains on this offer: the customer's split when the
+ * machine holds the agent, the offer's floor when it holds only the routine work, all of
+ * it without a machine. Choosing « tout par API » keeps everything by API.
+ */
+function partApiSur(o: OffreBox, m: Machine | undefined, tient: boolean, repartition: Repartition): number {
+  const choisie = REPARTITIONS[repartition].partApi;
+  if (!m) return 1;
+  if (tient) return choisie;
+  const plancher = o.partLocaleMinimum?.valeur ?? 0;
+  return Math.max(choisie, 1 - plancher);
+}
 const JOURS = 30;
 
 export function offre(id: string): OffreBox {
@@ -95,6 +119,10 @@ const r = (x: number) => Math.round(x * 100) / 100;
 export interface LigneDevis {
   offre: string; nom: string; aConfirmer: boolean;
   enLocal: boolean;
+  /** Vrai si la machine ne tient pas l'agent entier mais fait chez vous son travail courant (partLocaleMinimum). */
+  enPartie: boolean;
+  /** Part de sa consommation qui ne passe plus par l'API sur cette installation. */
+  partLocale: number;
   /** Ce que l'agent se paie en jetons chaque mois sur cette installation. */
   coutAgent: number;
   apiSeule: number;
@@ -116,15 +144,19 @@ export function devisParBox(
     const inst = coutInstallation(o);
     const m = machineDe(o);
     const enLocal = !!m && tientSur(m, [paquet]);
-    const coutAgent = enLocal ? apiSeule * REPARTITIONS[repartition].partApi : apiSeule;
+    const partApi = partApiSur(o, m, enLocal, repartition);
+    const enPartie = !enLocal && partApi < 1;
+    const coutAgent = apiSeule * partApi;
     const economie = apiSeule - coutAgent;
     const fixe = inst.mensualite + inst.abonnement + inst.electricite;
+    const pct = (x: number) => `${Math.round(x * 100)} %`;
     const motif = !m
-      ? o.role === 'aucune' ? "Tout par API." : "La Box Commandeur ne fait pas tourner d'agent : celui-ci travaille par API."
-      : enLocal ? `Tourne sur ${o.nom} ; ${Math.round(REPARTITIONS[repartition].partApi * 100)} % reste par API.`
+      ? "Tout par API."
+      : enLocal ? `Tourne sur ${o.nom} ; ${pct(partApi)} reste par API.`
+      : enPartie ? `${o.nom} fait chez vous son travail courant (${pct(1 - partApi)} au moins) ; le raisonnement le plus lourd part par API.`
       : `${o.nom} ne le tient pas : il reste par API.`;
     return {
-      offre: o.id, nom: o.nom, aConfirmer: inst.aConfirmer, enLocal,
+      offre: o.id, nom: o.nom, aConfirmer: inst.aConfirmer, enLocal, enPartie, partLocale: r(1 - partApi),
       coutAgent: r(coutAgent), apiSeule: r(apiSeule), economie: r(economie),
       mensualite: r(inst.mensualite), abonnement: r(inst.abonnement), electricite: r(inst.electricite),
       rembourseSeul: fixe > 0 && economie >= fixe,
@@ -135,6 +167,8 @@ export function devisParBox(
 
 export interface DevisPack {
   offre: string; nom: string; aConfirmer: boolean;
+  /** Boxes the team needs on this installation (0 without a machine). */
+  nombreBox: number;
   enLocal: string[]; enApi: string[];
   mensualite: number; abonnement: number; electricite: number; api: number;
   /** Total par mois pendant le financement, puis une fois la machine payée. */
@@ -145,10 +179,18 @@ export interface DevisPack {
   moisPourRembourser: number;
 }
 
+/** How many boxes of this offer a team of `n` agents needs: one per ten for the 64 Go Box, one otherwise. */
+export function nombreDeBox(o: OffreBox, n: number): number {
+  if (o.prixAchat === 0) return 0;
+  return o.role === 'commande' ? Math.max(1, Math.ceil(n / AGENTS_PAR_BOX)) : 1;
+}
+
 /**
  * Ce que coûte une équipe sur une installation. Les agents se placent par économie
  * décroissante tant que la machine les tient (poids partagés entre agents du même
- * palier, comme partout ailleurs) ; les autres restent en API.
+ * palier, comme partout ailleurs) ; les autres font chez vous la part minimale de
+ * l'offre (partLocaleMinimum) et le reste par API. La Box 64 Go se compte une par
+ * dizaine d'agents (max, 16/10/2026).
  */
 export function devisPack(
   paquets: PaquetEco[],
@@ -158,37 +200,43 @@ export function devisPack(
   const o = offre(id);
   const inst = coutInstallation(o);
   const m = machineDe(o);
+  const nBox = nombreDeBox(o, paquets.length);
   const partApi = REPARTITIONS[repartition].partApi;
   const couts = paquets.map((p) => ({ p, api: coutApiMensuel(p, undefined, intensite).total }))
     .sort((a, b) => b.api - a.api);
-  const places: PaquetEco[] = [];
+  const boxes: PaquetEco[][] = Array.from({ length: Math.max(1, nBox) }, () => []);
   let api = 0, toutApi = 0;
   const enLocal: string[] = [], enApi: string[] = [];
   for (const { p, api: c } of couts) {
     toutApi += c;
-    if (m && tientSur(m, [...places, p])) { places.push(p); enLocal.push(p.id); api += c * partApi; }
-    else { enApi.push(p.id); api += c; }
+    const box = m ? boxes.find((b) => (o.role !== 'commande' || b.length < AGENTS_PAR_BOX) && tientSur(m, [...b, p])) : undefined;
+    if (box) { box.push(p); enLocal.push(p.id); api += c * partApi; }
+    else { enApi.push(p.id); api += c * partApiSur(o, m, false, repartition); }
   }
-  const economieMensuelle = toutApi - api - inst.electricite - inst.abonnement;
+  const fois = Math.max(1, nBox);
+  const mens = inst.mensualite * fois, abo = inst.abonnement * fois, elec = inst.electricite * fois;
+  const economieMensuelle = toutApi - api - elec - abo;
   return {
-    offre: o.id, nom: o.nom, aConfirmer: inst.aConfirmer, enLocal, enApi,
-    mensualite: r(inst.mensualite), abonnement: r(inst.abonnement), electricite: r(inst.electricite), api: r(api),
-    totalPendant: r(inst.mensualite + inst.abonnement + inst.electricite + api),
-    totalApres: r(inst.abonnement + inst.electricite + api),
+    offre: o.id, nom: o.nom, aConfirmer: inst.aConfirmer, nombreBox: nBox, enLocal, enApi,
+    mensualite: r(mens), abonnement: r(abo), electricite: r(elec), api: r(api),
+    totalPendant: r(mens + abo + elec + api),
+    totalApres: r(abo + elec + api),
     toutApi: r(toutApi),
-    moisPourRembourser: inst.prixAchat === 0 ? 0 : economieMensuelle > 0 ? Math.ceil(inst.prixAchat / economieMensuelle) : Infinity,
+    moisPourRembourser: inst.prixAchat === 0 ? 0 : economieMensuelle > 0 ? Math.ceil((inst.prixAchat * fois) / economieMensuelle) : Infinity,
   };
 }
 
 /**
- * L'installation à conseiller pour une équipe : la moins chère sur toute la durée du
- * financement puis autant après (48 mois à 24 mois de financement), parce qu'une machine se garde au-delà de ses
- * mensualités. À coût égal, la plus petite. « Sans machine » est une réponse possible, et
- * c'est la bonne pour une équipe peu sollicitée (règle de max du 24/09).
+ * L'installation à conseiller pour une équipe (max, 16/10/2026). Un ordinateur de bureau
+ * ne fait pas travailler une équipe : « sans machine » ne se conseille que pour 1 ou 2
+ * agents, comme le Desktop Commander light. Au-delà, la Box 64 Go, une par dizaine
+ * d'agents. Avant le 16/10, le conseil prenait l'installation la moins chère sur le
+ * papier ; la seule Box publiée n'ayant alors aucune puissance, elle ne coûtait que
+ * son prix et « sans machine » gagnait pour toutes les équipes, 42 agents compris.
  */
 export function conseillerBox(paquets: PaquetEco[], reglages: { intensite?: Intensite; repartition?: Repartition } = {}) {
   const devis = OFFRES.map((o) => devisPack(paquets, o.id, reglages));
-  const horizon = (d: DevisPack) => d.totalPendant * FINANCEMENT.mois + d.totalApres * FINANCEMENT.mois;
-  const conseil = devis.reduce((best, d) => (horizon(d) < horizon(best) - 0.005 ? d : best));
+  const id = paquets.length <= AGENTS_SANS_MACHINE_MAX ? 'aucune' : COMMANDEUR.id;
+  const conseil = devis.find((d) => d.offre === id)!;
   return { conseil, devis };
 }

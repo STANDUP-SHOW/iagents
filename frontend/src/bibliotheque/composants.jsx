@@ -1,11 +1,12 @@
 // The library's pieces: the profile card, the preview panel, the search field
 // and the filters. They only present what the fiches already say.
 import { useEffect, useId, useRef, useState } from 'react';
-import { libelleSecteur, libelleFamille, logicielsDe, nomDuLogiciel, portraitDe, suggestions } from '../data/recherche.js';
+import { activitesDuPoste, libelleSecteur, libelleFamille, logicielsDe, nomDuLogiciel, portraitDe, suggestions, urlFiche } from '../data/recherche.js';
 import { PRIX_AGENT_MOIS, NOTE_ACHAT } from '../data/prix.js';
 import { passes3xTest, ratio3x } from '../data/loader.js';
 import { devisAgent, euros, installationDe } from '../data/offres.js';
-import { RECRUTER } from '../accueil/composants.jsx';
+import { ajouterAgent, PAGE_LISTE } from '../data/liste.js';
+import { suivre } from '../accueil/analytique.js';
 
 const Fleche = () => (
   <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" className="flex-none">
@@ -36,7 +37,7 @@ function Badge({ agent }) {
  */
 export function CarteAgent({ agent, choisi, onVoir, compact = false, prioritaire = false }) {
   const logiciels = logicielsDe(agent).slice(0, 3);
-  const ouvrir = () => onVoir(agent);
+  const ouvrir = () => onVoir(agent, true);
   return (
     <article className={`bi-carte ${compact ? 'bi-carte-compacte' : ''} ${choisi ? 'bi-carte-choisie' : ''}`}>
       <div className="bi-portrait">
@@ -46,7 +47,7 @@ export function CarteAgent({ agent, choisi, onVoir, compact = false, prioritaire
       <div className="bi-corps">
         <p className="bi-ref">{agent.id}</p>
         <h3 className="bi-poste">
-          <button type="button" onClick={ouvrir} className="text-left" aria-label={`Aperçu du profil ${agent.nom}`}>{agent.nom}</button>
+          <a href={urlFiche(agent)} onClick={(e) => { e.preventDefault(); ouvrir(); }} className="text-left" aria-label={`Aperçu du profil ${agent.nom}`}>{agent.nom}</a>
         </h3>
         <p className="bi-secteur">{libelleSecteur(agent.secteur)} · {libelleFamille(agent.famille)}</p>
         {!compact && <p className="bi-accroche">{agent.accroche}</p>}
@@ -78,7 +79,23 @@ const ONGLETS_APERCU = [
  * The preview beside the grid (a sheet from the bottom on a phone): enough to
  * decide whether to open the full fiche.
  */
-export function Apercu({ agent, installation, onFermer, onFicheComplete, focaliser = true }) {
+/**
+ * « Recruter cet agent » (max, 10/10): THIS job goes on the visitor's
+ * recruitment list, with the activity they chose; the button then leads to
+ * the list, where the Box is added and the whole is validated.
+ */
+export function BoutonRecruter({ agent, activite = null, duree = undefined, className = 'bouton bouton-plein', libelle = 'Recruter cet agent' }) {
+  const [ajoute, setAjoute] = useState(false);
+  if (ajoute) return <a href={PAGE_LISTE} className={className}>Ajouté · voir ma liste <Fleche /></a>;
+  const recruter = () => {
+    ajouterAgent({ fiche: agent.id, slug: agent.slug, nom: agent.nom, secteur: libelleSecteur(agent.secteur), activite: activite?.nom ?? null, suggestions: activitesDuPoste(agent), duree });
+    suivre('recruit_agent', { fiche: agent.id, duree });
+    setAjoute(true);
+  };
+  return <button type="button" className={className} onClick={recruter}>{libelle} <Fleche /></button>;
+}
+
+export function Apercu({ agent, installation, onFermer, onFicheComplete, focaliser = true, activite = null }) {
   const [onglet, setOnglet] = useState('competences');
   const fermer = useRef(null);
   useEffect(() => { setOnglet('competences'); if (focaliser) fermer.current?.focus({ preventScroll: true }); }, [agent?.id]);
@@ -156,7 +173,7 @@ export function Apercu({ agent, installation, onFermer, onFicheComplete, focalis
             <dl className="bi-details">
               <div><dt>Où il travaille</dt><dd>{agent.execution?.defaut === 'local' ? 'Chez vous par défaut, par API si vous le choisissez' : 'Par API'}</dd></div>
               {agent.materiel?.gpu?.libelle && <div><dt>Machine conseillée</dt><dd>{agent.materiel.gpu.libelle}</dd></div>}
-              {ligne && <div><dt>Sur votre {installationDe(installation).nom}</dt><dd>{ligne.enLocal ? 'il travaille chez vous' : 'il passe par l\'API'}, environ {euros(ligne.coutAgent)} / mois de fonctionnement</dd></div>}
+              {ligne && <div><dt>Sur votre {installationDe(installation).nom}</dt><dd>{ligne.enLocal ? 'il travaille chez vous' : ligne.enPartie ? `il fait chez vous ${Math.round(ligne.partLocale * 100)} % de son travail` : 'il passe par l\'API'}, environ {euros(ligne.coutAgent)} / mois de fonctionnement</dd></div>}
               <div><dt>Autonomie</dt><dd>Il travaille seul ; vous choisissez à l'entretien ce qui attend votre accord.</dd></div>
             </dl>
           )}
@@ -164,7 +181,7 @@ export function Apercu({ agent, installation, onFermer, onFicheComplete, focalis
       </div>
 
       <div className="bi-apercu-actions">
-        <a href={RECRUTER} className="bouton bouton-plein w-full">Recruter cet agent <Fleche /></a>
+        <BoutonRecruter agent={agent} activite={activite} className="bouton bouton-plein w-full" />
         <div className="grid grid-cols-2 gap-2">
           <button type="button" className="bouton bouton-contour !text-sm" onClick={() => onFicheComplete(agent)}>Fiche complète</button>
           <a href={`/agents/${agent.slug}`} className="bouton bouton-contour !text-sm">Page du métier</a>

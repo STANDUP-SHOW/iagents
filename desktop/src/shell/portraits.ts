@@ -20,7 +20,11 @@ export const portraitDeFiche = (ficheId: string) => {
 const vedette = (n: number) => `/portraits/equipe/v${String(n).padStart(3, '0')}.webp`
 
 /** The site's named agents keep their face here too. */
-const NOMMES: Record<string, number> = { julie: 20, thomas: 12, samir: 6, lea: 7, marco: 1, elise: 22, victor: 21 }
+const NOMMES: Record<string, number> = {
+  julie: 20, thomas: 12, samir: 6, lea: 7, marco: 1, elise: 22, victor: 21,
+  // The fundraising team, faces chosen with max on his PC (11/10/2026).
+  hugo: 12, camille: 22, nora: 20, paul: 24, ines: 25, louis: 19, sarah: 5,
+}
 
 /** The featured portraits by the presentation of the face, read on max's sheet. */
 const VEDETTES: Record<Sexe, number[]> = {
@@ -35,17 +39,21 @@ const empreinte = (t: string) => [...t].reduce((h, c) => (h * 31 + c.charCodeAt(
 /**
  * The face of a hired agent. A photo the client gave wins when the window can
  * load it; then the site's named agents; then a featured portrait matching the
- * gender chosen at hiring; else the fiche's own portrait from the bank.
+ * gender chosen at hiring; else any featured face. The bank is for the
+ * library only.
  */
 export function portraitDe(a: Pick<AgentInstalle, 'prenom' | 'photo' | 'sexe'> & { fiche: { id: string } }): string {
-  if (a.photo && /^(https?:|data:|\/portraits\/)/.test(a.photo)) return a.photo
+  // A bank portrait says nothing of its gender: once the agent's gender is
+  // known, it gives way to a featured face of that gender (max, 11/10/2026:
+  // « la photo d'une femme avec un nom Victor »).
+  const deLaBanque = Boolean(a.photo?.startsWith('/portraits/agents/'))
+  if (a.photo && /^(https?:|data:|\/portraits\/)/.test(a.photo) && !(deLaBanque && a.sexe)) return a.photo
   const nom = sansAccents(a.prenom)
-  if (NOMMES[nom]) return vedette(NOMMES[nom])
-  if (a.sexe) {
-    const pool = VEDETTES[a.sexe]
-    return vedette(pool[empreinte(nom) % pool.length])
-  }
-  return portraitDeFiche(a.fiche.id)
+  if (NOMMES[nom] && (!a.sexe || VEDETTES[a.sexe].includes(NOMMES[nom]))) return vedette(NOMMES[nom])
+  // A hired agent always wears a face of the iAgent team (max, 11/10/2026),
+  // never one from the library bank, even when its gender is unknown.
+  const pool = a.sexe ? VEDETTES[a.sexe] : [...VEDETTES.femme, ...VEDETTES.homme]
+  return vedette(pool[empreinte(nom) % pool.length])
 }
 
 /** The featured faces offered at hiring: those of the chosen gender, or all 25. */

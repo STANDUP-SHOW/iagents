@@ -19,11 +19,13 @@ import IAgentBox, { CarteInstallation } from '../src/components/IAgentBox.jsx';
 import PacksEntreprise from '../src/components/PacksEntreprise.jsx';
 import { AGENTS_RESEAUX, PACKS_ENTREPRISE, CYCLE_1, CYCLE_2, ficheDe, activitesPourIdee, INSTALLATIONS, conseilPour, euros } from '../src/data/offres.js';
 import { FINANCEMENT, OFFRES } from '../../dimensionnement/offre-box.ts';
+import { DEVIS } from '../../outils/poste-de-devis.ts';
 import { readFileSync, existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE, logicielsDeLActivite } from '../src/data/recherche.js';
-import { IDS_DU_COEUR, coeurDeLActivite, personnelDeLActivite } from '../src/data/activites-recherche.js';
-import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, euros as eurosTarif } from '../src/data/tarifs.js';
+import { PORTRAITS, portraitDe, filtrer, activitesDeLaRecherche, ACTIVITES as ACTIVITES_RECHERCHE, logicielsDeLActivite, optionsActivites } from '../src/data/recherche.js';
+import { IDS_DU_COEUR, coeurDeLActivite, personnelDeLActivite, SECTEURS_TRANSVERSAUX, estTransversal } from '../src/data/activites-recherche.js';
+import { specialiser, nomSpecialise } from '../src/data/specialisation.js';
+import tarifs, { INSTALLATIONS_MASQUEES, BOX_DES, BOX_PUBLIQUES, STATUTS, euros as eurosTarif } from '../src/data/tarifs.js';
 import Page from '../src/pages/Page.jsx';
 import { PAGES as PAGES_OFFRE } from '../src/pages/site.js';
 
@@ -133,7 +135,7 @@ for (const page of PAGES) {
   for (const vue of page.id === 'catalogue' ? VUES : [{ id: 'metier' }]) {
     try {
       const html = renderToString(<App pageInitiale={page.id} vueInitiale={vue.id} />);
-      const attendu = { catalogue: { packs: 'PACK-01', activites: 'Imprimerie offset et numérique', secteurs: 'Comptabilité' }[vue.id] ?? 'AG-0', entreprise: 'Cycle 1', box: 'Box Commandeur' }[page.id];
+      const attendu = { catalogue: { packs: 'PACK-01', activites: 'Imprimerie offset et numérique', secteurs: 'Comptabilité' }[vue.id] ?? 'AG-0', entreprise: 'Cycle 1', box: 'Box 64 Go' }[page.id];
       if (!html.includes(attendu)) echoue(`page « ${page.libelle} »${vue.libelle ? `, vue « ${vue.libelle} »` : ''} : « ${attendu} » absent`);
       else ok(`page « ${page.libelle} »${vue.libelle ? `, vue « ${vue.libelle} »` : ''} se rend`);
     } catch (e) {
@@ -175,7 +177,7 @@ for (const page of PAGES) {
     ['je suis boulanger', ['Chef de fournil', 'Responsable de boutique', 'Qualité, hygiène et allergènes', 'Secrétaire comptable']],
     // Asked in everyday words, these found no activity at all.
     ['créer une entreprise de transport', ['Deviseur — cotation transport', 'Planification des tournées']],
-    ['ouvrir une ferme bio', ['Devis et contrats', 'Chef de culture']],
+    ['ouvrir une ferme bio', ['offres et devis aux restaurateurs', 'Chef de culture']],
     ['créer une agence de voyage', ['Devis et cotation des voyages', 'Conception des circuits']],
   ]) {
     const rendu = renderToString(<CreezEntreprise ideeInitiale={idee} />).replace(/&#x27;/g, "'");
@@ -192,7 +194,7 @@ for (const page of PAGES) {
   const sansDevis = ACTIVITES_RECHERCHE
     .filter((a) => !['sante-social', 'finance-immobilier', 'public-associatif'].includes(a.famille))
     .filter((a) => !personnelDeLActivite(a, agents)?.sansDevis)
-    .filter((a) => !coeurDeLActivite(a, agents).some((c) => /devis|deviseur|cotation|chiffrage|chiffreur/i.test(c.role)));
+    .filter((a) => !coeurDeLActivite(a, agents).some((c) => DEVIS.test(c.role)));
   // Every trade shows its own software, not only office tools; and the print
   // shop, which its owner checks first, shows the ones printers actually run.
   const BUREAU = new Set(['bureautique']);
@@ -259,7 +261,7 @@ for (const page of PAGES) {
     if (!html.includes('<h1')) echoue(`page ${nom} : pas de titre principal`);
   }
   ok(`les ${PAGES_OFFRE.length} pages de l'offre se rendent`);
-  const sources = ['src/pages/Pages.jsx', 'src/pages/PagesBusiness.jsx', 'src/pages/blocs.jsx', 'src/accueil/Accueil.jsx'];
+  const sources = ['src/pages/Pages.jsx', 'src/pages/PagesOffre.jsx', 'src/pages/PagesBusiness.jsx', 'src/pages/scenes.jsx', 'src/pages/blocs.jsx', 'src/accueil/Accueil.jsx'];
   const enDur = sources.flatMap((f) => [...readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8').matchAll(/\d[\d\s,.]*\s?€/g)].map((m) => `${f} : ${m[0]}`));
   if (enDur.length) echoue(`montants écrits en dur : ${enDur.join(' ; ')}`);
   else ok('aucun montant écrit en dur dans les pages');
@@ -267,17 +269,28 @@ for (const page of PAGES) {
   const absents = [...BOX_PUBLIQUES.map((b) => b.mensuel), ...tarifs.agents.paliers.map((p) => p.mensuel)].filter((x) => tarifs.agents.affichage === 'paliers' || x < 100).filter((x) => !tarifsHtml.includes(String(x)));
   if (absents.length) echoue(`la page Tarifs ne montre pas ${absents.join(', ')}`);
   else ok('la page Tarifs montre la grille de tarifs.json');
-  // Le téléphone n'est pas construit : aucune offre Voice ne se vend comme disponible.
+  // Les offres Voice se vendent au tarif pilote, comme le reste de la grille (max, 10/10).
   const voixHtml = renderToString(<Page nom="voice" />);
-  const vendues = tarifs.voice.offres.filter((o) => !['bientot', 'sur-devis'].includes(o.statut));
+  const inconnus = tarifs.voice.offres.filter((o) => !STATUTS[o.statut]);
   const manquants = tarifs.voice.offres.filter((o) => o.mensuel ?? o.aPartirDe).filter((o) => !voixHtml.includes(String(o.mensuel ?? o.aPartirDe)));
-  if (vendues.length || manquants.length || !voixHtml.includes('Bientôt')) echoue(`page Voice : ${vendues.map((o) => o.id).join(', ')} vendues, ${manquants.map((o) => o.id).join(', ')} absentes`);
-  else ok('la page Voice montre ses prix, tous marqués « bientôt »');
+  if (inconnus.length || manquants.length) echoue(`page Voice : statut inconnu pour ${inconnus.map((o) => o.id).join(', ')}, prix absents pour ${manquants.map((o) => o.id).join(', ')}`);
+  else ok('la page Voice montre ses prix, chacun avec un statut de la grille');
   // Starter = Box 36 mois + 1 Essential (max, 07/10) : le prix est la somme, jamais recopié.
   const starter = tarifs.packs.find((p) => p.id === 'starter');
   const attendu = tarifs.box.find((b) => b.id === 'box-commander-36').mensuel + tarifs.agents.paliers.find((p) => p.id === 'essential').mensuel;
   if (starter.mensuel !== attendu || !tarifsHtml.includes(String(attendu))) echoue(`Starter à ${starter.mensuel} au lieu de ${attendu}`);
   else ok(`le Starter vaut la Box et un Essential : ${attendu} €`);
+  // Location à la durée (max, 15/10) : 24 h, 7 jours, 14 jours au prorata du mois,
+  // montrés sur la page Tarifs et sur Temp Agency, calculés et jamais recopiés.
+  {
+    const attendus = tarifs.agents.paliers.flatMap((p) => tarifs.agents.durees.liste.map((d) => eurosTarif(Math.round((p.mensuel * 100 * d.partDuMois[0]) / d.partDuMois[1]) / 100)));
+    const regle = tarifs.agents.durees.liste.map((d) => `${d.id}=${d.partDuMois.join('/')}`).join(' ');
+    const temp = renderToString(<Page nom="temp-agency" />);
+    const manque = (html) => attendus.filter((x) => !html.includes(x) && !html.includes(x.replace(/\u00a0/g, '&nbsp;')));
+    if (regle !== '24h=1/30 7j=1/4 14j=1/2 mois=1/1') echoue(`durées de location : ${regle}`);
+    else if (manque(tarifsHtml).length || manque(temp).length) echoue(`grille de location incomplète : Tarifs sans ${manque(tarifsHtml).join(', ')} ; Temp Agency sans ${manque(temp).join(', ')}`);
+    else ok(`location 24 h, 7 jours, 14 jours, mois : ${attendus.length} prix sur Tarifs et Temp Agency (Essential ${attendus.slice(0, 4).join(' / ')})`);
+  }
   // Les portraits découpés des planches de max : chaque visage annoncé existe, et
   // le catalogue en montre assez pour que deux fiches voisines ne se ressemblent pas.
   const public_ = 'public'; // the bench runs from frontend/
@@ -297,12 +310,83 @@ for (const page of PAGES) {
       .filter(([a, mot]) => !activitesDeLaRecherche(mot).includes(a) || !filtrer(agents, { requete: mot }).length);
     if (muets.length) echoue(`${muets.length} mots d'activité sans réponse, dont ${muets.slice(0, 5).map(([a, m]) => `« ${m} » (${a.id})`).join(', ')}`);
     else ok(`les ${ACTIVITES_RECHERCHE.length} activités se trouvent par leur nom et chacun de leurs alias`);
+  }  // Le filtre « Activité » (max, 10/10) : les 422 activités sans secteur
+  // choisi, seulement celles du secteur quand il l'est, et le personnel de
+  // l'imprimerie d'abord quand on la choisit.
+  {
+    const toutes = optionsActivites(agents);
+    const fiche = (id) => agents.find((a) => a.id === id);
+    const coeur = coeurDeLActivite(ACTIVITES_RECHERCHE.find((a) => a.id === 'ACT-0021'), agents).map((c) => c.fiche.id);
+    const secteurImprimeur = coeur.map((id) => fiche(id)?.secteur).find((s) => s && !SECTEURS_TRANSVERSAUX.has(s));
+    const duSecteur = optionsActivites(agents, [secteurImprimeur]);
+    const choisis = filtrer(agents, { activites: ['ACT-0021'] });
+    if (toutes.length !== ACTIVITES_RECHERCHE.length) echoue(`filtre Activité : ${toutes.length} activités proposées sur ${ACTIVITES_RECHERCHE.length}`);
+    else if (!duSecteur.some(([id]) => id === 'ACT-0021') || duSecteur.length >= toutes.length) echoue(`filtre Activité : le secteur ${secteurImprimeur} propose ${duSecteur.length} activités`);
+    else if (!coeur.includes(choisis[0]?.id)) echoue(`filtre Activité : l'imprimerie commence par ${choisis[0]?.nom}`);
+    else ok(`filtre Activité : ${toutes.length} activités, ${duSecteur.length} dans le secteur ${secteurImprimeur}, l'imprimerie montre ${choisis.length} métiers, d'abord ${choisis[0].nom}`);
   }
+  // The sector filter and the counter are the same number (max, 10/10: the
+  // catalogue said 63 sectors and the filter « Voir les 64 »).
+  {
+    const dansLeFiltre = new Set(agents.map((a) => a.secteur));
+    const declares = new Set(catalogueJson.secteurs.map((s) => s.id));
+    const enTrop = [...dansLeFiltre].filter((s) => !declares.has(s));
+    const sansFiche = [...declares].filter((s) => !dansLeFiltre.has(s));
+    if (enTrop.length || sansFiche.length) echoue(`secteurs : le filtre en montre ${dansLeFiltre.size}, le catalogue en déclare ${declares.size} (hors catalogue : ${enTrop.join(', ') || 'aucun'} ; sans fiche : ${sansFiche.join(', ') || 'aucun'})`);
+    else ok(`secteurs : ${declares.size} au catalogue, ${dansLeFiltre.size} dans le filtre, les mêmes`);
+  }
+
+  // La fiche se lit dans une activité (max, 10/10) : le menu de l'en-tête
+  // propose les 422 activités, le nom devient « Assistant de réunion commerce
+  // de gros », et la fiche porte la matière de l'activité : le poste tel que
+  // la branche le nomme, son expert du devis, ses logiciels, son vocabulaire.
+  // La composition est celle des pages métier × activité (specialisation.js).
+  {
+    const gros = ACTIVITES_RECHERCHE.find((a) => /^grossiste/i.test(a.nom));
+    const optique = ACTIVITES_RECHERCHE.find((a) => /^optique/i.test(a.nom));
+    const reunion = agents.find((a) => /^assistant de réunion/i.test(a.nom));
+    const devis = agents.find((a) => estTransversal(a) && DEVIS.test(a.nom));
+    if (!gros || !optique || !reunion || !devis) echoue(`spécialisation : il manque ${[!gros && 'un grossiste', !optique && 'l’optique', !reunion && 'l’assistant de réunion', !devis && 'un agent de devis transversal'].filter(Boolean).join(', ')}`);
+    else {
+      const sansMenu = renderToString(<FicheDetail agent={reunion} onClose={() => {}} />);
+      const generique = renderToString(<FicheDetail agent={reunion} onClose={() => {}} onChoisirActivite={() => {}} />);
+      const html = renderToString(<FicheDetail agent={reunion} onClose={() => {}} activite={gros} onChoisirActivite={() => {}} />);
+      const options = (generique.match(/<option /g) ?? []).length - 1;
+      const nom = nomSpecialise(reunion, gros);
+      const spec = specialiser(reunion, gros, agents);
+      const terme = spec.pack.vocabulaire?.[0]?.terme;
+      if (sansMenu.includes('fd-specialiser')) echoue('spécialisation : le menu s’affiche sans personne pour prendre le choix');
+      else if (options !== ACTIVITES_RECHERCHE.length) echoue(`spécialisation : le menu propose ${options} activités sur ${ACTIVITES_RECHERCHE.length}`);
+      else if (!generique.includes(`<h1 id="fd-titre-${reunion.id}" class="fd-h1">${reunion.nom}</h1>`)) echoue('spécialisation : sans activité, la fiche ne garde pas son nom');
+      else if (!html.includes(`class="fd-h1">${nom}</h1>`)) echoue(`spécialisation : la fiche ne s’appelle pas « ${nom} »`);
+      else if (!terme || !html.includes(terme)) echoue(`spécialisation : le vocabulaire de l’activité (« ${terme} ») manque à la fiche`);
+      else if (!html.includes(`Dans votre activité : ${gros.nom}`)) echoue('spécialisation : la fiche ne dit pas dans quelle activité elle se lit');
+      else ok(`spécialisation : « ${nom} », ${options} activités au menu, le vocabulaire du grossiste dans la fiche`);
+    }
+    // L'agent de devis lu en optique renvoie à l'expert du devis de la branche
+    // (l'opticien), pas à lui-même — comme sa page métier × activité.
+    if (optique && devis) {
+      const spec = specialiser(devis, optique, agents);
+      const html = renderToString(<FicheDetail agent={devis} onClose={() => {}} activite={optique} onChoisirActivite={() => {}} />);
+      if (!spec.expert) echoue(`spécialisation : ${devis.nom} en optique ne nomme pas l’expert du devis de la branche`);
+      else if (spec.expert.fiche.id === devis.id || estTransversal(spec.expert.fiche)) echoue(`spécialisation : l’expert du devis en optique est ${spec.expert.fiche.nom}, un métier transversal`);
+      else if (!html.includes(spec.expert.fiche.nom)) echoue(`spécialisation : la fiche ne cite pas ${spec.expert.fiche.nom}`);
+      else ok(`spécialisation : ${devis.nom} en optique renvoie à ${spec.expert.fiche.nom} (« ${spec.expert.role} »)`);
+    }
+  }
+
   // Le site n'offre jamais l'installeur : Desktop Commander est livré sur la Box
   // (max, 08/10). Un bouton « Télécharger » ramènerait le visiteur hors de l'offre.
   const telechargeurs = execSync("grep -rlE 'releases/(latest/)?download|\\.msi|T[eé]l[eé]charger' src seo || true", { encoding: 'utf8' }).trim();
   if (telechargeurs) echoue(`un bouton fait encore télécharger l'application : ${telechargeurs.split('\n').join(', ')}`);
   else ok('aucun bouton du site ne fait télécharger l’application');
+
+  // Le site présente un produit terminé (max, 10/10) : aucune page n'annonce
+  // une fonction pour plus tard. Le catalogue (data/*.json) décrit les tâches
+  // des agents et n'est pas concerné.
+  const avenir = execSync("grep -rniE 'bient(o|ô)t|prochainement|en pr(e|é)vision|arrive progressivement|arrivera|arriveront|à venir|en cours de d(e|é)veloppement|pas encore (branch|construit|disponible)' src/pages src/accueil src/components src/App.jsx src/data/tarifs.json seo/generer.mjs || true", { encoding: 'utf8' }).trim();
+  if (avenir) echoue(`une page annonce encore une fonction pour plus tard : ${avenir.split('\n').map((l) => l.slice(0, 120)).join(' ; ')}`);
+  else ok('aucune page ne renvoie une fonction à plus tard');
 }
 
 console.log(process.exitCode ? `\n${n} attentes tenues, au moins une faute ci-dessus — boutique REFUSÉE` : `\n${n} attentes tenues — boutique ok`);

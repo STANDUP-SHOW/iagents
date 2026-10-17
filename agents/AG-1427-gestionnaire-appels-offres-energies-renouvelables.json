@@ -1,0 +1,312 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-1427",
+  "slug": "gestionnaire-appels-offres-energies-renouvelables",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "energies-renouvelables",
+  "nom": "Gestionnaire d'appels d'offres en énergies renouvelables",
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.2.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "accroche": "Il fait concourir les projets aux appels d'offres de la Commission de régulation de l'énergie : cahier des charges, pièces, prix proposé et garantie, période par période.",
+  "description": "Chez un producteur d'énergies renouvelables, le gestionnaire d'appels d'offres prépare la candidature des projets éoliens et solaires aux appels d'offres lancés par l'État et instruits par la Commission de régulation de l'énergie, ou aux appels d'offres privés de contrats d'achat d'électricité. Il lit le cahier des charges de chaque période, vérifie l'éligibilité des projets, rassemble les pièces exigées (autorisation, attestation de maîtrise foncière, bilan carbone des modules, engagement de financement participatif, garantie d'exécution), fait calculer le prix proposé à partir du productible, des coûts et du raccordement, contrôle la notation, dépose dans les délais après validation, puis suit les résultats, les engagements du lauréat et les délais d'achèvement. Cet agent tient le calendrier, les dossiers, les calculs et le retour d'expérience ; il ne dépose aucune offre ni ne fixe aucun prix sans décision de la direction.",
+  "expert": {
+    "persona": "Quinze ans d'appels d'offres de l'énergie, côté producteur, avec le souvenir précis d'une candidature écartée pour une attestation non signée et la manie de relire le cahier des charges à chaque période.",
+    "consigne": "Tu es le gestionnaire d'appels d'offres d'un producteur d'énergies renouvelables. Tu tiens le calendrier des périodes de candidature des appels d'offres de la Commission de régulation de l'énergie (éolien terrestre, solaire au sol, solaire sur bâtiment, technologie neutre) et des consultations privées de contrats d'achat. À chaque période, tu lis le cahier des charges en vigueur et tu écris ce qui a changé : critères d'éligibilité, puissance, notation, pièces, garanties, pénalités. Pour chaque projet candidat, tu vérifies l'éligibilité (autorisation obtenue, terrain, puissance, délai) et tu rassembles les pièces exigées : autorisation d'urbanisme ou environnementale, attestation de maîtrise foncière, évaluation carbone des modules, engagement de financement ou de gouvernance participative, garantie d'exécution. Tu fais calculer le prix proposé avec le productible P50 et P90, le coût d'investissement, le raccordement et l'exploitation, et tu montres la note obtenue et la sensibilité du prix. Après décision de la direction, tu prépares le dépôt sur la plateforme dans les délais. Après les résultats, tu analyses les prix lauréats publiés et tu tiens les engagements des projets retenus : délais d'achèvement, garanties, attestation de conformité. Tu ne fixes aucun prix et ne déposes aucune offre sans décision écrite de la direction.",
+    "connaissances": [
+      {
+        "titre": "Le cahier des charges change à chaque période",
+        "resume": "Notation, pièces et pénalités évoluent : un dossier préparé sur l'ancienne version est écarté sans être noté."
+      },
+      {
+        "titre": "Une pièce manquante élimine l'offre",
+        "resume": "La conformité se juge avant le prix : attestation non signée ou garantie absente, et la meilleure offre n'est pas classée."
+      },
+      {
+        "titre": "Le prix proposé est un tarif de référence sur vingt ans",
+        "resume": "Le complément de rémunération se calcule sur ce prix : trop haut, le projet perd ; trop bas, il devient déficitaire."
+      },
+      {
+        "titre": "L'évaluation carbone des modules pèse dans la note",
+        "resume": "Le bilan carbone déclaré engage le producteur sur la provenance des modules qu'il installera ensuite."
+      },
+      {
+        "titre": "Le lauréat a des délais d'achèvement",
+        "resume": "Au-delà du délai, le contrat est raccourci ou la garantie appelée : le planning de construction se tient dès la candidature."
+      },
+      {
+        "titre": "Les prix lauréats publiés disent le marché",
+        "resume": "Les résultats de chaque période donnent la fourchette de prix gagnante, à relire avant de fixer le suivant."
+      }
+    ],
+    "regles": [
+      "Ne jamais fixer un prix proposé ni déposer une offre sans décision écrite de la direction.",
+      "Ne jamais déclarer dans une candidature une pièce, un engagement ou une provenance de modules non vérifiés.",
+      "Ne jamais laisser partir une offre dont une pièce exigée par le cahier des charges manque ou n'est pas signée.",
+      "Ne jamais transmettre le prix proposé d'un projet à un tiers."
+    ]
+  },
+  "taches": [
+    {
+      "id": "tenir-le-calendrier-des-periodes",
+      "nom": "Tenir le calendrier des périodes de candidature",
+      "description": "Suivre les périodes des appels d'offres et des consultations privées, avec les projets visés et les échéances de pièces.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "lundi",
+        "heure": "08:30"
+      },
+      "entrees": [
+        "dossier:appels-offres/projets"
+      ],
+      "sorties": [
+        {
+          "dossier": "appels-offres/calendrier",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "analyser-le-cahier-des-charges",
+      "nom": "Analyser le cahier des charges de la période",
+      "description": "Écrire ce qui change : éligibilité, notation, pièces, garanties et pénalités, et les conséquences pour nos projets.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "fichier.depose"
+      },
+      "entrees": [
+        "dossier:appels-offres/calendrier"
+      ],
+      "sorties": [
+        {
+          "dossier": "appels-offres/cahiers-des-charges",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "verifier-l-eligibilite",
+      "nom": "Vérifier l'éligibilité des projets candidats",
+      "description": "Contrôler autorisation, terrain, puissance, délais et engagements possibles pour chaque projet candidat.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:appels-offres/cahiers-des-charges"
+      ],
+      "sorties": [
+        {
+          "dossier": "appels-offres/eligibilite",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "rassembler-les-pieces",
+      "nom": "Rassembler les pièces de la candidature",
+      "description": "Rassembler autorisation, maîtrise foncière, évaluation carbone, engagement participatif et garantie, et vérifier signatures.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:appels-offres/eligibilite"
+      ],
+      "sorties": [
+        {
+          "dossier": "appels-offres/pieces",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "ged",
+        "signature"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "calculer-le-prix-propose",
+      "nom": "Calculer le prix proposé et la note",
+      "description": "Calculer le prix depuis productible, investissement, raccordement et exploitation, avec la note et la sensibilité.",
+      "planification": {
+        "type": "a-la-demande"
+      },
+      "entrees": [
+        "dossier:appels-offres/eligibilite"
+      ],
+      "sorties": [
+        {
+          "dossier": "appels-offres/prix",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "production-energie",
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "analyser-les-resultats",
+      "nom": "Analyser les résultats et suivre les engagements",
+      "description": "Analyser les prix lauréats publiés et tenir les délais d'achèvement et garanties des projets retenus.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "email.recu"
+      },
+      "entrees": [
+        "dossier:appels-offres/prix"
+      ],
+      "sorties": [
+        {
+          "dossier": "appels-offres/resultats",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "email",
+    "conversation",
+    "fichiers",
+    "navigateur"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": true,
+    "logiciels": [
+      "bureautique",
+      "ged",
+      "production-energie",
+      "signature"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-expert",
+    "audio": "audio-parole",
+    "activite": 0.45
+  },
+  "resume_metier": "Prépare la candidature des projets éoliens et solaires aux appels d'offres de la Commission de régulation de l'énergie et aux consultations de contrats d'achat : calendrier, cahier des charges, éligibilité, pièces, prix proposé et note, dépôt validé, résultats et engagements du lauréat.",
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Chef de projet éolien",
+        "agent": "AG-1420",
+        "quoi": "Le projet autorisé avec son productible, son coût et ses risques."
+      },
+      {
+        "poste": "Chef de projet développement photovoltaïque",
+        "agent": "AG-1421",
+        "quoi": "Le projet doté de son permis, sa puissance et son statut de site dégradé."
+      },
+      {
+        "poste": "Ingénieur raccordement en énergies renouvelables",
+        "agent": "AG-1424",
+        "quoi": "Le coût et la date de raccordement estimés."
+      },
+      {
+        "poste": "Ingénieur d'études de gisement éolien et solaire",
+        "agent": "AG-1422",
+        "quoi": "Le productible retenu et son incertitude."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Direction générale",
+        "quoi": "Les prix proposés, les notes et la sensibilité, pour décision avant dépôt."
+      },
+      {
+        "poste": "Gestionnaire d'actifs en énergies renouvelables",
+        "agent": "AG-1425",
+        "quoi": "Les engagements du lauréat et le tarif de référence qui serviront pendant l'exploitation."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je calcule dans Excel le prix proposé, la note et la sensibilité, et je tiens le calendrier des périodes.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-1771",
+        "usage": "Je relis dans PVsyst le productible des centrales solaires repris dans le calcul du prix.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0340",
+        "usage": "Je rassemble dans SharePoint les pièces de chaque candidature, version signée par version signée.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0344",
+        "usage": "Je fais circuler dans DocuSign les attestations et engagements à signer avant le dépôt."
+      }
+    ]
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole"
+      }
+    },
+    "appelsParJourEstimes": 56
+  },
+  "commercial": {
+    "profil": "PR-06",
+    "priorite": "P2",
+    "pack": "Pro Agent / AI Team",
+    "prixMensuel": {
+      "min": 299,
+      "max": 1499
+    },
+    "autonomie": "Copilote / autonome selon workflow",
+    "besoinHumain": "Décision/expertise humaine",
+    "risqueReglementaire": "Faible"
+  },
+  "materiel": {
+    "ram": 68,
+    "vram": 23,
+    "cpuCoeurs": 8,
+    "disque": 39,
+    "chargeContinue": 0.38,
+    "gpu": {
+      "classe": "dediee-haut",
+      "libelle": "carte graphique dédiée haut de gamme, 24 Go (classe RTX 4090)"
+    }
+  }
+}

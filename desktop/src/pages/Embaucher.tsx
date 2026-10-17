@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import plans from '../../../plateforme/tarifs/plans.json'
+import tarifsSite from '../../../frontend/src/data/tarifs.json'
 import Embauche from '../components/Embauche'
 import type { Fiche } from '../agents/fiche'
 import { EntetePage, Onde } from '../shell/Shell'
 import { publier } from '../shell/evenements'
 import type { Cible } from '../shell/intentions'
-import { activitesNommees, placeDansActivite, sansAccents, type Activite } from '../agents/activites'
+import { placeDansActivite, type Activite } from '../agents/activites'
+import { activitesNommees, metiersPourRecherche, motsDeLaRecherche, postesParFiche } from '../agents/recherche'
 import { portraitDeFiche } from '../shell/portraits'
 import Tiroir from '../shell/Tiroir'
 
@@ -29,6 +31,13 @@ const PAR_PAGE = 20
 
 const prix = (id: string) => (plans.plans as Plan[]).find((p) => p.plan_id === id && p.effective_to == null)
 const euros = (n: number | null | undefined) => (n == null ? '—' : `${n.toLocaleString('fr-FR')} €`)
+
+// Rental lengths of the site (max, 15/10 and 16/10): a share of the monthly price,
+// read from the site's tarifs.json so the app and the site quote the same amount.
+type Duree = { id: string; nom: string; partDuMois: number[] }
+const DUREES: Duree[] = tarifsSite.agents.durees?.liste ?? []
+const pourDuree = (mensuel: number | null | undefined, d: Duree) =>
+  mensuel == null ? null : Math.round((mensuel * 100 * d.partDuMois[0]) / d.partDuMois[1]) / 100
 
 export const PRIX_AGENT = {
   essential: prix('agent-essential'),
@@ -56,6 +65,7 @@ export default function Embaucher({
   const [profil, setProfil] = useState<Fiche | null>(null)
   const [profilMotif, setProfilMotif] = useState<string | null>(null)
   const [activites, setActivites] = useState<Activite[]>([])
+  const [personnel, setPersonnel] = useState<unknown>(null)
   const entretien = useRef<HTMLElement>(null)
 
   // On a touch screen the interview may sit out of sight: bring it to the finger.
@@ -74,6 +84,10 @@ export default function Embaucher({
     invoke<string>('lire_referentiel', { nom: 'activites' })
       .then((brut) => setActivites(JSON.parse(brut).activites ?? []))
       .catch(() => setActivites([]))
+    // The names a trade gives its jobs (« vendeur en boulangerie »), as the site searches them.
+    invoke<string>('lire_referentiel', { nom: 'personnel' })
+      .then((brut) => setPersonnel(JSON.parse(brut)))
+      .catch(() => setPersonnel(null))
   }, [])
 
   useEffect(() => {
@@ -88,26 +102,18 @@ export default function Embaucher({
   // The client's own branch: « imprimerie » names an activity, not a métier.
   const activite = useMemo(() => activitesNommees(recherche, activites)[0] ?? null, [recherche, activites])
 
+  const postes = useMemo(() => postesParFiche(personnel), [personnel])
+
   const retenus = useMemo(() => {
-    const t = sansAccents(recherche)
-    const parMetier = (c: EntreeCatalogue) => sansAccents(`${c.metier} ${nomSecteur(c.secteur)}`).includes(t)
+    const avecMots = motsDeLaRecherche(recherche).length > 0
     let l = catalogue.filter((c) => !secteur || c.secteur === secteur)
-    if (t) {
-      // A métier named in the search comes first; then, when the search names
-      // an activity, every métier that works there, its own branch first.
-      const directs = l.filter(parMetier)
-      const parActivite = activite
-        ? l
-            .filter((c) => !directs.includes(c) && placeDansActivite(c, activite) != null)
-            .sort((a, b) => (placeDansActivite(a, activite) ?? 2) - (placeDansActivite(b, activite) ?? 2))
-        : []
-      l = [...directs, ...parActivite]
-    }
+    // Already in order of relevance: the métiers the words name, then the
+    // trade's staff, then every métier that works in the activity.
+    if (avecMots) l = metiersPourRecherche(l, recherche, nomSecteur, postes, activite, personnel)
     if (tri === 'metier') l = [...l].sort((a, b) => a.metier.localeCompare(b.metier, 'fr'))
     if (tri === 'secteur') l = [...l].sort((a, b) => a.secteur.localeCompare(b.secteur, 'fr'))
-    if (tri === 'pertinence' && t) l = [...l].sort((a, b) => Number(!sansAccents(a.metier).startsWith(t)) - Number(!sansAccents(b.metier).startsWith(t)))
     return l
-  }, [catalogue, recherche, secteur, tri, activite, secteurs])
+  }, [catalogue, recherche, secteur, tri, activite, secteurs, postes, personnel])
 
   const voirProfil = async (id: string) => {
     setProfil(null)
@@ -337,6 +343,16 @@ export default function Embaucher({
               <span>{euros(PRIX_AGENT.expert?.base_price)} HT/mois</span>
             </li>
           </ul>
+          {DUREES.length > 0 && (
+            <ul className="niveaux">
+              {DUREES.map((d) => (
+                <li key={d.id}>
+                  <strong>{d.nom}</strong>
+                  <span>dès {euros(pourDuree(PRIX_AGENT.essential?.base_price, d))} HT</span>
+                </li>
+              ))}
+            </ul>
+          )}
           <p className="precision">La Box et la consommation d’IA sont facturées à part.</p>
         </section>
       </aside>

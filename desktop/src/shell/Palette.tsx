@@ -4,7 +4,8 @@ import type { Onglet } from '../components/Dashboard'
 import type { AgentInstalle } from '../agents/fiche'
 import { MODULES, SOUS_PAGES } from './modules'
 import { comprendre, type Cible } from './intentions'
-import { activitesNommees, type Activite } from '../agents/activites'
+import type { Activite } from '../agents/activites'
+import { activitesNommees, motsDeLaRecherche, pertinence } from '../agents/recherche'
 
 /**
  * The universal command (brief §16): Ctrl+K, or a tap on the search bar.
@@ -101,7 +102,7 @@ export default function Palette({
         )
       if (t.length >= 3 && metiers) {
         metiers
-          .filter((m) => sansAccents(`${m.metier} ${m.secteur}`).includes(t))
+          .filter((m) => pertinence(m, motsDeLaRecherche(q), (secteur) => secteur, new Map()) > 0)
           .slice(0, 8)
           .forEach((m) =>
             out.push({

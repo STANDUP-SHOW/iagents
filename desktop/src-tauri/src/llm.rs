@@ -38,6 +38,55 @@ pub struct ResponseContent {
 /// le meme pour reference : c'est sur lui que l'argument economique est calcule.
 pub const MODELE_API: &str = "claude-sonnet-5";
 
+/// The model an agent speaks with. Measured on max's PC, 12/10/2026: the
+/// working model took 6 to 8 s to write an answer said aloud, on top of the
+/// voice; a colleague answers in a breath. The working model stays for tasks.
+pub const MODELE_ORAL: &str = "claude-haiku-5-5";
+
+/// Tried in turn when a model is unknown to the key's account (404), ending on
+/// the working model: an agent called by name always answers, slowly at worst.
+const MODELES_ORAUX: [&str; 3] = [MODELE_ORAL, "claude-haiku-4-5", MODELE_API];
+
+/// How many earlier messages of the conversation go with a spoken request.
+/// Without them every sentence reached the agent alone, and Victor answered
+/// each one with the same team report (max, 12/10/2026: « un robot qui répète »).
+pub const ECHANGES_GARDES: usize = 10;
+
+/// The messages sent for a spoken request: the last exchanges, cleaned so the
+/// API accepts them (starting with the client, alternating, nothing empty),
+/// then the request itself.
+/// The API's answer for a model the account cannot use.
+fn modele_inconnu(erreur: &str) -> bool {
+    erreur.starts_with("API error 404") || erreur.contains("not_found_error")
+}
+
+pub fn messages_oraux(historique: &[Message], enonce: &str) -> Vec<Message> {
+    let mut messages: Vec<Message> = Vec::new();
+    for m in historique.iter().rev().take(ECHANGES_GARDES).rev() {
+        if m.content.trim().is_empty() || !(m.role == "user" || m.role == "assistant") {
+            continue;
+        }
+        if messages.is_empty() && m.role != "user" {
+            continue;
+        }
+        match messages.last_mut() {
+            Some(d) if d.role == m.role => {
+                d.content.push_str("\n");
+                d.content.push_str(&m.content);
+            }
+            _ => messages.push(m.clone()),
+        }
+    }
+    match messages.last_mut() {
+        Some(d) if d.role == "user" => {
+            d.content.push_str("\n");
+            d.content.push_str(enonce);
+        }
+        _ => messages.push(Message { role: "user".to_string(), content: enonce.to_string() }),
+    }
+    messages
+}
+
 #[derive(Clone)]
 pub struct LLMService {
     api_key: String,
@@ -144,6 +193,31 @@ impl LLMService {
         })
     }
 
+    /// A spoken answer: the fast model, the conversation so far, a short reply.
+    pub async fn repondre_a_l_oral(
+        &self,
+        systeme: &str,
+        historique: &[Message],
+        enonce: &str,
+    ) -> Result<String, String> {
+        let messages = messages_oraux(historique, enonce);
+        let mut echec = String::new();
+        for modele in MODELES_ORAUX {
+            let request = serde_json::json!({
+                "model": modele,
+                "max_tokens": 400,
+                "system": systeme,
+                "messages": messages,
+            });
+            match self.envoyer(&request).await {
+                Ok(texte) => return Ok(texte),
+                Err(e) if modele_inconnu(&e) => echec = e,
+                Err(e) => return Err(e),
+            }
+        }
+        Err(echec)
+    }
+
     pub async fn call_agent_llm(
         &self,
         agent_persona: &AgentPersona,
@@ -168,14 +242,17 @@ impl LLMService {
             "system": agent_persona.system_prompt,
             "messages": messages,
         });
+        self.envoyer(&request).await
+    }
 
+    async fn envoyer(&self, request: &serde_json::Value) -> Result<String, String> {
         // Make HTTP request
         let client = reqwest::Client::new();
         let response = client
             .post(&self.api_url)
             .header("x-api-key", &self.api_key)
             .header("anthropic-version", "2023-06-01")
-            .json(&request)
+            .json(request)
             .send()
             .await
             .map_err(|e| format!("API request failed: {}", e))?;
@@ -191,22 +268,208 @@ impl LLMService {
             .await
             .map_err(|e| format!("Failed to parse response: {}", e))?;
 
-        // Extract text from response
-        if let Some(content) = response_data["content"].as_array() {
-            if let Some(first) = content.first() {
-                if let Some(text) = first["text"].as_str() {
-                    return Ok(text.to_string());
-                }
-            }
+        // The text, wherever it sits: a model that thinks first puts a
+        // thinking block before it.
+        let texte: String = response_data["content"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|b| b["type"] == "text")
+            .filter_map(|b| b["text"].as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        if !texte.trim().is_empty() {
+            return Ok(texte);
         }
 
         Err("No text in response".to_string())
     }
 }
 
+/// Ce qu'un agent a répondu après avoir, peut-être, employé ses outils.
+#[derive(Debug, Clone, Default)]
+pub struct ReponseOutillee {
+    pub texte: String,
+    /// Une ligne par appel d'outil, abouti ou refusé, pour l'écran.
+    pub outils: Vec<String>,
+}
+
+/// Combien de tours un agent peut enchaîner avant qu'on l'arrête : chaque tour
+/// est un aller-retour avec le modèle, qui peut demander plusieurs outils.
+/// Le quota d'appels de `mcp::APPELS_PAR_CONVERSATION` reste le vrai
+/// coupe-circuit ; celui-ci empêche une boucle qui ne demanderait que des outils
+/// inconnus (refusés avant d'être comptés) de tourner sans fin.
+pub const TOURS_MAX: usize = 12;
+
+/// Les outils tels que l'API Anthropic les attend.
+pub fn outils_pour_l_api(offerts: &[crate::mcp::OutilOffert]) -> Vec<serde_json::Value> {
+    offerts
+        .iter()
+        .map(|o| {
+            let mut schema = o.schema.clone();
+            if !schema.is_object() {
+                schema = serde_json::json!({ "type": "object" });
+            }
+            serde_json::json!({
+                "name": o.nom_pour_le_modele,
+                "description": o.description,
+                "input_schema": schema,
+            })
+        })
+        .collect()
+}
+
+impl LLMService {
+    /// Le même service, tourné vers une autre adresse : le banc y met un
+    /// serveur écrit à la main sur la boucle locale.
+    #[cfg(test)]
+    pub fn vers(api_key: &str, api_url: &str) -> Self {
+        LLMService { api_key: api_key.to_string(), api_url: api_url.to_string() }
+    }
+
+    async fn envoyer_brut(&self, requete: &serde_json::Value) -> Result<serde_json::Value, String> {
+        let client = reqwest::Client::new();
+        let response = client
+            .post(&self.api_url)
+            .header("x-api-key", &self.api_key)
+            .header("anthropic-version", "2023-06-01")
+            .json(requete)
+            .send()
+            .await
+            .map_err(|e| format!("API request failed: {}", e))?;
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            return Err(format!("API error {}: {}", status, body));
+        }
+        response
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))
+    }
+
+    /// La conversation, avec les outils de l'agent.
+    ///
+    /// C'est la porte que le dépôt disait murée : jusqu'ici aucune requête ne
+    /// portait de `tools`, donc aucun modèle n'apprenait qu'un outil existait,
+    /// et aucun `tool_use` n'était lu. Chaque appel passe par `executeur`, donc
+    /// par `mcp::Client::appeler` et ses quatre refus : rien de ce que le
+    /// modèle demande n'atteint un serveur sans eux.
+    ///
+    /// Sans outil offert, c'est la conversation d'avant, à l'identique.
+    pub async fn call_agent_llm_outille(
+        &self,
+        agent_persona: &AgentPersona,
+        user_command: &str,
+        executeur: &mut dyn crate::mcp::Executeur,
+    ) -> Result<ReponseOutillee, String> {
+        let offerts = executeur.offerts();
+        if offerts.is_empty() {
+            let texte = self.call_agent_llm(agent_persona, user_command).await?;
+            return Ok(ReponseOutillee { texte, outils: Vec::new() });
+        }
+        let outils = outils_pour_l_api(&offerts);
+        let mut messages = vec![serde_json::json!({ "role": "user", "content": user_command })];
+
+        for _ in 0..TOURS_MAX {
+            let requete = serde_json::json!({
+                "model": MODELE_API,
+                // Plus large que la conversation sans outils : un fichier lu
+                // puis résumé demande plus qu'une phrase de standard.
+                "max_tokens": 4096,
+                "output_config": { "effort": "low" },
+                "system": agent_persona.system_prompt,
+                "tools": outils,
+                "messages": messages,
+            });
+            let reponse = self.envoyer_brut(&requete).await?;
+            let contenu = reponse
+                .get("content")
+                .and_then(serde_json::Value::as_array)
+                .cloned()
+                .unwrap_or_default();
+            let texte: String = contenu
+                .iter()
+                .filter(|b| b.get("type").and_then(serde_json::Value::as_str) == Some("text"))
+                .filter_map(|b| b.get("text").and_then(serde_json::Value::as_str))
+                .collect::<Vec<_>>()
+                .join("\n");
+            let demandes: Vec<&serde_json::Value> = contenu
+                .iter()
+                .filter(|b| b.get("type").and_then(serde_json::Value::as_str) == Some("tool_use"))
+                .collect();
+
+            if reponse.get("stop_reason").and_then(serde_json::Value::as_str) != Some("tool_use")
+                || demandes.is_empty()
+            {
+                if texte.trim().is_empty() {
+                    return Err("No text in response".to_string());
+                }
+                return Ok(ReponseOutillee { texte, outils: executeur.resume() });
+            }
+
+            // Le tour du modèle repart tel quel : l'API exige de retrouver ses
+            // propres blocs `tool_use` avant les résultats qui leur répondent.
+            messages.push(serde_json::json!({ "role": "assistant", "content": contenu }));
+            let mut resultats = Vec::new();
+            for demande in demandes {
+                let nom = demande.get("name").and_then(serde_json::Value::as_str).unwrap_or("");
+                let id = demande.get("id").and_then(serde_json::Value::as_str).unwrap_or("");
+                let arguments = demande.get("input").cloned().unwrap_or(serde_json::json!({}));
+                // L'appel bloque sur le tuyau du serveur : on le dit au moteur
+                // d'exécution plutôt que de figer un de ses fils sans prévenir.
+                let (sortie, erreur) = tokio::task::block_in_place(|| executeur.executer(nom, arguments));
+                resultats.push(serde_json::json!({
+                    "type": "tool_result",
+                    "tool_use_id": id,
+                    "content": sortie,
+                    "is_error": erreur,
+                }));
+            }
+            messages.push(serde_json::json!({ "role": "user", "content": resultats }));
+        }
+        Err(format!(
+            "{} a enchaîné {} tours d'outils sans conclure : la conversation est arrêtée.",
+            agent_persona.name, TOURS_MAX
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn m(role: &str, content: &str) -> Message {
+        Message { role: role.to_string(), content: content.to_string() }
+    }
+
+    #[test]
+    fn un_modele_inconnu_passe_au_suivant_une_autre_panne_non() {
+        assert!(modele_inconnu(r#"API error 404 Not Found: {"type":"error","error":{"type":"not_found_error"}}"#));
+        assert!(!modele_inconnu("API error 401 Unauthorized: invalid x-api-key"));
+        assert!(!modele_inconnu("API error 529: overloaded_error"));
+        assert_eq!(MODELES_ORAUX.last(), Some(&MODELE_API));
+    }
+
+    #[test]
+    fn une_demande_orale_part_avec_les_echanges_d_avant() {
+        let h = vec![m("user", "Victor, tu m'entends ?"), m("assistant", "Oui, je t'entends.")];
+        let dit = messages_oraux(&h, "En combien de temps aurons-nous des retours ?");
+        assert_eq!(dit.len(), 3);
+        assert_eq!(dit[2].content, "En combien de temps aurons-nous des retours ?");
+    }
+
+    #[test]
+    fn l_historique_est_remis_en_forme_pour_l_api() {
+        // Starts with the agent, two client turns in a row, an empty answer.
+        let h = vec![m("assistant", "Bonjour."), m("user", "Un"), m("assistant", " "), m("user", "Deux")];
+        let dit = messages_oraux(&h, "Trois");
+        assert_eq!(dit.len(), 1);
+        assert_eq!(dit[0].role, "user");
+        assert_eq!(dit[0].content, "Un\nDeux\nTrois");
+        let long: Vec<Message> = (0..30).map(|i| m(if i % 2 == 0 { "user" } else { "assistant" }, "x")).collect();
+        assert!(messages_oraux(&long, "fin").len() <= ECHANGES_GARDES + 1);
+    }
 
     #[test]
     fn une_cle_vide_ne_se_range_pas() {

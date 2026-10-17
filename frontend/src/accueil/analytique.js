@@ -12,6 +12,11 @@ export const EVENEMENTS = [
   'create_company_click',
   'enterprise_click',
   'final_cta_click',
+  // max's art-direction audit (08/10): the header's demo, the home page's prices and trust.
+  'demo_click',
+  'pricing_click',
+  'security_click',
+  'local_ai_click',
   // max's site plan (07/10), §19.
   'pricing_view',
   'local_ai_quote_start',
@@ -21,6 +26,9 @@ export const EVENEMENTS = [
   'plan_select',
   'box_quote',
   'recruit_agent',
+  'recruit_list',
+  // The fiche read in one trade (max, 10/10): the activity picked in its header.
+  'specialise_fiche',
   'personalize_agent',
   'create_idea_submit',
   'opportunity_view',

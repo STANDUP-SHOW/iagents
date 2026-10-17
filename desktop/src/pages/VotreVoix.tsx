@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import moteurs from '../../../plateforme/voix/moteurs.json'
 import VoiceTraining from '../components/VoiceTraining'
@@ -45,6 +45,16 @@ export default function VotreVoix({
 }) {
   const [sousVue, setSousVue] = useState<'hub' | 'empreinte'>('hub')
   const [test, setTest] = useState<Record<string, string>>({})
+  // Which voice keys are in the system vault, read where they are kept
+  // (`voix_api_etat`). The cards used to say « Non branché » for every engine
+  // but the local one, whatever was stored: max had stored his Gemini key and
+  // still read « Gemini Live : non branché » (12/10/2026).
+  const [cles, setCles] = useState<{ gemini: boolean; elevenlabs: boolean; mistral: boolean; parle: string } | null>(null)
+  useEffect(() => {
+    invoke<{ gemini: boolean; elevenlabs: boolean; mistral: boolean; parle: string }>('voix_api_etat')
+      .then(setCles)
+      .catch(() => setCles(null))
+  }, [])
   const chef = installes.find((a) => estTeamHolder(a)) ?? installes[0] ?? null
   const liste = Object.entries((moteurs as { moteurs: Record<string, Moteur> }).moteurs).sort((a, b) => a[1].qualite - b[1].qualite)
 
@@ -95,7 +105,7 @@ export default function VotreVoix({
             </div>
             <button className="scene-statut" onClick={voix.onBasculer} disabled={!!voix.motif}>
               <span className="point" />
-              {voix.motif ? 'Écoute indisponible' : voix.reflexion ? 'Je réfléchis…' : voix.eveillee ? 'Quel agent ?' : voix.active ? 'Je vous écoute…' : 'Touchez pour m’allumer'}
+              {voix.motif ? 'Écoute indisponible' : voix.reflexion ? 'Je réfléchis…' : voix.avec ? `En conversation avec ${voix.avec}` : voix.active ? 'Je vous écoute…' : 'Touchez pour m’allumer'}
             </button>
             <blockquote>« Une conversation suffit pour passer de l’idée à l’action. »</blockquote>
           </section>
@@ -103,14 +113,19 @@ export default function VotreVoix({
 
           <div className="voix-reglages">
             <div className="reglage-carte">
-              <span className="etiquette">Mot d’activation</span>
-              <strong>« Voice » + prénom</strong>
-              <span className="precision">L’application n’est dérangée que par ce mot, puis par le prénom d’un agent.</span>
+              <span className="etiquette">Pour appeler un agent</span>
+              <strong>Son prénom</strong>
+              <span className="precision">Dites son prénom au début de la phrase : « Victor, où en es-tu ? ». Il vous écoute ensuite sans qu’on le rappelle, jusqu’à « merci, c’est tout » ou une minute de silence après sa réponse. Un prénom cité au milieu d’une phrase n’appelle personne.</span>
             </div>
             <div className="reglage-carte">
               <span className="etiquette">Langue d’écoute</span>
               <strong>Français (FR)</strong>
               <span className="precision">Seule langue installée sur ce poste.</span>
+            </div>
+            <div className="reglage-carte">
+              <span className="etiquette">Ce qui comprend vos phrases</span>
+              <strong>Google Gemini, sinon ce poste</strong>
+              <span className="precision">Avec la clé Google AI Studio rangée dans « Vos connexions », la phrase que vous adressez à un agent est transcrite par Gemini, bien plus fidèle. Seule cette phrase part chez Google, jamais ce qui se dit dans la pièce. Sans clé ou sans réseau, ce poste transcrit seul.</span>
             </div>
             <button className="reglage-carte" onClick={() => setSousVue('empreinte')}>
               <span className="etiquette">Empreinte vocale</span>
@@ -122,12 +137,15 @@ export default function VotreVoix({
           <h2 className="titre-section">Fournisseurs voix et IA</h2>
           <div className="grille-fournisseurs">
             {liste.map(([id, m]) => {
-              const branche = m.local ? !voix.motif : false
+              const cleRangee = !m.local && Boolean(cles?.[id as 'gemini' | 'elevenlabs' | 'mistral'])
+              const branche = m.local ? !voix.motif : cleRangee
               return (
                 <div key={id} className={`fournisseur ${branche ? 'fournisseur-branche' : ''}`}>
                   <div className="fournisseur-tete">
                     <Onde vivante={false} barres={5} />
-                    <strong>{m.libelle}</strong>
+                    {/* « Gemini Live » is Google's real-time conversation, which this
+                        workstation does not use: the key gives the agents their voice. */}
+                    <strong>{id === 'gemini' ? 'Google Gemini' : m.libelle}</strong>
                   </div>
                   <span className="precision">{DESCRIPTIONS[id] ?? ''}</span>
                   <span className="precision">
@@ -135,9 +153,15 @@ export default function VotreVoix({
                   </span>
                   <span className={`statut-ligne ${branche ? 'statut-actif' : 'statut-pause'}`}>
                     <span className="point" />
-                    {m.local ? (branche ? 'Disponible sur ce poste' : 'Pièces manquantes') : 'Non branché'}
+                    {m.local ? (branche ? 'Disponible sur ce poste' : 'Pièces manquantes') : cleRangee ? 'Clé rangée' : 'Aucune clé'}
                   </span>
-                  {!m.local && <span className="precision">Se branche sur la plateforme iAgent quand sa clé y est posée.</span>}
+                  {!m.local && (
+                    <span className="precision">
+                      {cleRangee
+                        ? `Donne leur voix à vos agents quand ils vous répondent. ${cles?.parle ?? ''} Votre voix à vous est écoutée sur ce poste.`
+                        : 'Rangez sa clé dans « Vos connexions » pour que vos agents parlent avec elle.'}
+                    </span>
+                  )}
                 </div>
               )
             })}

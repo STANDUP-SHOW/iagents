@@ -1,6 +1,6 @@
 [package]
 name = "iagent-desktop"
-version = "0.2.0"
+version = "0.2.3"
 description = "iAgent Desktop — Local multi-agent orchestration with voice"
 authors = ["STANDUP-SHOW"]
 license = "MIT"
@@ -44,6 +44,10 @@ sha2 = "0.10"
 # nouvelle (ed25519-dalek n'est pas necessaire).
 ring = "0.17"
 base64 = "0.22"
+# The live conversation with Gemini (direct.rs) is a WebSocket held here, so
+# the Google key never reaches the screen. native-tls is already in the tree.
+tokio-tungstenite = { version = "0.30", features = ["native-tls"] }
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 # Les dates ISO des jetons de licence ; deja dans l'arbre par tauri.
 chrono = "0.4"
 # The Box encryption key (Skill Packs, MASTER §6): X25519. ring only offers
@@ -62,6 +66,11 @@ iagent-back-office-admin = { path = "../../back-office/admin" }
 # est deja dans l'arbre (tauri en depend), donc rien de neuf n'est telecharge.
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_System_SystemInformation"] }
+# Le pilotage du navigateur par les agents (pilote.rs) appelle le protocole
+# DevTools de WebView2 de l'intérieur, sans ouvrir de port. Mêmes versions que
+# tauri : rien de neuf n'est téléchargé.
+webview2-com = "0.38"
+windows = { version = "0.61", features = ["Win32_Foundation"] }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

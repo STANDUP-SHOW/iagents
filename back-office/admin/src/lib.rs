@@ -13,6 +13,9 @@
 //! No Tauri here: the back-office app and the Desktop Commander both wrap these
 //! functions in their own commands.
 
+#[cfg(feature = "courriel")]
+pub mod courriel;
+
 use serde::Serialize;
 use serde_json::Value;
 use std::path::Path;
@@ -206,7 +209,31 @@ pub async fn appeler(adresse: &str, nom: &str, methode: &str, chemin: &str, corp
     appeler_avec(adresse, &jeton, nom, methode, chemin, corps).await
 }
 
+/// Opens a personal session (actor id, personal key, 6-digit code) and keeps the
+/// session token in the keyring, in place of any previous token. The key and the
+/// token never come back to the interface: only who is connected and until when.
+pub async fn session_ouvrir(adresse: &str, acteur_id: &str, cle: &str, code: Option<&str>) -> Result<String, ErreurAppel> {
+    let (acteur_id, cle) = (acteur_id.trim(), cle.trim());
+    if acteur_id.is_empty() || cle.is_empty() {
+        return Err(ErreurAppel::locale("Saisissez votre identifiant et votre clé personnelle."));
+    }
+    let mut corps = serde_json::json!({ "acteur_id": acteur_id, "cle": cle });
+    if let Some(c) = code.map(str::trim).filter(|c| !c.is_empty()) {
+        corps["code"] = Value::String(c.to_string());
+    }
+    let r = envoyer(adresse, None, "v1Session", "POST", "/v1/sessions", Some(corps)).await?;
+    let jeton = r["jeton"].as_str().ok_or_else(|| ErreurAppel::plateforme("La plateforme n'a pas rendu de jeton de session.", 200))?;
+    jeton_poser(jeton).map_err(ErreurAppel::locale)?;
+    let jusqu_a = r["expire_le"].as_str().unwrap_or("");
+    let mfa = if r["mfa"].as_bool() == Some(true) { "avec second facteur" } else { "sans second facteur" };
+    Ok(format!("Session ouverte pour {acteur_id}, {mfa}, jusqu'au {jusqu_a}."))
+}
+
 async fn appeler_avec(adresse: &str, jeton: &str, nom: &str, methode: &str, chemin: &str, corps: Option<Value>) -> Result<Value, ErreurAppel> {
+    envoyer(adresse, Some(jeton), nom, methode, chemin, corps).await
+}
+
+async fn envoyer(adresse: &str, jeton: Option<&str>, nom: &str, methode: &str, chemin: &str, corps: Option<Value>) -> Result<Value, ErreurAppel> {
     route_permise(nom, methode, chemin)?;
     let base = adresse_recevable(adresse).map_err(ErreurAppel::locale)?;
     let hote = base.split_once("://").map(|(_, h)| h.to_string()).unwrap_or_default();
@@ -215,7 +242,10 @@ async fn appeler_avec(adresse: &str, jeton: &str, nom: &str, methode: &str, chem
         .build()
         .map_err(|e| ErreurAppel::locale(format!("Le client réseau ne démarre pas : {e}")))?;
     let m = reqwest::Method::from_bytes(methode.as_bytes()).map_err(|_| ErreurAppel::locale(format!("Méthode refusée : {methode}.")))?;
-    let mut requete = client.request(m, format!("{base}{chemin}")).bearer_auth(jeton).header("accept", "application/json");
+    let mut requete = client.request(m, format!("{base}{chemin}")).header("accept", "application/json");
+    if let Some(j) = jeton {
+        requete = requete.bearer_auth(j);
+    }
     if methode != "GET" {
         requete = requete.json(&corps.unwrap_or_else(|| serde_json::json!({})));
     }

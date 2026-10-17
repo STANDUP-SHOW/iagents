@@ -14,6 +14,9 @@ mod journal;
 mod mcp;
 mod modele;
 mod navigateur;
+mod pilote;
+mod procedure;
+mod inscriptions;
 mod tache;
 mod equipe;
 mod document;
@@ -31,8 +34,14 @@ mod telegram;
 mod whatsapp;
 mod mise_a_jour;
 mod partage;
+mod mission;
+mod voix_api;
+mod transcription;
+mod direct;
 mod plateforme;
 mod administration;
+#[cfg(test)]
+mod banc_outils;
 
 use voice::VoiceState;
 use agents::{AgentRouter, AgentCommand};
@@ -65,27 +74,63 @@ struct Ecoute {
     /// rien n'est ecoute, meme pas le mot de reveil.
     active: bool,
     ou_en_est: reveil::Etat,
+    /// Quand le client a parle a un agent pour la derniere fois.
+    dernier_echange: Option<std::time::Instant>,
 }
 
 impl Default for Ecoute {
     fn default() -> Self {
         // Allumee par defaut : le produit se vend sur le fait qu'on lui parle.
-        Ecoute { active: true, ou_en_est: reveil::Etat::Dormante }
+        Ecoute { active: true, ou_en_est: reveil::Etat::Dormante, dernier_echange: None }
+    }
+}
+
+impl Ecoute {
+    /// Closes a conversation the client left: nothing said to the agent for
+    /// `CONVERSATION_OUVERTE` since it last spoke or was last spoken to.
+    fn fermer_si_delaissee(&mut self) {
+        // Never while the agent is still speaking: a long answer outlasted the
+        // window, and the client's follow-ups were lost (max, 12/10/2026).
+        if matches!(self.ou_en_est, reveil::Etat::Dormante)
+            || voice::EN_TRAIN_DE_PARLER.load(std::sync::atomic::Ordering::Acquire)
+            || direct::en_cours()
+        {
+            return;
+        }
+        let parle = *voice::FIN_DE_PAROLE.lock().unwrap();
+        let depuis = [self.dernier_echange, parle].into_iter().flatten().max();
+        if depuis.is_none_or(|t| t.elapsed() > CONVERSATION_OUVERTE) {
+            self.ou_en_est = reveil::Etat::Dormante;
+        }
     }
 }
 
 /// Ce que l'ecran lit pour peindre le bouton VOICE et le noyau anime.
+/// `avec` : l'agent avec qui la conversation est ouverte.
 #[derive(serde::Serialize)]
 struct EcouteVue {
     active: bool,
-    ou_en_est: reveil::Etat,
+    ou_en_est: &'static str,
+    avec: Option<String>,
 }
+
+impl EcouteVue {
+    fn de(e: &Ecoute) -> Self {
+        EcouteVue { active: e.active, ou_en_est: e.ou_en_est.nom(), avec: e.ou_en_est.avec() }
+    }
+}
+
+/// How long an open conversation waits for the client once the agent has
+/// spoken (or, before it speaks, once it was called). After that the next
+/// sentence needs the agent's first name again.
+const CONVERSATION_OUVERTE: std::time::Duration = std::time::Duration::from_secs(60);
 
 /// L'etat de l'ecoute, pour le bouton VOICE (vert = actif, rouge = inactif).
 #[tauri::command]
 fn voix_ecoute_etat(state: State<'_, AppState>) -> EcouteVue {
-    let e = state.ecoute.lock().unwrap();
-    EcouteVue { active: e.active, ou_en_est: e.ou_en_est.clone() }
+    let mut e = state.ecoute.lock().unwrap();
+    e.fermer_si_delaissee();
+    EcouteVue::de(&e)
 }
 
 /// Allume ou coupe l'ecoute. Couper rendort aussi le mot de reveil : sinon
@@ -119,7 +164,7 @@ fn voix_ecoute_basculer(active: bool, state: State<'_, AppState>) -> Result<Ecou
     let mut e = state.ecoute.lock().unwrap();
     e.active = active;
     e.ou_en_est = reveil::Etat::Dormante;
-    Ok(EcouteVue { active: e.active, ou_en_est: e.ou_en_est.clone() })
+    Ok(EcouteVue::de(&e))
 }
 
 /// Allume ou coupe le micro. `Err` quand l'ecoute n'est pas prete sur ce poste
@@ -132,22 +177,139 @@ fn micro(state: &State<'_, AppState>, allume: bool) -> Result<String, String> {
     if allume { voice.start_listening() } else { voice.stop_listening() }
 }
 
+/// Ce que l'ecoute conclut de ce qu'elle vient d'entendre, et par qui la
+/// phrase a ete transcrite.
+#[derive(serde::Serialize)]
+struct Entendu {
+    #[serde(flatten)]
+    reaction: reveil::Reaction,
+    /// « google » quand Gemini a transcrit la phrase, « poste » sinon.
+    transcrite_par: &'static str,
+    /// Pourquoi Gemini n'a pas transcrit alors qu'une cle est rangee.
+    motif: Option<String>,
+}
+
 /// Ce que l'ecoute conclut de ce qu'elle vient d'entendre.
 ///
-/// L'ecran transcrit et passe le texte ici ; c'est Rust qui decide, parce que
-/// c'est la regle de max et qu'une regle tenue par l'ecran se perd au premier
-/// rechargement. Les prenoms viennent de `installation.json`, jamais de
+/// L'ecran passe le texte que le poste a transcrit ; c'est Rust qui decide,
+/// parce que c'est la regle de max et qu'une regle tenue par l'ecran se perd au
+/// premier rechargement. Les prenoms viennent de `installation.json`, jamais de
 /// l'ecran : un agent qu'on n'a pas embauche ne repond pas.
+///
+/// Quand la phrase s'adresse a un agent et qu'une cle Google AI Studio est
+/// rangee, elle est retranscrite par Gemini (decision de max, 12/10/2026) :
+/// seule cette phrase part, jamais la piece. Si Gemini echoue, la phrase du
+/// poste sert, et le motif est rendu.
 #[tauri::command]
-fn voix_entendu(texte: String, state: State<'_, AppState>) -> reveil::Reaction {
-    let mut e = state.ecoute.lock().unwrap();
-    if !e.active {
-        return reveil::Reaction::Rien;
-    }
+async fn voix_entendu(texte: String, parle: bool, state: State<'_, AppState>) -> Result<Entendu, String> {
     let prenoms = prenoms_embauches();
-    let (apres, reaction) = reveil::entendu(&e.ou_en_est, &texte, &prenoms);
+    let avant = {
+        let mut e = state.ecoute.lock().unwrap();
+        if !e.active {
+            return Ok(Entendu { reaction: reveil::Reaction::Rien, transcrite_par: "poste", motif: None });
+        }
+        e.fermer_si_delaissee();
+        e.ou_en_est.clone()
+    };
+    let (mut apres, mut reaction) = reveil::entendu(&avant, &texte, &prenoms);
+    let mut transcrite_par = "poste";
+    let mut motif = None;
+
+    // A typed sentence has no sound: the last one heard belongs to something else.
+    let phrase = if parle { state.voice.lock().unwrap().as_ref().and_then(|v| v.derniere_phrase()) } else { None };
+    // Gemini hears a call the PC missed too: retranscribing only what the PC
+    // already took for a call left max unheard whenever Whisper lost the name.
+    let a_reecouter = matches!(reaction, reveil::Reaction::Appel { .. })
+        || (matches!(avant, reveil::Etat::Dormante) && reveil::peut_etre_un_appel(&texte, &prenoms));
+    if let (true, Some(son), true) = (a_reecouter, phrase, transcription::en_ligne()) {
+        match transcription::transcrire(&son, &prenoms).await {
+            Ok(mieux) => {
+                let (a, r) = reveil::entendu(&avant, &mieux, &prenoms);
+                if matches!(r, reveil::Reaction::Appel { .. }) {
+                    (apres, reaction) = (a, r);
+                } else if matches!(avant, reveil::Etat::Dormante) {
+                    // Two ears must hear the call: when Gemini does not hear
+                    // a first name opening the sentence, nobody was called.
+                    (apres, reaction) = (reveil::Etat::Dormante, reveil::Reaction::Rien);
+                } else if let reveil::Reaction::Appel { prenom, .. } = &reaction {
+                    // Gemini heard the sentence without the first name the
+                    // PC heard: same agent, Gemini's words.
+                    let demande = match &avant {
+                        reveil::Etat::EnConversation { .. } => mieux.clone(),
+                        reveil::Etat::Dormante => mieux
+                            .split_once(|c: char| c == ',' || c.is_whitespace())
+                            .map(|(_, reste)| reste.trim().to_string())
+                            .unwrap_or_default(),
+                    };
+                    reaction = reveil::Reaction::Appel { prenom: prenom.clone(), demande };
+                }
+                transcrite_par = "google";
+            }
+            Err(m) => motif = Some(m),
+        }
+    }
+
+    let mut e = state.ecoute.lock().unwrap();
+    // Every sentence said in the conversation keeps it open, not only the call.
+    if matches!(apres, reveil::Etat::EnConversation { .. }) {
+        e.dernier_echange = Some(std::time::Instant::now());
+    }
     e.ou_en_est = apres;
-    reaction
+    Ok(Entendu { reaction, transcrite_par, motif })
+}
+
+/// Whether this PC can talk live with its agents: a Google AI Studio key is
+/// saved. Without one the relay of the listening loop answers.
+#[tauri::command]
+fn direct_possible() -> bool {
+    direct::possible()
+}
+
+/// Opens the live conversation with `prenom` (`direct.rs`). `consigne` is the
+/// agent's instruction as the screen builds it for a spoken answer, `demande`
+/// what the client said after the first name. An error means the screen
+/// answers through the relay instead, and says why.
+#[tauri::command]
+async fn direct_ouvrir(
+    prenom: String,
+    fiche_id: String,
+    consigne: String,
+    demande: String,
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<u64, String> {
+    // On a provisioned Box, no right, no answer (plateforme.rs), as in `repondre`.
+    plateforme::autoriser(&fiche_id).await?;
+    if !prenoms_embauches().contains(&prenom) {
+        return Err(format!("{} n'est pas embauché sur ce poste", prenom));
+    }
+    if consigne.trim().is_empty() {
+        return Err("consigne vide : la fiche n a pas ete chargee".to_string());
+    }
+    let ligne = direct::ouvrir(app, prenom.clone(), consigne, demande).await?;
+    let mut e = state.ecoute.lock().unwrap();
+    e.ou_en_est = reveil::Etat::EnConversation { prenom };
+    e.dernier_echange = Some(std::time::Instant::now());
+    Ok(ligne)
+}
+
+/// A tenth of a second of what the microphone hears, base64 16-bit PCM at
+/// 16 kHz, captured by the screen with echo cancellation.
+#[tauri::command]
+fn direct_son(donnees: String) -> Result<(), String> {
+    direct::envoyer_son(&donnees)
+}
+
+/// Closes the live conversation `ligne`; the next sentence needs a first
+/// name again. A newer line, for another agent, is left open.
+#[tauri::command]
+fn direct_fermer(ligne: u64, state: State<'_, AppState>) {
+    if !direct::fermer(Some(ligne)) {
+        return;
+    }
+    let mut e = state.ecoute.lock().unwrap();
+    e.ou_en_est = reveil::Etat::Dormante;
+    *voice::FIN_DE_PAROLE.lock().unwrap() = Some(std::time::Instant::now());
 }
 
 /// Les prenoms que ce client a donnes a SES agents. Une installation illisible
@@ -182,8 +344,10 @@ fn greet(name: &str) -> String {
     format!("Hello, {}!", name)
 }
 
+/// `async`, et le modele charge hors du fil de la fenetre : 190 Mo a lire au
+/// lancement figeaient l'ecran le temps du chargement.
 #[tauri::command]
-fn init_voice(state: State<AppState>) -> Result<String, String> {
+async fn init_voice(state: State<'_, AppState>) -> Result<String, String> {
     // Ce qui manque se dit AVANT d'essayer. whisper-rs rend « failed to load
     // model », qui ne nomme ni le fichier ni ce que le client peut y faire, et
     // l'écran le montrait tel quel, en anglais, à un client francophone.
@@ -192,7 +356,12 @@ fn init_voice(state: State<AppState>) -> Result<String, String> {
     }
 
     let model_path = voice::chemin_modele_ecoute();
-    match VoiceState::new(&model_path) {
+    let charge = tauri::async_runtime::spawn_blocking(move || {
+        VoiceState::new(&model_path).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("chargement interrompu : {}", e))?;
+    match charge {
         Ok(voice_state) => {
             {
                 let mut voice = state.voice.lock().unwrap();
@@ -261,15 +430,58 @@ fn process_voice_audio(audio_data: Vec<i16>, state: State<AppState>) -> Result<O
     }
 }
 
-#[tauri::command]
-fn get_partial_result(state: State<AppState>) -> Result<Option<String>, String> {
-    let voice_guard = state.voice.lock().unwrap();
+/// Vrai pendant qu'une transcription tourne : l'ecran interroge toutes les
+/// 200 ms, et une transcription prend plus longtemps que ca sur un processeur
+/// modeste. Pendant ce temps le micro continue de remplir le tampon, et la
+/// phrase suivante attend son tour au lieu d'etre perdue.
+static TRANSCRIPTION_EN_COURS: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 
-    if let Some(voice) = voice_guard.as_ref() {
-        voice.get_partial_result().map(Some)
-    } else {
-        Err("L'écoute n'est pas prête sur ce poste.".to_string())
+/// La phrase que le client vient de finir, transcrite sur le poste ; vide tant
+/// que personne n'a parle puis ne s'est tu.
+///
+/// Rien n'est transcrit tant que la phrase n'est pas finie (`voice::Decoupeur`)
+/// : avant le 12/10/2026 l'ecran transcrivait les 8 dernieres secondes cinq
+/// fois par seconde, coupait le debut des phrases longues, et occupait deux
+/// coeurs a transcrire la piece vide.
+///
+/// `async` n'est pas un detail : une commande Tauri synchrone tourne sur le fil
+/// de la fenetre, et une transcription la gelait (Big Work, 10/10/2026).
+#[tauri::command]
+async fn get_partial_result(state: State<'_, AppState>) -> Result<Option<String>, String> {
+    use std::sync::atomic::Ordering;
+
+    if TRANSCRIPTION_EN_COURS.load(Ordering::Acquire) {
+        return Ok(None);
     }
+    let (contexte, phrase) = {
+        let voice_guard = state.voice.lock().unwrap();
+        let Some(voice) = voice_guard.as_ref() else {
+            return Err("L'écoute n'est pas prête sur ce poste.".to_string());
+        };
+        voice.phrase_finie()
+    };
+    let Some(phrase) = phrase else {
+        return Ok(Some(String::new()));
+    };
+    if TRANSCRIPTION_EN_COURS.swap(true, Ordering::AcqRel) {
+        return Ok(None);
+    }
+    let resultat = tauri::async_runtime::spawn_blocking(move || {
+        voice::transcrire(&contexte, &phrase)
+    })
+    .await;
+    TRANSCRIPTION_EN_COURS.store(false, Ordering::Release);
+    resultat
+        .map_err(|e| format!("transcription interrompue : {}", e))?
+        .map(Some)
+}
+
+/// Le niveau du micro, de 0 a 1, pour la jauge de l'ecran. `None` quand
+/// l'ecoute n'est pas prete.
+#[tauri::command]
+fn voix_niveau(state: State<AppState>) -> Option<f32> {
+    state.voice.lock().unwrap().as_ref().map(|v| v.niveau())
 }
 
 #[tauri::command]
@@ -337,6 +549,19 @@ struct ReponseAgent {
     texte: String,
     motif: String,
     bascule: bool,
+    /// Ce que l'agent a fait de ses outils pendant ce tour, une ligne par appel,
+    /// et les outils auxquels il avait droit qui ne se sont pas ouverts.
+    outils: Vec<String>,
+}
+
+/// Ferme l'atelier et ajoute au compte rendu ce qui n'a pas pu s'écrire : un
+/// journal qu'on croit tenu et qui ne l'est pas vaut moins que pas de journal.
+fn fermer_atelier(atelier: Option<mcp::Atelier>, outils: &mut Vec<String>) {
+    if let Some(a) = atelier {
+        if let Err(e) = a.fermer() {
+            outils.push(format!("journal des outils non tenu : {}", e));
+        }
+    }
 }
 
 #[tauri::command]
@@ -345,8 +570,10 @@ async fn repondre(
     fiche_id: String,
     prompt_systeme: String,
     enonce: String,
+    historique: Option<Vec<llm::Message>>,
     state: State<'_, AppState>,
 ) -> Result<ReponseAgent, String> {
+    let historique = historique.unwrap_or_default();
     let _travail = mise_a_jour::travail()?;
     // On a provisioned Box, no right, no answer (plateforme.rs).
     plateforme::autoriser(&fiche_id).await?;
@@ -371,30 +598,58 @@ async fn repondre(
         cle_api: llm::cle_api().is_some(),
         memoire_insuffisante: jauge::memoire_insuffisante_pour(&fiche_id),
     };
-    let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_API)?;
+    let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_ORAL)?;
 
-    let texte = match &choix.voie {
+    // Les outils que sa fiche lui donne, ouverts pour ce tour et refermés après,
+    // quoi qu'il arrive : un serveur laissé ouvert derrière l'écran ne se voit pas.
+    let (mut atelier, indisponibles) = mcp::atelier_pour(&fiche_id, &prenom).await;
+    let mut sans = mcp::SansOutil;
+    let executeur: &mut dyn mcp::Executeur = match atelier.as_mut() {
+        Some(a) => a,
+        None => &mut sans,
+    };
+    let reponse = match &choix.voie {
         modele::Voie::Local { modele: nom } => {
-            modele::repondre_en_local(modele::ADRESSE_LOCALE, nom, &prompt_systeme, &enonce).await?
+            if executeur.offerts().is_empty() {
+                // No tool this turn: the spoken route, which keeps the conversation.
+                modele::repondre_en_local_avec(modele::ADRESSE_LOCALE, nom, &prompt_systeme, &historique, &enonce)
+                    .await
+                    .map(|texte| llm::ReponseOutillee { texte, outils: Vec::new() })
+            } else {
+                modele::repondre_en_local_outille(modele::ADRESSE_LOCALE, nom, &prompt_systeme, &enonce, executeur).await
+            }
         }
         modele::Voie::Api { .. } => {
             let llm_service = {
                 let llm = state.llm.lock().unwrap();
                 llm.as_ref()
-                    .ok_or("aucune cle d API n est enregistree sur cet ordinateur")?
-                    .clone()
+                    .ok_or("aucune cle d API n est enregistree sur cet ordinateur")
+                    .map(|s| s.clone())
             };
-            let persona = AgentPersona {
-                id: prenom.clone(),
-                name: prenom,
-                role: String::new(),
-                system_prompt: prompt_systeme,
-            };
-            llm_service.call_agent_llm(&persona, &enonce).await?
+            match llm_service {
+                Ok(llm_service) if executeur.offerts().is_empty() => llm_service
+                    .repondre_a_l_oral(&prompt_systeme, &historique, &enonce)
+                    .await
+                    .map(|texte| llm::ReponseOutillee { texte, outils: Vec::new() }),
+                Ok(llm_service) => {
+                    let persona = AgentPersona {
+                        id: prenom.clone(),
+                        name: prenom.clone(),
+                        role: String::new(),
+                        system_prompt: prompt_systeme,
+                    };
+                    llm_service.call_agent_llm_outille(&persona, &enonce, executeur).await
+                }
+                Err(e) => Err(e.to_string()),
+            }
         }
     };
+    let mut outils = reponse.as_ref().map(|r| r.outils.clone()).unwrap_or_default();
+    fermer_atelier(atelier, &mut outils);
+    let reponse = reponse?;
+    outils.extend(indisponibles.into_iter().map(|m| format!("outil indisponible : {}", m)));
 
-    Ok(ReponseAgent { texte, motif: choix.motif, bascule: choix.bascule })
+    Ok(ReponseAgent { texte: reponse.texte, motif: choix.motif, bascule: choix.bascule, outils })
 }
 
 /// Exécute une tâche de l'agent et pose le résultat dans le dossier du client.
@@ -469,26 +724,41 @@ async fn executer_tache(
     };
     let choix = modele::choisir(&execution, &exemples, &offre, llm::MODELE_API)?;
 
-    let texte = match &choix.voie {
+    // Mêmes outils qu'en conversation, par le même portier.
+    let (mut atelier, _indisponibles) = mcp::atelier_pour(&fiche_id, &prenom).await;
+    let mut sans = mcp::SansOutil;
+    let executeur: &mut dyn mcp::Executeur = match atelier.as_mut() {
+        Some(a) => a,
+        None => &mut sans,
+    };
+    let reponse = match &choix.voie {
         modele::Voie::Local { modele: nom } => {
-            modele::repondre_en_local(modele::ADRESSE_LOCALE, nom, &prep.systeme, &enonce).await?
+            modele::repondre_en_local_outille(modele::ADRESSE_LOCALE, nom, &prep.systeme, &enonce, executeur).await
         }
         modele::Voie::Api { .. } => {
             let llm_service = {
                 let llm = state.llm.lock().unwrap();
                 llm.as_ref()
-                    .ok_or("aucune cle d API n est enregistree sur cet ordinateur")?
-                    .clone()
+                    .ok_or("aucune cle d API n est enregistree sur cet ordinateur")
+                    .map(|s| s.clone())
             };
-            let persona = AgentPersona {
-                id: prenom.clone(),
-                name: prenom.clone(),
-                role: String::new(),
-                system_prompt: prep.systeme.clone(),
-            };
-            llm_service.call_agent_llm(&persona, &enonce).await?
+            match llm_service {
+                Ok(llm_service) => {
+                    let persona = AgentPersona {
+                        id: prenom.clone(),
+                        name: prenom.clone(),
+                        role: String::new(),
+                        system_prompt: prep.systeme.clone(),
+                    };
+                    llm_service.call_agent_llm_outille(&persona, &enonce, executeur).await
+                }
+                Err(e) => Err(e.to_string()),
+            }
         }
     };
+    let mut outils = reponse.as_ref().map(|r| r.outils.clone()).unwrap_or_default();
+    fermer_atelier(atelier, &mut outils);
+    let texte = reponse?.texte;
 
     // Un fichier vide serait pire qu'une erreur : le client croirait le travail
     // fait. Le modèle qui n'a rien rendu est un échec, pas un résultat.
@@ -528,6 +798,7 @@ async fn executer_tache(
         },
         motif: choix.motif,
         validation_humaine: prep.validation_humaine,
+        outils,
     })
 }
 
@@ -718,8 +989,8 @@ fn train_voice(utterances: Vec<String>) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn text_to_speech(text: String) -> Result<String, String> {
-    voice::text_to_speech(&text).await
+async fn text_to_speech(text: String, prenom: Option<String>) -> Result<String, String> {
+    voice::parler(prenom.as_deref(), &text).await
 }
 
 /// Ouvre la base du poste, une fois le dossier de données connu.
@@ -788,11 +1059,16 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             greet,
+            direct_possible,
+            direct_ouvrir,
+            direct_son,
+            direct_fermer,
             init_voice,
             start_voice_recognition,
             stop_voice_recognition,
             process_voice_audio,
             get_partial_result,
+            voix_niveau,
             text_to_speech,
             empreinte_capturer,
             empreinte_oublier,
@@ -839,6 +1115,13 @@ fn main() {
             llm::cle_api_presente,
             llm::cle_api_retirer,
             executer_tache,
+            mission::mission_lancer,
+            mission::mission_historique,
+            mission::mission_ouvrir,
+            voix_api::voix_api_etat,
+            voix_api::voix_api_ranger,
+            voix_api::voix_api_retirer,
+            voix_api::voix_api_preferer,
             tache::dossier_de_travail,
             tache::montrer_resultat,
             repondre,
@@ -860,6 +1143,12 @@ fn main() {
             navigateur::navigateur_declarer_site,
             navigateur::navigateur_oublier_site,
             navigateur::navigateur_effacer_sessions,
+            procedure::procedure_lancer,
+            procedure::procedure_reprendre,
+            procedure::procedure_abandonner,
+            procedure::procedure_liste,
+            procedure::procedure_dossier_televersements,
+            inscriptions::inscriptions_preparer_visuels,
             mise_a_jour::mise_a_jour_etat,
             plateforme::plateforme_etat,
             plateforme::plateforme_identite,
@@ -878,6 +1167,7 @@ fn main() {
             plateforme::plateforme_projet_creer,
             administration::admin_present,
             administration::plateforme_appeler,
+            administration::session_ouvrir,
             administration::jeton_poser,
             administration::jeton_present,
             administration::jeton_oublier,

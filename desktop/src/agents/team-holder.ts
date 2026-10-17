@@ -354,7 +354,7 @@ export function contexteDuTeamHolder(
   const faits = changements.slice(-10).map((c) => `- ${c.id} : ${changementEnMots(c)}`).join('\n');
   return [
     '',
-    'Ton équipe sur ce poste, telle que tu la lis maintenant :',
+    'Ton équipe sur ce poste, telle que tu la lis maintenant. C’est ce que tu sais pour répondre, pas un compte rendu à réciter : n’en dis que ce qui répond à la question.',
     '',
     blocs.join('\n\n'),
     faits ? `\nLes derniers changements que tu as faits :\n${faits}` : '',

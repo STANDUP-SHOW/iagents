@@ -29,6 +29,7 @@ const box: Box = {
   device_id: 'BOX-1', tenant_id: 't1', serial: 'SN1', gamme: 'business', os: 'ubuntu-core',
   identite_publique: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
   version_desktop: '0.2.1', statut: 'active', plan_id: null, sante: null, garantie_jusqu_au: null,
+  reference: 'IA-FR-CMD-00000001', profil_materiel: null, inventaire: null, versions: null, usine: null,
 };
 s.poser('boxes', box.device_id, box);
 const routeTest: Route[] = [
@@ -64,7 +65,7 @@ s.poser('boxes', 'BOX-1', { ...box, statut: 'suspendue' });
 verifier('Box suspendue refusée', (await appelBox('{}', new Date().toISOString())).status === 403);
 serveur.close();
 
-for (const m of ['controle', 'voix', 'create', 'tarifs']) {
+for (const m of ['controle', 'voix', 'create', 'tarifs', 'noyau']) {
   const chemin = new URL(`./${m}/banc.ts`, import.meta.url);
   if (existsSync(chemin)) {
     console.log(`\nModule ${m}`);

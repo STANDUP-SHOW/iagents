@@ -18,6 +18,7 @@ import {
   type Reponse,
 } from '../agents/entretien'
 import type { Sexe } from '../agents/fiche'
+import { sexeDuPrenom } from '../agents/prenoms'
 import {
   AUCUN_DE_CEUX_LA,
   competencesDepuisComposition,
@@ -33,6 +34,8 @@ import {
   type Referentiels,
 } from '../agents/composition'
 import { ficheComposee, type FicheMere, type LogicielTenu } from '../agents/fiche-composee'
+import { lireDemandeEquipe, type LectureEquipe, type ReferentielEquipes } from '../agents/equipe'
+import EmbaucheEquipe from './EmbaucheEquipe'
 import { visagesProposes } from '../shell/portraits'
 
 /**
@@ -106,6 +109,10 @@ export default function Embauche({
   const [lecture, setLecture] = useState<Lecture | null>(null)
   const [reponseLibre, setReponseLibre] = useState('')
   const [composition, setComposition] = useState<Composition | null>(null)
+  // Une demande qui décrit une équipe (« un pack d'agents pour trouver des financements »)
+  // se lit d'abord comme une équipe ; sinon c'est le parcours d'un seul poste.
+  const [refEquipes, setRefEquipes] = useState<ReferentielEquipes | null>(null)
+  const [equipe, setEquipe] = useState<LectureEquipe | null>(null)
 
   useEffect(() => {
     invoke<string>('lire_referentiel', { nom: 'catalogue' })
@@ -117,6 +124,10 @@ export default function Embauche({
     invoke<string>('lire_referentiel', { nom: 'activites' })
       .then((brut) => setRefActivites(JSON.parse(brut)))
       .catch((e) => setErreur(String(e)))
+    // Sans ce référentiel, l'embauche reste celle d'un seul poste : pas d'erreur à l'écran.
+    invoke<string>('lire_referentiel', { nom: 'equipes' })
+      .then((brut) => setRefEquipes(JSON.parse(brut)))
+      .catch(() => setRefEquipes(null))
   }, [])
 
   useEffect(() => {
@@ -171,6 +182,20 @@ export default function Embauche({
       }
     }
     if (!ref || !refActivites) return
+    const refs = { postes: liste, logiciels: ref, activites: refActivites }
+    const enEquipe = refEquipes ? lireDemandeEquipe(demande, refs, refEquipes) : null
+    setEquipe(enEquipe)
+    if (enEquipe) {
+      setLecture(null)
+      setComposition(null)
+      return
+    }
+    lireUnSeul(liste)
+  }
+
+  const lireUnSeul = (liste: Poste[] | null = postes) => {
+    if (!liste || !ref || !refActivites) return
+    setEquipe(null)
     const l = lireDemande(demande, { postes: liste, logiciels: ref, activites: refActivites })
     setLecture(l)
     setComposition(questionSuivante(l) ? null : composer(l))
@@ -255,7 +280,9 @@ export default function Embauche({
       const existant = JSON.parse(await invoke<string>('lire_installation').catch(() => '{}'))
       const agents = Array.isArray(existant.agents) ? existant.agents : []
       const nouveau: Record<string, unknown> = { prenom: prenom.trim(), ficheId, voix }
-      if (sexe) nouveau.sexe = sexe
+      // Not chosen: the name's own gender, so face and voice follow it.
+      const genre = sexe || sexeDuPrenom(prenom)
+      if (genre) nouveau.sexe = genre
       if (photo.trim()) nouveau.photo = photo.trim()
 
       // Ce que le client a répondu sur l'autonomie devient son planning, sans
@@ -362,7 +389,8 @@ export default function Embauche({
           <p>
             Dites-le comme à un cabinet de recrutement : le poste, ce qu'il fait, avec quels
             logiciels, ce dont il aura besoin. Je pars du poste le plus proche de mon catalogue
-            et je le complète avec ce que vous dites.
+            et je le complète avec ce que vous dites. Pour une équipe, dites l'objectif et les
+            missions : je propose les postes qui travaillent ensemble.
           </p>
           <textarea
             rows={6}
@@ -378,6 +406,10 @@ export default function Embauche({
               Je choisis le poste moi-même
             </button>
           </div>
+
+          {equipe && referentiels() && (
+            <EmbaucheEquipe lecture={equipe} refs={referentiels()!} surUnSeul={() => lireUnSeul()} />
+          )}
 
           {lecture && (
             <div className="relecture">

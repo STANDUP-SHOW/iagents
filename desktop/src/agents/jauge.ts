@@ -16,7 +16,9 @@ export type NiveauJauge =
   | 'chargee'
   | 'saturee'
   | 'impossible'
-  | 'memoire-seule';
+  | 'memoire-seule'
+  /** La mémoire ne porte pas les modèles locaux, et une clé d'API est rangée : les agents passent par l'API, rien n'est demandé. */
+  | 'par-api';
 
 export interface MachineJaugee {
   nom: string;

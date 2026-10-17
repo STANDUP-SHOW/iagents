@@ -406,11 +406,19 @@ pub fn lire_postes() -> Result<String, String> {
 /// Sans cette liste, le nom viendrait de la vue et servirait à lire n'importe
 /// quel fichier du poste. On ne « nettoie » pas un chemin reçu de l'extérieur :
 /// on refuse tout ce qui n'est pas dans cette liste.
-const CATALOGUES: [(&str, &str); 4] = [
+const CATALOGUES: [(&str, &str); 7] = [
     ("logiciels", "catalogue/logiciels.json"),
     ("activites", "catalogue/activites.json"),
     ("catalogue", "catalogue/catalogue.json"),
     ("connecteurs", "connecteurs/catalogue.json"),
+    // Les équipes types : l'embauche d'une équipe entière à partir d'un objectif dit.
+    ("equipes", "catalogue/equipes.json"),
+    // Le référentiel MCP, API et moteurs d'IA de max, que l'écran « Catalogue des
+    // connecteurs » parcourt (`outils/referentiel.ts`).
+    ("referentiel", "connecteurs/referentiel.json"),
+    // Les postes de chaque métier tels que la branche les nomme : la recherche
+    // d'« Embaucher » les lit comme le site.
+    ("personnel", "catalogue/personnel.json"),
 ];
 
 /// Lit un des catalogues livrés avec l'application.
@@ -734,6 +742,7 @@ mod tests {
     fn seuls_les_catalogues_livres_se_lisent() {
         assert!(catalogue_connu("logiciels"));
         assert!(catalogue_connu("activites"));
+        assert!(catalogue_connu("equipes"));
         for mauvais in [
             "../../.env",
             "catalogue/logiciels.json",

@@ -41,6 +41,37 @@ const OU: Record<string, string[]> = {
   'negoce-douane': ['negoce-gros', 'transport-logistique', 'industrie', 'commerce-detail'],
   'sante-social-etablissements': ['sante-social', 'transport-logistique'],
   'services-reglementes-specialises': ['services-entreprises', 'public-associatif', 'automobile-mobilite', 'finance-immobilier'],
+  'reseaux-electricite': ['environnement-energie'],
+  'eau-exploitation': ['environnement-energie', 'public-associatif'],
+  'energies-renouvelables': ['environnement-energie', 'agriculture'],
+  'dechets-economie-circulaire': ['environnement-energie', 'industrie', 'public-associatif', 'commerce-detail'],
+  'rse-climat': ['environnement-energie', 'industrie', 'services-entreprises', 'finance-immobilier', 'transport-logistique', 'negoce-gros', 'commerce-detail'],
+  'qualite-certification': ['industrie', 'services-entreprises', 'environnement-energie', 'batiment', 'agriculture', 'sante-social'],
+  'pilotage-si-recherche': ['industrie', 'environnement-energie', 'numerique-audiovisuel', 'negoce-gros', 'services-entreprises'],
+  'telecoms-audiovisuel-spectacle': ['numerique-audiovisuel', 'hotellerie-tourisme', 'batiment'],
+  'transport-aerien-maritime-ferroviaire': ['transport-logistique'],
+  'extraction-et-services-reglementes': ['industrie', 'environnement-energie', 'services-entreprises', 'sante-social'],
+  'industries-strategiques': ['industrie', 'environnement-energie'],
+  'culture-patrimoine': ['hotellerie-tourisme', 'services-entreprises', 'public-associatif', 'numerique-audiovisuel'],
+  'ingenierie-specialisee': ['services-entreprises', 'batiment'],
+  'infrastructures-transport': ['transport-logistique'],
+  'loisirs-tourisme-specialises': ['hotellerie-tourisme', 'sante-social'],
+  'cinema-medias-sport': ['numerique-audiovisuel', 'hotellerie-tourisme', 'services-entreprises', 'automobile-mobilite'],
+  'filieres-agricoles-nature': ['agriculture', 'industrie', 'artisanat', 'public-associatif'],
+  'etablissements-publics-et-specialises': ['sante-social', 'services-entreprises', 'public-associatif', 'artisanat'],
+  'finance-services-specialises': ['finance-immobilier', 'services-entreprises'],
+  'aerospatial-essais-recherche': ['industrie', 'numerique-audiovisuel', 'services-entreprises', 'public-associatif'],
+  'industries-de-procede': ['industrie'],
+  'expertises-et-formations-reglementees': ['sante-social', 'services-entreprises', 'finance-immobilier', 'transport-logistique'],
+  'eau-mer-territoire': ['environnement-energie', 'services-entreprises', 'transport-logistique'],
+  'devis-commerce-detail': ['artisanat', 'commerce-detail'],
+  'devis-transport-agriculture': ['transport-logistique', 'agriculture'],
+  'devis-negoce': ['negoce-gros', 'finance-immobilier'],
+  'devis-services': ['environnement-energie', 'sante-social', 'hotellerie-tourisme', 'services-entreprises'],
+  'devis-formation-ingenierie': ['services-entreprises', 'environnement-energie', 'transport-logistique', 'agriculture'],
+  'devis-numerique-conseil': ['numerique-audiovisuel', 'finance-immobilier', 'services-entreprises'],
+  'devis-infrastructures-culture': ['transport-logistique', 'industrie', 'environnement-energie', 'services-entreprises', 'hotellerie-tourisme', 'sante-social'],
+  'devis-agro-medias-expertises': ['hotellerie-tourisme', 'numerique-audiovisuel', 'services-entreprises', 'automobile-mobilite', 'agriculture', 'industrie', 'artisanat', 'public-associatif'],
   'energie-environnement': ['environnement-energie', 'batiment', 'industrie'],
   'reparation-automobile': ['automobile-mobilite'],
   'hotellerie-restauration': ['hotellerie-tourisme'],
@@ -70,23 +101,4 @@ export function placeDansActivite(metier: { metier: string; secteur: string }, a
     return PROPRE_VA.includes(activite.famille) ? 0 : null
   }
   return OU[metier.secteur]?.includes(activite.famille) ? 0 : null
-}
-
-/**
- * The activities a search names, best first: a whole word of the name or an
- * alias, then a beginning (« imprim » finds the printing house). Three letters
- * at least, so « co » does not light up half the list.
- */
-export function activitesNommees(texte: string, activites: readonly Activite[]): Activite[] {
-  const t = sansAccents(texte)
-  if (t.length < 3) return []
-  const notes = activites
-    .map((a) => {
-      const mots = [a.nom, ...(a.alias ?? [])].map(sansAccents)
-      const note = mots.some((m) => m === t) ? 0 : mots.some((m) => m.split(/[\s-]+/).some((w) => w.startsWith(t))) ? 1 : mots.some((m) => m.includes(t)) ? 2 : 3
-      return { a, note }
-    })
-    .filter((x) => x.note < 3)
-    .sort((x, y) => x.note - y.note || x.a.nom.localeCompare(y.a.nom, 'fr'))
-  return notes.map((x) => x.a)
 }
