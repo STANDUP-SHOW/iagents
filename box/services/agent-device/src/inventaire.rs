@@ -58,15 +58,6 @@ pub struct InventaireBox {
     pub version_desktop: Option<String>,
 }
 
-impl InventaireBox {
-    /// The gamme is not a hardware fact: the ISO was built for one profile (/etc/iagent/profil); the hardware profile only has to serve it.
-    pub fn gamme_supposee(&self, _profil_materiel: &str) -> String {
-        fs::read_to_string(std::env::var("IAGENT_CONF").map(|c| format!("{}/profil", c)).unwrap_or_else(|_| "/etc/iagent/profil".to_string()))
-            .map(|s| s.trim().to_string())
-            .unwrap_or_else(|_| "business".to_string())
-    }
-}
-
 fn commande(prog: &str, args: &[&str]) -> Option<String> {
     Command::new(prog).args(args).output().ok().filter(|o| o.status.success()).map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
 }

@@ -45,9 +45,9 @@ export type Box = {
   serial: string;
   /**
    * Référence commerciale, imprimée sur l'étiquette et dans le QR :
-   * `IA-FR-HOME-00000128` (Home Box), `IA-FR-PRO-00000042` (Pro Box) ou
-   * `IA-FR-BUS-00000127` (Business Box). Un numéro d'ordre par gamme, attribué
-   * par la plateforme à la création, jamais un secret.
+   * `IA-FR-STN-00000127`. Une seule série pour toutes les Stations : l'étiquette
+   * s'imprime à l'usine, avant que le profil soit posé. Attribuée par la
+   * plateforme à la création, jamais un secret.
    */
   reference: string;
   /** Clé publique Ed25519 de la Box, en PEM. La clé privée ne quitte jamais la Box (TPM visé). */
@@ -58,11 +58,13 @@ export type Box = {
    */
   cle_chiffrement_publique?: string | null;
   /**
-   * Trois gammes (max, 14/10/2026) : Home Box 16 Go (un agent, la voix
-   * d'abord), Pro Box 32 Go (4 agents), Business Box 64 Go (8 agents).
-   * « Commander » est le nom de l'application (Desktop Commander), pas une gamme.
+   * Le profil logiciel de la machine (max, 17/10/2026, documents Station Gen 1) :
+   * une seule machine, l'iAgent Station, dont le matériel est le SKU (32, 64 ou
+   * 64+, porté par `profil_materiel`) ; le profil home, business ou enterprise
+   * est posé au provisioning sur la même image d'usine. null tant que la Box n'est
+   * pas attribuée. « Commander » est le nom de l'application, pas un profil.
    */
-  gamme: 'home' | 'pro' | 'business';
+  gamme: 'home' | 'business' | 'enterprise' | null;
   os: string;
   version_desktop: string;
   statut: StatutBox;
@@ -92,6 +94,8 @@ export type JetonUsine = {
   /** Client et plan à attribuer dès que le rapport d'usine passe ; null = la Box reste en stock. */
   tenant_id: Id | null;
   plan_id: Id | null;
+  /** Profil posé avec le client et le plan ; null quand le jeton n'attribue pas. */
+  gamme: NonNullable<Box['gamme']> | null;
   cree_le: Iso;
   expire_le: Iso;
   utilisations_max: number;
@@ -106,7 +110,6 @@ export type RapportUsine = {
   device_id: Id;
   reference: string;
   serial: string;
-  gamme: Box['gamme'];
   profil_materiel: string;
   inventaire: InventaireBox;
   installateur: { version: string; build_id: string; commit: string };

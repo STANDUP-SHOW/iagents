@@ -265,7 +265,7 @@ const a=process.argv;require('fs').writeFileSync(a[a.indexOf('-of')+1]+'.txt','J
     lire(await fetch(`${base}${chemin}`, { method: methode, headers: { authorization: `Bearer ${secret}`, 'content-type': 'application/json' }, body: corps === undefined ? undefined : JSON.stringify(corps) }));
   const boxes = ['t1', 't2'].map((tenant, i) => {
     const k = generateKeyPairSync('ed25519');
-    const b: Box = { device_id: `BOX-V${i}`, tenant_id: tenant, serial: `SN${i}`, gamme: 'business', os: 'ubuntu-core', identite_publique: k.publicKey.export({ type: 'spki', format: 'pem' }).toString(), version_desktop: '0.2.1', statut: 'active', plan_id: null, sante: null, garantie_jusqu_au: null, reference: `IA-FR-BUS-0000000${i + 1}`, profil_materiel: null, inventaire: null, versions: null, usine: null };
+    const b: Box = { device_id: `BOX-V${i}`, tenant_id: tenant, serial: `SN${i}`, gamme: 'business', os: 'ubuntu-core', identite_publique: k.publicKey.export({ type: 'spki', format: 'pem' }).toString(), version_desktop: '0.2.1', statut: 'active', plan_id: null, sante: null, garantie_jusqu_au: null, reference: `IA-FR-STN-0000000${i + 1}`, profil_materiel: null, inventaire: null, versions: null, usine: null };
     s.poser('boxes', b.device_id, b);
     return { b, k };
   });

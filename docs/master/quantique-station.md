@@ -75,7 +75,13 @@ NVMe, module 4 micros champ lointain avec DSP (AEC, beamforming, AGC, réduction
 bruit, full duplex), ampli et deux haut-parleurs, écran 27" tactile capacitif,
 bras OEM. Phases : EVT-0 (1), EVT-1 (2-3), pilote (10), PVT (50-100).
 
-**Ce qui contredit le dépôt (à trancher par max).**
+**Tranché par max le 17/10/2026 : la Station fait foi (SKU 32 / 64 / 64+), et
+le profil se pose au provisioning sur une image commune.** Fait dans le code de
+la branche `admin-master` : profils matériel `station-*`, profils `home`,
+`business`, `enterprise`, une seule ISO, référence `IA-FR-STN-…`
+(`docs/box-usine.md` §3). Le tableau ci-dessous garde l'état d'avant.
+
+**Ce qui contredisait le dépôt.**
 
 | Sujet | Documents Station | Dépôt (décision du 14/10) |
 |---|---|---|

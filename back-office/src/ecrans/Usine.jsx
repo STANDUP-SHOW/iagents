@@ -13,11 +13,11 @@ export const lectures = [['jetonsUsine', {}], ['tenants', {}]];
 export const CYCLE = ['usine', 'qualifiee', 'stock', 'provisionnee', 'expediee', 'active'];
 
 function NouveauJeton({ tenants, onFini }) {
-  const [f, setF] = useState({ operateur: '', lot: '', tenant_id: '', plan_id: '', duree_h: 24, utilisations_max: 10 });
+  const [f, setF] = useState({ operateur: '', lot: '', tenant_id: '', plan_id: '', gamme: '', duree_h: 24, utilisations_max: 10 });
   const [etat, lancer] = useAction();
   const poser = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const corps = () => ({
-    operateur: f.operateur, lot: f.lot || undefined, tenant_id: f.tenant_id || undefined, plan_id: f.plan_id || undefined,
+    operateur: f.operateur, lot: f.lot || undefined, tenant_id: f.tenant_id || undefined, plan_id: f.plan_id || undefined, gamme: f.gamme || undefined,
     duree_h: Number(f.duree_h), utilisations_max: Number(f.utilisations_max),
   });
   return (
@@ -31,6 +31,7 @@ function NouveauJeton({ tenants, onFini }) {
       <div className="grille">
         <Champ libelle="Client (facultatif)" aide="Posé sur chaque Box dès que son rapport passe : elle sort provisionnée."><ChoixClient tenants={tenants} valeur={f.tenant_id} onChange={(v) => setF({ ...f, tenant_id: v })} tous="Aucun : les Box restent en stock" /></Champ>
         <Champ libelle="Plan (avec le client)"><input value={f.plan_id} onChange={poser('plan_id')} placeholder="box-commander-36" /></Champ>
+        <Champ libelle="Profil (avec le client)" aide="Même image d'usine pour toutes les Stations : le profil se pose à l'attribution."><select value={f.gamme} onChange={poser('gamme')}><option value="">—</option><option value="home">Home</option><option value="business">Business</option><option value="enterprise">Enterprise</option></select></Champ>
       </div>
       <div className="rangee"><button type="submit" className="bouton bouton-principal" disabled={etat.statut === 'en-cours'}>Émettre le jeton</button></div>
       <Resultat etat={etat} succes={(c) => `Jeton émis pour ${c?.operateur ?? f.operateur}, valable jusqu'au ${c?.expire_le ? dateHeure(c.expire_le) : '?'}. À copier MAINTENANT dans construire-iso.sh (--jeton-fichier), il ne sera plus montré : ${c?.jeton ?? '?'}`} />
@@ -56,7 +57,7 @@ export default function Usine() {
               colonnes={[
                 { titre: 'Opérateur', rendu: (j) => <strong>{j.operateur}</strong> },
                 { titre: 'Lot', rendu: (j) => j.lot ?? '—' },
-                { titre: 'Client', rendu: (j) => (j.tenant_id ? `${nomDe(j.tenant_id)} · ${j.plan_id ?? '?'}` : <span className="discret">aucun (stock)</span>) },
+                { titre: 'Client', rendu: (j) => (j.tenant_id ? `${nomDe(j.tenant_id)} · ${j.plan_id ?? '?'} · ${j.gamme ?? '?'}` : <span className="discret">aucun (stock)</span>) },
                 { titre: 'Box', rendu: (j) => `${nombre(j.utilisations)} / ${nombre(j.utilisations_max)}` },
                 { titre: 'Émis', rendu: (j) => dateHeure(j.cree_le) },
                 { titre: 'Expire', rendu: (j) => { const vivant = new Date(j.expire_le) > new Date(); return <Pastille ton={vivant ? 'succes' : 'neutre'}>{vivant ? `le ${dateHeure(j.expire_le)}` : `expiré le ${dateHeure(j.expire_le)}`}</Pastille>; } },

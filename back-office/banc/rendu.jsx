@@ -100,7 +100,7 @@ const clientBanc = (table) => creerClientWeb({ adresse: '/plateforme', jeton: JE
 const ATTENDU = {
   emails: ['Prospection · Agents par métier', 'Investisseurs · Dossier premium', 'À propos · Notre différence', 'Aucun envoi groupé', 'une adresse de destinataire valide', 'Aucun e-mail envoyé', 'Remettre le texte du modèle'],
   plans: ['agent-essential', 'masqué', 'legacy', 'ancienne', 'à venir', 'sur devis', 'BE', 'Aucune route de remise'],
-  boxes: ['IAB-2026-0001', 'IA-FR-BUS-00000001', 'IA-FR-HOME-00000001', 'Boulangerie Martin (banc)', 'suspendue', 'en stock', 'échue le', 'CPU 23', 'jamais remontée'],
+  boxes: ['IAB-2026-0001', 'IA-FR-STN-00000001', 'IA-FR-STN-00000005', 'Boulangerie Martin (banc)', 'suspendue', 'en stock', 'échue le', 'CPU 23', 'jamais remontée'],
   usine: ['Léa (banc)', 'L-2026-10-A', '3 / 10', 'expiré le', 'Famille Durand (banc)', 'home-box', 'Émettre le jeton', 'usine', 'qualifiee', 'expediee'],
   licences: ['ent-0001', 'AG-0179', 'revoquee', 'Révoquer', 'Cabinet Roux Avocats (banc)'],
   voix: ['+33187650001', 'telnyx', 'transfere-humain', '0,16', 'Commande de 3 baguettes', 'GET /voix/fournisseurs'],
@@ -111,7 +111,7 @@ const ATTENDU = {
   etudes: ['Nouvelle étude', 'GET /create/projets', 'Secrétariat juridique'],
   devis: ['Aucune route de demande de devis', 'POST /devis/demandes', 'Agent Essential', 'Chiffrer'],
   audit: ['entitlement.revoquer', 'impayé de septembre', 'BOX-7F3A', 'muette depuis', 'GET /controle/telemetrie'],
-  flotte: ['IA-FR-CMD-00000001', 'en ligne', 'hors ligne', 'jamais vue', 'Incidents ouverts', 'Hors état voulu', 'Chercher les Box muettes'],
+  flotte: ['IA-FR-STN-00000001', 'en ligne', 'hors ligne', 'jamais vue', 'Incidents ouverts', 'Hors état voulu', 'Chercher les Box muettes'],
   incidents: [`Box ${noyau.ids.cabinet} hors ligne`, 'détecté', 'majeure', 'trié', 'en surveillance', 'Passer'],
   approbations: ['Accorder une remise', "Remettre la Box en sortie d'usine", 'R4 critique', 'R2 modéré', 'Contrat de trois boutiques', 'Approuver', 'Demander une précision'],
   equipe: ['Laura Support (banc)', 'Inès (flotte, banc)', 'clé du fondateur', '2 · agit en risque faible', 'Créer l’acteur', 'sales.discount.apply', 'en attente d’approbation', 'exécutée'],
@@ -138,7 +138,7 @@ console.log('\nÉtats ouverts (formulaires, fiches, relectures)');
     ['flotte', { boxInitiale: noyau.ids.cabinet }, [`Fiche de la Box ${noyau.ids.cabinet}`, 'hors ligne', 'Aucun agent sur cette Box', `Box ${noyau.ids.cabinet} hors ligne`]],
     ['plans', { versionInitiale: 'agent-essential' }, ['Nouvelle version de agent-essential', 'rien n\'est écrasé', 'Enregistrer la version']],
     ['plans', { versionInitiale: '' }, ['Nouveau plan : sa première version']],
-    ['boxes', { boxInitiale: boxes[0].device_id }, [`Fiche de la Box ${boxes[0].device_id}`, 'clé publique Ed25519 enregistrée', 'box-commander-36', "Rapports d'usine", 'PASS', 'NON CONSTATÉ', '1 rapport(s) antérieur(s)', 'FAIL le', 'IA-FR-BUS-00000001', "Imprimer l'étiquette"]],
+    ['boxes', { boxInitiale: boxes[0].device_id }, [`Fiche de la Box ${boxes[0].device_id}`, 'clé publique Ed25519 enregistrée', 'box-commander-36', "Rapports d'usine", 'PASS', 'NON CONSTATÉ', '1 rapport(s) antérieur(s)', 'FAIL le', 'IA-FR-STN-00000001', "Imprimer l'étiquette"]],
     ['opportunites', { ouverteInitiale: opportunites[0].id }, ['Relecture : Accueil téléphonique', 'Pénurie de vendeurs le matin']],
     ['etudes', { etudeInitiale: etude.id }, [`Étude ${etude.id}`, 'ambitieux', '61 000', 'seuil rentabilite mois']],
   ];

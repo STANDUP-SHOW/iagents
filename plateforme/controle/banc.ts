@@ -235,7 +235,7 @@ export async function lancer(): Promise<number> {
     // Status transitions
     verifier('stock → active refusé (il faut attribuer)', (await admin('POST', `/controle/boxes/${b1.device_id}/statut`, { statut: 'active', motif: 'essai' })).statut === 409);
     verifier('un statut hors contrat est refusé', (await admin('POST', `/controle/boxes/${b1.device_id}/statut`, { statut: 'usine', motif: 'essai' })).statut === 400);
-    verifier('une Box provisionnée à la main porte sa référence, numérotée par gamme', b1?.reference === 'IA-FR-BUS-00000001' && b2?.reference === 'IA-FR-BUS-00000002' && b3?.reference === 'IA-FR-BUS-00000003' && b1?.usine === null && b1?.profil_materiel === null);
+    verifier('une Box provisionnée à la main porte sa référence, une seule série pour toutes les Stations', b1?.reference === 'IA-FR-STN-00000001' && b2?.reference === 'IA-FR-STN-00000002' && b3?.reference === 'IA-FR-STN-00000003' && b1?.usine === null && b1?.profil_materiel === null);
     r = await admin('POST', `/controle/boxes/${b1.device_id}/attribuer`, { tenant_id: tA.tenant_id, plan_id: 'box-commander-36' });
     verifier('attribuer : stock → provisionnee', r.corps?.statut === 'provisionnee' && r.corps?.tenant_id === tA.tenant_id);
     verifier('une Box déjà attribuée ne se réattribue pas', (await admin('POST', `/controle/boxes/${b1.device_id}/attribuer`, { tenant_id: tB.tenant_id, plan_id: 'x' })).statut === 409);
@@ -364,7 +364,7 @@ export async function lancer(): Promise<number> {
     const enroler = async (jeton: string, corps: unknown): Promise<R> =>
       lire(await fetch(`${base}/controle/usine/enroler`, { method: 'POST', body: JSON.stringify(corps), headers: jeton ? { 'x-jeton-usine': jeton } : {} }));
     const machine = (serial: string, k: { publicKey: KeyObject }, extra: Record<string, unknown> = {}) =>
-      ({ ...boxDe(serial, k), gamme: 'business', profil_materiel: 'vm-qemu', inventaire, installateur, ...extra });
+      ({ ...boxDe(serial, k), profil_materiel: 'vm-qemu', inventaire, installateur, ...extra });
     verifier("émettre un jeton d'usine exige le back-office", (await lire(await fetch(`${base}/controle/usine/jetons`, { method: 'POST', body: '{}' }))).statut === 401);
     verifier("un jeton d'usine sans opérateur est refusé", (await admin('POST', '/controle/usine/jetons', { lot: 'L1' })).statut === 400);
     verifier("un plan sans client est refusé", (await admin('POST', '/controle/usine/jetons', { operateur: 'Léa', plan_id: 'box-commander-36' })).statut === 400);
@@ -377,12 +377,11 @@ export async function lancer(): Promise<number> {
     verifier("enrôler sans jeton est refusé", (await enroler('', machine('SN-U1', kU))).statut === 401);
     verifier("enrôler avec un jeton inconnu est refusé", (await enroler('UF-inconnu', machine('SN-U1', kU))).statut === 401);
     verifier("un profil matériel inconnu de la plateforme est refusé", (await enroler(jetonA, machine('SN-U1', kU, { profil_materiel: 'nuc-13' }))).statut === 400);
-    verifier("un profil qui ne sert pas la gamme est refusé", (await enroler(jetonA, machine('SN-U1', kU, { profil_materiel: 'exr1-home-v1' }))).statut === 409);
     verifier("une adresse MAC mal formée est refusée", (await enroler(jetonA, machine('SN-U1', kU, { inventaire: { ...inventaire, mac: { ...inventaire.mac, eth0: 'pas-une-mac' } } }))).statut === 400);
     verifier("un installateur sans commit git est refusé", (await enroler(jetonA, machine('SN-U1', kU, { installateur: { version: '0.1.0', build_id: 'x' } }))).statut === 400);
     r = await enroler(jetonA, machine('SN-U1', kU));
     const bU = r.corps;
-    verifier("une Box enrôlée par l'usine est « usine », référencée, avec son inventaire et son profil", r.statut === 201 && bU?.statut === 'usine' && bU?.reference === 'IA-FR-BUS-00000004'
+    verifier("une Box enrôlée par l'usine est « usine », référencée, avec son inventaire et son profil", r.statut === 201 && bU?.statut === 'usine' && bU?.reference === 'IA-FR-STN-00000004' && bU?.gamme === null
       && bU?.profil_materiel === 'vm-qemu' && bU?.inventaire?.mac?.eth0 === 'a8:b1:c2:d3:e4:f5' && bU?.usine?.operateur === 'Léa' && bU?.usine?.lot === 'L-2026-10-A' && bU?.tenant_id === null);
     verifier("la même série ne s'enrôle pas deux fois", (await enroler(jetonA, machine('SN-U1', kV))).statut === 409);
     // ADMIN MASTER 14/10/2026 §22: the answer was lost, the Box sends the same request again.
@@ -393,17 +392,16 @@ export async function lancer(): Promise<number> {
     verifier("une Box « usine » n'a aucun droit", (await parBox(kU.privateKey, bU.device_id, 'GET', '/controle/box/droits')).statut === 403);
     verifier("une Box « usine » ne s'attribue pas", (await admin('POST', `/controle/boxes/${bU.device_id}/attribuer`, { tenant_id: tA.tenant_id, plan_id: 'box-commander-36' })).statut === 409);
     verifier("usine → stock à la main est refusé : il faut un rapport qui passe", (await admin('POST', `/controle/boxes/${bU.device_id}/statut`, { statut: 'stock', motif: 'essai' })).statut === 409);
-    verifier("l'étiquette ne porte que la référence, l'identifiant, la gamme et la série", JSON.stringify((await admin('GET', `/controle/boxes/${bU.device_id}/etiquette`)).corps) === JSON.stringify({ reference: bU.reference, device_id: bU.device_id, gamme: 'business', serial: 'SN-U1', qr: bU.reference }));
+    verifier("l'étiquette ne porte que la référence, l'identifiant et la série", JSON.stringify((await admin('GET', `/controle/boxes/${bU.device_id}/etiquette`)).corps) === JSON.stringify({ reference: bU.reference, device_id: bU.device_id, serial: 'SN-U1', qr: bU.reference }));
 
     const test = (id: string, verdict = 'passe', detail: string | null = null) => ({ id, libelle: `Contrôle ${id}`, verdict, duree_ms: 1200, detail });
     const tousPasses = ['materiel', 'disque', 'reseau', 'services', 'controle'].map((id) => test(id));
     const rapport = (tests: unknown[], extra: Record<string, unknown> = {}) => ({
-      serial: 'SN-U1', gamme: 'business', profil_materiel: 'vm-qemu', installateur, operateur: 'Léa',
+      serial: 'SN-U1', profil_materiel: 'vm-qemu', installateur, operateur: 'Léa',
       commence_le: maintenant().toISOString(), termine_le: new Date(horloge + 20 * 60_000).toISOString(), tests, ...extra,
     });
     const deposer = (k: KeyObject, b: any, corps: unknown) => parBox(k, b.device_id, 'POST', '/controle/box/usine/rapport', corps);
-    verifier("un rapport d'une autre gamme est refusé", (await deposer(kU.privateKey, bU, rapport(tousPasses, { gamme: 'home' }))).statut === 409);
-    verifier("un rapport d'un autre profil matériel est refusé", (await deposer(kU.privateKey, bU, rapport(tousPasses, { profil_materiel: 'bosgame-m4-neo-v1' }))).statut === 409);
+    verifier("un rapport d'un autre profil matériel est refusé", (await deposer(kU.privateKey, bU, rapport(tousPasses, { profil_materiel: 'station-64-v1' }))).statut === 409);
     verifier("un rapport d'une autre série est refusé", (await deposer(kU.privateKey, bU, rapport(tousPasses, { serial: 'SN-U9' }))).statut === 409);
     verifier("un rapport sans test est refusé", (await deposer(kU.privateKey, bU, rapport([]))).statut === 400);
     verifier("un test en double est refusé", (await deposer(kU.privateKey, bU, rapport([...tousPasses, test('disque')]))).statut === 400);
@@ -422,19 +420,31 @@ export async function lancer(): Promise<number> {
     verifier("qualifiee → stock à la main", (await admin('POST', `/controle/boxes/${bU.device_id}/statut`, { statut: 'stock', motif: 'rodage 24 h fait' })).corps?.statut === 'stock');
     verifier("le jeton compte ses utilisations", (await admin('GET', '/controle/usine/jetons')).corps?.[0]?.utilisations === 1);
 
-    // A token carrying a client: the Box is assigned the moment it passes.
-    const jetonB: string = (await admin('POST', '/controle/usine/jetons', { operateur: 'Léa', tenant_id: tB.tenant_id, plan_id: 'home-box' })).corps?.jeton;
-    r = await enroler(jetonB, machine('SN-U2', kV, { gamme: 'home' }));
+    // A token carrying a client: the Box is assigned the moment it passes, with the profile the token carries (max, 17/10/2026).
+    verifier("un jeton d'usine pour un client sans profil est refusé", (await admin('POST', '/controle/usine/jetons', { operateur: 'Léa', tenant_id: tB.tenant_id, plan_id: 'home-box' })).statut === 400);
+    verifier("un profil sans client est refusé", (await admin('POST', '/controle/usine/jetons', { operateur: 'Léa', gamme: 'home' })).statut === 400);
+    const jetonB: string = (await admin('POST', '/controle/usine/jetons', { operateur: 'Léa', tenant_id: tB.tenant_id, plan_id: 'home-box', gamme: 'home' })).corps?.jeton;
+    r = await enroler(jetonB, machine('SN-U2', kV));
     const bV = r.corps;
-    verifier("une Box home enrôlée prend une référence HOME", r.statut === 201 && bV?.reference === 'IA-FR-HOME-00000001');
-    r = await deposer(kV.privateKey, bV, rapport(tousPasses, { serial: 'SN-U2', gamme: 'home' }));
-    verifier("rapport passé avec un jeton client : provisionnee, client et plan posés", r.corps?.box?.statut === 'provisionnee' && r.corps?.box?.tenant_id === tB.tenant_id && r.corps?.box?.plan_id === 'home-box');
+    verifier("l'usine enrôle sans profil : même image pour toutes, la référence suit la série unique", r.statut === 201 && bV?.reference === 'IA-FR-STN-00000005' && bV?.gamme === null);
+    r = await deposer(kV.privateKey, bV, rapport(tousPasses, { serial: 'SN-U2' }));
+    verifier("rapport passé avec un jeton client : provisionnee, client, plan et profil posés", r.corps?.box?.statut === 'provisionnee' && r.corps?.box?.tenant_id === tB.tenant_id && r.corps?.box?.plan_id === 'home-box' && r.corps?.box?.gamme === 'home');
     verifier("provisionnee → expediee", (await admin('POST', `/controle/boxes/${bV.device_id}/statut`, { statut: 'expediee', motif: 'colis 6A123' })).corps?.statut === 'expediee');
     verifier("une Box expédiée n'a pas encore de droits", (await parBox(kV.privateKey, bV.device_id, 'GET', '/controle/box/droits')).statut === 403);
     r = await parBox(kV.privateKey, bV.device_id, 'POST', '/controle/box/telemetrie', { cpu: 3, version_desktop: '0.2.1', versions: { device: '0.1.0', desktop: '0.2.1' } });
     verifier("la première télémétrie d'une Box expédiée l'active et pose les versions", r.statut === 200 && r.corps?.statut === 'active' && (await admin('GET', `/controle/boxes/${bV.device_id}`)).corps?.versions?.device === '0.1.0');
     verifier("une version de service mal formée est refusée", (await parBox(kV.privateKey, bV.device_id, 'POST', '/controle/box/telemetrie', { version_desktop: '0.2.1', versions: { device: 'trois' } })).statut === 400);
-    verifier("le jeton sert encore une fois (2 au plus)", (await enroler(jetonA, machine('SN-U3', kW))).statut === 201);
+    r = await enroler(jetonA, machine('SN-U3', kW, { profil_materiel: 'station-32-v1' }));
+    verifier("le jeton sert encore une fois (2 au plus)", r.statut === 201);
+    const bW = r.corps;
+    const obligatoiresStation = ['materiel', 'disque', 'tpm', 'reseau', 'services', 'audio', 'commander', 'controle', 'ota'];
+    r = await deposer(kW.privateKey, bW, rapport(obligatoiresStation.map((id) => test(id)), { serial: 'SN-U3', profil_materiel: 'station-32-v1' }));
+    verifier("une Station 32 qualifiée reste sans profil", r.corps?.box?.statut === 'qualifiee' && r.corps?.box?.gamme === null);
+    verifier("attribuer sans profil une Box qui n'en a pas est refusé", (await admin('POST', `/controle/boxes/${bW.device_id}/attribuer`, { tenant_id: tA.tenant_id, plan_id: 'box-commander-36' })).statut === 400);
+    r = await admin('POST', `/controle/boxes/${bW.device_id}/attribuer`, { tenant_id: tA.tenant_id, plan_id: 'box-commander-36', gamme: 'enterprise' });
+    verifier("une Station 32 ne prend pas le profil Enterprise : refus qui nomme le matériel", r.statut === 409 && /station-32-v1/.test(r.corps?.erreur ?? ''));
+    r = await admin('POST', `/controle/boxes/${bW.device_id}/attribuer`, { tenant_id: tA.tenant_id, plan_id: 'box-commander-36', gamme: 'business' });
+    verifier("une Station 32 attribuée en Business : provisionnee avec son profil", r.corps?.statut === 'provisionnee' && r.corps?.gamme === 'business');
     r = await enroler(jetonA, machine('SN-U4', generateKeyPairSync('ed25519')));
     verifier("l'épuisement du jeton est refusé en le disant", r.statut === 401 && /2 fois/.test(r.corps?.erreur ?? ''));
     const actionsUsine: string[] = ((await admin('GET', '/controle/audit')).corps ?? []).map((a: any) => a.action);

@@ -6,7 +6,6 @@
 import React, { useEffect, useState } from 'react';
 import { qrSvg } from './qr.js';
 
-const LIBELLE_GAMME = { home: 'Home Box', pro: 'Pro Box', business: 'Business Box' };
 const TON = { passe: 'ok', echec: 'ko', non_constate: 'nc' };
 const MOT = { passe: 'PASS', echec: 'FAIL', non_constate: 'NON CONSTATÉ' };
 
@@ -46,7 +45,7 @@ function Tests({ tests }) {
 }
 
 export function Attente({ etat, operateur, setOperateur, profilMateriel, setProfilMateriel, installer }) {
-  const profils = (etat.profils_materiel ?? []).filter((p) => (p.gammes ?? []).includes(etat.profil));
+  const profils = etat.profils_materiel ?? [];
   const pret = Boolean(operateur?.trim()) && Boolean(profilMateriel) && etat.jeton_present !== false;
   return (
     <section>
@@ -54,7 +53,7 @@ export function Attente({ etat, operateur, setOperateur, profilMateriel, setProf
       <h2>Appareil détecté</h2>
       <Inventaire inventaire={etat.inventaire} />
       <h2>Profil</h2>
-      <p className="grand">{LIBELLE_GAMME[etat.profil] ?? etat.profil} <span className="discret">(fixé par la clé d'installation)</span></p>
+      <p className="grand">Posé à l'attribution <span className="discret">(Home, Business ou Enterprise : même image pour toutes les Stations)</span></p>
       <label className="champ">Machine
         <select value={profilMateriel} onChange={(e) => setProfilMateriel(e.target.value)}>
           <option value="">Choisir…</option>
@@ -97,7 +96,7 @@ export function Termine({ etat, eteindre }) {
       {!reussi && (etat.verdict?.manquants?.length || etat.verdict?.echoues?.length) ? (
         <p className="erreur">Échoués : {(etat.verdict.echoues ?? []).join(', ') || '—'} · Obligatoires non passés : {(etat.verdict.manquants ?? []).join(', ') || '—'}</p>
       ) : null}
-      {reussi && reference ? <div className="etiquette"><div dangerouslySetInnerHTML={{ __html: qrSvg(reference, 180) }} /><p>{reference}</p><p className="discret">{box.serial} · {LIBELLE_GAMME[box.gamme] ?? box.gamme}</p></div> : null}
+      {reussi && reference ? <div className="etiquette"><div dangerouslySetInnerHTML={{ __html: qrSvg(reference, 180) }} /><p>{reference}</p><p className="discret">{box.serial}</p></div> : null}
       <div className="boutons">
         <a className="bouton" href="/api/rapport" download={`${reference || 'rapport'}.json`}>EXPORTER LE RAPPORT</a>
         {!reussi ? <a className="bouton" href="/">RECOMMENCER</a> : null}
@@ -137,7 +136,7 @@ export default function App() {
         setEtat(e);
         if (!operateur && e.operateur) setOperateur(e.operateur);
         if (!profilMateriel) {
-          const candidats = (e.profils_materiel ?? []).filter((p) => (p.gammes ?? []).includes(e.profil) && p.id !== 'vm-qemu');
+          const candidats = (e.profils_materiel ?? []).filter((p) => p.id !== 'vm-qemu');
           if (candidats.length === 1) setProfilMateriel(candidats[0].id);
         }
       } catch {

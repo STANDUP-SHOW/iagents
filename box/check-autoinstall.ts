@@ -60,7 +60,7 @@ export function lancer(): number {
   verifier('30-tpm.sh écrit son état plutôt que de planter sans TPM', /non_constate/.test(tpm) && /etat\.json/.test(tpm));
   verifier('un redémarrage ferme l’installation', /shutdown: reboot/.test(texte));
   const grub = readFileSync(join(RACINE, 'box/usine/iso/grub.cfg'), 'utf8');
-  verifier('GRUB démarre l’autoinstall seul, graine nocloud sur le cédérom, en trois secondes', /set timeout=3/.test(grub) && /autoinstall ds=nocloud\\;s=\/cdrom\/nocloud\//.test(grub) && /__PROFIL__/.test(grub));
+  verifier('GRUB démarre l’autoinstall seul, graine nocloud sur le cédérom, en trois secondes, sans profil (même image pour toutes les Stations)', /set timeout=3/.test(grub) && /autoinstall ds=nocloud\\;s=\/cdrom\/nocloud\//.test(grub) && !/__PROFIL__/.test(grub));
   verifier('construire-iso.sh existe et vérifie le SHA-256 de la source', existsSync(join(RACINE, 'box/usine/iso/construire-iso.sh')) && /sha256sum/.test(readFileSync(join(RACINE, 'box/usine/iso/construire-iso.sh'), 'utf8')));
   return bilan();
 }

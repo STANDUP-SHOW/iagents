@@ -36,9 +36,9 @@ export function validateur(schemaRelatif: string): (valeur: unknown) => string[]
 }
 
 /**
- * The two gammes, read in the text of plateforme/modele.ts (`gamme: 'business' | 'home'`),
+ * The profiles, read in the text of plateforme/modele.ts (`gamme: 'home' | 'business' | 'enterprise' | null`),
  * exactly as check-connecteurs.ts compares field names across files: retyped here,
- * a third gamme in the model would never be noticed by these benches.
+ * a new profile in the model would never be noticed by these benches.
  */
 export function gammesDuModele(): string[] {
   const texte = readFileSync(join(RACINE, 'plateforme/modele.ts'), 'utf8');

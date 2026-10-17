@@ -894,11 +894,14 @@ par WhatsApp et email.
   `box/`, `docs/box-usine.md`). **Un seul cycle de vie**, dans `regles.ts` :
   `usine → qualifiee → stock → provisionnee → expediee → active → suspendue |
   restituee | remplacee` ; l'usine n'ajoute pas d'état parallèle, un échec
-  d'usine laisse la Box `usine` avec son rapport. **Trois gammes, `gamme: home |
-  pro | business`** (max, 14/10/2026) : Home Box 16 Go (1 agent), Pro Box 32 Go
-  (4 agents), Business Box 64 Go (8 agents). Commander est le nom de
-  l'application, pas une gamme ; la référence (`IA-FR-HOME-…`, `IA-FR-PRO-…`,
-  `IA-FR-BUS-…`) vient de `CODE_GAMME` et `referenceBox()`. **Le verdict d'un rapport d'usine se recalcule**
+  d'usine laisse la Box `usine` avec son rapport. **Une machine, l'iAgent Station**
+  (max, 17/10/2026) : SKU `station-32-v1`, `station-64-v1`, `station-64-plus-v1`
+  dans `box/materiel/`, **une seule image d'usine** ; le profil `gamme: home |
+  business | enterprise` (null jusqu'à l'attribution) se pose au provisioning et
+  doit être servi par le matériel (`gammeRefusee`). Les services actifs et le
+  kiosque, communs à toutes, sont dans `SERVICES.json`. Une seule série de
+  référence, `IA-FR-STN-…` (`referenceBox()`). Commander est le nom de
+  l'application, pas une gamme. **Le verdict d'un rapport d'usine se recalcule**
   (`verdictRapport`, tests obligatoires du profil matériel `box/materiel/`),
   jamais lu ; Python (`regles.py`) et TypeScript rendent le même verdict sur les
   mêmes témoins, deux bancs le tiennent.

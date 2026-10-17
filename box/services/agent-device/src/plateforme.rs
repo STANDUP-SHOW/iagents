@@ -278,7 +278,7 @@ pub fn enroler(adresse: &str, jeton: &str, id: &Identite, profil_materiel: &str,
     let a = adresse_recevable(adresse)?;
     let pub_ = id.publique();
     let corps = json!({
-        "serial": inv.serial_machine, "gamme": inv.gamme_supposee(profil_materiel), "os": inv.os,
+        "serial": inv.serial_machine, "os": inv.os,
         "version_desktop": inv.version_desktop.clone().unwrap_or_else(|| "0.0.0".to_string()),
         "identite_publique": pub_.identite_publique, "cle_chiffrement_publique": pub_.cle_chiffrement_publique,
         "profil_materiel": profil_materiel, "inventaire": inv, "installateur": manifeste.installateur, "operateur": operateur,

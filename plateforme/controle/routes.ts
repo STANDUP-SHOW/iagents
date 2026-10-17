@@ -41,7 +41,7 @@ void _licencesCompletes;
 
 const COMPOSANTS = ['desktop', 'os', 'skills', 'device'] as const satisfies readonly MiseAJour['composant'][];
 const CANAUX = ['stable', 'beta'] as const;
-const GAMMES = ['home', 'pro', 'business'] as const satisfies readonly Box['gamme'][];
+const GAMMES = ['home', 'business', 'enterprise'] as const satisfies readonly NonNullable<Box['gamme']>[];
 const VERDICTS = ['passe', 'echec', 'non_constate'] as const satisfies readonly VerdictTest[];
 /** A factory token lives one shift by default and never more than three days (brief §43 : l'image d'usine est générique, le jeton est court). */
 const JETON_USINE_DUREE_H = 24;
@@ -121,7 +121,7 @@ const sousObjet = (c: Record<string, unknown>, champ: string): Record<string, un
 
 // --- Box identity: one reading for admin provisioning and factory enrolment ----
 
-type IdentiteBox = Pick<Box, 'serial' | 'gamme' | 'os' | 'version_desktop' | 'identite_publique' | 'cle_chiffrement_publique' | 'device_id'>;
+type IdentiteBox = Pick<Box, 'serial' | 'os' | 'version_desktop' | 'identite_publique' | 'cle_chiffrement_publique' | 'device_id'>;
 
 /**
  * Reads what identifies a Box in a request body, checks the keys and refuses a
@@ -131,7 +131,6 @@ type IdentiteBox = Pick<Box, 'serial' | 'gamme' | 'os' | 'version_desktop' | 'id
  */
 function lireIdentiteBox(stockage: Stockage, c: Record<string, unknown>): IdentiteBox {
   const serial = texte(c, 'serial', 100);
-  const gamme = parmi(c, 'gamme', GAMMES);
   const os = texte(c, 'os', 100);
   const version_desktop = texte(c, 'version_desktop', 64);
   if (!estSemver(version_desktop)) non(400, '« version_desktop » doit être une version semver.');
@@ -163,15 +162,28 @@ function lireIdentiteBox(stockage: Stockage, c: Record<string, unknown>): Identi
   if (cle_chiffrement_publique && boxes.some((b) => b.cle_chiffrement_publique === cle_chiffrement_publique)) {
     non(409, 'Cette clé de chiffrement est déjà celle d’une autre Box.');
   }
-  return { serial, gamme, os, version_desktop, identite_publique, cle_chiffrement_publique, device_id };
+  return { serial, os, version_desktop, identite_publique, cle_chiffrement_publique, device_id };
 }
 
-/** The next commercial reference of a gamme: one counter per gamme, kept in `compteurs/reference-box`. */
-function nouvelleReference(stockage: Stockage, gamme: Box['gamme']): string {
+/** The next commercial reference: one series for every Station, kept in `compteurs/reference-box`. */
+function nouvelleReference(stockage: Stockage): string {
   const compteur = stockage.lire<Record<string, number>>('compteurs', 'reference-box') ?? {};
-  const numero = (compteur[gamme] ?? 0) + 1;
-  stockage.poser('compteurs', 'reference-box', { ...compteur, [gamme]: numero });
-  return referenceBox(gamme, numero);
+  const numero = (compteur.station ?? 0) + 1;
+  stockage.poser('compteurs', 'reference-box', { ...compteur, station: numero });
+  return referenceBox(numero);
+}
+
+/** An optional profile in a body: absent or null means "not set yet". */
+function gammeOuNul(c: Record<string, unknown>): NonNullable<Box['gamme']> | null {
+  return c.gamme === undefined || c.gamme === null ? null : parmi(c, 'gamme', GAMMES);
+}
+
+/** Why this Box cannot take this profile, or null: the hardware profile it was qualified on must serve it (Station 32 is not an Enterprise machine). */
+function gammeRefusee(box: Box, gamme: NonNullable<Box['gamme']>): string | null {
+  if (!box.profil_materiel) return null;
+  const profil = profilMateriel(box.profil_materiel);
+  if (!profil) return `Le profil matériel « ${box.profil_materiel} » n'est plus connu de la plateforme.`;
+  return profil.gammes.includes(gamme) ? null : `Le matériel « ${box.profil_materiel} » ne sert pas le profil ${gamme} (il sert : ${profil.gammes.join(', ')}).`;
 }
 
 /** The hardware inventory the factory reports (brief §6, §13): shapes checked, nothing derived. */
@@ -210,12 +222,10 @@ function lireInstallateur(c: Record<string, unknown>): RapportUsine['installateu
   return { version, build_id: texte(i, 'build_id', 100), commit };
 }
 
-/** The hardware profile named by the factory must exist here and serve this gamme: the platform never trusts a profile it cannot read. */
-function lireProfilMateriel(c: Record<string, unknown>, gamme: Box['gamme']): string {
+/** The hardware profile named by the factory must exist here: the platform never trusts a profile it cannot read. */
+function lireProfilMateriel(c: Record<string, unknown>): string {
   const id = texte(c, 'profil_materiel', 64);
-  const profil = profilMateriel(id);
-  if (!profil) non(400, `Le profil matériel « ${id} » est inconnu de la plateforme (box/materiel/) : la Box ne peut pas être qualifiée contre lui.`);
-  if (!profil.gammes.includes(gamme)) non(409, `Le profil matériel « ${id} » ne sert pas la gamme ${gamme}.`);
+  if (!profilMateriel(id)) non(400, `Le profil matériel « ${id} » est inconnu de la plateforme (box/materiel/) : la Box ne peut pas être qualifiée contre lui.`);
   return id;
 }
 
@@ -339,14 +349,15 @@ export const routes: Route[] = [
   {
     methode: 'POST', chemin: '/controle/boxes', acces: 'admin',
     traiter: traiter(({ stockage, corps, maintenant }) => {
-      const identite = lireIdentiteBox(stockage, objet(corps));
+      const c = objet(corps);
+      const identite = lireIdentiteBox(stockage, c);
       const box: Box = {
-        ...identite, tenant_id: null, reference: nouvelleReference(stockage, identite.gamme),
+        ...identite, gamme: gammeOuNul(c), tenant_id: null, reference: nouvelleReference(stockage),
         statut: 'stock', plan_id: null, sante: null, garantie_jusqu_au: null,
         profil_materiel: null, inventaire: null, versions: null, usine: null,
       };
       stockage.poser('boxes', box.device_id, box);
-      auditer(stockage, maintenant(), { tenant_id: null, acteur: ACTEUR_ADMIN, action: 'box.provisionnee', cible: box.device_id, detail: `série ${box.serial}, gamme ${box.gamme}, référence ${box.reference}, clé ${box.device_id.slice(4)}` });
+      auditer(stockage, maintenant(), { tenant_id: null, acteur: ACTEUR_ADMIN, action: 'box.provisionnee', cible: box.device_id, detail: `série ${box.serial}, profil ${box.gamme ?? 'à poser'}, référence ${box.reference}, clé ${box.device_id.slice(4)}` });
       return ok(box, 201);
     }),
   },
@@ -362,12 +373,15 @@ export const routes: Route[] = [
       const plan_id = texteOuNul(c, 'plan_id', 64);
       if (plan_id && !tenant_id) non(400, "« plan_id » sans « tenant_id » : un plan s'attribue à un client.");
       if (tenant_id && !plan_id) non(400, "« tenant_id » sans « plan_id » : attribuer une Box demande les deux.");
+      const gamme = gammeOuNul(c);
+      if (tenant_id && !gamme) non(400, "« tenant_id » sans « gamme » : une Box attribuée reçoit son profil (home, business ou enterprise).");
+      if (gamme && !tenant_id) non(400, "« gamme » sans « tenant_id » : le profil se pose avec l'attribution à un client.");
       const duree_h = c.duree_h === undefined ? JETON_USINE_DUREE_H : nombre(c, 'duree_h', 1, JETON_USINE_DUREE_MAX_H);
       const utilisations_max = c.utilisations_max === undefined ? JETON_USINE_UTILISATIONS : nombre(c, 'utilisations_max', 1, JETON_USINE_UTILISATIONS_MAX, true);
       const now = maintenant();
       const brut = `UF-${randomBytes(24).toString('base64url')}`;
       const jeton: JetonUsine = {
-        id: `JU-${randomUUID()}`, empreinte: sha256(brut), operateur, lot, tenant_id, plan_id,
+        id: `JU-${randomUUID()}`, empreinte: sha256(brut), operateur, lot, tenant_id, plan_id, gamme,
         cree_le: now.toISOString(), expire_le: new Date(now.getTime() + duree_h * 3600_000).toISOString(),
         utilisations_max, utilisations: 0,
       };
@@ -391,18 +405,18 @@ export const routes: Route[] = [
       if (deja) return ok(deja, 200);
       if (jeton.utilisations >= jeton.utilisations_max) non(401, `Enrôlement refusé : ce jeton d'usine a servi ses ${jeton.utilisations_max} fois.`);
       const identite = lireIdentiteBox(stockage, c);
-      const profil_materiel = lireProfilMateriel(c, identite.gamme);
+      const profil_materiel = lireProfilMateriel(c);
       const inventaire = lireInventaire(c);
       const installateur = lireInstallateur(c);
       const box: Box = {
-        ...identite, tenant_id: null, reference: nouvelleReference(stockage, identite.gamme),
+        ...identite, gamme: null, tenant_id: null, reference: nouvelleReference(stockage),
         statut: 'usine', plan_id: null, sante: null, garantie_jusqu_au: null,
         profil_materiel, inventaire, versions: null,
         usine: { enrolee_le: now.toISOString(), installateur: installateur.version, operateur: jeton.operateur, lot: jeton.lot, jeton_id: jeton.id },
       };
       stockage.poser('boxes', box.device_id, box);
       stockage.poser('jetons_usine', jeton.id, { ...jeton, utilisations: jeton.utilisations + 1 });
-      auditer(stockage, now, { tenant_id: null, acteur: `usine:${jeton.operateur}`, action: 'box.enrolee', cible: box.device_id, detail: `référence ${box.reference}, série ${box.serial}, gamme ${box.gamme}, profil ${profil_materiel}, installateur ${installateur.version}, jeton ${jeton.id}` });
+      auditer(stockage, now, { tenant_id: null, acteur: `usine:${jeton.operateur}`, action: 'box.enrolee', cible: box.device_id, detail: `référence ${box.reference}, série ${box.serial}, matériel ${profil_materiel}, installateur ${installateur.version}, jeton ${jeton.id}` });
       return ok(box, 201);
     }),
   },
@@ -413,8 +427,6 @@ export const routes: Route[] = [
       if (b.statut !== 'usine') return refus(409, `Cette Box est « ${b.statut} » : un rapport d'usine ne se dépose que pendant la fabrication.`);
       if (!b.profil_materiel || !b.usine) return refus(409, "Cette Box n'a pas été enrôlée par l'usine : aucun rapport ne la qualifie.");
       const c = objet(corps);
-      const gamme = parmi(c, 'gamme', GAMMES);
-      if (gamme !== b.gamme) return refus(409, `Le rapport dit gamme ${gamme}, la Box est enrôlée en ${b.gamme}.`);
       const profil = texte(c, 'profil_materiel', 64);
       if (profil !== b.profil_materiel) return refus(409, `Le rapport cite le profil « ${profil} », la Box a été enrôlée contre « ${b.profil_materiel} ».`);
       const serial = texte(c, 'serial', 100);
@@ -441,7 +453,7 @@ export const routes: Route[] = [
       const { verdict, manquants, echoues } = verdictRapport(tests, obligatoires);
       const now = maintenant();
       const rapport: RapportUsine = {
-        id: `RU-${randomUUID()}`, device_id: b.device_id, reference: b.reference, serial: b.serial, gamme: b.gamme, profil_materiel: b.profil_materiel,
+        id: `RU-${randomUUID()}`, device_id: b.device_id, reference: b.reference, serial: b.serial, profil_materiel: b.profil_materiel,
         inventaire: c.inventaire === undefined ? b.inventaire! : lireInventaire(c), installateur: lireInstallateur(c),
         operateur: texte(c, 'operateur', 100), lot: b.usine.lot, commence_le, termine_le, recu_le: now.toISOString(), tests, verdict,
       };
@@ -453,9 +465,15 @@ export const routes: Route[] = [
         // A token issued for a client assigns the Box as soon as it is qualified (brief §10 : provisioning client).
         const jeton = stockage.lire<JetonUsine>('jetons_usine', b.usine.jeton_id);
         const tenant = jeton?.tenant_id ? stockage.lire<Tenant>('tenants', jeton.tenant_id) : null;
-        if (jeton?.tenant_id && jeton.plan_id && tenant) {
-          suivante = { ...suivante, statut: 'provisionnee', tenant_id: tenant.tenant_id, plan_id: jeton.plan_id };
-          auditer(stockage, now, { tenant_id: tenant.tenant_id, acteur: ACTEUR_ADMIN, action: 'box.attribuee', cible: b.device_id, detail: `plan ${jeton.plan_id}, par le jeton d'usine ${jeton.id}` });
+        if (jeton?.tenant_id && jeton.plan_id && jeton.gamme && tenant) {
+          const motif = gammeRefusee(suivante, jeton.gamme);
+          if (motif) {
+            // The Box stays qualified; the back-office assigns it by hand once the right machine is chosen.
+            auditer(stockage, now, { tenant_id: tenant.tenant_id, acteur: ACTEUR_ADMIN, action: 'box.attribution-refusee', cible: b.device_id, detail: `jeton d'usine ${jeton.id} : ${motif}` });
+          } else {
+            suivante = { ...suivante, statut: 'provisionnee', tenant_id: tenant.tenant_id, plan_id: jeton.plan_id, gamme: jeton.gamme };
+            auditer(stockage, now, { tenant_id: tenant.tenant_id, acteur: ACTEUR_ADMIN, action: 'box.attribuee', cible: b.device_id, detail: `plan ${jeton.plan_id}, profil ${jeton.gamme}, par le jeton d'usine ${jeton.id}` });
+          }
         }
       } else {
         auditer(stockage, now, { tenant_id: null, acteur: acteurBox(b.device_id), action: 'box.rapport-echec', cible: b.device_id, detail: `rapport ${rapport.id} : échoués ${echoues.join(', ') || '—'} ; obligatoires non passés ${manquants.join(', ') || '—'}` });
@@ -476,7 +494,7 @@ export const routes: Route[] = [
     // What the label and its QR carry, and nothing else (brief §42) : no key, no MAC, no client.
     traiter: traiter(({ stockage, params }) => {
       const b = boxOuRien(stockage, params.id);
-      return ok({ reference: b.reference, device_id: b.device_id, gamme: b.gamme, serial: b.serial, qr: b.reference });
+      return ok({ reference: b.reference, device_id: b.device_id, serial: b.serial, qr: b.reference });
     }),
   },
   {
@@ -499,9 +517,14 @@ export const routes: Route[] = [
       const tenant = tenantOuRien(stockage, texte(c, 'tenant_id', 64));
       const plan_id = texte(c, 'plan_id', 64);
       if (!STATUTS_ATTRIBUABLES.includes(box.statut)) return refus(409, `Cette Box est « ${box.statut} » : seule une Box en stock ou qualifiée s'attribue.`);
-      const suivante: Box = { ...box, tenant_id: tenant.tenant_id, plan_id, statut: 'provisionnee' };
+      // The profile is set here, on the common factory image (max, 17/10/2026); a Box provisioned by hand may already carry one.
+      const gamme = gammeOuNul(c) ?? box.gamme;
+      if (!gamme) return refus(400, "« gamme » manque : attribuer une Box pose son profil (home, business ou enterprise).");
+      const refusGamme = gammeRefusee(box, gamme);
+      if (refusGamme) return refus(409, refusGamme);
+      const suivante: Box = { ...box, tenant_id: tenant.tenant_id, plan_id, gamme, statut: 'provisionnee' };
       stockage.poser('boxes', box.device_id, suivante);
-      auditer(stockage, maintenant(), { tenant_id: tenant.tenant_id, acteur: ACTEUR_ADMIN, action: 'box.attribuee', cible: box.device_id, detail: `plan ${plan_id}` });
+      auditer(stockage, maintenant(), { tenant_id: tenant.tenant_id, acteur: ACTEUR_ADMIN, action: 'box.attribuee', cible: box.device_id, detail: `plan ${plan_id}, profil ${gamme}` });
       return ok(suivante);
     }),
   },

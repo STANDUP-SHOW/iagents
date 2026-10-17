@@ -100,7 +100,7 @@ const doublures: Record<string, Route['traiter']> = {
   'GET /controle/boxes/:id/rapports': (c) => (etat.boxes.some((b) => b.device_id === c.params.id) ? ok(etat.rapportsUsine.filter((r) => r.device_id === c.params.id)) : refus(404, "Cette Box n'existe pas.")),
   'GET /controle/boxes/:id/etiquette': (c) => {
     const b = etat.boxes.find((x) => x.device_id === c.params.id);
-    return b ? ok({ reference: b.reference, device_id: b.device_id, gamme: b.gamme, serial: b.serial, qr: b.reference }) : refus(404, "Cette Box n'existe pas.");
+    return b ? ok({ reference: b.reference, device_id: b.device_id, serial: b.serial, qr: b.reference }) : refus(404, "Cette Box n'existe pas.");
   },
   'GET /tarifs/plans/tous': () => ok(etat.plans),
   'GET /tarifs/plans': () => ok(etat.plans.filter((p) => p.public_visibility && !p.legacy_flag && !p.effective_to)),

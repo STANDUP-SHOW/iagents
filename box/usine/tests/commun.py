@@ -61,7 +61,7 @@ def emettre(r: dict) -> None:
 def arguments(description: str) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=description)
     p.add_argument("--profil-materiel", required=True, help="box/materiel/<id>.json")
-    p.add_argument("--profil-os", required=True, help="box/profils/<gamme>.json")
+    p.add_argument("--services", default="/opt/iagent/SERVICES.json", help="box/os/systemd/SERVICES.json : services actifs et kiosque, communs à toutes les Stations")
     p.add_argument("--inventaire", required=True, help="inventaire JSON produit par `iagent-device inventaire`")
     p.add_argument("--etat", default="/var/lib/iagent", help="dossier d'état de la Box")
     p.add_argument("--plateforme", default="", help="adresse https du Control Plane (lue dans /etc/iagent/device.json sinon)")

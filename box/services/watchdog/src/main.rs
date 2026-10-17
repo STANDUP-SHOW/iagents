@@ -4,7 +4,7 @@
 //! qu'il ne fait pas, c'est compter : trois échecs du même service en dix
 //! minutes veulent dire que la relance ne soigne rien, et quelqu'un doit le
 //! savoir. Le watchdog lit `systemctl show` toutes les trente secondes pour les
-//! services actifs du profil, garde une fenêtre glissante par service, et écrit
+//! services actifs de SERVICES.json, garde une fenêtre glissante par service, et écrit
 //! une alerte dans /var/lib/iagent/alertes.json, que iagent-device porte dans sa
 //! télémétrie. Il ne relance rien lui-même : systemd s'en charge, et deux
 //! mains sur le même service se gêneraient. La règle de comptage est pure et
@@ -77,14 +77,14 @@ pub fn lire_show(sortie: &str, quand_s: i64) -> Option<Observation> {
     Some(Observation { quand_s, relances: relances?, actif: actif? })
 }
 
-fn services_du_profil() -> Vec<String> {
-    let conf = PathBuf::from(std::env::var("IAGENT_CONF").unwrap_or_else(|_| "/etc/iagent".to_string()));
-    let profils = PathBuf::from(std::env::var("IAGENT_PROFILS").unwrap_or_else(|_| "/opt/iagent/profils".to_string()));
-    let profil = fs::read_to_string(conf.join("profil")).map(|s| s.trim().to_string()).unwrap_or_else(|_| "business".to_string());
-    fs::read_to_string(profils.join(format!("{}.json", profil)))
+/// The services every Station runs (box/os/systemd/SERVICES.json, "actifs"): one factory
+/// image for every Station (max, 17/10/2026), so the watchdog no longer reads a profile.
+fn services_surveilles() -> Vec<String> {
+    let chemin = std::env::var("IAGENT_SERVICES").unwrap_or_else(|_| "/opt/iagent/SERVICES.json".to_string());
+    fs::read_to_string(chemin)
         .ok()
         .and_then(|t| serde_json::from_str::<Value>(&t).ok())
-        .and_then(|p| p["services_actifs"].as_array().map(|a| a.iter().filter_map(|s| s.as_str().map(str::to_string)).filter(|s| s != "iagent-watchdog" && s != "iagent-commander").collect()))
+        .and_then(|s| s["actifs"].as_array().map(|a| a.iter().filter_map(|s| s.as_str().map(str::to_string)).filter(|s| s != "iagent-watchdog" && s != "iagent-commander").collect()))
         .unwrap_or_else(|| vec!["iagent-device".to_string()])
 }
 
@@ -103,7 +103,7 @@ fn main() {
     let mut fenetres: BTreeMap<String, Fenetre> = BTreeMap::new();
     loop {
         let quand_s = chrono::Utc::now().timestamp();
-        for service in services_du_profil() {
+        for service in services_surveilles() {
             let sortie = Command::new("systemctl").args(["show", "-p", "NRestarts,ActiveState", &format!("{}.service", service)]).output().ok().map(|o| String::from_utf8_lossy(&o.stdout).to_string()).unwrap_or_default();
             let Some(o) = lire_show(&sortie, quand_s) else { continue };
             let f = fenetres.entry(service.clone()).or_default();

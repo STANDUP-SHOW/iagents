@@ -74,7 +74,7 @@ try {
 
   // Fleet: a Box's sheet, and a command left waiting for a second person.
   await page.goto(`http://127.0.0.1:${PORT_PAGE}/#/flotte`);
-  await page.locator('tr', { hasText: 'IA-FR-CMD-00000001' }).getByRole('button', { name: 'Ouvrir' }).click();
+  await page.locator('tr', { hasText: 'IA-FR-STN-00000001' }).getByRole('button', { name: 'Ouvrir' }).click();
   await page.getByText('Fiche de la Box').waitFor();
   await capturer('flotte-fiche');
 

@@ -4,16 +4,16 @@
 // mêmes fichiers pour comparer l'inventaire ; aucun des deux ne recopie un seuil.
 // JSON plutôt que YAML, exprès : la plateforme tourne aussi chez Cloudflare,
 // où rien ne se lit sur disque et où seul un import JSON passe au build.
-import bosgameM4Neo from './bosgame-m4-neo-v1.json' with { type: 'json' };
-import bosgameM4NeoPro from './bosgame-m4-neo-pro-v1.json' with { type: 'json' };
-import exr1HomeV1 from './exr1-home-v1.json' with { type: 'json' };
+import station32 from './station-32-v1.json' with { type: 'json' };
+import station64 from './station-64-v1.json' with { type: 'json' };
+import station64Plus from './station-64-plus-v1.json' with { type: 'json' };
 import vmQemu from './vm-qemu.json' with { type: 'json' };
 
 export type ProfilMateriel = {
   id: string;
   nom: string;
   /** Gammes que cette machine peut servir. */
-  gammes: ('home' | 'pro' | 'business')[];
+  gammes: ('home' | 'business' | 'enterprise')[];
   cpu: { modele_regex: string; coeurs_min: number };
   /** Tailles de mémoire acceptées, en Go (une machine est vendue en plusieurs configurations). */
   memoire_go: number[];
@@ -31,7 +31,7 @@ export type ProfilMateriel = {
   a_confirmer: boolean;
 };
 
-export const PROFILS_MATERIEL: readonly ProfilMateriel[] = [bosgameM4Neo, bosgameM4NeoPro, exr1HomeV1, vmQemu] as ProfilMateriel[];
+export const PROFILS_MATERIEL: readonly ProfilMateriel[] = [station32, station64, station64Plus, vmQemu] as ProfilMateriel[];
 
 export function profilMateriel(id: string): ProfilMateriel | null {
   return PROFILS_MATERIEL.find((p) => p.id === id) ?? null;

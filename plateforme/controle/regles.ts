@@ -4,7 +4,7 @@
 
 import { depot } from '../depot.ts';
 import catalogueJson from '../../catalogue/catalogue.json' with { type: 'json' };
-import type { Box, RapportUsine, SkillPack, StatutBox } from '../modele.ts';
+import type { RapportUsine, SkillPack, StatutBox } from '../modele.ts';
 import { profilMateriel } from '../../box/materiel/index.ts';
 
 type StatutSkill = SkillPack['validation_status'];
@@ -39,20 +39,18 @@ export const STATUTS_ATTRIBUABLES: StatutBox[] = ['stock', 'qualifiee'];
 export const STATUTS_FERMES: StatutBox[] = ['suspendue', 'restituee', 'remplacee'];
 
 /**
- * The code of each gamme in the commercial reference printed on the label
- * (brief §12, codes chosen by max on 14/10/2026 after the names Home Box, Pro Box,
- * Business Box): `IA-FR-HOME-00000128`, `IA-FR-PRO-00000042`, `IA-FR-BUS-00000127`.
- * The brief's `CMD` is gone: "Commander" is the desktop application, not a Box.
+ * The commercial reference printed on the label (brief §12): `IA-FR-STN-00000127`.
+ * One series for every iAgent Station (max, 17/10/2026): the label is printed at
+ * the factory, before the profile (home, business, enterprise) is set, so the
+ * reference cannot carry it. The counter is kept by the platform in
+ * `compteurs/reference-box`.
  */
-export const CODE_GAMME = { home: 'HOME', pro: 'PRO', business: 'BUS' } as const satisfies Record<Box['gamme'], string>;
-
-/** The reference of the n-th Box of a gamme; the counter is per gamme, kept by the platform in `compteurs/reference-box`. */
-export function referenceBox(gamme: Box['gamme'], numero: number): string {
+export function referenceBox(numero: number): string {
   if (!Number.isInteger(numero) || numero < 1 || numero > 99_999_999) throw new Error(`Numéro de Box hors bornes : ${numero}.`);
-  return `IA-FR-${CODE_GAMME[gamme]}-${String(numero).padStart(8, '0')}`;
+  return `IA-FR-STN-${String(numero).padStart(8, '0')}`;
 }
 
-export const REFERENCE_BOX = /^IA-FR-(HOME|PRO|BUS)-\d{8}$/;
+export const REFERENCE_BOX = /^IA-FR-STN-\d{8}$/;
 
 /**
  * The verdict of a factory report, derived from its tests and the hardware

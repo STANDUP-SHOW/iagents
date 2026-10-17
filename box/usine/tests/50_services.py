@@ -1,5 +1,5 @@
-"""Test d'usine « services » (brief §16, §30) : les services actifs du profil
-d'OS tournent (systemctl show), iagent-commander excepté en mode usine, où sa
+"""Test d'usine « services » (brief §16, §30) : les services actifs de SERVICES.json
+(communs à toutes les Stations) tournent (systemctl show), iagent-commander excepté en mode usine, où sa
 condition l'arrête exprès tant que la Box n'est pas qualifiée."""
 import os
 import sys
@@ -23,8 +23,8 @@ def etat_de(nom: str) -> dict | None:
 if __name__ == "__main__":
     debut = time.monotonic()
     args = arguments(__doc__)
-    profil = charger(args.profil_os)
-    attendus = list(profil["services_actifs"])
+    services = charger(args.services)
+    attendus = list(services["actifs"])
     etats = {nom: etat_de(nom) for nom in attendus}
     if all(e is None for e in etats.values()):
         emettre(resultat("services", LIBELLE, "non_constate", debut, "systemctl ne répond pas : hors d'un système installé ?"))

@@ -106,9 +106,10 @@ que la Box (Factory Installer, fusionné dans `main` par les PR #72 et #75) doit
   Cloudflare : l'équipe Zero Trust, Google comme méthode de connexion, la liste
   des adresses admises ; la double authentification est celle du compte Google
   de chaque administrateur, à activer. Rien de ceci n'est codé.
-- **Gammes et noms** : Home Box 16 Go, Pro Box 32 Go, Business Box 64 Go
-  (§2.3 et §2.4 tranchés) ; Pro Box = BOSGAME M4 Neo en 32 Go, 4 agents ;
-  références `IA-FR-HOME-…`, `IA-FR-PRO-…`, `IA-FR-BUS-…`. Fait dans le code.
+- **Gammes et noms** : Home Box 16 Go, Pro Box 32 Go, Business Box 64 Go.
+  **Remplacé le 17/10/2026** : la Station fait foi, SKU 32 / 64 / 64+, profils
+  home, business, enterprise posés au provisioning, référence `IA-FR-STN-…`
+  (`docs/box-usine.md` §3, `quantique-station.md` §3).
 - **Applications** : Web App, Desktop Commander (le client sur sa Box), et trois
   Desktop Admin : **Admin Global** (côté iAgent : clients, agents, facturation,
   ce que les documents appellent Platform Commander), **Admin Box** (la flotte et

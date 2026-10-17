@@ -43,7 +43,7 @@ export function Etiquette({ etiquette }) {
   return (
     <div className="etiquette-box">
       <div dangerouslySetInnerHTML={{ __html: qrSvg(etiquette.qr ?? etiquette.reference, 140) }} />
-      <p><strong>{etiquette.reference}</strong><br /><span className="petit">{etiquette.serial} · {etiquette.gamme}</span></p>
+      <p><strong>{etiquette.reference}</strong><br /><span className="petit">{etiquette.serial}</span></p>
       <Bouton onClick={() => (typeof window !== 'undefined' ? window.print() : null)}>Imprimer l'étiquette</Bouton>
     </div>
   );
@@ -70,15 +70,17 @@ export function santeDe(sante) {
   return `${morceaux.join(' · ') || 'aucune mesure'} — vue ${dateHeure(sante.vu_le)}`;
 }
 
+const PROFILS = [['home', 'Home'], ['business', 'Business'], ['enterprise', 'Enterprise']];
+const optionsProfil = PROFILS.map(([v, l]) => <option key={v} value={v}>{l}</option>);
 function Provisionner({ onFini }) {
-  const [f, setF] = useState({ serial: '', gamme: 'business', os: 'ubuntu-core', version_desktop: '', identite_publique: '' });
+  const [f, setF] = useState({ serial: '', gamme: '', os: 'ubuntu-core', version_desktop: '', identite_publique: '' });
   const [etat, lancer] = useAction();
   const poser = (k) => (e) => setF({ ...f, [k]: e.target.value });
   return (
-    <form className="formulaire" onSubmit={(e) => { e.preventDefault(); lancer('provisionnerBox', { corps: f }, onFini); }}>
+    <form className="formulaire" onSubmit={(e) => { e.preventDefault(); lancer('provisionnerBox', { corps: { ...f, gamme: f.gamme || null } }, onFini); }}>
       <div className="grille">
         <Champ libelle="Numéro de série"><input value={f.serial} onChange={poser('serial')} required /></Champ>
-        <Champ libelle="Gamme"><select value={f.gamme} onChange={poser('gamme')}><option value="home">Home Box</option><option value="pro">Pro Box</option><option value="business">Business Box</option></select></Champ>
+        <Champ libelle="Profil" aide="Le profil se pose d'habitude à l'attribution."><select value={f.gamme} onChange={poser('gamme')}><option value="">À poser à l'attribution</option>{optionsProfil}</select></Champ>
         <Champ libelle="Système"><input value={f.os} onChange={poser('os')} required /></Champ>
         <Champ libelle="Version du Desktop"><input value={f.version_desktop} onChange={poser('version_desktop')} required /></Champ>
       </div>
@@ -90,10 +92,10 @@ function Provisionner({ onFini }) {
 }
 
 function Attribuer({ boxes, tenants, onFini }) {
-  const [f, setF] = useState({ id: '', tenant_id: '', plan_id: '' });
+  const [f, setF] = useState({ id: '', tenant_id: '', plan_id: '', gamme: '' });
   const [etat, lancer] = useAction();
   return (
-    <form className="formulaire" onSubmit={(e) => { e.preventDefault(); lancer('attribuerBox', { params: { id: f.id }, corps: { tenant_id: f.tenant_id, plan_id: f.plan_id } }, onFini); }}>
+    <form className="formulaire" onSubmit={(e) => { e.preventDefault(); lancer('attribuerBox', { params: { id: f.id }, corps: { tenant_id: f.tenant_id, plan_id: f.plan_id, gamme: f.gamme || null } }, onFini); }}>
       <div className="grille">
         <Champ libelle="Box"><select value={f.id} onChange={(e) => setF({ ...f, id: e.target.value })} required>
           <option value="">Choisir…</option>
@@ -101,6 +103,7 @@ function Attribuer({ boxes, tenants, onFini }) {
         </select></Champ>
         <Champ libelle="Client"><ChoixClient tenants={tenants} valeur={f.tenant_id} onChange={(v) => setF({ ...f, tenant_id: v })} tous="Choisir…" requis /></Champ>
         <Champ libelle="Plan"><input value={f.plan_id} onChange={(e) => setF({ ...f, plan_id: e.target.value })} placeholder="box-commander-36" required /></Champ>
+        <Champ libelle="Profil" aide="Home, Business ou Enterprise, selon ce que le matériel sert."><select value={f.gamme} onChange={(e) => setF({ ...f, gamme: e.target.value })}><option value="">Celui de la Box, s'il est posé</option>{optionsProfil}</select></Champ>
       </div>
       <div className="rangee"><button type="submit" className="bouton bouton-principal" disabled={etat.statut === 'en-cours'}>Attribuer</button></div>
       <Resultat etat={etat} succes={(c) => `Box ${c?.device_id ?? f.id} attribuée, statut « ${c?.statut ?? '?'} ».`} />
@@ -189,7 +192,7 @@ export default function Boxes({ boxInitiale = '' }) {
                 { titre: 'Référence', rendu: (b) => <strong>{b.reference ?? '—'}</strong> },
                 { titre: 'Série', rendu: (b) => <><strong>{b.serial}</strong><br /><code>{b.device_id}</code></> },
                 { titre: 'Client', rendu: (b) => (b.tenant_id ? nomDe(b.tenant_id) : <span className="discret">en stock</span>) },
-                { titre: 'Gamme', rendu: (b) => b.gamme },
+                { titre: 'Profil', rendu: (b) => b.gamme ?? 'à poser' },
                 { titre: 'Statut', rendu: (b) => <Pastille ton={TON_STATUT[b.statut] ?? 'neutre'}>{b.statut}</Pastille> },
                 { titre: 'Version', rendu: (b) => `${b.version_desktop ?? '—'} · ${b.os ?? '—'}` },
                 { titre: 'Plan', rendu: (b) => b.plan_id ?? '—' },

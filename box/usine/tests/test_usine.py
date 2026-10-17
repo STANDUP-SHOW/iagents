@@ -25,51 +25,45 @@ from regles import comparer_materiel, juger_services, niveau_rms, verdict, verif
 BOX = ICI.parents[1]
 PROFILS = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in (BOX / "materiel").glob("*.json") if p.name != "schema.json"}
 
-INVENTAIRE_BOSGAME = {
+INVENTAIRE_STATION = {
     "cpu": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics", "coeurs": 8, "memoire_go": 62.7,
     "disque": {"modele": "Samsung SSD 980 PRO 1TB", "capacite_go": 1000},
-    "mac": {"eth0": "a8:b1:c2:d3:e4:f5", "eth1": "a8:b1:c2:d3:e4:f6", "wifi": "a8:b1:c2:d3:e4:f7"},
+    "mac": {"eth0": "a8:b1:c2:d3:e4:f5", "eth1": None, "wifi": "a8:b1:c2:d3:e4:f7"},
     "bios": {"fournisseur": "American Megatrends", "version": "1.07", "date": "2026-06-02"},
-    "tpm": {"present": True, "version": "2.0"}, "uefi": True, "secure_boot": True, "releve_le": "2026-10-11T09:00:00Z",
+    "tpm": {"present": True, "version": "2.0"}, "uefi": True, "secure_boot": True, "releve_le": "2026-10-17T09:00:00Z",
 }
 
 
 class Materiel(unittest.TestCase):
-    def test_bosgame_conforme(self):
-        self.assertEqual(comparer_materiel(INVENTAIRE_BOSGAME, PROFILS["bosgame-m4-neo-v1"]), [])
+    # max, 17/10/2026 : une seule machine, l'iAgent Station, en SKU 32 (32 Go, 1 To), 64 (64 Go, 1 To), 64+ (64 Go, 2 To).
+    def test_station_64_conforme(self):
+        self.assertEqual(comparer_materiel(INVENTAIRE_STATION, PROFILS["station-64-v1"]), [])
 
-    def test_memoire_32_sur_profil_64_refusee(self):
-        inv = {**INVENTAIRE_BOSGAME, "memoire_go": 31.2}
-        ecarts = comparer_materiel(inv, PROFILS["bosgame-m4-neo-v1"])
+    def test_memoire_32_sur_station_64_refusee(self):
+        ecarts = comparer_materiel({**INVENTAIRE_STATION, "memoire_go": 31.2}, PROFILS["station-64-v1"])
         self.assertTrue(any("mémoire" in e for e in ecarts), ecarts)
 
     def test_tolerance_memoire_lue_sous_le_nominal(self):
-        inv = {**INVENTAIRE_BOSGAME, "memoire_go": 61.0}
-        self.assertEqual(comparer_materiel(inv, PROFILS["bosgame-m4-neo-v1"]), [])
+        self.assertEqual(comparer_materiel({**INVENTAIRE_STATION, "memoire_go": 61.0}, PROFILS["station-64-v1"]), [])
 
-    def test_un_seul_ethernet_sur_profil_a_deux(self):
-        inv = {**INVENTAIRE_BOSGAME, "mac": {**INVENTAIRE_BOSGAME["mac"], "eth1": None}}
-        self.assertTrue(any("Ethernet" in e for e in comparer_materiel(inv, PROFILS["bosgame-m4-neo-v1"])))
+    def test_station_32_et_64_plus(self):
+        self.assertEqual(comparer_materiel({**INVENTAIRE_STATION, "memoire_go": 30.9}, PROFILS["station-32-v1"]), [])
+        self.assertNotEqual(comparer_materiel(INVENTAIRE_STATION, PROFILS["station-32-v1"]), [], "64 Go n'est pas une Station 32")
+        self.assertNotEqual(comparer_materiel(INVENTAIRE_STATION, PROFILS["station-64-plus-v1"]), [], "un disque de 1 To n'est pas une Station 64+")
+        self.assertEqual(comparer_materiel({**INVENTAIRE_STATION, "disque": {"modele": "NVMe 2TB", "capacite_go": 2000}}, PROFILS["station-64-plus-v1"]), [])
+
+    def test_sans_ethernet_refuse(self):
+        inv = {**INVENTAIRE_STATION, "mac": {**INVENTAIRE_STATION["mac"], "eth0": None}}
+        self.assertTrue(any("Ethernet" in e for e in comparer_materiel(inv, PROFILS["station-64-v1"])))
 
     def test_tpm_absent_et_secure_boot_inactif(self):
-        inv = {**INVENTAIRE_BOSGAME, "tpm": {"present": False, "version": None}, "secure_boot": False}
-        ecarts = comparer_materiel(inv, PROFILS["bosgame-m4-neo-v1"])
+        inv = {**INVENTAIRE_STATION, "tpm": {"present": False, "version": None}, "secure_boot": False}
+        ecarts = comparer_materiel(inv, PROFILS["station-64-v1"])
         self.assertEqual(len([e for e in ecarts if "TPM" in e]), 1)
         self.assertEqual(len([e for e in ecarts if "Secure Boot" in e]), 1)
 
-    def test_home_box_exige_16_go(self):
-        # max, 14/10/2026 : Home Box 16 Go, Pro Box 32 Go, Business Box 64 Go.
-        inv = {**INVENTAIRE_BOSGAME, "cpu": "Intel N305", "memoire_go": 15.6, "mac": {"eth0": "00:11:22:33:44:55", "eth1": None, "wifi": "00:11:22:33:44:56"}}
-        self.assertEqual(comparer_materiel(inv, PROFILS["exr1-home-v1"]), [])
-        self.assertNotEqual(comparer_materiel({**inv, "memoire_go": 31.2}, PROFILS["exr1-home-v1"]), [])
-        self.assertNotEqual(comparer_materiel({**inv, "memoire_go": 8}, PROFILS["exr1-home-v1"]), [])
-
-    def test_pro_box_bosgame_32_go(self):
-        self.assertEqual(comparer_materiel({**INVENTAIRE_BOSGAME, "memoire_go": 30.9}, PROFILS["bosgame-m4-neo-pro-v1"]), [])
-        self.assertNotEqual(comparer_materiel(INVENTAIRE_BOSGAME, PROFILS["bosgame-m4-neo-pro-v1"]), [], "64 Go n'est pas une Pro Box")
-
     def test_vm_sans_secure_boot_conforme(self):
-        inv = {**INVENTAIRE_BOSGAME, "cpu": "QEMU Virtual CPU", "coeurs": 2, "memoire_go": 7.8, "disque": {"modele": "QEMU", "capacite_go": 64},
+        inv = {**INVENTAIRE_STATION, "cpu": "QEMU Virtual CPU", "coeurs": 2, "memoire_go": 7.8, "disque": {"modele": "QEMU", "capacite_go": 64},
                "mac": {"eth0": "52:54:00:12:34:56", "eth1": None, "wifi": None}, "secure_boot": False}
         self.assertEqual(comparer_materiel(inv, PROFILS["vm-qemu"]), [])
 
