@@ -16,6 +16,7 @@ mod modele;
 mod navigateur;
 mod web_operator;
 mod web_operator_observation;
+mod web_operator_actions;
 mod tache;
 mod equipe;
 mod document;
@@ -906,6 +907,7 @@ fn main() {
             navigateur::navigateur_oublier_site,
             navigateur::navigateur_effacer_sessions,
             web_operator_observation::navigateur_observer,
+            web_operator_actions::navigateur_action,
             mise_a_jour::mise_a_jour_etat,
             plateforme::plateforme_etat,
             plateforme::plateforme_identite,
