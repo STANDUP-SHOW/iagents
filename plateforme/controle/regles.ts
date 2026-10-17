@@ -4,20 +4,25 @@
 
 import { depot } from '../depot.ts';
 import catalogueJson from '../../catalogue/catalogue.json' with { type: 'json' };
-import type { Box, SkillPack } from '../modele.ts';
+import type { Box, RapportUsine, SkillPack, StatutBox } from '../modele.ts';
+import { profilMateriel } from '../../box/materiel/index.ts';
 
-type StatutBox = Box['statut'];
 type StatutSkill = SkillPack['validation_status'];
 
 /**
- * Allowed Box transitions. Anything not listed is refused. `stock -> provisionnee`
- * only happens through /attribuer (it needs a tenant); restituee and remplacee
- * are final: a returned or replaced Box never runs agents again under its old
- * identity.
+ * Allowed Box transitions. Anything not listed is refused. `usine -> qualifiee`
+ * only happens through a passing factory report (POST /controle/box/usine/rapport);
+ * `stock | qualifiee -> provisionnee` only through /attribuer (it needs a tenant);
+ * `expediee -> active` also happens on the first telemetry at the client's.
+ * restituee and remplacee are final: a returned or replaced Box never runs agents
+ * again under its old identity.
  */
 export const TRANSITIONS_BOX: Record<StatutBox, StatutBox[]> = {
+  usine: [],
+  qualifiee: ['stock'],
   stock: [],
-  provisionnee: ['active', 'suspendue', 'restituee'],
+  provisionnee: ['expediee', 'active', 'suspendue', 'restituee'],
+  expediee: ['active', 'restituee'],
   active: ['suspendue', 'restituee', 'remplacee'],
   suspendue: ['active', 'restituee', 'remplacee'],
   restituee: [],
@@ -25,7 +30,48 @@ export const TRANSITIONS_BOX: Record<StatutBox, StatutBox[]> = {
 };
 
 /** Statuses reachable through POST /controle/boxes/:id/statut (contract). */
-export const STATUTS_DEMANDABLES: StatutBox[] = ['active', 'suspendue', 'restituee', 'remplacee'];
+export const STATUTS_DEMANDABLES: StatutBox[] = ['stock', 'expediee', 'active', 'suspendue', 'restituee', 'remplacee'];
+
+/** Statuses from which /attribuer may take a Box: identified, qualified or not, but without a tenant. */
+export const STATUTS_ATTRIBUABLES: StatutBox[] = ['stock', 'qualifiee'];
+
+/** A Box whose signed requests are refused outright (http.ts): nothing of it runs any more. */
+export const STATUTS_FERMES: StatutBox[] = ['suspendue', 'restituee', 'remplacee'];
+
+/**
+ * The commercial reference printed on the label (brief §12): `IA-FR-CMD-00000127`
+ * for business, `IA-FR-HOME-00000128` for home. `CMD` is the brief's own code
+ * for the business Box ("Commander" being the desktop application, not a gamme).
+ * The counter is per gamme, kept by the platform in `compteurs/reference-box`.
+ */
+export function referenceBox(gamme: Box['gamme'], numero: number): string {
+  if (!Number.isInteger(numero) || numero < 1 || numero > 99_999_999) throw new Error(`Numéro de Box hors bornes : ${numero}.`);
+  return `IA-FR-${gamme === 'business' ? 'CMD' : 'HOME'}-${String(numero).padStart(8, '0')}`;
+}
+
+export const REFERENCE_BOX = /^IA-FR-(CMD|HOME)-\d{8}$/;
+
+/**
+ * The verdict of a factory report, derived from its tests and the hardware
+ * profile's obligatory tests: `passe` only when no test failed and every
+ * obligatory test is present and passed. A test `non_constate` is honest about
+ * what the bench could not see, and it is enough to refuse the qualification when
+ * the profile demands that test. Computed here, never read from the report.
+ */
+export function verdictRapport(
+  tests: RapportUsine['tests'],
+  testsObligatoires: readonly string[],
+): { verdict: RapportUsine['verdict']; manquants: string[]; echoues: string[] } {
+  const parId = new Map(tests.map((t) => [t.id, t.verdict]));
+  const echoues = tests.filter((t) => t.verdict === 'echec').map((t) => t.id);
+  const manquants = testsObligatoires.filter((id) => parId.get(id) !== 'passe');
+  return { verdict: echoues.length === 0 && manquants.length === 0 ? 'passe' : 'echec', manquants, echoues };
+}
+
+/** The obligatory tests of a hardware profile, or null when the profile is unknown to the repository. */
+export function testsObligatoiresDe(profilMaterielId: string): readonly string[] | null {
+  return profilMateriel(profilMaterielId)?.tests_obligatoires ?? null;
+}
 
 /** Review circuit of a Skill Pack: candidat -> en-revue -> valide | rejete, valide -> retire. */
 export const TRANSITIONS_SKILL: Record<StatutSkill, StatutSkill[]> = {

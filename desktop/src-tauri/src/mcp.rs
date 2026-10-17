@@ -162,6 +162,11 @@ pub struct Outil {
     /// qu'il modifie : mieux vaut demander une validation de trop qu'écrire
     /// chez le client sans le lui dire.
     pub lecture_seule: bool,
+    /// Ce que l'outil attend, tel que le serveur l'écrit (`inputSchema`). C'est
+    /// ce que le modèle reçoit pour savoir comment l'appeler : sans lui, il
+    /// devinerait le nom des arguments.
+    #[serde(default)]
+    pub schema: serde_json::Value,
 }
 
 // ---------------------------------------------------------------------------
@@ -349,6 +354,10 @@ impl Client {
                             .and_then(serde_json::Value::as_bool)
                             .unwrap_or(false)
                             || affirmees.contains(&nom),
+                        schema: o
+                            .get("inputSchema")
+                            .cloned()
+                            .unwrap_or_else(|| serde_json::json!({ "type": "object" })),
                         nom,
                         }
                     })
@@ -423,7 +432,14 @@ impl Client {
         let params = serde_json::json!({ "name": outil, "arguments": arguments });
         match self.demander("tools/call", params) {
             Ok(resultat) => {
-                self.noter(agent, outil, true, "");
+                // Un outil peut répondre et refuser quand même (`isError`) : un
+                // chemin hors des dossiers permis, un fichier absent. Le journal
+                // le dit, sinon le client lirait « fait » pour ce qui n'a pas eu lieu.
+                if resultat.get("isError").and_then(serde_json::Value::as_bool) == Some(true) {
+                    self.noter(agent, outil, false, "l'outil a refusé la demande");
+                } else {
+                    self.noter(agent, outil, true, "");
+                }
                 Ok(resultat)
             }
             Err(refus) => {
@@ -480,6 +496,15 @@ pub struct ServeurDeclare {
     /// serveur qui grandit entre deux lancements n'élargit rien.
     #[serde(default)]
     pub outils: Vec<OutilDeclare>,
+    /// Vrai quand le serveur reçoit en arguments les dossiers où l'agent a le
+    /// droit de travailler (le sien, puis ceux que le client lui a désignés).
+    ///
+    /// C'est le cas du serveur de fichiers de référence : sans dossier au
+    /// lancement, il démarre, annonce ses outils, puis refuse tout chemin —
+    /// l'agent aurait des outils et rien à ouvrir. Les dossiers ne s'écrivent
+    /// pas dans la déclaration parce qu'ils changent d'un agent à l'autre.
+    #[serde(default, rename = "dossiersDeLAgent")]
+    pub dossiers_de_l_agent: bool,
 }
 
 /// Un outil retenu, tel que le dépôt le déclare.
@@ -646,6 +671,28 @@ fn adresse_recevable(nom: &str, url: &str) -> Result<(), String> {
 /// canal. C'est ce qui rend le délai tenable : lire directement sur la sortie du
 /// fils bloquerait l'application jusqu'à ce qu'il parle, et un serveur qui ne
 /// parle jamais figerait l'écran sans rien pour l'interrompre.
+/// La commande qui lance un serveur, telle que le système l'entend.
+///
+/// Sous Windows, `npx` et `uvx` ne sont pas des exécutables mais des scripts
+/// (`npx.cmd`) : `Command::new("npx")` ne les trouve pas, et le serveur de
+/// fichiers — le seul qu'un agent puisse employer aujourd'hui — ne se serait
+/// jamais lancé sur le poste du client. `cmd /C` résout le nom comme une
+/// invite de commandes le ferait. La fenêtre de console est cachée : sans
+/// `CREATE_NO_WINDOW`, chaque appel d'outil ferait clignoter un terminal noir.
+#[cfg(windows)]
+fn commande_du_systeme(programme: &str) -> std::process::Command {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let mut c = std::process::Command::new("cmd");
+    c.arg("/C").arg(programme).creation_flags(CREATE_NO_WINDOW);
+    c
+}
+
+#[cfg(not(windows))]
+fn commande_du_systeme(programme: &str) -> std::process::Command {
+    std::process::Command::new(programme)
+}
+
 pub struct ProcessusTransport {
     fils: std::process::Child,
     entree: Option<std::process::ChildStdin>,
@@ -662,7 +709,7 @@ impl ProcessusTransport {
     ) -> Result<Self, String> {
         declaration_recevable(serveur)?;
 
-        let mut commande = std::process::Command::new(&serveur.commande);
+        let mut commande = commande_du_systeme(&serveur.commande);
         commande
             .args(&serveur.arguments)
             .stdin(std::process::Stdio::piped())
@@ -1274,6 +1321,12 @@ fn besoins_de_la_fiche(fiche_id: &str) -> Result<Vec<String>, String> {
 ///
 /// C'est le champ dérivé `sert`, calculé à l'import par `outils/capacites.ts` :
 /// la jointure se fait là-bas une fois pour toutes, pas ici à chaque appel.
+///
+/// **Seuls les connecteurs activables comptent** : la règle du dépôt (éditeur,
+/// authentification, permissions, coût, risque identifiés) ne valait jusqu'ici
+/// que pour le bouton de l'écran, et un serveur rattaché à un connecteur fermé
+/// restait à la portée de l'agent par cette porte-ci. Le bloc `activation` est
+/// recalculé par `npm run controle`, qui refuse un catalogue où il diverge.
 fn connecteurs_servant(besoins: &[String]) -> Result<Vec<String>, String> {
     let brut = crate::fiches::lire_referentiel("connecteurs".to_string())?;
     let catalogue: serde_json::Value =
@@ -1294,6 +1347,12 @@ fn connecteurs_servant(besoins: &[String]) -> Result<Vec<String>, String> {
                         .any(|capacite| besoins.iter().any(|b| b == capacite))
                 })
                 .unwrap_or(false)
+        })
+        .filter(|c| {
+            c.get("activation")
+                .and_then(|a| a.get("activable"))
+                .and_then(serde_json::Value::as_bool)
+                == Some(true)
         })
         .filter_map(|c| c.get("id").and_then(serde_json::Value::as_str))
         .map(str::to_string)
@@ -1468,6 +1527,287 @@ pub fn mcp_appeler(
     let resultat = resultat.map_err(|refus| refus.en_clair())?;
     tenue?;
     Ok(resultat)
+}
+
+// ---------------------------------------------------------------------------
+// L'atelier : les outils d'un agent le temps d'une conversation
+// ---------------------------------------------------------------------------
+
+/// Un outil tel que le modèle le reçoit : un nom qu'il peut écrire, ce que
+/// l'outil fait, et ce qu'il attend.
+#[derive(Debug, Clone, Serialize)]
+pub struct OutilOffert {
+    /// `serveur__outil`, réduit aux caractères qu'acceptent les deux voies
+    /// (lettres, chiffres, `_` et `-`, 64 au plus).
+    pub nom_pour_le_modele: String,
+    pub serveur: String,
+    pub outil: String,
+    pub description: String,
+    pub schema: serde_json::Value,
+    pub lecture_seule: bool,
+}
+
+/// Ce dont une boucle de conversation a besoin pour faire travailler un outil.
+///
+/// Écrit en trait pour que les deux voies (`llm.rs` pour l'API, `modele.rs`
+/// pour le moteur local) s'éprouvent au banc sans lancer un seul serveur, et
+/// qu'elles passent toutes les deux par le même portier.
+pub trait Executeur: Send {
+    fn offerts(&self) -> Vec<OutilOffert>;
+    /// Rend le texte à remettre au modèle, et vrai si c'est un échec. Un échec
+    /// n'arrête pas la conversation : le modèle l'apprend et le dit au client.
+    fn executer(&mut self, nom_pour_le_modele: &str, arguments: serde_json::Value) -> (String, bool);
+    /// Ce qui a été fait, en une ligne par appel, pour l'écran.
+    fn resume(&self) -> Vec<String>;
+}
+
+/// Le nom d'un outil tel que le modèle peut l'écrire.
+pub fn nom_pour_le_modele(serveur: &str, outil: &str) -> String {
+    let brut = format!("{}__{}", serveur, outil);
+    brut.chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '_' || c == '-' { c } else { '_' })
+        .take(64)
+        .collect()
+}
+
+/// Ce que rend `tools/call`, ramené à du texte pour le modèle.
+///
+/// Le protocole rend une liste de morceaux ; seul le texte traverse. Une image
+/// ou une ressource est nommée plutôt que tue, pour que le modèle sache qu'il
+/// y avait quelque chose qu'il n'a pas vu.
+pub fn texte_du_resultat(resultat: &serde_json::Value) -> (String, bool) {
+    let erreur = resultat
+        .get("isError")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false);
+    let morceaux: Vec<String> = resultat
+        .get("content")
+        .and_then(serde_json::Value::as_array)
+        .map(|v| {
+            v.iter()
+                .map(|m| match m.get("type").and_then(serde_json::Value::as_str) {
+                    Some("text") => m
+                        .get("text")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("")
+                        .to_string(),
+                    Some(autre) => format!("[contenu de type {} non transmis]", autre),
+                    None => String::new(),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    let texte = morceaux.join("\n");
+    if texte.trim().is_empty() {
+        (
+            if erreur { "L'outil a échoué sans dire pourquoi." } else { "L'outil n'a rien rendu." }
+                .to_string(),
+            erreur,
+        )
+    } else {
+        (texte, erreur)
+    }
+}
+
+/// Les outils d'un agent, ouverts pour une conversation ou une tâche.
+///
+/// Les serveurs sont lancés une fois au début et arrêtés à la fin : le modèle
+/// appelle souvent plusieurs outils à la suite (lister un dossier, puis lire un
+/// fichier), et relancer `npx` à chaque fois coûterait des secondes par appel.
+/// Rien ne reste ouvert après : `fermer` est appelé dans tous les cas, et le
+/// `Drop` d'un client oublié coupe son processus.
+///
+/// **Aucun appel n'y est validé par le client.** Un outil qui modifie quelque
+/// chose est donc refusé par `Client::appeler`, et le refus — en français —
+/// revient au modèle, qui le dit. Valider un appel au milieu d'une
+/// conversation demande un aller-retour avec l'écran qui n'est pas écrit.
+pub struct Atelier {
+    prenom: String,
+    clients: Vec<Client>,
+    offerts: Vec<OutilOffert>,
+    resume: Vec<String>,
+    /// Les serveurs auxquels l'agent avait droit et qui n'ont pas pu s'ouvrir,
+    /// avec la raison. Un agent sans ses outils doit pouvoir le dire.
+    pub indisponibles: Vec<String>,
+}
+
+impl Atelier {
+    /// Ouvre les serveurs auxquels cet agent a droit, d'après sa fiche.
+    ///
+    /// Un serveur qui ne s'ouvre pas n'empêche pas les autres ni la
+    /// conversation : il est noté dans `indisponibles`.
+    pub fn ouvrir(fiche_id: &str, prenom: &str) -> Result<Atelier, String> {
+        let installation = crate::fiches::lire_installation()?;
+        if !est_embauche(&installation, prenom, fiche_id) {
+            return Err(format!(
+                "{} ne fait pas partie de vos agents, ou ce n'est pas son poste.",
+                prenom
+            ));
+        }
+        let utiles = connecteurs_servant(&besoins_de_la_fiche(fiche_id)?)?;
+        let mut clients = Vec::new();
+        let mut indisponibles = Vec::new();
+        for serveur in lire_serveurs()? {
+            // Pas de droit, pas de serveur : la plupart des fiches n'ont rien à
+            // faire de la plupart des serveurs, ce n'est pas une panne.
+            let Ok(autorisations) = autorisations_pour(&serveur, &utiles) else { continue };
+            let mut declare = serveur.declare.clone();
+            if declare.dossiers_de_l_agent {
+                match crate::tache::dossiers_de_l_agent(&installation, prenom, fiche_id) {
+                    Ok(dossiers) => {
+                        for d in dossiers {
+                            // Le serveur refuse un dossier qui n'existe pas ; le
+                            // dossier de l'agent se crée à la première écriture.
+                            let _ = std::fs::create_dir_all(&d);
+                            declare.arguments.push(d.display().to_string());
+                        }
+                    }
+                    Err(e) => {
+                        indisponibles.push(format!("{} : {}", declare.nom, e));
+                        continue;
+                    }
+                }
+            }
+            let affirmees: Vec<String> = declare
+                .outils
+                .iter()
+                .filter(|o| o.lecture_seule == Some(true))
+                .map(|o| o.nom.clone())
+                .collect();
+            let transport = match ouvrir_transport(
+                &declare,
+                &secrets_du_trousseau(&declare),
+                DELAI_PAR_DEFAUT,
+            ) {
+                Ok(t) => t,
+                Err(e) => {
+                    indisponibles.push(format!("{} : {}", declare.nom, e));
+                    continue;
+                }
+            };
+            let mut client = Client::nouveau(
+                &declare.nom,
+                transport,
+                autorisations,
+                Arc::new(AtomicBool::new(false)),
+            )
+            .avec_lectures_seules(affirmees);
+            match client.ouvrir() {
+                Ok(()) => clients.push(client),
+                Err(refus) => {
+                    client.arreter();
+                    indisponibles.push(format!("{} : {}", declare.nom, refus.en_clair()));
+                }
+            }
+        }
+        Ok(Atelier::depuis_clients(prenom, clients, indisponibles))
+    }
+
+    /// L'atelier fait de clients déjà ouverts. C'est ce qu'emploie le banc.
+    pub fn depuis_clients(prenom: &str, clients: Vec<Client>, indisponibles: Vec<String>) -> Atelier {
+        let offerts = clients
+            .iter()
+            .flat_map(|c| {
+                c.outils_permis().into_iter().map(move |o| OutilOffert {
+                    nom_pour_le_modele: nom_pour_le_modele(&c.serveur, &o.nom),
+                    serveur: c.serveur.clone(),
+                    outil: o.nom.clone(),
+                    description: o.description.clone(),
+                    schema: o.schema.clone(),
+                    lecture_seule: o.lecture_seule,
+                })
+            })
+            .collect();
+        Atelier { prenom: prenom.to_string(), clients, offerts, resume: Vec::new(), indisponibles }
+    }
+
+    /// Arrête les serveurs et écrit au journal de l'agent tout ce qui a été
+    /// tenté, abouti ou refusé.
+    pub fn fermer(mut self) -> Result<(), String> {
+        let mut appels = Vec::new();
+        for client in &mut self.clients {
+            appels.extend_from_slice(client.journal().appels());
+            client.arreter();
+        }
+        if appels.is_empty() {
+            return Ok(());
+        }
+        inscrire_au_journal(&self.prenom, &appels)
+    }
+
+    /// Les appels faits, pour le banc et pour `fermer`.
+    pub fn appels(&self) -> Vec<Appel> {
+        self.clients.iter().flat_map(|c| c.journal().appels().to_vec()).collect()
+    }
+}
+
+/// Un agent sans outil : la conversation d'avant, à l'identique.
+pub struct SansOutil;
+
+impl Executeur for SansOutil {
+    fn offerts(&self) -> Vec<OutilOffert> {
+        Vec::new()
+    }
+    fn executer(&mut self, nom: &str, _arguments: serde_json::Value) -> (String, bool) {
+        (format!("Aucun outil ne s'appelle « {} ».", nom), true)
+    }
+    fn resume(&self) -> Vec<String> {
+        Vec::new()
+    }
+}
+
+/// Ouvre l'atelier d'un agent hors du fil de l'écran : lancer `npx` peut
+/// prendre des secondes, et la première fois télécharger le serveur.
+///
+/// Ne rend jamais d'erreur : un agent dont les outils ne s'ouvrent pas parle
+/// quand même, et la raison est rendue pour qu'il puisse la dire.
+pub async fn atelier_pour(fiche_id: &str, prenom: &str) -> (Option<Atelier>, Vec<String>) {
+    let (f, p) = (fiche_id.to_string(), prenom.to_string());
+    match tokio::task::spawn_blocking(move || Atelier::ouvrir(&f, &p)).await {
+        Ok(Ok(atelier)) => {
+            let motifs = atelier.indisponibles.clone();
+            (Some(atelier), motifs)
+        }
+        Ok(Err(e)) => (None, vec![e]),
+        Err(_) => (None, vec!["les outils de l'agent n'ont pas pu s'ouvrir".to_string()]),
+    }
+}
+
+impl Executeur for Atelier {
+    fn offerts(&self) -> Vec<OutilOffert> {
+        self.offerts.clone()
+    }
+
+    fn executer(&mut self, nom: &str, arguments: serde_json::Value) -> (String, bool) {
+        let Some(offert) = self.offerts.iter().find(|o| o.nom_pour_le_modele == nom).cloned() else {
+            self.resume.push(format!("outil inconnu demandé : {}", nom));
+            return (format!("Aucun outil ne s'appelle « {} ».", nom), true);
+        };
+        let Some(client) = self.clients.iter_mut().find(|c| c.serveur == offert.serveur) else {
+            return (format!("Le serveur « {} » n'est plus ouvert.", offert.serveur), true);
+        };
+        // Jamais validé ici : voir la note de `Atelier`.
+        match client.appeler(&self.prenom, &offert.outil, arguments, false) {
+            Ok(resultat) => {
+                let (texte, erreur) = texte_du_resultat(&resultat);
+                self.resume.push(format!(
+                    "{} : {}",
+                    offert.outil,
+                    if erreur { "échec rendu par l'outil" } else { "fait" }
+                ));
+                (texte, erreur)
+            }
+            Err(refus) => {
+                let motif = refus.en_clair();
+                self.resume.push(format!("{} : refusé ({})", offert.outil, motif));
+                (motif, true)
+            }
+        }
+    }
+
+    fn resume(&self) -> Vec<String> {
+        self.resume.clone()
+    }
 }
 
 #[cfg(test)]
@@ -2384,5 +2724,84 @@ mod tests {
                 assert!(!phrase.contains(jargon), "jargon « {} » dans : {}", jargon, phrase);
             }
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // L'atelier : ce que le modèle voit et ce qui passe
+    // -----------------------------------------------------------------------
+
+    const OUTILS_AVEC_SCHEMA: &str = r#"{"jsonrpc":"2.0","id":2,"result":{"tools":[
+        {"name":"lire_fichier","description":"Lit un fichier","annotations":{"readOnlyHint":true},
+         "inputSchema":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}},
+        {"name":"ecrire_fichier","description":"Écrit un fichier","annotations":{"readOnlyHint":false}},
+        {"name":"hors_fiche","description":"Rien à faire pour cet agent","annotations":{"readOnlyHint":true}}
+    ]}}"#;
+
+    fn atelier_de_banc(reponses: Vec<&str>) -> Atelier {
+        let mut c = client(
+            vec!["fichiers/lire_fichier", "fichiers/ecrire_fichier"],
+            5,
+            reponses,
+        );
+        c.ouvrir().expect("ouverture");
+        Atelier::depuis_clients("Paul", vec![c], vec![])
+    }
+
+    /// Le modèle ne reçoit que ce que la fiche permet, avec le schéma que le
+    /// serveur a écrit : sans lui, il devinerait le nom des arguments.
+    #[test]
+    fn l_atelier_n_offre_que_les_outils_permis_avec_leur_schema() {
+        let atelier = atelier_de_banc(vec![INIT, OUTILS_AVEC_SCHEMA]);
+        let offerts = atelier.offerts();
+        let noms: Vec<&str> = offerts.iter().map(|o| o.nom_pour_le_modele.as_str()).collect();
+        assert_eq!(noms, vec!["fichiers__lire_fichier", "fichiers__ecrire_fichier"]);
+        assert_eq!(offerts[0].schema["required"][0], "path");
+        // Un serveur qui n'écrit pas de schéma donne un objet vide, pas `null`,
+        // que les deux voies refuseraient.
+        assert_eq!(offerts[1].schema["type"], "object");
+    }
+
+    /// Un outil en lecture seule passe et son texte revient au modèle ; un outil
+    /// qui écrit est refusé faute de validation, et le refus revient aussi,
+    /// en français, au lieu d'arrêter la conversation.
+    #[test]
+    fn l_atelier_laisse_lire_et_refuse_d_ecrire_sans_le_client() {
+        let lu = r#"{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"Devis 2026-118 : 4 250,00 €"}]}}"#;
+        let mut atelier = atelier_de_banc(vec![INIT, OUTILS_AVEC_SCHEMA, lu]);
+
+        let (texte, erreur) =
+            atelier.executer("fichiers__lire_fichier", serde_json::json!({ "path": "devis.txt" }));
+        assert!(!erreur);
+        assert_eq!(texte, "Devis 2026-118 : 4 250,00 €");
+
+        let (motif, erreur) =
+            atelier.executer("fichiers__ecrire_fichier", serde_json::json!({ "path": "x" }));
+        assert!(erreur, "une écriture non validée ne peut pas aboutir");
+        assert!(motif.contains("accord") || motif.contains("valid"), "motif : {}", motif);
+
+        let (_, erreur) = atelier.executer("fichiers__hors_fiche", serde_json::json!({}));
+        assert!(erreur, "un outil que la fiche ne donne pas n'existe pas pour le modèle");
+
+        // Les deux appels qui ont atteint le portier sont au journal, le refus
+        // compris ; le troisième n'a jamais été offert, il est seulement résumé.
+        let appels = atelier.appels();
+        assert_eq!(appels.len(), 2);
+        assert!(appels[0].abouti && !appels[1].abouti);
+        assert_eq!(atelier.resume().len(), 3);
+    }
+
+    #[test]
+    fn un_nom_d_outil_reste_ecrivable_par_le_modele() {
+        assert_eq!(nom_pour_le_modele("web", "fetch"), "web__fetch");
+        assert_eq!(nom_pour_le_modele("mon serveur", "lire.fichier"), "mon_serveur__lire_fichier");
+        assert!(nom_pour_le_modele(&"a".repeat(50), &"b".repeat(50)).len() <= 64);
+    }
+
+    #[test]
+    fn un_resultat_sans_texte_se_dit() {
+        let (t, e) = texte_du_resultat(&serde_json::json!({ "content": [], "isError": true }));
+        assert!(e && t.contains("échoué"));
+        let (t, _) = texte_du_resultat(&serde_json::json!({ "content": [{ "type": "image", "data": "…" }] }));
+        assert!(t.contains("image"), "une image tue laisserait croire au modèle qu'il a tout vu : {}", t);
     }
 }

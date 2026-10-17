@@ -12,6 +12,7 @@ import { TITRES, type Onglet } from './components/Dashboard'
 import Machine from './components/Machine'
 import { BandeauChiffres, ETAT_DEMO, tiret, useLectures, useTravail, type Chiffre, type Etat } from './components/Chiffres'
 import ConnectorSetup from './components/ConnectorSetup'
+import CatalogueConnecteurs from './pages/CatalogueConnecteurs'
 import Navigateur from './components/Navigateur'
 import Courriel from './components/Courriel'
 import CleApi from './components/CleApi'
@@ -580,9 +581,9 @@ function App() {
       promptSysteme +=
         "\n\nOn vous parle à voix haute. Répondez comme un collègue, en deux phrases simples, sans titre ni liste : c'est tout ce qui sera dit. Répondez à la question posée, sans répéter ce que vous avez déjà dit ni refaire le point de toute l'équipe si on ne vous le demande pas. Le détail peut suivre, il restera écrit à l'écran."
 
-      let reponse: { texte: string; motif: string; bascule: boolean }
+      let reponse: { texte: string; motif: string; bascule: boolean; outils: string[] }
       for (;;) {
-        reponse = await invoke<{ texte: string; motif: string; bascule: boolean }>('repondre', {
+        reponse = await invoke<{ texte: string; motif: string; bascule: boolean; outils: string[] }>('repondre', {
           prenom: agent.prenom,
           ficheId: agent.fiche.id,
           promptSysteme,
@@ -602,6 +603,16 @@ function App() {
 
       setLastResponse(reponse.texte)
       publier({ type: 'voix', agent: agent.prenom, texte: `${agent.prenom} vous a répondu`, gravite: 'info' })
+      // What the agent did with its tools during this turn, one line per call:
+      // the client has the right to read it in the activity feed, refusals first.
+      for (const ligne of reponse.outils ?? []) {
+        publier({
+          type: 'systeme',
+          agent: agent.prenom,
+          texte: `${agent.prenom} — ${ligne}`,
+          gravite: /refus|indisponible|échec|non tenu/.test(ligne) ? 'alerte' : 'info',
+        })
+      }
       setVoie(reponse.motif)
       setVoieBascule(reponse.bascule)
 
@@ -884,6 +895,7 @@ function App() {
               <ConnectorSetup />
             </>
           )}
+        {activeTab === 'catalogue-connecteurs' && <CatalogueConnecteurs aller={aller} />}
         {activeTab === 'navigateur' && cadre(<Navigateur />)}
         {activeTab === 'courriel' && cadre(<Courriel />)}
         {activeTab === 'equipe' &&

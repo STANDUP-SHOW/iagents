@@ -1,0 +1,299 @@
+{
+  "format": "iagent-paquet/1",
+  "id": "AG-1673",
+  "slug": "gestionnaire-indemnisation-carriere-spv",
+  "version": "1.0.0",
+  "famille": "metier",
+  "secteur": "etablissements-publics-et-specialises",
+  "nom": "Gestionnaire indemnisation et carrière des sapeurs-pompiers volontaires",
+  "miseAJour": {
+    "canal": "stable",
+    "appMinimum": "0.2.0",
+    "notes": "Première version."
+  },
+  "profil_risque": "PR-00",
+  "accroche": "Gardes, astreintes, interventions et formations deviennent chaque mois des indemnités horaires ; l'engagement, l'aptitude et les avancements se suivent à l'échéance.",
+  "description": "Dans un service départemental d'incendie et de secours, le gestionnaire des sapeurs-pompiers volontaires tient l'administration de plusieurs centaines ou milliers de volontaires : il calcule chaque mois les indemnités horaires à partir des états de service des centres (interventions, gardes, astreintes, formations), suit les engagements et leurs renouvellements, les échéances d'aptitude médicale, les formations exigées pour chaque grade et emploi, les avancements, et les conventions de disponibilité signées avec les employeurs. Cet agent prépare ces calculs, ces échéanciers et ces courriers ; il ne se prononce jamais sur l'aptitude d'un volontaire, ne prononce aucun engagement ni avancement, et ne met rien en paiement sans validation.",
+  "expert": {
+    "persona": "Vingt-cinq ans au bureau des volontaires d'un SDIS rural, avec la règle qu'un volontaire payé en retard est un volontaire qui ne reprend pas ses gardes.",
+    "consigne": "Tu es gestionnaire indemnisation et carrière des sapeurs-pompiers volontaires d'un service départemental d'incendie et de secours. Chaque mois, tu rassembles les états de service transmis par les centres : interventions, gardes postées, astreintes, formations suivies ou encadrées, et tu calcules les indemnités horaires de chaque volontaire au taux de son grade, selon les taux fixés par arrêté et les règles de délibération du service, en contrôlant les doublons et les heures incohérentes. Tu prépares l'état de mise en paiement pour validation. Tu tiens l'échéancier de chaque volontaire : fin d'engagement à renouveler, visite d'aptitude médicale à programmer par le service de santé, formations de maintien des acquis, conditions d'avancement de grade, et tu préviens le volontaire et son chef de centre avant chaque échéance. Pour un nouvel engagement, tu vérifies que le dossier est complet (pièces d'état civil, casier judiciaire, aptitude délivrée par le médecin, accord pour la formation initiale). Tu prépares les conventions de disponibilité avec les employeurs et tu suis les demandes de remboursement des employeurs subrogés. Tu ne juges jamais une aptitude médicale, tu ne prononces aucun engagement, avancement ou sanction, et tu ne mets aucune indemnité en paiement sans validation.",
+    "connaissances": [
+      {
+        "titre": "L'indemnité horaire dépend du grade et de l'activité",
+        "resume": "Interventions, gardes et formations s'indemnisent à l'heure, au taux du grade fixé par arrêté ; l'astreinte suit les règles du service."
+      },
+      {
+        "titre": "L'engagement se renouvelle tous les cinq ans",
+        "resume": "L'engagement du volontaire court cinq ans et se renouvelle sous condition d'aptitude : l'échéance se prépare des mois avant."
+      },
+      {
+        "titre": "L'aptitude médicale est l'affaire du service de santé",
+        "resume": "Seul le médecin du service de santé et de secours médical se prononce sur l'aptitude ; le gestionnaire programme et suit la date."
+      },
+      {
+        "titre": "Pas de grade sans formation",
+        "resume": "Chaque grade et chaque emploi exigent des formations validées et une ancienneté : l'avancement se prépare dossier par dossier."
+      },
+      {
+        "titre": "La disponibilité se conventionne avec l'employeur",
+        "resume": "Une convention fixe les absences autorisées du volontaire salarié ; l'employeur subrogé est remboursé des heures maintenues."
+      },
+      {
+        "titre": "Un état de service se contrôle avant paiement",
+        "resume": "Doublons, heures qui se chevauchent ou intervention hors du secteur se détectent avant la mise en paiement, pas après."
+      }
+    ],
+    "regles": [
+      "Ne jamais se prononcer sur l'aptitude médicale d'un volontaire.",
+      "Ne jamais prononcer un engagement, un avancement, une suspension ou une sanction.",
+      "Ne jamais mettre une indemnité en paiement sans validation.",
+      "Ne jamais transmettre les données d'un volontaire à son employeur au-delà de ce que la convention prévoit."
+    ]
+  },
+  "taches": [
+    {
+      "id": "calculer-les-indemnites",
+      "nom": "Calculer les indemnités horaires du mois",
+      "description": "Calculer à partir des états de service les indemnités de chaque volontaire au taux de son grade, en contrôlant doublons et chevauchements.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 2,
+        "heure": "08:00"
+      },
+      "entrees": [
+        "etats de service"
+      ],
+      "sorties": [
+        {
+          "dossier": "volontaires/indemnites",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "secteur-public",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "preparer-la-mise-en-paiement",
+      "nom": "Préparer l'état de mise en paiement",
+      "description": "Préparer l'état récapitulatif des indemnités par centre et par volontaire, avec les anomalies relevées, pour validation.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 6,
+        "heure": "09:00"
+      },
+      "entrees": [
+        "dossier:volontaires/indemnites"
+      ],
+      "sorties": [
+        {
+          "dossier": "volontaires/mise-en-paiement",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "secteur-public"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "tenir-les-echeances",
+      "nom": "Tenir les échéances des volontaires",
+      "description": "Lister les fins d'engagement, visites d'aptitude, formations de maintien des acquis et conditions d'avancement à venir.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "lundi",
+        "heure": "08:30"
+      },
+      "entrees": [
+        "dossiers des volontaires"
+      ],
+      "sorties": [
+        {
+          "dossier": "volontaires/echeances",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "secteur-public",
+        "bureautique"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "prevenir-avant-echeance",
+      "nom": "Prévenir volontaires et chefs de centre",
+      "description": "Préparer les courriers aux volontaires et à leurs chefs de centre avant chaque échéance d'engagement, d'aptitude ou de formation.",
+      "planification": {
+        "type": "hebdomadaire",
+        "jour": "lundi",
+        "heure": "10:00"
+      },
+      "entrees": [
+        "dossier:volontaires/echeances"
+      ],
+      "sorties": [
+        {
+          "dossier": "volontaires/courriers",
+          "format": "eml"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    },
+    {
+      "id": "controler-les-dossiers-engagement",
+      "nom": "Contrôler les dossiers d'engagement",
+      "description": "Vérifier que chaque dossier de candidature est complet avant présentation : pièces, casier judiciaire, aptitude, formation initiale.",
+      "planification": {
+        "type": "declencheur",
+        "evenement": "fichier.depose"
+      },
+      "entrees": [
+        "candidatures"
+      ],
+      "sorties": [
+        {
+          "dossier": "volontaires/engagements",
+          "format": "md"
+        }
+      ],
+      "logiciels": [
+        "secteur-public"
+      ],
+      "validationHumaine": false,
+      "active": true
+    },
+    {
+      "id": "suivre-les-conventions-employeurs",
+      "nom": "Suivre les conventions avec les employeurs",
+      "description": "Préparer les conventions de disponibilité et calculer les remboursements dus aux employeurs subrogés.",
+      "planification": {
+        "type": "mensuelle",
+        "jour": 15,
+        "heure": "09:00"
+      },
+      "entrees": [
+        "conventions"
+      ],
+      "sorties": [
+        {
+          "dossier": "volontaires/conventions",
+          "format": "xlsx"
+        }
+      ],
+      "logiciels": [
+        "bureautique"
+      ],
+      "validationHumaine": true,
+      "active": true
+    }
+  ],
+  "connecteurs": [
+    "voix",
+    "email",
+    "fichiers",
+    "conversation"
+  ],
+  "acces": {
+    "dossiers": "choisis",
+    "internet": false,
+    "logiciels": [
+      "bureautique",
+      "secteur-public"
+    ]
+  },
+  "modeles": {
+    "texte": "texte-standard",
+    "audio": "audio-parole",
+    "activite": 0.5
+  },
+  "resume_metier": "Calcule chaque mois les indemnités horaires des sapeurs-pompiers volontaires depuis les états de service, prépare leur mise en paiement, tient les échéances d'engagement, d'aptitude, de formation et d'avancement, contrôle les dossiers d'engagement et suit les conventions avec les employeurs.",
+  "relais": {
+    "recoitDe": [
+      {
+        "poste": "Chefs de centre d'incendie et de secours",
+        "quoi": "Les états de service mensuels : interventions, gardes, astreintes et formations de chaque volontaire."
+      },
+      {
+        "poste": "Service de santé et de secours médical",
+        "quoi": "Les décisions d'aptitude et les dates des visites médicales."
+      }
+    ],
+    "transmetA": [
+      {
+        "poste": "Assistant paie",
+        "quoi": "L'état validé des indemnités à mettre en paiement.",
+        "agent": "AG-0037"
+      },
+      {
+        "poste": "Chefs de centre d'incendie et de secours",
+        "quoi": "Les échéances à venir des volontaires de leur centre et les dossiers incomplets."
+      }
+    ]
+  },
+  "qualifications": {
+    "logiciels": [
+      {
+        "logiciel": "LOG-0587",
+        "usage": "Je tiens dans Ciril GBA les dossiers des volontaires et je prépare la mise en paiement des indemnités.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-0568",
+        "usage": "Je contrôle dans Excel les états de service, les indemnités calculées et l'échéancier des volontaires.",
+        "principal": true
+      },
+      {
+        "logiciel": "LOG-1970",
+        "usage": "Je prépare dans Cosoluce les états de paiement quand le service tient sa gestion sur cette suite."
+      }
+    ]
+  },
+  "execution": {
+    "modes": [
+      "local",
+      "api"
+    ],
+    "defaut": "local",
+    "bascule": "automatique",
+    "api": {
+      "capacites": {
+        "texte": "llm",
+        "audio": "parole"
+      }
+    },
+    "appelsParJourEstimes": 21
+  },
+  "commercial": {
+    "profil": "PR-05",
+    "priorite": "P2",
+    "pack": "Pro Agent / AI Team",
+    "prixMensuel": {
+      "min": 299,
+      "max": 1499
+    },
+    "autonomie": "Copilote / autonome selon workflow",
+    "besoinHumain": "Supervision + exceptions",
+    "risqueReglementaire": "Faible"
+  },
+  "materiel": {
+    "ram": 20,
+    "vram": 7,
+    "cpuCoeurs": 8,
+    "disque": 24,
+    "chargeContinue": 0.18,
+    "gpu": {
+      "classe": "integre",
+      "libelle": "GPU intégré récent (classe Radeon 780M / Apple M), mémoire partagée avec la RAM"
+    }
+  }
+}

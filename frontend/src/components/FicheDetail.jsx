@@ -4,9 +4,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { devisAgent, euros, installationDe, ficheDe, LOCATION_BOX } from '../data/offres.js';
 import { FINANCEMENT } from '../../../dimensionnement/offre-box.ts';
 import { economieDe, tachesAReliretConseillees } from '../data/loader.js';
-import { libelleSecteur, libelleFamille, nomDuLogiciel, portraitDe } from '../data/recherche.js';
+import agents from '../data/loader.js';
+import { libelleSecteur, libelleFamille, nomDuLogiciel, portraitDe, ACTIVITES, urlFiche } from '../data/recherche.js';
+import { FAMILLES_ACTIVITE } from '../data/activites-recherche.js';
+import { specialiser } from '../data/specialisation.js';
 import { PRIX_AGENT_MOIS, NOTE_ACHAT, prixAgentCourt } from '../data/prix.js';
-import { RECRUTER } from '../accueil/composants.jsx';
+import { BoutonRecruter } from '../bibliotheque/composants.jsx';
+import { ChoixDuree, AvecSansBox } from './PrixAgent.jsx';
+import { DUREE_MOIS } from '../data/tarifs.js';
+import { PAGE_LISTE } from '../data/liste.js';
 import logicielsJson from '../../../catalogue/logiciels.json';
 
 /**
@@ -43,18 +49,16 @@ const libelleCategorie = (id) => {
   return CATEGORIES[c] ?? (c.charAt(0).toUpperCase() + c.slice(1)).replace(/-/g, ' ');
 };
 
-// The eight words a fiche uses for its needs (outils/capacites.ts). WhatsApp
-// and the telephone have no code in the app yet: they are announced as coming,
-// never as working.
+// The eight words a fiche uses for its needs (outils/capacites.ts).
 const CANAUX = {
   voix: { libelle: 'Voix', detail: 'Vous lui parlez, il vous répond' },
   conversation: { libelle: 'Conversation', detail: 'Échanges écrits dans l\'application' },
   email: { libelle: 'E-mail', detail: 'Brouillons relus avant tout envoi' },
-  whatsapp: { libelle: 'WhatsApp', detail: 'Arrive progressivement', bientot: true },
+  whatsapp: { libelle: 'WhatsApp', detail: 'Par le centre d\'appels IA, mis en service avec vous' },
   calendrier: { libelle: 'Agenda', detail: 'Lit et prépare les rendez-vous' },
   fichiers: { libelle: 'Fichiers', detail: 'Dans les dossiers que vous lui ouvrez' },
   navigateur: { libelle: 'Navigateur', detail: 'Avec vos sessions, vous validez' },
-  telephone: { libelle: 'Téléphone', detail: 'Arrive progressivement', bientot: true },
+  telephone: { libelle: 'Téléphone', detail: 'Par le centre d\'appels IA, mis en service avec vous' },
 };
 
 // Missions are grouped by rhythm: it is the one grouping every fiche carries
@@ -168,9 +172,16 @@ function Section({ id, agentId, inscrire, titre, chapeau, children }) {
 
 // `ongletInitial` says which section the view opens on. The bench renders the
 // fiche once per section; every section is in the HTML whatever the value.
-export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', installation = null }) {
+// `activite` is the trade the fiche is read in, `onChoisirActivite` what the
+// header's menu calls (max, 10/10: on every fiche, « Spécialisé à votre
+// activité » lists the 422 activities; chosen, « Assistant de réunion »
+// becomes « Assistant de réunion commerce de gros » and the fiche carries the
+// trade's matter; nothing chosen, the fiche stays generic). The menu is only
+// shown when the caller can take the choice.
+export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', installation = null, activite = null, onChoisirActivite = null }) {
   const depart = sectionDe(ongletInitial);
   const [actif, setActif] = useState(depart);
+  const [duree, setDuree] = useState(DUREE_MOIS?.id);
   const defile = useRef(null);
   const fermer = useRef(null);
   const sections = useRef({});
@@ -241,6 +252,12 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
   const secteur = libelleSecteur(agent.secteur);
   const famille = libelleFamille(agent.famille);
   const portrait = portraitDe(agent);
+  // What the fiche becomes in the visitor's trade: the same composition as
+  // the job × activity pages (src/data/specialisation.js).
+  const spec = activite ? specialiser(agent, activite, agents) : null;
+  const nom = spec ? spec.nom : agent.nom;
+  const pack = spec?.pack ?? {};
+  const famillesActivite = Object.entries(FAMILLES_ACTIVITE).map(([id, libelle]) => [libelle, ACTIVITES.filter((a) => a.famille === id).sort((x, y) => x.nom.localeCompare(y.nom, 'fr'))]).filter(([, l]) => l.length);
 
   return (
     <div className="fd-voile" role="dialog" aria-modal="true" aria-labelledby={titreId} ref={defile} data-actif={actif}>
@@ -251,7 +268,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
         <div className="fd-nav-ligne">
           <div className="fd-nav-qui" aria-hidden="true">
             <img src={portrait} alt="" width="32" height="32" />
-            <span>{agent.nom}</span>
+            <span>{nom}</span>
           </div>
           <ol className="fd-nav-liens">
             {ONGLETS.map((id) => (
@@ -280,8 +297,21 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
           </div>
           <div className="fd-tete-texte">
             <p className="fd-ref">{agent.id} · {famille}</p>
-            <h1 id={titreId} className="fd-h1">{agent.nom}</h1>
-            <p className="fd-tete-secteur">{secteur}</p>
+            <h1 id={titreId} className="fd-h1">{nom}</h1>
+            <p className="fd-tete-secteur">{secteur}{spec?.place && <> · dans votre activité, ce poste s'appelle « {spec.place.role} » ({spec.place.service.toLowerCase()})</>}</p>
+            {onChoisirActivite && (
+              <p className="fd-specialiser">
+                <label htmlFor={`fd-activite-${agent.id}`}>Spécialisé à votre activité</label>
+                <select id={`fd-activite-${agent.id}`} value={activite?.id ?? ''} onChange={(e) => onChoisirActivite(ACTIVITES.find((a) => a.id === e.target.value) ?? null)}>
+                  <option value="">Tous métiers, sans activité particulière</option>
+                  {famillesActivite.map(([libelle, liste]) => (
+                    <optgroup key={libelle} label={libelle}>
+                      {liste.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
+              </p>
+            )}
             <div className="fd-tete-statuts">
               <span className="fd-dispo"><span aria-hidden="true" />Disponible maintenant</span>
               <span className="fd-puce">{local ? 'Travaille chez vous' : 'Travaille par API'}</span>
@@ -293,7 +323,8 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
           <div className="fd-tete-mobile">
             <p className="fd-prix">{PRIX_AGENT_MOIS ?? 'Sur devis'}{PRIX_AGENT_MOIS && <span> / mois</span>}</p>
             <p className="fd-note">{NOTE_ACHAT ? `${NOTE_ACHAT} · ` : ''}la Box et la consommation à part</p>
-            <a href={RECRUTER} className="bouton bouton-plein w-full" onClick={() => suivre('recruit_agent', { fiche: agent.id })}>Recruter cet agent <Icone nom="fleche" taille={16} /></a>
+            <ChoixDuree duree={duree} onDuree={setDuree} compact />
+            <BoutonRecruter agent={agent} activite={activite} duree={duree} className="bouton bouton-plein w-full" />
             <button type="button" className="bouton bouton-contour w-full" onClick={() => aller('recrutement')}>Personnaliser</button>
           </div>
         </header>
@@ -301,7 +332,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
         <div className="fd-grille">
           <div className="fd-principal">
             {/* ---- 01 PROFIL ---- */}
-            <Section agentId={agent.id} inscrire={inscrire} id="profil" titre={`Voici votre ${enMinuscule(agent.nom)}.`} chapeau={agent.description}>
+            <Section agentId={agent.id} inscrire={inscrire} id="profil" titre={`Voici votre ${enMinuscule(nom)}.`} chapeau={agent.description}>
               {agent.expert?.persona && (
                 <figure className="fd-bloc fd-persona">
                   <p className="fd-etiquette">Son parcours</p>
@@ -315,6 +346,17 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                 <div className="fd-bloc"><p className="fd-etiquette">Type de poste</p><p className="fd-valeur">{famille}</p></div>
                 <div className="fd-bloc"><p className="fd-etiquette">Où il travaille</p><p className="fd-valeur">{local ? 'Chez vous par défaut' : 'Par API'}{modes.includes('api') && local ? ', API à votre choix' : ''}</p></div>
               </div>
+
+              {spec && (
+                <div className="fd-bloc fd-activite">
+                  <p className="fd-etiquette">{`Dans votre activité : ${activite.nom}`}</p>
+                  {activite.trait && <p className="fd-tache-desc">{activite.trait}</p>}
+                  <p className="fd-tache-desc">Il reçoit le savoir de votre activité en plus de son métier : son vocabulaire, ses documents, ses règles et ses logiciels.</p>
+                  {spec.expert && (
+                    <p className="fd-tache-desc">Votre branche a son propre expert du devis : <a href={urlFiche(spec.expert.fiche)}>{spec.expert.fiche.nom}</a>, « {spec.expert.role} ». {spec.expert.fiche.accroche}</p>
+                  )}
+                </div>
+              )}
 
               {agent.resume_metier && (
                 <div className="fd-bloc">
@@ -362,7 +404,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                           <span className="fd-case" aria-hidden="true"><Icone nom="coche" taille={13} /></span>
                           <div>
                             <p className="fd-tache-nom">{t.nom}</p>
-                            {t.description && <p className="fd-tache-desc">{t.description}</p>}
+                            {t.description && <p className="fd-tache-desc">{t.description}{spec?.outilsDe(t).length ? ` Dans ${spec.outilsDe(t).map((l) => l.nom).join(' ou ')}.` : ''}</p>}
                             <p className="fd-tache-meta">
                               <span>{quand(t.planification)}</span>
                               {[...new Set((t.sorties ?? []).map((s) => s.format))].map((f) => <span key={f} className="fd-format">.{f}</span>)}
@@ -415,15 +457,58 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                 </div>
               )}
 
+              {spec && (spec.outils.length > 0 || spec.autresLogiciels.length > 0) && (
+                <div className="fd-bloc">
+                  <p className="fd-etiquette">Les logiciels de votre activité</p>
+                  {spec.outils.length > 0 && (
+                    <ul className="fd-logiciels">
+                      {spec.outils.map((l) => (
+                        <li key={l.id} className="fd-logiciel">
+                          <span className="fd-mono" style={{ '--h': teinte(l.nom) }} aria-hidden="true">{monogramme(l.nom)}</span>
+                          <div>
+                            <p className="fd-logiciel-nom">{l.nom}</p>
+                            {l.editeur && <p className="fd-logiciel-cat">{l.editeur}</p>}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {spec.autresLogiciels.length > 0 && (
+                    <p className="fd-tache-desc mt-3">Les autres logiciels de votre activité, il vous demande à l'entretien lesquels vous employez : {spec.autresLogiciels.map((l) => l.nom).join(', ')}.</p>
+                  )}
+                </div>
+              )}
+
+              {spec && [
+                ['Le vocabulaire qu\'il connaît', (pack.vocabulaire ?? []).map((v) => [v.terme, v.sens])],
+                ['Les documents qu\'il manie', (pack.documents ?? []).map((d) => [d.nom, d.role])],
+                ['Les règles qu\'il respecte', (pack.regles ?? []).map((r) => [r, null])],
+                ['Ce qu\'il compte dans votre activité', (pack.unites ?? []).map((u) => [u.unite, u.emploi])],
+                ['Avec qui il travaille', (pack.interlocuteurs ?? []).map((i) => [i.role, i.attend])],
+                ['Les moments de l\'année', (pack.rythmes ?? []).map((r) => [r, null])],
+              ].filter(([, l]) => l.length).map(([titre, lignes]) => (
+                <div key={titre} className="fd-bloc">
+                  <p className="fd-etiquette">{titre}</p>
+                  <ul className="fd-competences">
+                    {lignes.map(([terme, sens], i) => (
+                      <li key={i}>
+                        <span className="fd-case fd-case-pleine" aria-hidden="true"><Icone nom="coche" taille={13} /></span>
+                        <div><p className="fd-tache-nom">{terme}</p>{sens && <p className="fd-tache-desc">{sens}</p>}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+
               {canaux.length > 0 && (
                 <div className="fd-bloc">
                   <p className="fd-etiquette">Canaux</p>
                   <ul className="fd-canaux">
                     {canaux.map((c) => (
-                      <li key={c} className={CANAUX[c].bientot ? 'fd-canal fd-canal-bientot' : 'fd-canal'}>
+                      <li key={c} className="fd-canal">
                         <span className="fd-canal-icone"><Icone nom={c} taille={18} /></span>
                         <div>
-                          <p className="fd-logiciel-nom">{CANAUX[c].libelle}{CANAUX[c].bientot && <span className="fd-bientot">bientôt</span>}</p>
+                          <p className="fd-logiciel-nom">{CANAUX[c].libelle}</p>
                           <p className="fd-logiciel-cat">{CANAUX[c].detail}</p>
                         </div>
                       </li>
@@ -437,7 +522,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                   <p className="fd-ajout-titre">Votre logiciel n'est pas présent ?</p>
                   <p className="fd-tache-desc">Vous l'ajoutez lors de l'entretien d'embauche : l'agent vous demande ce que tourne l'entreprise et règle sa propre configuration.</p>
                 </div>
-                <a href={RECRUTER} className="bouton bouton-contour">Ajouter un outil lors de l'entretien</a>
+                <a href={PAGE_LISTE} className="bouton bouton-contour">Ajouter un outil lors de l'entretien</a>
               </div>
             </Section>
 
@@ -530,6 +615,8 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                 <div className="fd-bloc"><dt>Capacité</dt><dd>~{nombre(appels)} échanges / jour</dd></div>
               </dl>
               <p className="fd-note">La machine iAgent Box et son abonnement se comptent toujours à part, sur leur propre ligne.</p>
+              <div className="fd-bloc"><ChoixDuree duree={duree} onDuree={setDuree} /></div>
+              <div className="fd-bloc"><AvecSansBox agent={agent} /></div>
 
               <div className="fd-bloc fd-devis">
                 <p className="fd-etiquette">Ce que cet agent vous coûte selon votre installation</p>
@@ -541,7 +628,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                     {devis.map((l) => (
                       <tr key={l.offre} className={l.offre === installation ? 'fd-ligne-votre' : undefined}>
                         <th scope="row" data-label="Installation">{l.nom}{l.offre === installation && <span className="fd-votre"> (la vôtre)</span>}</th>
-                        <td data-label="Où il travaille" title={l.motif}><span className={l.enLocal ? 'fd-niveau fd-niveau-ok' : 'fd-niveau'}>{l.enLocal ? 'chez vous' : 'par API'}</span></td>
+                        <td data-label="Où il travaille" title={l.motif}><span className={l.enLocal || l.enPartie ? 'fd-niveau fd-niveau-ok' : 'fd-niveau'}>{l.enLocal ? 'chez vous' : l.enPartie ? `chez vous à ${Math.round(l.partLocale * 100)} %` : 'par API'}</span></td>
                         <td data-label="Coût de l'agent">{euros(l.coutAgent)}/mois</td>
                         <td data-label="Par API seule" className="fd-attenue">{euros(l.apiSeule)}/mois</td>
                         <td data-label="Économie" className={l.economie > 0 ? 'fd-gain' : 'fd-attenue'}>{l.economie > 0 ? `${euros(l.economie)}/mois` : '—'}</td>
@@ -556,7 +643,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                     {inst.cout.lignes.map((b) => (
                       <p key={b.id}>{b.nom} : {b.id === LOCATION_BOX.id ? `${LOCATION_BOX.phrase}.` : `${euros(b.mensualite)} HT par mois sur ${FINANCEMENT.mois} mois, plus son abonnement de ${euros(b.abonnement)} par mois.`}</p>
                     ))}
-                    {inst.cout.lignes.length > 0 && <p>{ligne.rembourseSeul ? 'Cet agent rembourse à lui seul la machine, son abonnement et son électricité.' : 'Cet agent seul ne rembourse pas la machine : elle se rentabilise avec plusieurs agents.'}</p>}
+                    {inst.cout.lignes.length > 0 && !inst.cout.lignes.some((b) => b.id === LOCATION_BOX.id) && <p>{ligne.rembourseSeul ? 'Cet agent rembourse à lui seul la machine, son abonnement et son électricité.' : 'Cet agent seul ne rembourse pas la machine : elle se rentabilise avec plusieurs agents.'}</p>}
                     {inst.cout.mensualiteAConfirmer && <p className="fd-a-confirmer">Taux du financement à confirmer</p>}
                   </div>
                 ) : (
@@ -578,9 +665,9 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
               <div className="fd-final">
                 <div>
                   <p className="fd-ajout-titre">Prêt à le rencontrer ?</p>
-                  <p className="fd-tache-desc">L'embauche se fait dans l'application iAgent : vous la téléchargez, puis l'agent vous fait passer l'entretien.</p>
+                  <p className="fd-tache-desc">Ajoutez-le à votre liste de recrutement : une fois la liste validée, il est installé sur votre Box et vous fait passer l'entretien.</p>
                 </div>
-                <a href={RECRUTER} className="bouton bouton-plein">Faire passer l'entretien <Icone nom="fleche" taille={16} /></a>
+                <BoutonRecruter agent={agent} activite={activite} duree={duree} />
               </div>
             </Section>
           </div>
@@ -595,7 +682,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
             </div>
             <div className="fd-a-corps">
               <p className="fd-ref">{agent.id}</p>
-              <p className="fd-a-nom">{agent.nom}</p>
+              <p className="fd-a-nom">{nom}</p>
               <p className="fd-tete-secteur">{secteur} · {famille}</p>
               <p className="fd-a-accroche">{agent.accroche}</p>
 
@@ -612,7 +699,7 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                   <p className="fd-etiquette">Outils</p>
                   <ul className="fd-a-badges">
                     {qualifs.slice(0, 5).map((q) => <li key={q.logiciel} className="fd-a-badge">{nomDuLogiciel(q.logiciel)}</li>)}
-                    {canaux.map((c) => <li key={c} className={`fd-a-badge fd-a-canal${CANAUX[c].bientot ? ' fd-a-canal-bientot' : ''}`} title={CANAUX[c].bientot ? `${CANAUX[c].libelle} : bientôt` : CANAUX[c].libelle}><Icone nom={c} taille={13} /><span className="sr-only">{CANAUX[c].libelle}{CANAUX[c].bientot ? ' (bientôt)' : ''}</span></li>)}
+                    {canaux.map((c) => <li key={c} className="fd-a-badge fd-a-canal" title={CANAUX[c].libelle}><Icone nom={c} taille={13} /><span className="sr-only">{CANAUX[c].libelle}</span></li>)}
                   </ul>
                 </div>
               )}
@@ -627,8 +714,10 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
                   <p className="fd-note">échanges / jour</p>
                 </div>
               </div>
+              <ChoixDuree duree={duree} onDuree={setDuree} compact />
+              <AvecSansBox agent={agent} compact />
 
-              <a href={RECRUTER} className="bouton bouton-plein w-full" onClick={() => suivre('recruit_agent', { fiche: agent.id })}>Recruter cet agent <Icone nom="fleche" taille={16} /></a>
+              <BoutonRecruter agent={agent} activite={activite} duree={duree} className="bouton bouton-plein w-full" />
               <div className="fd-a-actions">
                 <button type="button" className="bouton bouton-contour" onClick={() => aller('recrutement')}>Personnaliser</button>
                 <button type="button" className="bouton bouton-contour" onClick={() => aller('recrutement')}>Comparer les coûts</button>
@@ -641,10 +730,10 @@ export default function FicheDetail({ agent, onClose, ongletInitial = 'profil', 
       {/* ---- sticky hire button on a phone ---- */}
       <div className="fd-collant">
         <div>
-          <p className="fd-collant-nom">{agent.nom}</p>
+          <p className="fd-collant-nom">{nom}</p>
           <p className="fd-note">{prixAgentCourt()}</p>
         </div>
-        <a href={RECRUTER} className="bouton bouton-plein" onClick={() => suivre('recruit_agent', { fiche: agent.id })}>Recruter</a>
+        <BoutonRecruter agent={agent} activite={activite} duree={duree} />
       </div>
     </div>
   );

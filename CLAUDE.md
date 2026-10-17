@@ -483,28 +483,23 @@ par WhatsApp et email.
   pas fait : l'authentification OAuth du protocole** (le jeton vient du
   trousseau, rangé à la main) et **aucun serveur distant d'éditeur n'a encore
   été joint**.
-- **Aucun agent n'a jamais employé un outil : la porte est murée** (constaté le
-  23/09/2026, chaîne vérifiée maillon par maillon). `mcp.rs` fait 2 387 lignes
-  et 38 bancs, et rien ne le traverse :
-  1. `llm.rs` n'envoie **aucun `tools`** dans sa requête (le corps ne porte que
-     `model`, `max_tokens`, `output_config`, `system`, `messages`) — le modèle
-     n'apprend donc jamais qu'un outil existe ;
-  2. **aucun `tool_use` ni `tool_result` n'est lu** nulle part (`llm.rs`,
-     `tache.rs`, `agents.rs` : zéro occurrence) ;
-  3. `mcp_appeler` et `mcp_outils_permis` sont des commandes Tauri enregistrées
-     que **l'écran n'appelle jamais** — elles n'apparaissent que dans
-     l'enregistrement de `main.rs`.
-  Le portier est complet et éprouvé ; c'est le passage qui manque. **Écrire la
-  boucle est petit** (`mcp_appeler` est une fonction ordinaire, sans état Tauri,
-  donc appelable depuis le crate) — ce qui n'est pas petit est la validation
-  humaine (`valide: bool`), que max exige et qu'on ne peut pas éprouver ici
-  faute d'un vrai serveur et d'un vrai compte client.
-  **Et ça n'ouvrirait presque rien aujourd'hui** : un seul serveur est à portée
-  d'un agent (`fichiers`, 13 outils, connecteur OFF029) ; `web` a
-  `connecteur: null`, donc hors de portée par construction, et ces 13 outils
-  doublent ce que l'application écrit déjà elle-même. **À faire quand les 133
-  connecteurs bloqués sur un coût seront ouverts, pas avant** : c'est cette
-  décision de max qui commande l'ordre des travaux.
+- **La porte des outils est ouverte depuis le 10/10/2026** (elle était murée :
+  `llm.rs` n'envoyait aucun `tools` et rien ne lisait un `tool_use`). Une
+  conversation (`repondre`) et une tâche (`executer_tache`) ouvrent un
+  `mcp::Atelier` pour l'agent embauché, offrent au modèle les outils de sa liste
+  blanche avec leur schéma, et bouclent : `call_agent_llm_outille` (format
+  Anthropic) ou `repondre_en_local_outille` (format Ollama, relevé dans
+  `ollama@0.6.4`), au plus `TOURS_MAX` tours. **L'atelier appelle toujours avec
+  `valide: false`** : un outil qui modifie est refusé et le modèle reçoit le refus
+  en français. La validation par le client au fil de la conversation reste à
+  écrire. Un seul serveur à portée : `fichiers` (OFF029, activable depuis le
+  10/10), lancé avec `dossiersDeLAgent: true` — sans dossier en argument le
+  serveur de référence refuse de démarrer. Sous Windows `npx` est `npx.cmd`,
+  donc lancé par `cmd /C` (`commande_du_systeme`), **non constaté sur Windows**.
+  Banc de bout en bout avec le vrai serveur : `cargo test -- --ignored
+  de_bout_en_bout` (modèle scripté : aucun vrai modèle n'a encore conduit
+  l'échange). Le catalogue des 350 références de max s'affiche dans « Vos
+  connexions » : voir `docs/referentiel-connecteurs.md`.
 - **La liste blanche d'un agent se dérive de sa fiche, jamais de l'écran.**
   `mcp_appeler` est le seul chemin vers un outil, et rien de ce qui décide ne
   vient de l'interface : la fiche déclare un besoin, le catalogue dit quels
@@ -922,11 +917,41 @@ par WhatsApp et email.
   l'exige. Le premier message n'est publié que si le dirigeant l'a coché.
   **Non constaté : aucun compte n'a encore été ouvert par un agent.**
 
+- **La Box se fabrique, elle ne s'installe pas** (brief de max du 11/10/2026,
+  `box/`, `docs/box-usine.md`). **Un seul cycle de vie**, dans `regles.ts` :
+  `usine → qualifiee → stock → provisionnee → expediee → active → suspendue |
+  restituee | remplacee` ; l'usine n'ajoute pas d'état parallèle, un échec
+  d'usine laisse la Box `usine` avec son rapport. **`gamme` reste `business |
+  home`** (max, 11/10) : Commander est le nom de l'application, pas une gamme ;
+  la référence garde les codes du brief (`IA-FR-CMD-…`, `IA-FR-HOME-…`) par
+  `referenceBox()`. **Le verdict d'un rapport d'usine se recalcule**
+  (`verdictRapport`, tests obligatoires du profil matériel `box/materiel/`),
+  jamais lu ; Python (`regles.py`) et TypeScript rendent le même verdict sur les
+  mêmes témoins, deux bancs le tiennent.
+- **Rust fait tourner la machine, TypeScript fait tourner le produit, Python
+  fait tourner l'IA et les tests** (max, 11/10/2026). Services résidents de la
+  Box en Rust (`box/services/`), écran d'usine et back-office en React, tests
+  d'usine en Python bibliothèque standard.
+- **Un service systemd absent refuse en français et n'est pas activable** :
+  `box/os/systemd/SERVICES.json` est la seule liste de ce qui tourne sur iAgent
+  OS, `check-systemd.ts` tient les unités à cette liste, `check-profils.ts`
+  refuse qu'un profil allume un service absent. Même règle que « du code qui
+  rend Ok sans agir », au niveau de systemctl.
+- **Sur la Box, un seul updater** : `iagent-updater` pose des `.deb` dont il
+  vérifie l'empreinte ET la signature de la plateforme (`iagent-maj-v1`) ;
+  l'updater Tauri se tait en édition Box sous Linux. Toute mise à jour publiée
+  est signée ou n'est pas publiée (503 sans `PLATEFORME_CLE_SIGNATURE`).
+- **Rien de `box/` n'a tourné sur une machine au 11/10/2026** : écrit sur un
+  poste Windows sans Node, Rust ni Python, vérifié par l'intégration continue
+  seulement. La liste du non constaté est dans `box/README.md` ; ne pas la
+  raccourcir sans l'avoir vu.
+
 ## Commandes
 
 ```bash
 npm install
 npm run controle              # banc du dimensionnement + validation des paquets
+npm run controle-box          # les bancs de box/ (profils, unités, autoinstall, rapports, manifeste)
 npm run controle-application  # typage React + tests Rust de l'application (176)
 npm run controle-boutique     # la boutique : rend vraiment ses pages, tous onglets
 npx tsc --noEmit

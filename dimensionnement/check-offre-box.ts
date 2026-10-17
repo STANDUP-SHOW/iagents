@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { OFFRES, COMMANDEUR, machineDe, mensualite, coutInstallation, devisParBox, devisPack, conseillerBox } from './offre-box.ts';
+import { OFFRES, COMMANDEUR, AGENTS_PAR_BOX, AGENTS_SANS_MACHINE_MAX, machineDe, mensualite, coutInstallation, devisParBox, devisPack, conseillerBox } from './offre-box.ts';
 import { coutApiMensuel, type PaquetEco } from './economie.ts';
 import { tientSur, RESERVE_MEMOIRE_UNIFIEE } from './calculer.ts';
 import offreJson from './offre-box.json' with { type: 'json' };
@@ -20,15 +20,17 @@ assert.ok(OFFRES.filter((o) => o.id.startsWith('puissance-')).every((o) => o.ave
 assert.ok(!OFFRES.find((o) => o.id === 'box-max')!.avecCommandeur, 'la Box Max commande elle-meme ses agents');
 ok('six installations : sans machine, Box Commandeur, Box Max, trois machines de puissance livrees avec un commandeur');
 
-// 2. Every power offer carries a machine, none other does; a unified-memory machine follows the
-// repo rule (RAM minus the reserve), never a figure typed by hand.
+// 2. Every power offer carries a machine, and so does the Box since max's decision of 16/10/2026
+// (every pro machine has 64 Go); only « sans machine » has none. A unified-memory machine follows
+// the repo rule (RAM minus the reserve), never a figure typed by hand.
 for (const o of OFFRES) {
-  if (o.role === 'puissance') { const m = machineDe(o); assert.ok(m && m.role === 'bundle', `${o.id} : machine de calcul absente`); }
-  else assert.equal(o.machine, null, `${o.id} ne porte aucune puissance`);
+  if (o.role === 'aucune') assert.equal(o.machine, null, `${o.id} ne porte aucune puissance`);
+  else { const m = machineDe(o); assert.ok(m && m.role === 'bundle', `${o.id} : machine de calcul absente`); }
+  if (o.role === 'commande') assert.equal(machineDe(o)!.ram, 64, 'max, 16/10 : toutes les machines pro en 64 Go');
   const m = machineDe(o);
   if (m?.memoireUnifiee) assert.equal(m.vram, m.ram - RESERVE_MEMOIRE_UNIFIEE, `${o.id} : ${m.vram} Go annonces aux modeles pour ${m.ram} Go de memoire unifiee`);
 }
-ok('chaque machine de puissance porte sa machine, ni « sans machine » ni le commandeur n en ont ; memoire unifiee = RAM - reserve');
+ok('chaque Box porte sa machine (64 Go pour la Box), « sans machine » n en a pas ; memoire unifiee = RAM - reserve');
 
 // 3. A confirmed price carries its source and the date it was given. A provisional one says so on every quote.
 for (const o of OFFRES) {
@@ -55,11 +57,23 @@ for (const l of lignes.filter((l) => l.leasingMensuelHT)) assert.ok(Math.abs(men
 assert.equal(offreJson.financement.mois, 24, 'max, 25/09 : 24 mois');
 ok(`financement : 2 400 € sur 24 mois = 100 €/mois a 0 % ; ${lignes.filter((l) => l.leasingMensuelHT).length} mensualites du catalogue (36 mois) retrouvees au centime ; la boutique finance sur 24`);
 
-// 5. The commander is an extension of the desk: no agent ever runs on it, nor without a machine.
-for (const p of tous) for (const l of devisParBox(p).filter((l) => l.offre === 'aucune' || l.offre === COMMANDEUR.id)) {
-  assert.ok(!l.enLocal && l.coutAgent === l.apiSeule, `${p.id} tourne sur ${l.offre}`);
+// 5. Without a machine every agent pays its API price. On the 64 Go Box every agent costs at least
+// 40 % less (max, 16/10/2026): the one he quoted, an engineer at 231 € both with and without the
+// Box, was the proof that the Box carried no power at all.
+const plancher = COMMANDEUR.partLocaleMinimum!.valeur;
+assert.equal(plancher, 0.4, 'max, 16/10 : au moins 40 % de gain par agent');
+let entiers = 0;
+for (const p of tous) for (const l of devisParBox(p)) {
+  if (l.offre === 'aucune') assert.ok(!l.enLocal && !l.enPartie && l.coutAgent === l.apiSeule, `${p.id} tourne sans machine`);
+  if (l.offre === COMMANDEUR.id) {
+    assert.ok(l.coutAgent <= l.apiSeule * (1 - plancher) + 0.01, `${p.id} : ${l.coutAgent} € sur la Box contre ${l.apiSeule} € en API`);
+    if (l.enLocal) entiers++;
+  }
 }
-ok(`sur ${tous.length} fiches, aucune ne tourne sans machine ni sur la Box Commandeur : elles y coutent leur prix API`);
+const ingenieur = devisParBox(lire('AG-1458'));
+const [sansBox, avecBox] = ['aucune', COMMANDEUR.id].map((id) => ingenieur.find((l) => l.offre === id)!);
+assert.ok(avecBox.coutAgent < sansBox.coutAgent, 'AG-1458 coute moins cher avec la Box');
+ok(`sur ${tous.length} fiches, chacune coute au moins ${plancher * 100} % de moins sur la Box 64 Go (${entiers} y tiennent en entier) ; ingenieur controle technique : ${sansBox.coutAgent} € sans Box, ${avecBox.coutAgent} € avec`);
 
 // 6. The largest machine holds every fiche alone, and everything a smaller one holds. Between the
 // others the ladder is not strict, and the bench REPORTS it rather than refusing: a memory-rich but
@@ -88,18 +102,23 @@ for (const o of OFFRES) {
   const d = devisPack(equipe, o.id);
   assert.equal(d.enLocal.length + d.enApi.length, equipe.length);
   const m = machineDe(o);
-  if (m) assert.ok(tientSur(m, equipe.filter((p) => d.enLocal.includes(p.id))), `${o.id} : equipe placee au-dela de la machine`);
+  if (m && d.nombreBox <= 1) assert.ok(tientSur(m, equipe.filter((p) => d.enLocal.includes(p.id))), `${o.id} : equipe placee au-dela de la machine`);
   if (o.id === 'aucune') assert.equal(d.totalPendant, d.toutApi);
 }
 ok(`equipe de ${equipe.length} : placement jamais au-dela de la machine, « sans machine » = facture API`);
 
-// 9. The advice: the commander alone is never the cheapest (it only adds cost); a lightly used team gets no machine (max, 24/09).
+// 9. The advice (max, 16/10/2026): a customer's computer does not run a team. No machine only
+// for 1 or 2 agents; beyond, the 64 Go Box, one per ten agents. Before, the cheapest-on-paper
+// rule advised « sans machine » for every team, 42 agents included.
 const parCout = [...tous].sort((a, b) => coutApiMensuel(a).total - coutApiMensuel(b).total);
-const legers = parCout.slice(0, 5);
-assert.equal(conseillerBox(legers).conseil.offre, 'aucune', 'equipe peu sollicitee : pas de machine');
-for (const eq of [legers, equipe, parCout.slice(-5), [lire('AG-0001')]]) assert.notEqual(conseillerBox(eq).conseil.offre, COMMANDEUR.id);
-const lourds = conseillerBox(parCout.slice(-5)).conseil;
-assert.notEqual(lourds.offre, 'aucune', 'equipe tres sollicitee : une machine se rembourse');
-ok(`conseil : 5 agents peu sollicites -> sans machine ; 5 agents tres sollicites -> ${lourds.nom} (${lourds.totalPendant} €/mois contre ${lourds.toutApi} € en API)`);
+for (let k = 1; k <= AGENTS_SANS_MACHINE_MAX; k++) assert.equal(conseillerBox(parCout.slice(-k)).conseil.offre, 'aucune', `${k} agent(s) : sans machine`);
+for (const k of [3, 5, 10, 11, 42]) {
+  const c = conseillerBox(parCout.slice(0, k)).conseil;
+  assert.equal(c.offre, COMMANDEUR.id, `${k} agents : la Box`);
+  assert.equal(c.nombreBox, Math.ceil(k / AGENTS_PAR_BOX), `${k} agents : ${c.nombreBox} Box`);
+  assert.ok(c.api < c.toutApi, `${k} agents : la Box fait baisser la facture d API`);
+}
+const quarante = conseillerBox(parCout.slice(0, 42)).conseil;
+ok(`conseil : 1 ou 2 agents -> sans machine ; 3 a 10 -> une Box ; 42 agents -> ${quarante.nombreBox} Box, ${quarante.api} € d API par mois contre ${quarante.toutApi} € tout par API`);
 
 console.log(`\ncheck-offre-box : ${n} verifications passees`);

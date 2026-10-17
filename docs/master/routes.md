@@ -1,7 +1,9 @@
 # Contrat des routes de la plateforme (à tenir par tous les chantiers)
 
 Accès : `public`, `admin` (Bearer du back-office), `box` (requête signée par la
-Box, voir `plateforme/serveur.ts`). Pour une route `box`, le tenant est
+Box, voir `plateforme/serveur.ts`), `acteur` (jeton de session d'un acteur du
+noyau, ou la clé de secours `PLATEFORME_ADMIN_SECRET` qui vaut le fondateur ;
+voir `docs/admin/noyau.md`). Pour une route `box`, le tenant est
 `ctx.box.tenant_id` : une Box ne voit jamais que son client. Toutes les réponses
 sont du JSON ; une erreur est `{ "erreur": "<phrase en français>" }`.
 
@@ -10,18 +12,24 @@ sont du JSON ; une erreur est `{ "erreur": "<phrase en français>" }`.
 |---|---|---|---|
 | POST | /controle/tenants | admin | créer un client `{nom, segment, pays, opt_in_skills}` |
 | GET | /controle/tenants | admin | lister |
-| POST | /controle/boxes | admin | provisionner `{serial, gamme, identite_publique, cle_chiffrement_publique?, os, version_desktop}` → statut `stock` ; `cle_chiffrement_publique` = clé X25519 brute de 32 octets en base64url, sans elle la Box ne reçoit aucun contenu de Skill |
+| POST | /controle/boxes | admin | provisionner à la main `{serial, gamme, identite_publique, cle_chiffrement_publique?, os, version_desktop}` → statut `stock`, `reference` attribuée (`IA-FR-CMD-00000127` / `IA-FR-HOME-…`, un compteur par gamme) ; `cle_chiffrement_publique` = clé X25519 brute de 32 octets en base64url, sans elle la Box ne reçoit aucun contenu de Skill |
 | GET | /controle/boxes | admin | inventaire |
 | GET | /controle/boxes/:id | admin | une Box |
-| POST | /controle/boxes/:id/attribuer | admin | `{tenant_id, plan_id}` → `provisionnee` |
-| POST | /controle/boxes/:id/statut | admin | `{statut, motif}` (active, suspendue, restituee, remplacee) |
+| POST | /controle/boxes/:id/attribuer | admin | `{tenant_id, plan_id}` → `provisionnee` (depuis `stock` ou `qualifiee`) |
+| POST | /controle/boxes/:id/statut | admin | `{statut, motif}` (stock, expediee, active, suspendue, restituee, remplacee) ; cycle : `usine → qualifiee → stock → provisionnee → expediee → active → suspendue | restituee | remplacee`, transitions dans `plateforme/controle/regles.ts` |
+| POST | /controle/usine/jetons | admin | jeton d'usine `{operateur, lot?, tenant_id?, plan_id?, duree_h? (≤ 72), utilisations_max? (≤ 100)}` → `{jeton, expire_le, …}` ; le jeton n'est rendu qu'ici, la plateforme n'en garde que l'empreinte |
+| GET | /controle/usine/jetons | admin | jetons émis, sans leur valeur |
+| POST | /controle/usine/enroler | public | en-tête `x-jeton-usine` ; `{serial, gamme, identite_publique, cle_chiffrement_publique?, os, version_desktop, profil_materiel, inventaire, installateur}` → Box `usine` avec sa `reference` ; refusé si jeton inconnu, expiré ou épuisé (401), profil matériel inconnu de `box/materiel/` (400) ou ne servant pas la gamme (409), série ou clé déjà vues (409) |
+| POST | /controle/box/usine/rapport | box | rapport d'usine `{serial, gamme, profil_materiel, inventaire?, installateur, operateur, commence_le, termine_le, tests:[{id, libelle, verdict: passe|echec|non_constate, duree_ms, detail}]}` ; la plateforme recalcule le verdict (aucun `echec`, tous les `tests_obligatoires` du profil `passe`) ; `passe` → `qualifiee`, puis `provisionnee` si le jeton d'usine portait client et plan ; `echec` laisse `usine` ; 409 hors `usine` ; 422 si un détail porte un secret ou une donnée client |
+| GET | /controle/boxes/:id/rapports | admin | rapports d'usine de la Box |
+| GET | /controle/boxes/:id/etiquette | admin | `{reference, device_id, gamme, serial, qr}` — ce qui va sur l'étiquette, rien d'autre (`qr` = la référence) |
 | POST | /controle/entitlements | admin | `{tenant_id, device_id, agent_template_id, specialisation_id, licence, debut, fin}` |
 | GET | /controle/entitlements | admin | `?tenant_id=` |
 | POST | /controle/entitlements/:id/revoquer | admin | `{motif}` |
 | GET | /controle/box/droits | box | droits actifs + `jeton` v2 signé par la plateforme : `expire_le` (24 h) et `grace_jusqu_au` (72 h, plateforme injoignable seulement) ; chaque droit porte `empreinte_fiche` (SHA-256 des octets exacts de la fiche) |
-| POST | /controle/box/telemetrie | box | `{cpu, memoire, disque, temperature, version_desktop}` |
-| GET | /controle/box/mises-a-jour | box | versions visées pour cette Box |
-| POST | /controle/mises-a-jour | admin | publier `{composant, version, canal, url, empreinte}` |
+| POST | /controle/box/telemetrie | box | `{cpu, memoire, disque, temperature, version_desktop, versions?: {service: semver}}` ; une Box `expediee` passe `active` à sa première télémétrie |
+| GET | /controle/box/mises-a-jour | box | versions visées pour cette Box, chacune avec `url`, `empreinte` et `signature` |
+| POST | /controle/mises-a-jour | admin | publier `{composant: desktop|os|skills|device, version, canal, url, empreinte}` ; signée par la plateforme (503 sans `PLATEFORME_CLE_SIGNATURE`) |
 | POST | /controle/skills | admin | déposer un Skill Pack (statut `candidat`) |
 | POST | /controle/skills/:id/revue | admin | `{decision: en-revue|valide|rejete|retire, motif}` ; `valide` signe le pack (refusé sans `PLATEFORME_CLE_SIGNATURE`) |
 | GET | /controle/skills | admin | tous |
@@ -45,6 +53,8 @@ Formats (`plateforme/controle/jeton.ts`, `scellement.ts`, vecteurs figés dans
   réponse « suspendue », « restituée » ou « révoqué » (403, droits vides) ne
   relève jamais de la grâce.
 - signature d'un Skill Pack : Ed25519 sur `iagent-skill-v1\n<skill_pack_id>\n<version>\n<empreinte>`.
+- signature d'une mise à jour : Ed25519 sur `iagent-maj-v1\n<composant>\n<version>\n<empreinte>` ;
+  la Box vérifie l'empreinte ET la signature avant de ranger le paquet (`box/services/`).
 - chiffrement : X25519 éphémère à chaque appel × clé de la Box, HKDF-SHA256 (sel
   vide, info `iagent-skill-v1|<device_id>|<skill_pack_id>|<version>`, 32 octets),
   AES-256-GCM, nonce 12 octets, étiquette de 16 octets à la fin du chiffré,
@@ -91,3 +101,49 @@ puissance-3, agent-unique (9,90 €).
 | GET | /create/etudes/:id | public | (identifiant non devinable) |
 | POST | /create/box/projets | box | `{etude_id}` → entreprise composée : 5 phases, équipes du catalogue, budget, jalons |
 | GET | /create/box/projets | box | |
+
+## v1 (noyau de l'admin : ADMIN MASTER §3 à §12, `plateforme/noyau/`)
+Une route `acteur` portant une permission répond 403 si l'acteur ne l'a sur
+aucun périmètre ; le périmètre exact est revérifié sur la ressource. Toute
+action qui change quelque chose passe par la passerelle (`POST /v1/actions` ou
+ses raccourcis) : 200 exécutée, 202 en attente d'approbation, 403 refusée par
+les règles, 422 échouée. `idempotence` et `motif` sont obligatoires ; l'en-tête
+`x-correlation-id` est repris jusque dans l'audit. Contrat lisible par une
+machine : `GET /v1/openapi.json` (OpenAPI 3.1).
+
+| Méthode | Chemin | Accès | Rôle |
+|---|---|---|---|
+| POST | /v1/sessions | public | `{acteur_id, cle, code?}` → jeton (humain 12 h, agent 15 min, service 1 h) ; `code` = second facteur une fois activé ; un seul message de refus |
+| GET | /v1/moi | acteur | qui je suis, mes rôles, second facteur ouvert ou non |
+| GET | /v1/registre | acteur | rôles, permissions, catalogue des actions avec leur risque |
+| POST | /v1/acteurs | acteur | core.actor.manage : créer `{type, nom_affiche, roles, autonomie?, budgets?, departement?}` ; la clé n'est rendue qu'ici |
+| GET | /v1/acteurs | acteur | core.actor.manage : lister, sans clés |
+| POST | /v1/acteurs/:id/statut | acteur | core.actor.manage : `{statut: actif|suspendu|retire, motif}` ; suspendre révoque les jetons |
+| POST | /v1/moi/mfa | acteur | ouvrir le second facteur (TOTP, application d'authentification) |
+| POST | /v1/moi/mfa/confirmer | acteur | `{code}` : le confirmer |
+| GET | /v1/vue-ensemble | acteur | fleet.device.read : compteurs de la flotte, approbations et incidents ouverts |
+| GET | /v1/devices | acteur | fleet.device.read : `?q&tenant_id&statut&connexion&gamme&apres&limite` (réponse `{elements, suivant}`), limité au périmètre de l'acteur |
+| GET | /v1/devices/:id | acteur | fleet.device.read : une Box, sa connexion, sa santé, ses écarts ; jamais de clé |
+| GET | /v1/devices/:id/desired-state | acteur | fleet.device.read : état voulu (versions, agents RUN/HOLD/STOP, politiques) |
+| PUT | /v1/devices/:id/desired-state | acteur | fleet.device.desired.update : changer l'état voulu, par la passerelle |
+| POST | /v1/devices/:id/commands | acteur | `{type, parametres, motif, idempotence}` → action de la passerelle (`restart_service`, `restart_box`, `update`, `factory_reset`…) |
+| POST | /v1/devices/:id/diagnostics | acteur | raccourci du diagnostic (R1) |
+| POST | /v1/agents/:id/pause | acteur | platform.agent.pause (R2) |
+| POST | /v1/agents/:id/resume | acteur | platform.agent.resume (R2) |
+| POST | /v1/agents/:id/suspend | acteur | platform.agent.suspend (R3) |
+| POST | /v1/agents/:id/terminate | acteur | platform.agent.terminate (R3) |
+| POST | /v1/actions | acteur | `{verbe, parametres, motif, idempotence}` |
+| GET | /v1/actions | acteur | actions visibles par l'acteur |
+| GET | /v1/approbations | acteur | core.approval.decide : boîte des approbations |
+| POST | /v1/approbations/:id/decision | acteur | core.approval.decide : `{decision: approuve|refuse|clarification, note}` ; le demandeur ne tranche pas sa propre demande ; R4 = deux personnes |
+| GET | /v1/evenements | acteur | core.event.read : `?apres=<seq>&type=` |
+| GET | /v1/incidents | acteur | fleet.device.read : incidents |
+| POST | /v1/incidents/:id/etat | acteur | core.incident.manage : `{etat, note}` |
+| GET | /v1/audit | acteur | security.audit.read : journal, avec politique, risque, approbation, résultat, corrélation |
+| POST | /v1/balayage | acteur | core.sweep.run : Box sans battement → hors ligne, commandes et approbations expirées, lettres mortes rejouées |
+| POST | /v1/box/battement | box | `{uptime_s, sante?}` → `{prochain_dans_s}` (60 s ± gigue) |
+| GET | /v1/box/etat-voulu | box | état voulu et sa version |
+| POST | /v1/box/etat-reel | box | `{version_appliquee, reel}` → écarts, `convergee` |
+| GET | /v1/box/commandes | box | commandes à exécuter (expirées écartées) |
+| POST | /v1/box/commandes/:id/resultat | box | `{reussie, code, duree_ms, sortie}` ; idempotent, sortie caviardée |
+| GET | /v1/openapi.json | public | le contrat |

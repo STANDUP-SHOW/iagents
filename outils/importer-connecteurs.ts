@@ -166,6 +166,25 @@ for (const e of mcp.entrees as Ligne[]) {
   parNom.set(slug(e['Application / serveur'] ?? ''), e);
 }
 
+// Le rapprochement par le nom ne voit pas qu'un connecteur V6 et un serveur du relevé
+// sont la même chose sous deux noms (« Dossiers locaux » et « Filesystem »). Quand
+// l'application met vraiment ce connecteur en œuvre, `serveurs-mcp.json` le dit en
+// toutes lettres (`connecteur` et `referentiel`) : c'est ce lien écrit qu'on suit, et
+// le serveur déclaré donne aussi l'adresse de sa documentation.
+const declares = new Map<string, { referentiel?: string; documentation?: string }>();
+for (const s of lire('connecteurs/serveurs-mcp.json').serveurs as any[]) {
+  if (s.connecteur) declares.set(s.connecteur, s);
+}
+function serveurDeclare(id: string): { ligne?: Ligne; documentation?: string } {
+  const d = declares.get(id);
+  if (!d) return {};
+  const ligne = d.referentiel ? parNom.get(slug(d.referentiel)) : undefined;
+  if (d.referentiel && !ligne) {
+    throw new Error(`serveurs-mcp.json renvoie ${id} à « ${d.referentiel} », absent du relevé MCP`);
+  }
+  return { ligne, documentation: d.documentation };
+}
+
 /** Rapproche « Microsoft 365 / Graph » de « Microsoft 365 », sans inventer de lien. */
 function serveurMcp(nom: string): Ligne | undefined {
   const s = slug(nom);
@@ -209,7 +228,8 @@ for (const source of SOURCES) {
     const nom = e['Nom'];
     const famille = slug(e['Famille'] ?? '');
     familles.add(famille);
-    const serveur = serveurMcp(nom);
+    const declare = serveurDeclare(e['ID connecteur']);
+    const serveur = declare.ligne ?? serveurMcp(nom);
 
     connecteurs.push({
       id: e['ID connecteur'],
@@ -258,8 +278,11 @@ for (const source of SOURCES) {
       coutPourLeClient: couts.get(e['ID connecteur'])?.pourLeClient ?? null,
       etapesClient: etapes(e['Étapes utilisateur']),
       etapesIntegrateur: etapes(e['Étapes intégrateur']),
-      urlProduit: e['URL produit'] ?? '',
-      urlDocumentation: e['URL documentation'] ?? '',
+      // Le relevé V6 laisse ces adresses vides pour les connecteurs qu'il dit « internes ».
+      // Quand l'application les met en œuvre par un serveur déclaré, ce serveur a un éditeur
+      // et une documentation, et ce sont eux qu'on lit.
+      urlProduit: e['URL produit'] || (declare.ligne?.['Source officielle ou registre'] ?? ''),
+      urlDocumentation: e['URL documentation'] || (declare.documentation ?? ''),
       // Dérivés, jamais saisis : `sert` dit quels besoins de fiche ce connecteur couvre, et
       // la règle d'activation relit les champs ci-dessus pour dire ce qui manque. Un
       // connecteur ne s'allume pas parce qu'on a coché une case ailleurs.

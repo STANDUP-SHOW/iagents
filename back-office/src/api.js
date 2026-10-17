@@ -8,6 +8,12 @@
 //         nom is a key of routes.json; rejects with ErreurPlateforme;
 //     jeton:   { present(): Promise<boolean>, poser(j): Promise<string>, oublier(): Promise<string> },
 //     adresse: { lire(): Promise<string>, poser(a): Promise<string> },
+//     session: { ouvrir({ acteur_id, cle, code? }): Promise<string> }
+//         a personal account of the admin core: the session token replaces the
+//         stored token, and neither the key nor the token comes back;
+//     courriel?: the e-mail studio's mailbox, see src/emails/client.js. Only the
+//                back-office app adds it: a host without it (the Desktop
+//                Commander) does not show the studio.
 //   }
 //
 // Rule (MASTER §15, CLAUDE.md): a platform error is shown exactly as the
@@ -15,6 +21,7 @@
 // into a success. Anything other than a 2xx JSON answer without `erreur` is
 // an ErreurPlateforme.
 import { chemin as construire } from './routes.js';
+import { courrielWeb } from './emails/client.js';
 
 export class ErreurPlateforme extends Error {
   constructor(message, statut, plateforme = true) {
@@ -85,8 +92,27 @@ export function creerClientWeb({ adresse: adresseDepart, jeton: jetonDepart = ''
     return interpreter(reponse.status, await reponse.text(), methode, chemin);
   }
 
+  async function ouvrirSession({ acteur_id, cle, code } = {}) {
+    if (!String(acteur_id ?? '').trim() || !String(cle ?? '').trim()) throw new ErreurPlateforme('Saisissez votre identifiant et votre clé personnelle.', 0, false);
+    const { methode, chemin: c } = construire('v1Session');
+    let reponse;
+    try {
+      reponse = await f(adresseComplete(adresse, c), {
+        method: methode, headers: { accept: 'application/json', 'content-type': 'application/json' },
+        body: JSON.stringify({ acteur_id: String(acteur_id).trim(), cle: String(cle).trim(), ...(String(code ?? '').trim() ? { code: String(code).trim() } : {}) }),
+      });
+    } catch (e) {
+      throw new ErreurPlateforme(`La plateforme ne répond pas à l'adresse « ${adresse} » (${e && e.message ? e.message : 'connexion impossible'}).`, 0);
+    }
+    const r = interpreter(reponse.status, await reponse.text(), methode, c);
+    if (typeof r?.jeton !== 'string') throw new ErreurPlateforme("La plateforme n'a pas rendu de jeton de session.", reponse.status);
+    jeton = r.jeton;
+    return `Session ouverte pour ${String(acteur_id).trim()}, ${r.mfa ? 'avec' : 'sans'} second facteur, jusqu'au ${r.expire_le}.`;
+  }
+
   return {
     appeler,
+    session: { ouvrir: ouvrirSession },
     jeton: {
       present: async () => Boolean(jeton),
       poser: async (j) => {
@@ -105,6 +131,7 @@ export function creerClientWeb({ adresse: adresseDepart, jeton: jetonDepart = ''
         return adresse;
       },
     },
+    courriel: courrielWeb(),
   };
 }
 
@@ -123,6 +150,9 @@ export function creerClientTauri(invoke) {
     appeler: async (nom, { params, query, corps } = {}) => {
       const { methode, chemin } = construire(nom, params, query);
       return appel('plateforme_appeler', { nom, methode, chemin, corps: methode === 'GET' ? null : (corps ?? {}) });
+    },
+    session: {
+      ouvrir: ({ acteur_id, cle, code } = {}) => appel('session_ouvrir', { acteurId: String(acteur_id ?? ''), cle: String(cle ?? ''), code: String(code ?? '').trim() || null }),
     },
     jeton: {
       present: () => appel('jeton_present'),

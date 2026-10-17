@@ -1,0 +1,30 @@
+# Le mode usine du premier démarrage (brief §41, §44) : tant que la Box n'est pas
+# qualifiée, tty1 montre l'écran opérateur (cage + cog devant iagent-device sur
+# 127.0.0.1). La condition est le MIROIR de celle d'iagent-commander : l'une des
+# deux tient tty1, jamais les deux.
+[Unit]
+Description=iAgent Box - mode usine (premier demarrage, tests, rapport)
+ConditionPathExists=!/var/lib/iagent/usine/qualifiee
+After=iagent-device.service systemd-user-sessions.service
+Wants=iagent-device.service
+Conflicts=getty@tty1.service iagent-commander.service
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/iagent/iagent-usine.sh
+Restart=on-failure
+RestartSec=3
+SyslogIdentifier=factory
+User=iagent
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+StandardInput=tty-force
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+Environment=XDG_SESSION_TYPE=wayland
+
+[Install]
+WantedBy=graphical.target

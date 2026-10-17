@@ -12,6 +12,7 @@ export default function Footer() {
       { nom: 'iAgent Box', href: '/box' },
       { nom: 'Desktop Commander', href: '/#desktop-commander' },
       { nom: 'Tarifs', href: '/pricing' },
+      { nom: 'Temp Agency', href: '/temp-agency' },
       { nom: 'Pourquoi louer', href: '/why-rent' },
       { nom: 'iAgent Voice', href: '/voice' },
       { nom: 'Standard téléphonique', href: '/standard-telephonique' },
@@ -22,7 +23,7 @@ export default function Footer() {
       { nom: `Les ${compteurs.fiches.toLocaleString('fr-FR')} métiers`, href: LIENS.catalogue },
       ...vitrine.slice(0, 5).map((f) => ({ nom: f.metier, href: f.url })),
     ] },
-    { titre: 'Par activité', liens: [...activitesPopulaires.map((a) => ({ nom: a.nom, href: a.url })), { nom: 'Toutes les activités', href: '/activites' }, { nom: 'Tous les secteurs', href: '/secteurs' }] },
+    { titre: 'Par activité', liens: [...activitesPopulaires.map((a) => ({ nom: a.nom, href: a.url })), { nom: 'Toutes les activités', href: '/activites' }, { nom: 'Tous les secteurs', href: '/secteurs' }, { nom: 'Tous les logiciels', href: '/logiciels' }] },
     { titre: 'Entreprise', liens: [
       { nom: 'Créer votre entreprise', href: '/create' },
       { nom: 'Opportunités', href: '/opportunities' },

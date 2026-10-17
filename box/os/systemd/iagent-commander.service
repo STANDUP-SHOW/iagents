@@ -1,0 +1,29 @@
+# Le kiosque (brief §28-§29) : une fois la Box qualifiée, tty1 démarre sur le
+# logo puis Desktop Commander, jamais sur un bureau Linux. cage n'affiche qu'une
+# application ; iagent-desktop (édition Box) est cette application.
+[Unit]
+Description=iAgent Box - Desktop Commander en kiosque
+ConditionPathExists=/var/lib/iagent/usine/qualifiee
+After=iagent-device.service systemd-user-sessions.service
+Wants=iagent-device.service
+Conflicts=getty@tty1.service iagent-usine.service
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/iagent/iagent-commander.sh
+Restart=always
+RestartSec=3
+SyslogIdentifier=runtime
+User=iagent
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+StandardInput=tty-force
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+Environment=XDG_SESSION_TYPE=wayland
+
+[Install]
+WantedBy=graphical.target

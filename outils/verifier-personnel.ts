@@ -15,6 +15,7 @@
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DEVIS } from './poste-de-devis.ts';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const lire = (p: string) => JSON.parse(readFileSync(join(racine, p), 'utf8'));
@@ -27,8 +28,6 @@ const fiches = new Map<string, { metier: string; secteur: string }>(catalogue.ag
 const SERVICES = ['direction', 'commercial', 'production', 'gestion'] as const;
 // The fewest a real company runs with: a manager, two people on the books, three on what it makes.
 const MINIMUM: Record<(typeof SERVICES)[number], number> = { direction: 1, commercial: 2, production: 3, gestion: 2 };
-// The price a client asks for before he signs, under whatever name the branch gives it.
-const DEVIS = /devis|deviseur|cotation|chiffrage|chiffreur|honoraires|lettre de mission|tarification|estimation|avis de valeur|offres? de prêt|propositions? commerciales?/i;
 
 const fautes: string[] = [];
 const faute = (ou: string, quoi: string) => fautes.push(`${ou} : ${quoi}`);

@@ -13,7 +13,7 @@
 // Lancer : `npm --prefix plateforme/cloudflare run banc`.
 
 import { spawn, type ChildProcess } from 'node:child_process';
-import { createHash, generateKeyPairSync, sign } from 'node:crypto';
+import { createHash, createHmac, generateKeyPairSync, sign } from 'node:crypto';
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -44,6 +44,9 @@ const env: Record<string, string> = {
   VOIX_URL_PUBLIQUE: base,
   // A phone engine "has its key": the bridge opens. The key is false, so the engine refuses and the call goes to a human.
   GEMINI_API_KEY: 'cle-gemini-banc-fausse',
+  // The call centre: Meta's signature is checked; no WhatsApp token and no model key, so the
+  // message is acknowledged as "for a human" and the reply is journaled as not sent.
+  META_APP_SECRET: 'secret-meta-banc-cloudflare', META_VERIFY_TOKEN: 'mot-meta-banc',
 };
 const fichierEnv = join(persistance, 'variables.env');
 writeFileSync(fichierEnv, Object.entries(env).map(([k, v]) => `${k}="${v}"`).join('\n'));
@@ -110,6 +113,14 @@ try {
   const faux = await lire(await fetch(base + '/controle/box/droits', { headers: { 'x-box-id': deviceId, 'x-horodatage': h, 'x-signature': sign(null, Buffer.from(messageASigner('GET', '/controle/box/droits', h, '')), autre.privateKey).toString('base64') } }));
   verifier('une Box qui signe avec une autre clé : refusée', faux.statut === 401);
 
+  // Admin core (/v1): heartbeat, desired state and a command through the action gateway, in workerd.
+  const bat = await parBox('POST', '/v1/box/battement', JSON.stringify({ uptime_s: 60 }));
+  const voulu = await parBox('GET', '/v1/box/etat-voulu');
+  verifier('noyau : battement et état voulu servis par workerd', bat.statut === 200 && voulu.statut === 200 && voulu.corps?.voulu?.agents !== undefined, `${bat.texte} | ${voulu.texte}`);
+  const diag = await admin('POST', `/v1/devices/${deviceId}/diagnostics`, { motif: 'banc cloudflare', idempotence: 'banc-cf-diag-1' });
+  const cmds = await parBox('GET', '/v1/box/commandes');
+  verifier('noyau : un diagnostic passe la passerelle et arrive à la Box', diag.statut === 200 && cmds.corps?.commandes?.some((c: { type: string }) => c.type === 'diagnostic'), `${diag.texte} | ${cmds.texte}`);
+
   // Pricing: the JSON imported into the Worker gives what Node computes from the same files.
   const { serveur } = creerPlateforme({ secretAdmin, fichierDonnees: null });
   await new Promise<void>((r) => serveur.listen(0, '127.0.0.1', r));
@@ -171,13 +182,31 @@ try {
     o.ws.close();
   }
 
+  // The internal call centre, in workerd: a signed WhatsApp message is accepted, worked on
+  // after the 200 (waitUntil), and lands in the Durable Object's storage.
+  const chargeWa = JSON.stringify({ object: 'whatsapp_business_account', entry: [{ id: 'W', changes: [{ field: 'messages', value: { contacts: [{ wa_id: '33611112222', profile: { name: 'Prospect Cloudflare' } }], messages: [{ from: '33611112222', id: 'wamid.cf', timestamp: '1760000000', type: 'text', text: { body: 'Bonjour, vous êtes là ?' } }] } }] }] });
+  const wa = await lire(await fetch(base + '/centre/whatsapp', { method: 'POST', headers: { 'content-type': 'application/json', 'x-hub-signature-256': `sha256=${createHmac('sha256', env.META_APP_SECRET).update(chargeWa).digest('hex')}` }, body: chargeWa }));
+  let centre: R | null = null;
+  for (let i = 0; i < 20; i++) {
+    centre = await admin('GET', '/centre/etat');
+    if (centre.corps?.a_traiter?.includes('wa-+33611112222')) break;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  verifier('centre d’appels : message WhatsApp signé accepté et traité après la réponse', wa.statut === 200 && centre?.corps?.a_traiter?.includes('wa-+33611112222'), `${wa.texte} | ${centre?.texte}`);
+  verifier('centre d’appels : la console dit ce qui manque, par son nom', String(centre?.corps?.canaux?.whatsapp).includes('WHATSAPP_JETON') && String(centre?.corps?.canaux?.cerveau).includes('ANTHROPIC_API_KEY'), JSON.stringify(centre?.corps?.canaux));
+  verifier('centre d’appels : la page de la console est servie', (await fetch(base + '/centre/console')).headers.get('content-type')?.startsWith('text/html') === true);
+
   // Durable: everything above survives a restart of the Worker.
   await arreter();
   await demarrer();
   const apres = await parBox('GET', '/controle/box/droits');
   verifier('après redémarrage : la Box, son client et son droit sont toujours là', apres.statut === 200 && String(apres.corps?.jeton ?? '').includes('.'), apres.texte);
+  const audit = await admin('GET', `/v1/audit?tenant_id=${tenant}`);
+  verifier('après redémarrage : l’action du noyau est toujours à l’audit', audit.statut === 200 && JSON.stringify(audit.corps).includes('fleet.device.diagnostic'), audit.texte);
   const sup = await admin('GET', `/voix/appels?tenant_id=${tenant}`);
   verifier('après redémarrage : l’appel est toujours connu de la supervision', sup.statut === 200 && JSON.stringify(sup.corps).includes('+33144444444'), sup.texte);
+  const journalCentre = await admin('GET', '/centre/etat');
+  verifier('après redémarrage : la conversation du centre d’appels est toujours au journal', journalCentre.corps?.conversations?.some((c: { id: string }) => c.id === 'wa-+33611112222'), journalCentre.texte);
 } catch (e) {
   verifier('le banc va jusqu’au bout', false, `${(e as Error).message}\n${journal.slice(-2000)}`);
 } finally {

@@ -46,6 +46,11 @@ jobs:
       - name: Typage à la racine
         run: npx tsc --noEmit
 
+      # Le studio e-mail du back-office propose les vrais agents : sa copie du
+      # catalogue doit suivre agents/ et catalogue/, que son propre flux ne surveille pas.
+      - name: Catalogue du studio e-mail
+        run: node back-office/banc/catalogue-emails.mjs --verifier
+
       # Rend réellement les pages de la boutique en SSR, tous onglets :
       # « vite build » ne voit pas une variable qui n'existe pas.
       - name: Contrôle de la boutique
@@ -71,6 +76,47 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node --experimental-strip-types desktop/relever-piper.ts
+
+  box:
+    name: Box (usine, services, écran opérateur)
+    # 24.04 et non -latest : c'est l'Ubuntu d'iAgent OS (box/usine/iso/source.json),
+    # et les .deb des services se construisent contre sa glibc.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Installer
+        run: npm install
+
+      # Les bancs TypeScript du dossier box/ tournent déjà dans « Contrôle des
+      # données » (npm run controle). Ici : ce que seul Linux peut voir.
+      - name: Scripts shell (shellcheck)
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends shellcheck xorriso
+          find box -name '*.sh' -print0 | xargs -0 shellcheck -S warning
+
+      - name: Tests d'usine Python (règles pures, témoins)
+        run: python3 -m unittest discover -s box/usine/tests -v
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: box/services
+      - name: Services Rust de la Box (cargo test)
+        run: cargo test --manifest-path box/services/Cargo.toml --workspace
+
+      - name: Écran opérateur (rendu SSR des écrans sur les rapports témoins)
+        run: npm --prefix box/usine/ui install --no-audit --no-fund && npm --prefix box/usine/ui run banc
+
+      # Assemble l'arbre nocloud/ et le manifeste sans télécharger l'ISO Ubuntu :
+      # une faute de chemin dans construire-iso.sh se voit ici, pas à l'étiquette.
+      - name: Assemblage de l'ISO à blanc (--verifier)
+        run: |
+          box/usine/iso/construire-iso.sh --profil business --sortie dist --verifier
+          box/usine/iso/construire-iso.sh --profil home --sortie dist --verifier
+          cat dist/arbre-nocloud-business.txt | head -40
 
   application:
     name: Application desktop
