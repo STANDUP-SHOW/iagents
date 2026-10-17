@@ -121,10 +121,12 @@ jobs:
         env:
           ADRESSE: ${{ steps.deploiement.outputs.adresse }}
         run: |
-          for i in 1 2 3 4 5 6; do
+          # A secret put just before takes a while to reach every edge: the first real deploy
+          # (17/10/2026) was judged 503 at 30 s and answered 200 a minute later. Wait up to 3 min.
+          for i in $(seq 1 18); do
             code=$(curl -s -o reponse.txt -w '%{http_code}' "$ADRESSE/")
             if [ "$code" = 200 ] && grep -q 'plateforme iagent' reponse.txt; then echo "En ligne : $ADRESSE"; exit 0; fi
-            sleep 5
+            sleep 10
           done
           echo "::error::$ADRESSE répond $code : $(head -c 300 reponse.txt)"
           exit 1
