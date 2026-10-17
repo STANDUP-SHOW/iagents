@@ -1,3 +1,4 @@
+import { StationApple } from './station.jsx';
 import donnees from 'virtual:accueil';
 import { nombre, LIENS, Icone } from '../accueil/composants.jsx';
 import tarifs, { euros, montant, STATUTS, BOX_PUBLIQUES, BOX_DES, prixAgentEnUneLigne, DUREES, DUREES_COURTES, GRILLE_LOCATION, JOUR_DES } from '../data/tarifs.js';
@@ -42,7 +43,7 @@ function ScenEquipe() {
         {roles.map(([n, role]) => <Collaborateur key={n} n={n} role={role} statut="Disponible" />)}
       </div>
       <div className="sc-equipe-ecran"><Ecran src="dc-vos-agents" alt="Desktop Commander : l'écran « Vos agents » avec l'équipe embauchée" charger="eager" /></div>
-      <div className="sc-equipe-box"><Photo dossier="/accueil" src="box-commander" alt="La Box iAgent Station en trois finitions : écran tactile 27 pouces sur bras, base avec micros et haut-parleurs" largeur={1122} hauteur={570} charger="eager" /></div>
+      <div className="sc-equipe-box"><Photo dossier="/accueil" src="box-commander" alt="La Box iAgent Station en trois finitions : écran tactile 27 pouces sur bras, base avec micros et haut-parleurs" largeur={1176} hauteur={600} charger="eager" /></div>
     </div>
   );
 }
@@ -65,7 +66,7 @@ function RailRecrutement({ colonnes = 6, complet = false }) {
     ['Le prix', 'Agents, Box et estimation de consommation, affichés avant tout engagement.',
       <div className="sc-prix-mini"><small>Agent {ESSENTIAL.nom}, dès</small><strong>{euros(ESSENTIAL.mensuel)}<em> HT / mois</em></strong><small>+ consommation, à part</small></div>],
     ...(complet ? [['La préparation', 'Le contrat signé, la Box est préparée et vos agents y sont installés.',
-      <Photo dossier="/accueil" src="box-commander" alt="" largeur={1122} hauteur={570} />]] : []),
+      <Photo dossier="/accueil" src="box-commander" alt="" largeur={1176} hauteur={600} />]] : []),
     ['La mise en service', 'Vous branchez, vous vous connectez à vos comptes, l’équipe se met au travail.',
       <ul className="sc-coches-mini">{['Box branchée', 'Comptes connectés par vous', 'Équipe au travail'].map((t) => <li key={t}><Icone nom="coche" taille={14} />{t}</li>)}</ul>],
   ];
@@ -90,7 +91,7 @@ export function Workforce() {
         texte="Quatre pièces, chacune sur sa ligne : vous savez toujours ce que vous payez.">
         <div className="sc-formule">
           <a href="/box" className="sc-verre">
-            <div className="sc-formule-visuel"><Photo dossier="/accueil" src="box-commander" alt="La Box iAgent Station en trois finitions" largeur={1122} hauteur={570} /></div>
+            <div className="sc-formule-visuel"><Photo dossier="/accueil" src="box-commander" alt="La Box iAgent Station en trois finitions" largeur={1176} hauteur={600} /></div>
             <b>La Box</b><small>La Station iAgent, chez vous : écran tactile, micros et haut-parleurs en un seul appareil.</small>
           </a>
           <a href={LIENS.catalogue} className="sc-verre">
@@ -116,7 +117,7 @@ export function Workforce() {
       <Scene surtitre="Ce qui fait la différence" titre="Une présence, un poste de pilotage, un vrai métier">
         <div className="sc-trois">
           <div className="sc-verre sc-panneau">
-            <Photo src="box-bureau" alt="La Box iAgent Station sur un bureau, l'écran allumé, en blanc, bleu nuit et aluminium" largeur={1990} hauteur={940} />
+            <Photo src="box-bureau" alt="La Box iAgent Station sur un bureau, l'écran allumé, en blanc, bleu nuit et aluminium" largeur={1448} hauteur={600} />
             <p className="mq-surtitre">Pourquoi la Box</p>
             <h3 className="sc-h3">Une présence physique dans vos bureaux</h3>
             <Liste items={['On parle aux agents à voix haute, par leur prénom.', "L'écran tactile se commande au doigt, sans formation.", 'Préparée, maintenue et mise à jour par iAgent.']} />
@@ -208,7 +209,7 @@ function Puissances() {
     <ul className="sc-materiel">
       {PUISSANCES.map(([icone, titre, texte, statut, image]) => (
         <li key={titre} className="sc-verre">
-          <div className="sc-materiel-visuel">{image ? <Photo dossier="/accueil" src={image} alt="" largeur={1122} hauteur={570} /> : <Icone nom={icone} taille={54} />}</div>
+          <div className="sc-materiel-visuel">{image ? <Photo dossier="/accueil" src={image} alt="" largeur={1176} hauteur={600} /> : <Icone nom={icone} taille={54} />}</div>
           <em>{statut}</em>
           <b>{titre}</b>
           <small>{texte}</small>
@@ -226,12 +227,15 @@ const FINITIONS = [
   ['alu', 'Brushed Aluminum', 'Aluminium brossé et détails chrome', 'Sobre, minéral, haut de gamme.'],
 ];
 
+// Native widths of the three crops of max's visual (height 505).
+const TAILLES = { white: 344, navy: 400, alu: 430 };
+
 function Finitions() {
   return (
     <ul className="sc-finitions">
       {FINITIONS.map(([id, nom, matiere, ton], i) => (
         <li key={id} className="sc-verre">
-          <div className="sc-finition-visuel"><Photo src={`station-${id}`} alt={`La Station iAgent en finition ${nom}`} largeur={490} hauteur={640} /></div>
+          <div className="sc-finition-visuel"><Photo src={`station-${id}`} alt={`La Station iAgent en finition ${nom}`} largeur={TAILLES[id]} hauteur={505} /></div>
           <p className="mq-surtitre">{String.fromCharCode(65 + i)} / {nom}</p>
           <b>{matiere}</b>
           <small>{ton}</small>
@@ -320,7 +324,9 @@ export function Box() {
           <Bouton href="/contact" variante="contour-cyan" evenement="box_quote">Demander un devis Box</Bouton>
         </>}
         preuves={[['micro', 'La voix', 'par leur prénom'], ['ecran', 'Tactile', 'au doigt'], ['bouclier', 'Maintenue', 'mises à jour comprises'], ['equipe', 'Une dizaine', "d'agents par Box"]]}
-        visuel={<Photo src="box-bureau" alt="La Box iAgent Station sur un bureau, en Pearl White, Deep Navy et Brushed Aluminum : écran tactile 27 pouces sur bras articulé, base avec micros et haut-parleurs" largeur={1990} hauteur={940} charger="eager" className="sc-box-heros" />} />
+        visuel={<Photo src="box-bureau" alt="La Box iAgent Station sur un bureau, en Pearl White, Deep Navy et Brushed Aluminum : écran tactile 27 pouces sur bras articulé, base avec micros et haut-parleurs" largeur={1448} hauteur={600} charger="eager" className="sc-box-heros" />} />
+
+      <StationApple />
 
       <Scene surtitre="L'expérience" titre={<>On lui parle, on la touche, <Eclat>elle travaille</Eclat></>}>
         <Atouts items={[
@@ -454,7 +460,7 @@ function GrilleTarifs() {
         <div className="sc-offre-tete"><span><Icone nom="ecran" taille={20} /></span><div><b>La Box</b><small>Le poste de vos agents, chez vous.</small></div></div>
         <div className="sc-montant"><strong>{euros(BOX_PUBLIQUES[0].mensuel)}</strong><em>HT / mois sur {BOX_PUBLIQUES[0].engagementMois} mois</em></div>
         {BOX_PUBLIQUES.slice(1).map((b) => <p key={b.id} className="sc-montant-ou">ou <b>{euros(b.mensuel)}</b> HT / mois sur {b.engagementMois} mois</p>)}
-        <Photo dossier="/accueil" src="box-commander" alt="" largeur={1122} hauteur={570} className="sc-offre-image" />
+        <Photo dossier="/accueil" src="box-commander" alt="" largeur={1176} hauteur={600} className="sc-offre-image" />
         <Bouton href="/box" variante="contour-cyan" evenement="box_click">Découvrir la Box</Bouton>
         <span className="sc-offre-statut">{STATUTS[BOX_PUBLIQUES[0].statut] ?? ''} · matériel compris</span>
       </li>
@@ -469,7 +475,7 @@ export function Tarifs() {
       <Heros decor="orbite" surtitre="Tarifs" titre={<>Un abonnement fixe. <Eclat>Une consommation à part.</Eclat></>}
         texte={`Vous payez la Box, vos agents et, au-delà de quelques agents, le Task Commander. L'usage de l'IA se paie au réel, à part. Prix hors taxes, ${STATUTS[tarifs.statut]?.toLowerCase() ?? tarifs.statut}.`}
         preuves={[['equipe', 'Par agent', 'un prix par niveau'], ['ecran', 'La Box', 'mise à disposition'], ['eclair', 'Consommation', 'au réel, à part'], ['bouclier', 'Sans surprise', "l'estimation avant"]]}
-        visuel={<Photo src="box-bureau" alt="La Box iAgent Station sur un bureau, en trois finitions" largeur={1990} hauteur={940} charger="eager" className="sc-box-heros" />} />
+        visuel={<Photo src="box-bureau" alt="La Box iAgent Station sur un bureau, en trois finitions" largeur={1448} hauteur={600} charger="eager" className="sc-box-heros" />} />
 
       <Scene surtitre="Les agents et la Box" titre={<>Choisissez le niveau de <Eclat>chaque poste</Eclat></>}
         texte={`Chaque agent a son abonnement, ${prixAgentEnUneLigne()} hors taxes. La Box s'ajoute une fois pour l'équipe.`}>
@@ -609,7 +615,7 @@ export function IALocale() {
 /** The three ways to run, as in the security mockup: local, hybrid, cloud. */
 function Deploiements() {
   const voies = [
-    ['local', 'Local', 'Les modèles tournent chez vous ; rien ne sort pour être traité.', <Photo dossier="/accueil" src="box-commander" alt="" largeur={1122} hauteur={570} />, ['Vos fichiers', 'La Box', 'Vos dossiers']],
+    ['local', 'Local', 'Les modèles tournent chez vous ; rien ne sort pour être traité.', <Photo dossier="/accueil" src="box-commander" alt="" largeur={1176} hauteur={600} />, ['Vos fichiers', 'La Box', 'Vos dossiers']],
     ['hybride', 'Hybride', "Le quotidien en local, l'API pour ce que la machine ne porte pas. Vous êtes prévenu avant.", <Icone nom="hybride" taille={64} />, ['La Box', 'Vous êtes prévenu', "L'API d'IA"]],
     ['cloud', 'Cloud', "Pour un ou deux agents, sans machine : ils passent par l'API d'IA que vous choisissez.", <Icone nom="nuage" taille={64} />, ['Desktop Commander', "L'API d'IA", 'Vos dossiers']],
   ];

@@ -387,6 +387,15 @@ for (const page of PAGES) {
   const avenir = execSync("grep -rniE 'bient(o|ô)t|prochainement|en pr(e|é)vision|arrive progressivement|arrivera|arriveront|à venir|en cours de d(e|é)veloppement|pas encore (branch|construit|disponible)' src/pages src/accueil src/components src/App.jsx src/data/tarifs.json seo/generer.mjs || true", { encoding: 'utf8' }).trim();
   if (avenir) echoue(`une page annonce encore une fonction pour plus tard : ${avenir.split('\n').map((l) => l.slice(0, 120)).join(' ; ')}`);
   else ok('aucune page ne renvoie une fonction à plus tard');
+
+  // Une seule exception, voulue par max le 17/10 : « Coming soon » pour la
+  // Station iAgent, écrit une fois dans station.jsx et nulle part ailleurs.
+  const bientot = execSync("grep -rniE 'coming soon' src/pages src/accueil src/components src/App.jsx src/data/tarifs.json seo/generer.mjs || true", { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+  const horsStation = bientot.filter((l) => !l.startsWith('src/pages/station.jsx:'));
+  const dansStation = bientot.filter((l) => l.startsWith('src/pages/station.jsx:') && /COMING_SOON = 'Coming soon'/.test(l));
+  if (horsStation.length) echoue(`« Coming soon » ailleurs que pour la Station : ${horsStation.map((l) => l.slice(0, 120)).join(' ; ')}`);
+  else if (dansStation.length !== 1) echoue('la Station iAgent ne porte plus son « Coming soon » (station.jsx)');
+  else ok('« Coming soon » n’annonce que la Station iAgent');
 }
 
 console.log(process.exitCode ? `\n${n} attentes tenues, au moins une faute ci-dessus — boutique REFUSÉE` : `\n${n} attentes tenues — boutique ok`);
