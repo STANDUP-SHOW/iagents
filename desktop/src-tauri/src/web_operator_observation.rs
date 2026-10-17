@@ -38,6 +38,8 @@ pub struct ElementVue {
 pub struct Observation {
     pub version: u8,
     #[serde(default)]
+    pub id: String,
+    #[serde(default)]
     pub origine: String,
     #[serde(default)]
     pub titre: String,
@@ -52,7 +54,7 @@ pub struct Observation {
 /// En lecture seulement, l'accord est une declaration utilisateur preexistante.
 /// Pour toute action impactante, le controle Web Operator de phase C reste
 /// distinct et exige une permission/validation humaine supplementaire.
-fn site_observable(url: &Url, sites: &[crate::navigateur::SiteConnecte]) -> bool {
+pub(crate) fn site_observable(url: &Url, sites: &[crate::navigateur::SiteConnecte]) -> bool {
     if url.scheme() != "https" || url.port_or_known_default() != Some(443) {
         return false;
     }
@@ -125,7 +127,7 @@ pub async fn navigateur_observer(app: AppHandle) -> Result<Observation, String> 
     if brut.len() > MAX_REPONSE {
         return Err("L'observation depasse la taille autorisee.".into());
     }
-    let resultat: Observation = serde_json::from_str(&brut)
+    let mut resultat: Observation = serde_json::from_str(&brut)
         .map_err(|_| "Le navigateur a renvoye une observation illisible.".to_string())?;
     valider_resultat(&resultat, &origine)?;
 
@@ -136,6 +138,9 @@ pub async fn navigateur_observer(app: AppHandle) -> Result<Observation, String> 
     if apres != avant || !site_observable(&apres, &sites) {
         return Err("La page a change pendant l'observation. Reessayez.".into());
     }
+    // Memoriser exclusivement des references a cette observation precise.
+    // Chaque action consommera ce releve une seule fois.
+    crate::web_operator_actions::memoriser(&avant, &mut resultat)?;
     Ok(resultat)
 }
 
@@ -154,6 +159,7 @@ mod tests {
     fn resultat() -> Observation {
         Observation {
             version: 1,
+            id: String::new(),
             origine: "https://www.example.com".into(),
             titre: "Votre compte".into(),
             titres: vec!["Profil".into()],
