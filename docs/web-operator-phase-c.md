@@ -42,6 +42,40 @@ Fichiers :
 6. Reessayer avec une page ayant un champ mot de passe et des valeurs saisies : aucun de ces contenus ne doit etre renvoye.
 7. Tester les changements de page rapides, pages lentes, erreurs de lecture et fermeture de la WebView pendant la demande.
 
+## Etape 3 ajoutee — Banc de saisie et de clic, confirmation humaine
+
+Cette etape introduit un pilote **manuel** de gestes sur la WebView existante.
+
+- `web_operator_actions.rs` : memoire du dernier releve, UUID aleatoire a usage unique, index et empreinte logique des proprietes de l'element, controles de domaine et d'URL avant execution, delai 8 s, taille de retour bornee. Toute tentative consomme l'observation ; en cas d'echec ou de reponse inconnue, il faut **relire la page avant de recommencer**.
+- `web_operator_action.js` : script constant qui repere les elements dans le meme ordre que la lecture, compare leurs proprietes et refuse toute divergence. Aucune injection de script ou de selecteur fourni par le modele. Saisie prise en charge : input text/email/tel/search/url/number et textarea ; pas de password ni champs de paiement declares. Clic : uniquement bouton HTML natif de type `button`, hors formulaire. **Le fait de declencher un clic ne signifie pas que la mission a reussi.**
+- `web_operator_observation.rs` : chaque releve valide recoit un UUID et est memorise uniquement en RAM.
+- `main.rs` : commande Tauri `navigateur_action` (reservee a la vue de confiance) ; aucune permission ajoutee a la WebView du site externe.
+- `Navigateur.tsx` : champ de texte de test et boutons « Remplir (test) » / « Cliquer (test) » ; confirmation utilisateur a chaque tentative et disparition du releve apres usage.
+
+### Limite de securite fondamentale
+
+Le parametre `confirmation_humaine: bool` de `navigateur_action` n'est **PAS** une preuve forte d'accord humain. Il est utilise uniquement par le banc manuel de l'interface de confiance, car les agents ne peuvent pas encore invoquer cette commande via leurs outils.
+
+**Interdiction d'ajouter `navigateur_action` aux outils MCP des agents sans :**
+1. verifier les permissions site/geste/agent dans le backend Rust de confiance ;
+2. emettre et consommer un accord ponctuel par le gestionnaire de validations, lie a l'operation et a l'identite du client, non forgeable par le modele ;
+3. presenter a l'humain les gestes a impact (clics SPA, envois, suppressions), puis controler leur execution et verifier l'etat resultant ;
+4. journaliser un resultat verifie sans stocker valeurs de formulaires, mots de passe, cookies ou tokens ;
+5. traiter explicitement les redirections, iframes, onglets, formulaires complexes et les etats `attente_humaine` avec l'ordonnanceur proactif existant.
+
+### Recette manuelle attendue
+
+Tester sur un domaine HTTPS de demonstration declare dans « Vos comptes », puis :
+- relever les champs et saisir un texte neutre ; observer qu'il apparait dans le bon champ ;
+- refaire l'observation, declencher un bouton de type `button` explicitement confirme, et controler l'effet ;
+- essayer un bouton de soumission, un mot de passe ou un lien : le pilote doit refuser ;
+- changer de page apres releve : refus du geste ;
+- tenter de rejouer le meme releve : refus ;
+- interrompre l'action ou simuler un timeout : aucun second clic automatique ;
+- verifier le comportement de la WebView sur Windows, macOS et Linux pris en charge.
+
+Ces essais ne remplacent pas la compilation CI ni un banc end-to-end. Le navigateur pilote ne constitue pas encore un employe web autonome.
+
 ## Suite technique, sans reconstruire l'existant
 1. **Capacites reelles du moteur WebView** : confirmer Windows WebView2, macOS WKWebView, Linux WebKitGTK et ce qui est exposable de maniere sure en Rust. Le maintien du profil et des sessions est obligatoire.
 2. **Pilote de lecture** : naviguer, observer URL/titre/DOM accessible/elements etiquetes/captures si compatibles, detecter les redirections et changements d'origine. Le contenu web est non fiable (prompt injection).
