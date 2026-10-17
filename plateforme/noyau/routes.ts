@@ -240,7 +240,7 @@ export const routes: Route[] = [
       const lignes = stockage.lister<Box>('boxes', (b) => peut(appelant!, 'fleet.device.read', ressourceBox(b))).map((b) => ligneBox(stockage, b, m));
       const compter = (f: (l: (typeof lignes)[number]) => string) => lignes.reduce<Record<string, number>>((acc, l) => { const k = f(l); acc[k] = (acc[k] ?? 0) + 1; return acc; }, {});
       return ok({
-        total: lignes.length, par_connexion: compter((l) => l.connexion), par_statut: compter((l) => l.statut), par_gamme: compter((l) => l.gamme),
+        total: lignes.length, par_connexion: compter((l) => l.connexion), par_statut: compter((l) => l.statut), par_gamme: compter((l) => l.gamme ?? 'a_poser'),
         par_profil: compter((l) => l.profil_materiel ?? 'non qualifiée'), par_version_desktop: compter((l) => l.versions.desktop),
         non_convergees: lignes.filter((l) => !l.convergee).length,
         incidents_ouverts: stockage.lister<Incident>('incidents', (i) => i.etat !== 'RESOLVED' && i.etat !== 'POSTMORTEM').length,
