@@ -43,7 +43,7 @@ export class CerveauDemonstration implements Cerveau {
     if (/rendez-vous|rdv|rencontrer/.test(dit)) return outil('creneaux_libres');
     if (/prix|tarif|combien|cout/.test(dit)) {
       const essentiel = /Essential : (\d+) € HT par mois/.exec(systeme);
-      const box = /Box Commander \(?[^:]*: (\d+) € HT par mois sur 36 mois/.exec(systeme);
+      const box = /(?:Box Commander|iAgent Station) \(?[^:]*: (\d+) € HT par mois sur 36 mois/.exec(systeme);
       return this.texte(essentiel
         ? `Un agent commence à ${essentiel[1]} euros hors taxes par mois en formule Essential${box ? `, et la Box qui l’accueille est à ${box[1]} euros par mois sur trente-six mois` : ''}. Voulez-vous qu’un conseiller vous présente l’offre ?`
         : 'Je préfère qu’un conseiller vous donne le prix exact. Voulez-vous un rendez-vous ?');

@@ -283,6 +283,13 @@ export type Audit = {
   action: string;
   cible: string;
   detail: string;
+  /** Noyau (ADMIN MASTER §16) : qui agit, sous quelle règle, avec quelle approbation, pour quel résultat, dans quelle chaîne. */
+  acteur_type?: 'HUMAN' | 'AGENT' | 'SERVICE' | 'DEVICE';
+  politique?: 'ALLOW' | 'DENY' | 'APPROVAL' | 'DUAL_APPROVAL';
+  risque?: 'R0' | 'R1' | 'R2' | 'R3' | 'R4';
+  approbation?: string | null;
+  resultat?: 'SUCCESS' | 'FAILURE' | 'PENDING' | 'DENIED';
+  correlation_id?: string;
 };
 
 /** Un client de la plateforme (entreprise ou foyer). */

@@ -5,6 +5,7 @@ export const PAGES = [
   { nom: 'workforce', titre: 'iAgent Workforce : un collaborateur numérique managé', description: "Des agents par métier, une Box installée chez vous, Desktop Commander pour les diriger, la consommation d'IA à part : l'offre iAgent en une page." },
   { nom: 'box', titre: 'iAgent Box : votre équipe IA, installée dans votre entreprise', description: "Un poste tactile préparé pour vos agents, avec voix, micro et Desktop Commander, mis à disposition sous abonnement et maintenu par iAgent." },
   { nom: 'pricing', titre: 'Tarifs iAgent : abonnement fixe, consommation à part', description: "Le prix de la Box, des agents, du Task Commander et des packs, et ce qui se paie à l'usage : API d'IA, voix, téléphonie." },
+  { nom: 'temp-agency', titre: "Temp Agency : l'intérim de l'IA, un agent à la durée", description: "Louez un agent iAgent pour 24 heures, 7 jours, 14 jours ou un mois, sans Box : le prix du mois ramené à la durée, payé une fois." },
   { nom: 'how-it-works', titre: 'Comment ça marche : du recrutement au travail', description: "Décrivez votre besoin, choisissez vos agents, faites passer l'entretien d'embauche : iAgent prépare la Box et met l'équipe au travail." },
   { nom: 'local-ai', titre: 'IA locale et hybride pour les entreprises', description: "Faire tourner vos agents chez vous, dans le cloud ou entre les deux : confidentialité, contrôle et coût à grande échelle. Infrastructure sur devis." },
   { nom: 'security', titre: 'Sécurité et contrôle : autonome ne signifie pas incontrôlé', description: "Ce que chaque agent peut ouvrir, ce qui attend votre accord, ce qui est consigné : comment iAgent garde le travail sous votre contrôle." },
@@ -20,7 +21,7 @@ export const PAGES = [
   { nom: 'create', titre: 'iAgent Create : de votre idée à une entreprise composée', description: "Décrivez votre projet : iAgent propose l'équipe d'agents qui l'étudie, le finance, le construit, le lance et le fait tourner." },
   { nom: 'opportunities', titre: 'Opportunités : des projets repérés sur le marché', description: "Des projets repérés, avec leurs scénarios, leurs coûts, leurs risques et l'équipe d'agents qu'il faudrait. Aucune promesse de rentabilité." },
   { nom: 'contact', titre: 'Contact et démonstration iAgent', description: "Une démonstration, une équipe à composer, une infrastructure à dimensionner : dites-nous ce que vous voulez accomplir." },
-  { nom: 'recrutement', noindex: true, titre: 'Votre liste de recrutement iAgent', description: "Les agents que vous recrutez et votre Box Commander, chaque prix sur sa ligne : validez la liste, nous revenons vers vous avec votre devis." },
+  { nom: 'recrutement', noindex: true, titre: 'Votre liste de recrutement iAgent', description: "Les agents que vous recrutez et votre Station iAgent, chaque prix sur sa ligne : validez la liste, nous revenons vers vous avec votre devis." },
   { nom: 'mentions-legales', titre: 'Mentions légales iAgent', description: "L'éditeur du site iagent.agency, son directeur de la publication, son hébergeur et l'usage des données que vous nous confiez." },
 ];
 

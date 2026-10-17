@@ -176,7 +176,7 @@ function PourquoiLouer() {
             <p className="mq-surtitre">Avec iAgent</p>
             <h3 className="sc-h2">Tout est déjà intégré</h3>
             <div className="sc-integre-corps">
-              <Photo dossier="/accueil" src="box-commander" alt="La Box iAgent Commander" largeur={1122} hauteur={570} />
+              <Photo dossier="/accueil" src="box-commander" alt="La Box iAgent Station en trois finitions" largeur={1122} hauteur={570} />
               <div className="sc-integre-lignes">
                 <div><Icone nom="equipe" taille={20} /><span><b>Des métiers prêts</b><small>Décrits, maintenus, enrichis.</small></span></div>
                 <div><Icone nom="ecran" taille={20} /><span><b>La Box et Desktop Commander</b><small>Préparés et tenus à jour.</small></span></div>
@@ -284,7 +284,8 @@ function Voix() {
 function Standard() {
   return (
     <>
-      <Heros surtitre="Standard téléphonique IA" titre={<>Un standard qui comprend <Eclat>ce qu'on lui dit.</Eclat></>}
+      <Heros photo={{ src: 'decor-call-center', alt: 'Des conseillers au casque, alignés à leur poste, en bleu nuit et violet', position: '70% 35%' }}
+        surtitre="Standard téléphonique IA" titre={<>Un standard qui comprend <Eclat>ce qu'on lui dit.</Eclat></>}
         texte="Plus de « tapez 1, tapez 2 » : l'appelant dit ce qu'il veut, l'agent d'accueil répond ou passe l'appel au bon agent, ou à vous."
         actions={<Bouton href="#numero" evenement="phone_number_request">Ouvrir mon numéro</Bouton>}
         preuves={[['tel', 'Un vrai numéro', 'gardé si vous changez'], ['bulle', 'En conversation', 'sans touches'], ['reseau', 'Une extension', 'par agent'], ['visage', 'La main', "à l'humain"]]}
@@ -336,7 +337,8 @@ function Standard() {
 function CentreSupport() {
   return (
     <>
-      <Heros surtitre="iAgent Support Center" titre={<>Votre SAV au téléphone, <Eclat>plusieurs appels à la fois.</Eclat></>}
+      <Heros photo={{ src: 'decor-call-center', alt: 'Des conseillers au casque, alignés à leur poste, en bleu nuit et violet', position: '60% 40%' }}
+        surtitre="iAgent Support Center" titre={<>Votre SAV au téléphone, <Eclat>plusieurs appels à la fois.</Eclat></>}
         texte="Facturation, commandes, assistance, réclamations : des agents répondent en parallèle, ouvrent le ticket et passent la main à un humain quand il le faut."
         actions={<Bouton href="#devis" evenement="call_center_quote">Dimensionner mon support</Bouton>}
         preuves={[['equipe', 'En parallèle', 'plusieurs appels'], ['doc', 'Un ticket', 'par appel'], ['visage', 'Escalade', 'avec le contexte'], ['graphe', 'Suivi', 'appel par appel']]}
@@ -387,7 +389,8 @@ function CentreSupport() {
 function CentreVentes() {
   return (
     <>
-      <Heros surtitre="iAgent Sales Center" titre={<>Des campagnes d'appels, <Eclat>dans les règles.</Eclat></>}
+      <Heros photo={{ src: 'decor-sales-center', alt: 'Un plateau commercial : des conseillers au casque passent leurs appels, en bleu nuit et violet', position: '50% 65%' }}
+        surtitre="iAgent Sales Center" titre={<>Des campagnes d'appels, <Eclat>dans les règles.</Eclat></>}
         texte="Relances, prises de rendez-vous, suivi de devis : des agents appellent pour vous, dans les plages autorisées et seulement les personnes qui peuvent l'être."
         actions={<Bouton href="#devis" evenement="call_center_quote">Préparer une campagne</Bouton>}
         preuves={[['cible', 'Des campagnes', 'un objectif, un script'], ['crm', 'Votre CRM', 'chaque appel noté'], ['agenda', 'Des relances', 'au bon moment'], ['bouclier', 'Consentement', 'vérifié']]}

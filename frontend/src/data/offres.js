@@ -95,17 +95,23 @@ const publique = (id) => !INSTALLATIONS_MASQUEES.has(id);
 export const INSTALLATIONS = OFFRES.filter((o) => publique(o.id)).map((o) => ({ ...o, cout: coutInstallation(o) }));
 
 /** The Box is rented (max, 07/10): its line reads the rent from tarifs.json, not a purchase price. */
-export const LOCATION_BOX = { id: 'box-commandeur', phrase: `${eurosTarif(BOX_DES.mensuel)} HT par mois sur ${BOX_DES.engagementMois} mois, matériel mis à disposition` };
+export const COMMANDEUR_ID = 'box-commandeur';
+export const LOCATION_BOX = { id: COMMANDEUR_ID, phrase: `${eurosTarif(BOX_DES.mensuel)} HT par mois sur ${BOX_DES.engagementMois} mois, matériel mis à disposition` };
 export const installationDe = (id) => INSTALLATIONS.find((o) => o.id === id);
 
-/** A team -> the installation to advise, with every installation's quote beside it. */
+/**
+ * A team -> the installation to advise, with every installation's quote beside it.
+ * The rule is max's (16/10): no machine for 1 or 2 agents, the 64 Go Box beyond,
+ * one per ten agents. The Box is rented: its cost here is the rent of tarifs.json
+ * times the number of boxes, never the purchase price of the dimensioning file.
+ */
 export function conseilPour(ids) {
   const fiches = ids.map(ficheDe).filter(Boolean);
   if (!fiches.length) return null;
   const devis = conseillerBox(fiches).devis.filter((d) => publique(d.offre));
-  const horizon = (d) => d.totalPendant + d.totalApres;
-  const conseil = devis.reduce((best, d) => (horizon(d) < horizon(best) - 0.005 ? d : best));
-  return { conseil, devis, fiches };
+  const conseil = conseillerBox(fiches).conseil;
+  const loyer = conseil.nombreBox * BOX_DES.mensuel;
+  return { conseil, devis, fiches, loyer, total: Math.round((loyer + conseil.api) * 100) / 100 };
 }
 
 /** One line per installation for a single agent. */

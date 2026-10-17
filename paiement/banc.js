@@ -166,6 +166,60 @@ await cas('le catalogue Stripe ne se crée qu\'une fois', async () => {
   assert.equal(appels.filter((a) => a.methode === 'POST' && a.chemin === '/v1/tax_rates').length, 1);
 });
 
+console.log('Location à la durée');
+await cas('24 heures, 7 jours, 14 jours : un trentième, un quart, la moitié du mois, au centime', () => {
+  const prix = (duree, palier = 'essential') => lignesAFacturer({ lignes: [{ type: 'agent', fiche: 'AG-0001', palier, duree }] })[0].montant;
+  for (const p of tarifs.agents.paliers) {
+    assert.equal(prix('24h', p.id), Math.round((p.mensuel * 100) / 30), `${p.id} 24 h`);
+    assert.equal(prix('7j', p.id), Math.round((p.mensuel * 100) / 4), `${p.id} 7 jours`);
+    assert.equal(prix('14j', p.id), Math.round((p.mensuel * 100) / 2), `${p.id} 14 jours`);
+    assert.equal(prix('mois', p.id), p.mensuel * 100, `${p.id} mois`);
+  }
+  assert.equal(prix('24h'), 497, 'Essential 149 € → 4,97 € les 24 heures');
+  assert.equal(prix('7j', 'expert'), 9975, 'Expert 399 € → 99,75 € les 7 jours');
+});
+await cas('sans durée, un agent se loue au mois, sous la clé Stripe d\'avant les durées', () => {
+  const [sans] = lignesAFacturer({ lignes: [{ type: 'agent', fiche: 'AG-0001', palier: 'essential' }] });
+  const [mois] = lignesAFacturer({ lignes: [{ type: 'agent', fiche: 'AG-0001', palier: 'essential', duree: 'mois' }] });
+  assert.equal(sans.cle, `iagent_agent_AG-0001_essential_${essential * 100}`);
+  assert.equal(mois.cle, sans.cle);
+  assert.equal(sans.recurrent, true);
+});
+await cas('une durée inconnue est refusée en français', () => {
+  refuse(() => lignesAFacturer({ lignes: [{ type: 'agent', fiche: 'AG-0001', palier: 'essential', duree: '3j' }] }), /durée/);
+});
+await cas('le même poste au mois et pour 7 jours fait deux lignes', () => {
+  const l = lignesAFacturer({ lignes: [{ type: 'agent', fiche: 'AG-0001', palier: 'essential' }, { type: 'agent', fiche: 'AG-0001', palier: 'essential', duree: '7j' }] });
+  assert.equal(l.length, 2);
+  assert.match(l[1].nom, /7 jours$/);
+});
+await cas('locations courtes seules : un paiement unique, sans abonnement ni prix récurrent', async () => {
+  viderCache();
+  const { f, appels } = fauxStripe();
+  const lignes = lignesAFacturer({ lignes: [{ type: 'agent', fiche: 'AG-0001', palier: 'essential', duree: '24h', quantite: 2 }] });
+  assert.match(texteEngagement(lignes), /payée une fois/);
+  await creerSession(client('sk_test_x', f), lignes, { origine: 'https://iagent.agency' });
+  const p = appels.find((a) => a.chemin === '/v1/prices' && a.methode === 'POST').corps;
+  assert.equal(p.unit_amount, '497');
+  assert.equal(p['recurring[interval]'], undefined);
+  const session = appels.find((a) => a.chemin === '/v1/checkout/sessions').corps;
+  assert.equal(session.mode, 'payment');
+  assert.equal(session['subscription_data[metadata][origine]'], undefined);
+  assert.equal(session['payment_intent_data[metadata][ligne_1]'], 'agent AG-0001 essential 24h x2');
+  assert.equal(session['invoice_creation[enabled]'], 'true');
+});
+await cas('au mois et à la durée ensemble : un abonnement, la location courte payée une fois', async () => {
+  viderCache();
+  const { f, appels } = fauxStripe();
+  const lignes = lignesAFacturer({ lignes: [{ type: 'agent', fiche: 'AG-0001', palier: 'essential' }, { type: 'agent', fiche: 'AG-0002', palier: 'expert', duree: '14j' }] });
+  await creerSession(client('sk_test_x', f), lignes, { origine: 'https://iagent.agency' });
+  const prix = appels.filter((a) => a.chemin === '/v1/prices' && a.methode === 'POST').map((a) => a.corps);
+  assert.equal(prix.filter((p) => p['recurring[interval]'] === 'month').length, 1);
+  assert.equal(prix.find((p) => !p['recurring[interval]']).unit_amount, '19950');
+  assert.equal(appels.find((a) => a.chemin === '/v1/checkout/sessions').corps.mode, 'subscription');
+  assert.match(texteEngagement(lignes), /payées une fois/);
+});
+
 console.log('Webhook');
 const secret = 'whsec_banc';
 const signe = (corps, t = Math.floor(Date.now() / 1000), s = secret) => `t=${t},v1=${createHmac('sha256', s).update(`${t}.${corps}`).digest('hex')}`;

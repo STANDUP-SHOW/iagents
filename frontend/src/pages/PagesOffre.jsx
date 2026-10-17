@@ -1,6 +1,6 @@
 import donnees from 'virtual:accueil';
 import { nombre, LIENS, Icone } from '../accueil/composants.jsx';
-import tarifs, { euros, montant, STATUTS, BOX_PUBLIQUES, BOX_DES, prixAgentEnUneLigne } from '../data/tarifs.js';
+import tarifs, { euros, montant, STATUTS, BOX_PUBLIQUES, BOX_DES, prixAgentEnUneLigne, DUREES, DUREES_COURTES, GRILLE_LOCATION, JOUR_DES } from '../data/tarifs.js';
 import { Voisines, Bouton, Demande } from './blocs.jsx';
 import { Eclat, Heros, Scene, Ecran, Photo, Visage, Collaborateur, Rail, Atouts, Preuves, Liste, Onde, Exemple, Champs, Final, Choix } from './scenes.jsx';
 
@@ -42,7 +42,7 @@ function ScenEquipe() {
         {roles.map(([n, role]) => <Collaborateur key={n} n={n} role={role} statut="Disponible" />)}
       </div>
       <div className="sc-equipe-ecran"><Ecran src="dc-vos-agents" alt="Desktop Commander : l'écran « Vos agents » avec l'équipe embauchée" charger="eager" /></div>
-      <div className="sc-equipe-box"><Photo dossier="/accueil" src="box-commander" alt="La Box iAgent Commander : écran tactile, enceintes et micro" largeur={1122} hauteur={570} charger="eager" /></div>
+      <div className="sc-equipe-box"><Photo dossier="/accueil" src="box-commander" alt="La Box iAgent Station en trois finitions : écran tactile 27 pouces sur bras, base avec micros et haut-parleurs" largeur={1122} hauteur={570} charger="eager" /></div>
     </div>
   );
 }
@@ -90,8 +90,8 @@ export function Workforce() {
         texte="Quatre pièces, chacune sur sa ligne : vous savez toujours ce que vous payez.">
         <div className="sc-formule">
           <a href="/box" className="sc-verre">
-            <div className="sc-formule-visuel"><Photo dossier="/accueil" src="box-commander" alt="La Box iAgent Commander" largeur={1122} hauteur={570} /></div>
-            <b>La Box</b><small>Le poste de travail de vos agents, chez vous : écran tactile, voix, micro.</small>
+            <div className="sc-formule-visuel"><Photo dossier="/accueil" src="box-commander" alt="La Box iAgent Station en trois finitions" largeur={1122} hauteur={570} /></div>
+            <b>La Box</b><small>La Station iAgent, chez vous : écran tactile, micros et haut-parleurs en un seul appareil.</small>
           </a>
           <a href={LIENS.catalogue} className="sc-verre">
             <div className="sc-formule-visuel"><MiniVisages ns={[2, 12, 13, 21, 7]} /></div>
@@ -116,7 +116,7 @@ export function Workforce() {
       <Scene surtitre="Ce qui fait la différence" titre="Une présence, un poste de pilotage, un vrai métier">
         <div className="sc-trois">
           <div className="sc-verre sc-panneau">
-            <Photo src="box-bureau" alt="La Box iAgent posée sur un bureau, l'écran allumé" largeur={1990} hauteur={940} />
+            <Photo src="box-bureau" alt="La Box iAgent Station sur un bureau, l'écran allumé, en blanc, bleu nuit et aluminium" largeur={1990} hauteur={940} />
             <p className="mq-surtitre">Pourquoi la Box</p>
             <h3 className="sc-h3">Une présence physique dans vos bureaux</h3>
             <Liste items={['On parle aux agents à voix haute, par leur prénom.', "L'écran tactile se commande au doigt, sans formation.", 'Préparée, maintenue et mise à jour par iAgent.']} />
@@ -139,7 +139,7 @@ export function Workforce() {
       <Scene surtitre="Local, cloud ou hybride" titre="Là où vos données doivent rester"
         texte="Vos agents passent par l'API d'IA, travaillent sur une machine chez vous, ou les deux selon la tâche. Pour une forte puissance locale, l'infrastructure se conçoit sur devis.">
         <Preuves colonnes={3} items={[
-          ['nuage', 'Cloud', "Sans machine de calcul : les agents passent par l'API d'IA.", '/local-ai'],
+          ['nuage', 'Cloud', "Pour un ou deux agents, sans machine : ils passent par l'API d'IA.", '/local-ai'],
           ['serveur', 'Local', 'Les modèles tournent chez vous ; rien ne sort pour être traité.', '/local-ai'],
           ['hybride', 'Hybride', "Le quotidien en local, l'API pour le reste. Vous êtes prévenu avant.", '/local-ai'],
         ]} />
@@ -197,7 +197,7 @@ export function CommentCaMarche() {
 /* ---------------------------------------------------------------------- box */
 
 const PUISSANCES = [
-  ['ecran', 'La Box', 'Le poste de commande : vos agents par API.', 'Livrée', 'box-commander'],
+  ['ecran', 'La Box', 'La Station iAgent : une part du travail de chaque agent se fait chez vous, le reste par API.', 'Livrée', 'box-commander'],
   ['puce', 'Mémoire unifiée', 'Un boîtier compact pour les modèles de texte.', 'Sur devis'],
   ['eclair', 'Carte graphique dédiée', 'Pour les agents nombreux et les images.', 'Sur devis'],
   ['serveur', 'Serveur', 'Plusieurs cartes, pour une entreprise entière.', 'Sur devis'],
@@ -215,6 +215,81 @@ function Puissances() {
         </li>
       ))}
     </ul>
+  );
+}
+
+// The iAgent Station (max's visual and Gen 1 dossier, 16/10/2026): three
+// finishes, three memory sizes, and only what those two documents establish.
+const FINITIONS = [
+  ['white', 'Pearl White', 'Blanc nacré et aluminium naturel', 'Élégant, lumineux, intemporel.'],
+  ['navy', 'Deep Navy', 'Bleu profond et aluminium graphite', 'Moderne, premium, professionnel.'],
+  ['alu', 'Brushed Aluminum', 'Aluminium brossé et détails chrome', 'Sobre, minéral, haut de gamme.'],
+];
+
+function Finitions() {
+  return (
+    <ul className="sc-finitions">
+      {FINITIONS.map(([id, nom, matiere, ton], i) => (
+        <li key={id} className="sc-verre">
+          <div className="sc-finition-visuel"><Photo src={`station-${id}`} alt={`La Station iAgent en finition ${nom}`} largeur={490} hauteur={640} /></div>
+          <p className="mq-surtitre">{String.fromCharCode(65 + i)} / {nom}</p>
+          <b>{matiere}</b>
+          <small>{ton}</small>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const FICHE = [
+  ['puce', 'Calcul', ['Processeur AMD Ryzen 7', 'Mémoire : 16, 32 ou 64 Go de DDR5, sur deux emplacements SO-DIMM', 'Stockage SSD NVMe M.2, 1 ou 2 To', 'Puce de sécurité TPM 2.0']],
+  ['ecran', 'Écran', ['Tactile 27 pouces, QHD 2560 × 1440', 'Sur bras articulé en aluminium : inclinaison et rotation', 'Câbles passés dans le bras, invisibles', 'Caméra en option']],
+  ['micro', 'Écoute', ['4 à 6 micros MEMS en couronne, captation à 360°', 'Traitement de la voix par un processeur dédié : annulation d’écho, gain automatique, réduction de bruit', 'Bouton de confidentialité qui coupe les micros, signalé en rouge']],
+  ['voix', 'Son', ['Deux haut-parleurs intégrés à la base, 2 × 5 W ou 2 × 10 W, avec amplificateur', 'Grille acoustique sur tout le tour de la base']],
+  ['reseau', 'Connexions', ['Ethernet 2,5 Gb/s, Wi-Fi 6E, Bluetooth', '2 USB-A, 2 USB-C, HDMI ou DisplayPort', 'Alimentation et encoche antivol Kensington à l’arrière']],
+  ['bouclier', 'Sécurité', ['Démarrage sécurisé et disque chiffré en entier', 'Identité propre à chaque appareil', 'Micrologiciel et mises à jour signés']],
+];
+
+const ANNEAU = [['ecoute', 'En écoute'], ['traitement', 'En traitement'], ['reponse', 'Réponse'], ['coupe', 'Confidentialité (micro coupé)']];
+
+function FicheTechnique() {
+  return (
+    <>
+      <ul className="sc-fiche">
+        {FICHE.map(([icone, titre, lignes]) => (
+          <li key={titre} className="sc-verre">
+            <span className="sc-atout-icone"><Icone nom={icone} taille={26} /></span>
+            <div><h3>{titre}</h3><Liste items={lignes} /></div>
+          </li>
+        ))}
+      </ul>
+      <div className="sc-anneau sc-verre">
+        <div><p className="mq-surtitre">L’anneau lumineux iAgent</p><p className="sc-texte">Il dit d’un coup d’œil ce que fait la Station. Ses couleurs se personnalisent ; le rouge reste réservé au micro coupé.</p></div>
+        <ul>{ANNEAU.map(([id, nom]) => <li key={id}><span className={`sc-anneau-${id}`} />{nom}</li>)}</ul>
+      </div>
+      <div className="sc-deux sc-espace">
+        <div>
+          <p className="mq-surtitre">Une architecture modulaire</p>
+          <h3 className="sc-h3">Des modules éprouvés dans un châssis iAgent</h3>
+          <Liste items={[
+            'Le processeur, la mémoire, le stockage, le traitement de la voix et l’écran sont des composants du marché ; iAgent conçoit leur intégration.',
+            'Le châssis porte un squelette métallique, une ventilation séparée des micros et des chambres pour les haut-parleurs.',
+            'Une trappe sous la base donne accès à la mémoire et au stockage : la maintenance est simple et rapide.',
+            'Les coques se remplacent, le badge iAgent est en métal émaillé en relief.',
+          ]} />
+        </div>
+        <div>
+          <p className="mq-surtitre">Une carte iAgent dans la base</p>
+          <h3 className="sc-h3">Ce qui fait d’un ordinateur une Station</h3>
+          <Liste items={[
+            'La distribution de l’alimentation et ses protections.',
+            'Un concentrateur USB interne pour la voix, le tactile et la caméra.',
+            'Le pilotage de l’anneau lumineux et des boutons : marche, micro coupé, action iAgent.',
+            'Le suivi de la température et de la ventilation, et un accès de diagnostic d’usine.',
+          ]} />
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -237,23 +312,28 @@ function OffresBox() {
 export function Box() {
   return (
     <>
-      <Heros decor="ville" surtitre="iAgent Box Commander" badge={<><b>Box</b> Préparée, installée et maintenue par iAgent</>}
+      <Heros decor="ville" surtitre="iAgent Box · la Station iAgent" badge={<><b>Box</b> Préparée, installée et maintenue par iAgent</>}
         titre={<>Votre équipe IA, <Eclat>installée chez vous.</Eclat></>}
-        texte={`Un poste préparé pour vos agents, que vous branchez et qui travaille. Le matériel est mis à disposition sous abonnement, à partir de ${euros(BOX_DES.mensuel)} HT par mois.`}
+        texte={`La Station iAgent réunit l'ordinateur, l'écran tactile, les micros et les haut-parleurs en un seul appareil, préparé pour vos agents : vous la branchez, elle travaille. Le matériel est mis à disposition sous abonnement, à partir de ${euros(BOX_DES.mensuel)} HT par mois.`}
         actions={<>
           <Bouton href="/pricing" evenement="box_click">Voir les tarifs</Bouton>
           <Bouton href="/contact" variante="contour-cyan" evenement="box_quote">Demander un devis Box</Bouton>
         </>}
-        preuves={[['micro', 'La voix', 'par leur prénom'], ['ecran', 'Tactile', 'au doigt'], ['bouclier', 'Maintenue', 'mises à jour comprises'], ['equipe', "Jusqu'à 20 agents", 'par Box']]}
-        visuel={<Photo src="box-bureau" alt="La Box iAgent Commander sur un bureau : écran tactile allumé, enceintes et micro" largeur={1990} hauteur={940} charger="eager" className="sc-box-heros" />} />
+        preuves={[['micro', 'La voix', 'par leur prénom'], ['ecran', 'Tactile', 'au doigt'], ['bouclier', 'Maintenue', 'mises à jour comprises'], ['equipe', 'Une dizaine', "d'agents par Box"]]}
+        visuel={<Photo src="box-bureau" alt="La Box iAgent Station sur un bureau, en Pearl White, Deep Navy et Brushed Aluminum : écran tactile 27 pouces sur bras articulé, base avec micros et haut-parleurs" largeur={1990} hauteur={940} charger="eager" className="sc-box-heros" />} />
 
       <Scene surtitre="L'expérience" titre={<>On lui parle, on la touche, <Eclat>elle travaille</Eclat></>}>
         <Atouts items={[
           ['voix', 'Voix', 'Parlez à vos agents', 'Appelez un agent par son prénom : il vous répond à voix haute.', true],
-          ['micro', 'Écoute', 'Un micro de conférence', 'Il vous entend dans la pièce, sans casque ni bouton.', true],
-          ['ecran', 'Tactile', "Un écran pensé pour le doigt", 'Suivez, validez, corrigez sans clavier.'],
-          ['eclair', 'Box autonome', 'Toujours prête', 'Vos agents font leurs tâches aux horaires que vous fixez.'],
+          ['micro', 'Écoute', 'Des micros dans la base', 'Ils vous entendent dans toute la pièce, sans casque ni bouton.', true],
+          ['ecran', 'Tactile', "Un écran de 27 pouces pour le doigt", 'Suivez, validez, corrigez sans clavier, sur un bras qui s’incline et pivote.'],
+          ['eclair', 'Tout-en-un', 'Toujours prête', 'Ordinateur, audio, micros et écran : vos agents font leurs tâches aux horaires que vous fixez.'],
         ]} />
+      </Scene>
+
+      <Scene surtitre="La Station iAgent" titre={<>Trois finitions, <Eclat>un seul produit</Eclat></>}
+        texte="Pour la maison comme pour l'entreprise : même design, trois coques, et la mémoire choisie selon votre équipe, 16, 32 ou 64 Go.">
+        <Finitions />
       </Scene>
 
       <Scene surtitre="La mise en service" titre="Brancher, et travailler">
@@ -270,13 +350,18 @@ export function Box() {
           <div>
             <p className="mq-surtitre">Dans la Box</p>
             <h2 className="sc-h2">Tout ce qu'il faut pour parler à son équipe</h2>
-            <Liste items={['Un mini-PC préparé en usine pour vos agents.', 'Un écran tactile, pensé pour le doigt.', 'Une enceinte et un micro de conférence.', 'Un clavier et une souris de secours.', 'Desktop Commander, installé et prêt.']} />
+            <Liste items={['La Station iAgent, préparée en usine pour vos agents.', 'Son écran tactile de 27 pouces, sur bras articulé.', 'Ses micros et ses haut-parleurs, intégrés à la base.', 'Un clavier et une souris de secours.', 'Desktop Commander, installé et prêt.']} />
             <p className="mq-surtitre sc-espace">Le service</p>
             <h3 className="sc-h3">Mise à disposition, pas achat</h3>
-            <Liste items={['La Box reste à iAgent et se rend en fin de contrat.', 'Mises à jour automatiques des agents et de l’application.', 'Diagnostic et maintenance selon votre contrat.', 'Jusqu’à 20 agents par Box ; au-delà, une deuxième Box.']} />
+            <Liste items={['La Box reste à iAgent et se rend en fin de contrat.', 'Mises à jour automatiques des agents et de l’application.', 'Diagnostic et maintenance selon votre contrat.', 'Une dizaine d’agents par Box ; au-delà, une deuxième Box.']} />
           </div>
           <Ecran src="dc-vos-agents" alt="Desktop Commander sur l'écran de la Box : vos agents et leur travail" legende="Desktop Commander, installé sur la Box" />
         </div>
+      </Scene>
+
+      <Scene surtitre="Côté technique" titre={<>La fiche de la <Eclat>Station iAgent</Eclat></>}
+        texte="Ce que contient la Station, module par module.">
+        <FicheTechnique />
       </Scene>
 
       <Scene className="sc-remote">
@@ -319,6 +404,31 @@ const PALIERS_TEXTE = {
 };
 const PALIERS_ICONE = { essential: 'doc', professional: 'rouage', expert: 'bouclier' };
 
+/** An agent for 24 hours, 7 days, 14 days or a month: every price a rule of three on the month, read from tarifs.json. */
+export function GrilleLocation() {
+  if (!GRILLE_LOCATION.length || !DUREES.length) return null;
+  return (
+    <div className="sc-location sc-verre">
+      <table>
+        <caption>{tarifs.agents.durees.regle} Prix hors taxes par agent, consommation d'IA à part.</caption>
+        <thead>
+          <tr><th scope="col">Agent</th>{DUREES.map((d) => <th key={d.id} scope="col">{d.nom}</th>)}</tr>
+        </thead>
+        <tbody>
+          {GRILLE_LOCATION.map((f) => (
+            <tr key={f.id}>
+              <th scope="row">{f.id === 'unique' ? f.nom : `Agent ${f.nom}`}</th>
+              {f.prix.map(({ duree, montant: m }) => (
+                <td key={duree.id}><b>{euros(m)}</b><small>{duree.recurrent ? 'HT, renouvelé chaque mois' : 'HT, payé une fois'}</small></td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function GrilleTarifs() {
   const a = tarifs.agents;
   return (
@@ -359,7 +469,7 @@ export function Tarifs() {
       <Heros decor="orbite" surtitre="Tarifs" titre={<>Un abonnement fixe. <Eclat>Une consommation à part.</Eclat></>}
         texte={`Vous payez la Box, vos agents et, au-delà de quelques agents, le Task Commander. L'usage de l'IA se paie au réel, à part. Prix hors taxes, ${STATUTS[tarifs.statut]?.toLowerCase() ?? tarifs.statut}.`}
         preuves={[['equipe', 'Par agent', 'un prix par niveau'], ['ecran', 'La Box', 'mise à disposition'], ['eclair', 'Consommation', 'au réel, à part'], ['bouclier', 'Sans surprise', "l'estimation avant"]]}
-        visuel={<Photo src="box-bureau" alt="La Box iAgent Commander sur un bureau" largeur={1990} hauteur={940} charger="eager" className="sc-box-heros" />} />
+        visuel={<Photo src="box-bureau" alt="La Box iAgent Station sur un bureau, en trois finitions" largeur={1990} hauteur={940} charger="eager" className="sc-box-heros" />} />
 
       <Scene surtitre="Les agents et la Box" titre={<>Choisissez le niveau de <Eclat>chaque poste</Eclat></>}
         texte={`Chaque agent a son abonnement, ${prixAgentEnUneLigne()} hors taxes. La Box s'ajoute une fois pour l'équipe.`}>
@@ -378,6 +488,12 @@ export function Tarifs() {
         </div>
       </Scene>
 
+      <Scene id="location" surtitre="Location à la durée" titre={<>Un agent pour <Eclat>24 heures, 7 jours, 14 jours ou un mois</Eclat></>}
+        texte="Le prix d'une location courte est celui du mois, ramené à sa durée. Elle se règle une fois, sans engagement ni renouvellement."
+        droite={<Bouton href="/temp-agency" variante="contour-cyan">Temp Agency</Bouton>}>
+        <GrilleLocation />
+      </Scene>
+
       <Scene surtitre="Les packs" titre="Box, agents et Commander ensemble">
         <Packs />
       </Scene>
@@ -388,6 +504,58 @@ export function Tarifs() {
         <Bouton href={LIENS.catalogue} variante="contour-cyan" evenement="catalog_click">Explorer les agents</Bouton>
       </Final>
       <Voisines ici="pricing" />
+    </>
+  );
+}
+
+/* -------------------------------------------------------------- temp-agency */
+
+// Temp Agency (max, 15/10/2026): an agent rented for 24 hours, 7 days,
+// 14 days or a month, like a temp worker, without a Box. Structure ready for
+// max's text; every price comes from tarifs.json (agents.durees). The light
+// Desktop Commander max describes (one or two agents on the client's own
+// computer, downloaded from this page) is not built: the page says nothing
+// about it until it exists.
+export function TempAgency() {
+  const courtes = DUREES_COURTES.map((d) => d.nom).join(', ');
+  return (
+    <>
+      <Heros surtitre="Temp Agency" titre={<>L'intérim de l'IA : <Eclat>un agent pour le temps qu'il vous faut.</Eclat></>}
+        texte={`Un pic d'activité, une absence, un projet court : louez un agent iAgent pour ${DUREES.map((d) => d.nom).join(', ').replace(/, ([^,]*)$/, ' ou $1')}, sans Box à installer.${JOUR_DES != null ? ` À partir de ${euros(JOUR_DES)} HT les 24 heures.` : ''}`}
+        actions={<>
+          <Bouton href={LIENS.catalogue} evenement="catalog_click">Choisir un agent</Bouton>
+          <Bouton href="#prix" variante="contour-cyan">Voir les prix</Bouton>
+        </>}
+        preuves={[['agenda', 'À la durée', courtes], ['pieces', 'Payé une fois', 'sans engagement'], ['equipe', 'Un vrai métier', `${nombre(compteurs.fiches)} postes`], ['ecran', 'Sans Box', 'aucun matériel à louer']]} />
+
+      <Scene surtitre="Quand l'intérim s'impose" titre={<>Le bon agent, <Eclat>juste le temps nécessaire</Eclat></>}>
+        <Preuves colonnes={4} items={[
+          ['eclair', "Un pic d'activité", 'Une clôture, une saison, une campagne : du renfort sur quelques jours.'],
+          ['equipe', 'Une absence', 'Le poste continue de tourner pendant un congé ou un arrêt.'],
+          ['cible', 'Un projet court', 'Une étude, un dossier, un lancement : un expert le temps du projet.'],
+          ['idee', 'Essayer avant de recruter', "Voir un agent travailler une semaine avant de l'embaucher au mois."],
+        ]} />
+      </Scene>
+
+      <Scene id="prix" surtitre="Les prix" titre={<>Le prix du mois, <Eclat>ramené à la durée</Eclat></>}
+        texte="24 heures, 7 jours ou 14 jours se règlent une fois, sans engagement ni renouvellement. Le mois se renouvelle chaque mois. L'usage de l'IA se paie à part, au réel.">
+        <GrilleLocation />
+      </Scene>
+
+      <Scene surtitre="Comment ça se passe" titre="De la fiche du métier au travail">
+        <Rail colonnes={4} etapes={[
+          ['Choisissez le métier', `Parmi les ${nombre(compteurs.fiches)} postes du catalogue, celui dont vous avez besoin.`],
+          ['Choisissez la durée', 'Dans votre liste de recrutement, ligne par ligne : 24 heures, 7 jours, 14 jours ou un mois.'],
+          ['Validez votre liste', 'Vous la réglez en ligne, ou vous recevez le devis par écrit.'],
+          ['Votre agent prend son poste', 'Nous vous écrivons pour préparer son entretien d’embauche et le mettre au travail.'],
+        ]} />
+      </Scene>
+
+      <Final titre="Un renfort pour demain ?" texte="Choisissez le métier, choisissez la durée." visage={9}>
+        <Bouton href={LIENS.catalogue} evenement="catalog_click">Choisir un agent</Bouton>
+        <Bouton href="/contact" variante="contour-cyan">Nous écrire</Bouton>
+      </Final>
+      <Voisines ici="temp-agency" />
     </>
   );
 }
@@ -443,7 +611,7 @@ function Deploiements() {
   const voies = [
     ['local', 'Local', 'Les modèles tournent chez vous ; rien ne sort pour être traité.', <Photo dossier="/accueil" src="box-commander" alt="" largeur={1122} hauteur={570} />, ['Vos fichiers', 'La Box', 'Vos dossiers']],
     ['hybride', 'Hybride', "Le quotidien en local, l'API pour ce que la machine ne porte pas. Vous êtes prévenu avant.", <Icone nom="hybride" taille={64} />, ['La Box', 'Vous êtes prévenu', "L'API d'IA"]],
-    ['cloud', 'Cloud', "Sans machine de calcul : les agents passent par l'API d'IA que vous choisissez.", <Icone nom="nuage" taille={64} />, ['Desktop Commander', "L'API d'IA", 'Vos dossiers']],
+    ['cloud', 'Cloud', "Pour un ou deux agents, sans machine : ils passent par l'API d'IA que vous choisissez.", <Icone nom="nuage" taille={64} />, ['Desktop Commander', "L'API d'IA", 'Vos dossiers']],
   ];
   return (
     <div className="sc-deploiements">

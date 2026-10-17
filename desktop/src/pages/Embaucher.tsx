@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import plans from '../../../plateforme/tarifs/plans.json'
+import tarifsSite from '../../../frontend/src/data/tarifs.json'
 import Embauche from '../components/Embauche'
 import type { Fiche } from '../agents/fiche'
 import { EntetePage, Onde } from '../shell/Shell'
@@ -29,6 +30,13 @@ const PAR_PAGE = 20
 
 const prix = (id: string) => (plans.plans as Plan[]).find((p) => p.plan_id === id && p.effective_to == null)
 const euros = (n: number | null | undefined) => (n == null ? '—' : `${n.toLocaleString('fr-FR')} €`)
+
+// Rental lengths of the site (max, 15/10 and 16/10): a share of the monthly price,
+// read from the site's tarifs.json so the app and the site quote the same amount.
+type Duree = { id: string; nom: string; partDuMois: number[] }
+const DUREES: Duree[] = tarifsSite.agents.durees?.liste ?? []
+const pourDuree = (mensuel: number | null | undefined, d: Duree) =>
+  mensuel == null ? null : Math.round((mensuel * 100 * d.partDuMois[0]) / d.partDuMois[1]) / 100
 
 export const PRIX_AGENT = {
   essential: prix('agent-essential'),
@@ -337,6 +345,16 @@ export default function Embaucher({
               <span>{euros(PRIX_AGENT.expert?.base_price)} HT/mois</span>
             </li>
           </ul>
+          {DUREES.length > 0 && (
+            <ul className="niveaux">
+              {DUREES.map((d) => (
+                <li key={d.id}>
+                  <strong>{d.nom}</strong>
+                  <span>dès {euros(pourDuree(PRIX_AGENT.essential?.base_price, d))} HT</span>
+                </li>
+              ))}
+            </ul>
+          )}
           <p className="precision">La Box et la consommation d’IA sont facturées à part.</p>
         </section>
       </aside>
