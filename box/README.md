@@ -18,8 +18,8 @@ Mini-PC neuf → clé Factory (ISO) → autoinstall Ubuntu 24.04 (EFI/SYSTEM_A/S
 
 | Dossier | Contenu | Banc |
 |---|---|---|
-| `materiel/` | profils matériel (JSON) : `bosgame-m4-neo`, `exr1`, `vm-qemu` ; `index.ts` les sert à la plateforme | `check-materiel.ts` |
-| `profils/` | les deux profils d'OS, `business` et `home` (la gamme de `plateforme/modele.ts`) | `check-profils.ts` |
+| `materiel/` | profils matériel (JSON), un par SKU de la Station : `station-32-v1`, `station-64-v1`, `station-64-plus-v1`, et `vm-qemu` ; `index.ts` les sert à la plateforme | `check-materiel.ts` |
+| `profils/` | les trois profils logiciels, `home`, `business`, `enterprise` (le `gamme` de `plateforme/modele.ts`), posés au provisioning sur la même image | `check-profils.ts` |
 | `os/base/paquets.txt` | LA liste apt d'iAgent OS | `check-autoinstall.ts` |
 | `os/systemd/` | 11 unités `iagent-*` + timer ; `SERVICES.json` dit lesquelles sont réelles | `check-systemd.ts` |
 | `os/durcissement/`, `os/kiosque/` | nftables sortant seul, sysctl, journald, aucun compte ; cage + cog / cage + iagent-desktop | `check-systemd.ts` |
@@ -44,7 +44,7 @@ npm run controle-box                                  # les six bancs TypeScript
 python3 -m unittest discover -s box/usine/tests -v    # règles pures des tests d'usine (Linux/mac : python3)
 cargo test --manifest-path box/services/Cargo.toml    # les services Rust
 npm --prefix box/usine/ui install && npm --prefix box/usine/ui run banc   # l'écran opérateur en SSR
-box/usine/iso/construire-iso.sh --profil business --sortie dist --verifier   # l'arbre de l'ISO sans télécharger Ubuntu
+box/usine/iso/construire-iso.sh --sortie dist --verifier   # l'arbre de l'ISO sans télécharger Ubuntu
 ```
 
 Tout ceci tourne dans `controles.yml` (jobs « Contrôle des données » et « Box »).
@@ -56,15 +56,15 @@ Les `.deb` sortent de `build-linux-deb.yml`, l'ISO de `build-factory-iso.yml`
 1. Dans le back-office, écran **Usine** : émettre un jeton d'usine (opérateur,
    lot, client et plan si la Box est déjà vendue). Le jeton n'est montré qu'une
    fois : le coller dans un fichier.
-2. Construire l'ISO du profil voulu avec ce jeton et l'adresse de la plateforme :
-   `construire-iso.sh --profil business --paquets dist/ --plateforme https://… --jeton-fichier jeton.txt --sortie dist/`
+2. Construire l'ISO (la même pour toutes les Stations) avec ce jeton et l'adresse de la plateforme :
+   `construire-iso.sh --paquets dist/ --plateforme https://… --jeton-fichier jeton.txt --sortie dist/`
    (ou lancer `build-factory-iso.yml` puis ajouter le jeton : à outiller).
 3. Graver l'ISO sur une clé, brancher la Box, Ethernet, démarrer sur la clé :
    l'installation part seule en 3 secondes et **efface le disque**.
 4. Au redémarrage, l'écran d'usine : vérifier l'appareil détecté, choisir la
    machine, saisir son prénom, **INSTALLER**. Attendre **PRÊTE À EXPÉDIER**.
 5. Exporter le rapport (USB), imprimer l'étiquette depuis la fiche de la Box
-   au back-office (QR = la référence `IA-FR-CMD-00000127`), mettre en carton.
+   au back-office (QR = la référence `IA-FR-STN-00000127`), mettre en carton.
    Imprimer la clé de secours (`securite/luks-tpm.md`) et l'effacer de la Box.
 
 Au back-office la Box est `qualifiee` (ou `provisionnee` si le jeton portait un
@@ -76,8 +76,8 @@ parle depuis chez le client.
 ```bash
 sudo apt-get install qemu-system-x86 ovmf swtpm swtpm-tools xorriso
 PLATEFORME_ADMIN_SECRET=… PLATEFORME_CLE_SIGNATURE=… npm run plateforme    # la plateforme sur l'hôte (port 8787)
-box/usine/iso/construire-iso.sh --profil business --paquets dist/ --plateforme http://10.0.2.2:8787 --jeton-fichier jeton.txt --sortie dist/
-box/usine/iso/essayer-qemu.sh dist/iagent-factory-installer-v0.1.0-business.iso
+box/usine/iso/construire-iso.sh --paquets dist/ --plateforme http://10.0.2.2:8787 --jeton-fichier jeton.txt --sortie dist/
+box/usine/iso/essayer-qemu.sh dist/iagent-factory-installer-v0.1.0.iso
 ```
 
 `10.0.2.2` est l'hôte vu de QEMU ; l'agent accepte `http://` pour cette adresse

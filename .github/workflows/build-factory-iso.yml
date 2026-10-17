@@ -1,10 +1,12 @@
 name: Build Factory ISO
 
-# L'ISO du iAgent Box Factory Installer (brief §5) : une par profil (business,
-# home), nommée iagent-factory-installer-v<version>-<profil>.iso, avec son
-# manifeste (Build ID, commit, versions lues dans leurs fichiers). Elle embarque
-# les .deb construits par build-linux-deb.yml ; l'ISO Ubuntu 24.04.5 source est
-# vérifiée contre box/usine/iso/source.json et gardée en cache par son condensé.
+# L'ISO du iAgent Box Factory Installer (brief §5) : une seule image pour toutes
+# les Stations (max, 17/10/2026), nommée iagent-factory-installer-v<version>.iso,
+# avec son manifeste (Build ID, commit, versions lues dans leurs fichiers). Le
+# profil (home, business, enterprise) se pose au provisioning, pas par la clé.
+# Elle embarque les .deb construits par build-linux-deb.yml ; l'ISO Ubuntu
+# 24.04.5 source est vérifiée contre box/usine/iso/source.json et gardée en cache
+# par son condensé.
 #
 # Lancé à la main ou sur une étiquette box-v* : trois gigaoctets ne se
 # téléchargent pas à chaque PR. Sur une PR, controles.yml joue
@@ -17,9 +19,6 @@ on:
       - 'box-v*'
   workflow_dispatch:
     inputs:
-      profils:
-        description: "Profils à construire (business, home, ou les deux séparés par une virgule)"
-        default: "business,home"
       plateforme:
         description: "Adresse https du Control Plane à graver dans l'ISO (vide : l'enrôlement attendra une adresse)"
         default: ""
@@ -30,72 +29,54 @@ jobs:
     uses: ./.github/workflows/build-linux-deb.yml
 
   iso:
-    name: ISO ${{ matrix.profil }}
+    name: ISO de la Station
     needs: paquets
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        profil: [business, home]
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Ce profil est-il demandé ?
-        id: voulu
-        run: |
-          VOULUS="${{ github.event.inputs.profils || 'business,home' }}"
-          case ",$VOULUS," in *",${{ matrix.profil }},"*) echo "oui=1" >> "$GITHUB_OUTPUT" ;; *) echo "oui=0" >> "$GITHUB_OUTPUT" ;; esac
-
       - uses: actions/setup-node@v4
-        if: steps.voulu.outputs.oui == '1'
         with:
           node-version: '22'
 
       - name: Outils d'assemblage
-        if: steps.voulu.outputs.oui == '1'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xorriso curl
 
       - uses: actions/download-artifact@v4
-        if: steps.voulu.outputs.oui == '1'
         with:
           pattern: iagent-*-deb
           path: paquets
           merge-multiple: true
 
       - name: L'écran opérateur (statique)
-        if: steps.voulu.outputs.oui == '1'
         run: npm --prefix box/usine/ui install --no-audit --no-fund && npm --prefix box/usine/ui run build
 
       # L'ISO Ubuntu source, gardée par son condensé : un changement de source.json la retélécharge.
       - name: Lire source.json
-        if: steps.voulu.outputs.oui == '1'
         id: source
         run: |
           echo "fichier=$(node -e 'console.log(JSON.parse(require("fs").readFileSync("box/usine/iso/source.json","utf8")).fichier)')" >> "$GITHUB_OUTPUT"
           echo "sha=$(node -e 'console.log(JSON.parse(require("fs").readFileSync("box/usine/iso/source.json","utf8")).sha256)')" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
-        if: steps.voulu.outputs.oui == '1'
         with:
           path: dist/${{ steps.source.outputs.fichier }}
           key: ubuntu-iso-${{ steps.source.outputs.sha }}
 
       - name: Construire l'ISO
-        if: steps.voulu.outputs.oui == '1'
         run: |
           mkdir -p dist
-          box/usine/iso/construire-iso.sh --profil "${{ matrix.profil }}" --paquets paquets --sortie dist \
+          box/usine/iso/construire-iso.sh --paquets paquets --sortie dist \
             --plateforme "${{ github.event.inputs.plateforme }}" --operateur "flux GitHub ${{ github.run_number }}"
           rm -f "dist/${{ steps.source.outputs.fichier }}.partiel"
           ls -l dist/
 
       - uses: actions/upload-artifact@v4
-        if: steps.voulu.outputs.oui == '1'
         with:
-          name: iagent-factory-installer-${{ matrix.profil }}
+          name: iagent-factory-installer
           path: |
             dist/iagent-factory-installer-*.iso
             dist/iagent-factory-installer-*.iso.sha256
-            dist/manifeste-*.json
+            dist/manifeste.json
           retention-days: 14

@@ -45,8 +45,9 @@ export type Box = {
   serial: string;
   /**
    * Référence commerciale, imprimée sur l'étiquette et dans le QR :
-   * `IA-FR-CMD-00000127` (business) ou `IA-FR-HOME-00000128` (home). Un numéro
-   * d'ordre par gamme, attribué par la plateforme à la création, jamais un secret.
+   * `IA-FR-STN-00000127`. Une seule série pour toutes les Stations : l'étiquette
+   * s'imprime à l'usine, avant que le profil soit posé. Attribuée par la
+   * plateforme à la création, jamais un secret.
    */
   reference: string;
   /** Clé publique Ed25519 de la Box, en PEM. La clé privée ne quitte jamais la Box (TPM visé). */
@@ -56,7 +57,14 @@ export type Box = {
    * Packs à cette Box seule (§6). Absente = la Box ne reçoit aucun contenu de Skill.
    */
   cle_chiffrement_publique?: string | null;
-  gamme: 'business' | 'home';
+  /**
+   * Le profil logiciel de la machine (max, 17/10/2026, documents Station Gen 1) :
+   * une seule machine, l'iAgent Station, dont le matériel est le SKU (32, 64 ou
+   * 64+, porté par `profil_materiel`) ; le profil home, business ou enterprise
+   * est posé au provisioning sur la même image d'usine. null tant que la Box n'est
+   * pas attribuée. « Commander » est le nom de l'application, pas un profil.
+   */
+  gamme: 'home' | 'business' | 'enterprise' | null;
   os: string;
   version_desktop: string;
   statut: StatutBox;
@@ -86,6 +94,8 @@ export type JetonUsine = {
   /** Client et plan à attribuer dès que le rapport d'usine passe ; null = la Box reste en stock. */
   tenant_id: Id | null;
   plan_id: Id | null;
+  /** Profil posé avec le client et le plan ; null quand le jeton n'attribue pas. */
+  gamme: NonNullable<Box['gamme']> | null;
   cree_le: Iso;
   expire_le: Iso;
   utilisations_max: number;
@@ -100,7 +110,6 @@ export type RapportUsine = {
   device_id: Id;
   reference: string;
   serial: string;
-  gamme: Box['gamme'];
   profil_materiel: string;
   inventaire: InventaireBox;
   installateur: { version: string; build_id: string; commit: string };

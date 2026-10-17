@@ -1,7 +1,7 @@
 """Lance les tests d'usine d'une Box et écrit son rapport (brief §44-§46).
 
-    python3 -I lancer.py --profil-os /opt/iagent/profils/business.json \
-        --profil-materiel /opt/iagent/materiel/bosgame-m4-neo.json \
+    python3 -I lancer.py --services /opt/iagent/SERVICES.json \
+        --profil-materiel /opt/iagent/materiel/station-64-v1.json \
         --inventaire /var/lib/iagent/usine/inventaire.json \
         --device /etc/iagent/device.json --manifeste /opt/iagent/manifeste.json \
         --operateur "Léa" --sortie /var/lib/iagent/usine
@@ -35,7 +35,7 @@ def scripts() -> list[Path]:
 def executer(script: Path, args: argparse.Namespace) -> dict:
     ident = script.stem[3:].replace("_", "-")
     debut = time.monotonic()
-    cmd = [sys.executable, "-I", str(script), "--profil-materiel", args.profil_materiel, "--profil-os", args.profil_os,
+    cmd = [sys.executable, "-I", str(script), "--profil-materiel", args.profil_materiel, "--services", args.services,
            "--inventaire", args.inventaire, "--etat", args.etat]
     if args.plateforme:
         cmd += ["--plateforme", args.plateforme]
@@ -62,10 +62,10 @@ def executer(script: Path, args: argparse.Namespace) -> dict:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
-    p.add_argument("--profil-os", required=True)
+    p.add_argument("--services", default="/opt/iagent/SERVICES.json")
     p.add_argument("--profil-materiel", required=True)
     p.add_argument("--inventaire", required=True)
-    p.add_argument("--device", default="/etc/iagent/device.json", help="identité posée à l'enrôlement : device_id, reference, serial, gamme, lot, plateforme")
+    p.add_argument("--device", default="/etc/iagent/device.json", help="identité posée à l'enrôlement : device_id, reference, serial, lot, plateforme")
     p.add_argument("--manifeste", default="/opt/iagent/manifeste.json", help="manifeste de l'installateur : version, build_id, commit")
     p.add_argument("--operateur", required=True)
     p.add_argument("--sortie", default="/var/lib/iagent/usine")
@@ -76,10 +76,6 @@ def main() -> int:
     args = p.parse_args()
 
     profil_materiel = charger(args.profil_materiel)
-    profil_os = charger(args.profil_os)
-    if profil_materiel["id"] not in profil_os["materiel"]:
-        print(f"Le profil matériel {profil_materiel['id']} ne sert pas la gamme {profil_os['id']}.", file=sys.stderr)
-        return 2
     device = charger(args.device)
     manifeste = charger(args.manifeste)
     inventaire = charger(args.inventaire)

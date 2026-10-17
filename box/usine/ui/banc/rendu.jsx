@@ -36,22 +36,23 @@ const rien = () => {};
 const temoins = readdirSync(TEMOINS).filter((f) => f.endsWith('.json')).sort().map((f) => JSON.parse(readFileSync(join(TEMOINS, f), 'utf8')));
 verifier(temoins.length >= 3, `${temoins.length} rapports témoins lus`);
 const profilsMateriel = [
-  { id: 'bosgame-m4-neo', nom: 'BOSGAME M4 Neo', gammes: ['business'], a_confirmer: true },
-  { id: 'exr1', nom: 'EXR1 (Box Home)', gammes: ['home'], a_confirmer: true },
-  { id: 'vm-qemu', nom: 'Machine virtuelle QEMU', gammes: ['business', 'home'], a_confirmer: false },
+  { id: 'station-32-v1', nom: 'iAgent Station 32 (32 Go, 1 To)', gammes: ['home', 'business'], a_confirmer: true },
+  { id: 'station-64-v1', nom: 'iAgent Station 64 (64 Go, 1 To)', gammes: ['business', 'enterprise'], a_confirmer: true },
+  { id: 'station-64-plus-v1', nom: 'iAgent Station 64+ (64 Go, 2 To)', gammes: ['business', 'enterprise'], a_confirmer: true },
+  { id: 'vm-qemu', nom: 'Machine virtuelle QEMU', gammes: ['home', 'business', 'enterprise'], a_confirmer: false },
 ];
 
 console.log('Attente (appareil détecté)');
 for (const r of temoins) {
-  const etat = { etape: 'attente', profil: r.gamme, inventaire: r.inventaire, profils_materiel: profilsMateriel, jeton_present: true, operateur: r.operateur };
+  const etat = { etape: 'attente', inventaire: r.inventaire, profils_materiel: profilsMateriel, jeton_present: true, operateur: r.operateur };
   const t = rendre(`attente ${r.reference}`, <Ecran etat={etat} operateur={r.operateur} setOperateur={rien} profilMateriel={r.profil_materiel} setProfilMateriel={rien} installer={rien} eteindre={rien} />);
   if (!t) continue;
   verifier(t.includes(r.inventaire.cpu) && t.includes(`${r.inventaire.memoire_go} Go`) && t.includes('INSTALLER'), `${r.reference} : l'inventaire et le bouton INSTALLER sont à l'écran`);
-  verifier(t.includes(r.gamme === 'business' ? 'Business (Desktop Commander)' : 'Home'), `${r.reference} : la gamme est nommée comme le brief (${r.gamme})`);
+  verifier(t.includes('Posé à l'), `${r.reference} : le profil se pose à l'attribution, pas à l'usine (max, 17/10/2026)`);
   verifier(t.includes(r.inventaire.tpm.present ? 'présent' : 'absent'), `${r.reference} : le TPM est dit ${r.inventaire.tpm.present ? 'présent' : 'absent'}`);
 }
 {
-  const sans = rendre('attente sans jeton', <Ecran etat={{ etape: 'attente', profil: 'business', inventaire: temoins[0].inventaire, profils_materiel: profilsMateriel, jeton_present: false }} operateur="Léa" setOperateur={rien} profilMateriel="bosgame-m4-neo" setProfilMateriel={rien} installer={rien} eteindre={rien} />);
+  const sans = rendre('attente sans jeton', <Ecran etat={{ etape: 'attente', inventaire: temoins[0].inventaire, profils_materiel: profilsMateriel, jeton_present: false }} operateur="Léa" setOperateur={rien} profilMateriel="station-64-v1" setProfilMateriel={rien} installer={rien} eteindre={rien} />);
   verifier(sans && sans.includes('aucun jeton d’usine'), "sans jeton d'usine sur la clé, l'écran le dit avant de laisser cliquer");
 }
 
@@ -68,9 +69,9 @@ console.log('\nTerminé (rapport déposé)');
 for (const r of temoins) {
   const reussi = r.verdict === 'passe';
   const etat = {
-    etape: reussi ? 'qualifiee' : 'echec', device: { reference: r.reference, serial: r.serial, gamme: r.gamme }, tests: r.tests,
+    etape: reussi ? 'qualifiee' : 'echec', device: { reference: r.reference, serial: r.serial }, tests: r.tests,
     verdict: { verdict: r.verdict, manquants: r.manquants, echoues: r.echoues },
-    reponse_plateforme: { rapport: r, box: { reference: r.reference, serial: r.serial, gamme: r.gamme, statut: reussi ? 'qualifiee' : 'usine' } },
+    reponse_plateforme: { rapport: r, box: { reference: r.reference, serial: r.serial, statut: reussi ? 'qualifiee' : 'usine' } },
   };
   const t = rendre(`terminé ${r.reference}`, <Ecran etat={etat} eteindre={rien} />);
   if (!t) continue;
@@ -101,7 +102,7 @@ console.log('\nQR');
   let refuse = false;
   try { qr('x'.repeat(120)); } catch { refuse = true; }
   verifier(refuse, 'un texte trop long est refusé plutôt que tronqué');
-  verifier(qr('IA-FR-HOME-00000001').taille === 25 && qr('A').taille === 21, 'HOME tient aussi en version 2 ; un caractère en version 1');
+  verifier(qr('IA-FR-STN-00000001').taille === 25 && qr('A').taille === 21, 'la référence tient en version 2 ; un caractère en version 1');
 }
 
 console.log(`\n${n} contrôles, ${fautes} faute(s)`);

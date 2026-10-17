@@ -1,0 +1,1561 @@
+iAgent
+ADMIN • CONTROL PLANE • TEAM
+MASTER ARCHITECTURE & DEVELOPER SPECIFICATION
+Trois consoles Desktop. Un seul cerveau central.Fleet Commander • Platform Commander • iAgent TeamFactory • Boxes • Agents • Billing • Support • Voice • Connecteurs • Sécurité • Automatisation
+But du document — Donner au développeur une spécification directement exploitable pour les données, APIs, permissions, écrans, workflows, services de contrôle des Box et l’environnement de travail des équipes d’agents internes.
+ |
+Version 1.0 • Octobre 2026
+
+Sommaire opérationnel
+1. Vision et principes
+2. Architecture globale
+3. Actors / identité / permissions
+4. Fleet Commander
+5. Platform Commander
+6. iAgent Team
+7. Operations Center
+8. Control Plane
+9. Factory Installer
+10. Action Gateway & Policy Engine
+11. Event Bus & Workflow Engine
+12. Connectors & App Bridge
+13. Voice / Hotline / Sales / Support
+14. Billing & entitlements
+15. Données & stockage
+16. Sécurité & audit
+17. APIs
+18. Data model
+19. Stack technique
+20. CI/CD & tests
+21. Roadmap
+22. Critères d’acceptation
+23. Backlog
+24. Annexes
+Règle d’architecture — Tous les écrans humains et tous les agents internes consomment les mêmes services métier. La logique critique n’est jamais enfermée dans le frontend.
+ |
+
+1. Vision et principes non négociables
+iAgent doit gérer une flotte de postes de travail IA, des agents loués, des compétences, des connecteurs, de la voix, des abonnements, des clients et une société interne elle-même opérée par des agents.
+Principe
+ | Exigence
+ | P1 — Un seul cerveau
+ | Fleet, Platform et Team sont trois consoles branchées sur le même iAgent Core, la même identité, le même Policy Engine, le même Event Bus et le même Audit.
+ | P2 — API first
+ | Chaque action importante existe côté service/API avant d’exister comme bouton. Les agents internes utilisent l’Action Gateway.
+ | P3 — Actors unifiés
+ | Humains, agents, services et devices sont identifiables, autorisables et auditables.
+ | P4 — Desired State
+ | Le cloud décrit l’état attendu ; la Box remonte l’état réel ; le Device Agent réconcilie.
+ | P5 — Sécurité par défaut
+ | mTLS, Vault, certificats, chiffrement, least privilege, approvals, audit.
+ | P6 — Données client séparées
+ | Les données client restent isolées ; les skills généralisables suivent un pipeline de revue.
+ | P7 — Échelle
+ | Toute fonction est conçue pour batch, canary, limites, reprise, observabilité et automatisation.
+ |
+1.1 Applications officielles
+Produit
+ | Rôle
+ | Population
+ | iAgent Fleet Commander
+ | Infrastructure / Box / Factory / OTA / RMA
+ | Fleet Ops, Factory, Tech, Sécurité
+ | iAgent Platform Commander
+ | Business / clients / agents / billing / catalogue / contenu
+ | Ops business, finance, catalogue, sales
+ | iAgent Team
+ | Lieu de travail des équipes d’agents internes
+ | Agents iAgent + managers humains
+ | iAgent Master
+ | Launcher / super-console SSO
+ | Founder / Super Admin
+ |
+1.2 Anti-patterns interdits
+Une base différente par Desktop.
+Un mot de passe admin partagé.
+Un agent Support avec SSH/root direct.
+Une logique tarifaire dupliquée dans les frontends.
+Une mise à jour globale sans canary/rollback.
+Des tokens OAuth visibles dans le frontend.
+Un agent interne qui agit hors Action Gateway/Audit.
+Une résiliation qui détruit instantanément les données.
+
+2. Architecture globale : trois Desktop, un iAgent Core
+Le backend peut démarrer en modular monolith TypeScript si les domaines sont strictement séparés et les contrats d’API versionnés. Les services système device restent distincts.
+Service
+ | Responsabilité
+ | Identity
+ | SSO, MFA, actors, service identities
+ | Tenant
+ | clients, organisations, isolation
+ | Fleet/Device
+ | Box, App Nodes, desired/actual state
+ | Factory
+ | provisioning, qualification, stock
+ | Agent
+ | templates, instances, lifecycle
+ | Entitlement
+ | droits Box/agents/features
+ | Catalog
+ | métiers, secteurs, logiciels, skills
+ | Connector
+ | MCP/API/OAuth, capabilities, health
+ | Voice
+ | providers, numéros, SIP, routing
+ | Billing
+ | subscriptions, usage, invoices, failures
+ | Workflow
+ | workflows, timers, retries, escalations
+ | Policy
+ | RBAC, ABAC, budgets, autonomie
+ | Action Gateway
+ | exécution contrôlée pour agents internes
+ | Notification
+ | email, SMS, push, WhatsApp
+ | Support
+ | tickets, omnicanal, RMA
+ | Content/SEO
+ | publication, pages, sitemaps
+ | Audit
+ | journal transversal
+ |
+2.1 Planes
+Plane
+ | Contenu
+ | Console dominante
+ | Control Plane
+ | devices, desired state, OTA, certs, health
+ | Fleet
+ | Business Plane
+ | clients, agents, catalogue, billing
+ | Platform
+ | Work Plane
+ | équipes, missions, calls, campaigns
+ | Team
+ | Security Plane
+ | identity, policy, Vault, audit
+ | Transverse
+ | Observability
+ | logs, metrics, traces, alerts
+ | Fleet + Ops
+ |
+2.2 Intégration Desktop
+Shared API SDK TypeScript généré OpenAPI.
+Shared Design System React/Tauri.
+Shared Identity/SSO.
+Deep-links croisés Fleet/Platform/Team.
+Aucune lecture directe d’une base appartenant à un autre domaine.
+
+3. Actors, identité, tenants et autorisations
+Type
+ | Exemples
+ | Authentification
+ | HUMAN
+ | Founder, Fleet Admin, Support L2
+ | SSO + MFA + device trust
+ | AGENT
+ | Laura Support, Sales Agent, Marketing Commander
+ | workload identity + token court
+ | SERVICE
+ | Billing Worker, Workflow Engine
+ | service identity + mTLS/JWT
+ | DEVICE
+ | Commander Box, Home Box, App Bridge
+ | certificat device lié TPM
+ |
+3.1 Scopes
+Scope
+ | But
+ | GLOBAL
+ | administration iAgent
+ | REGION
+ | zone conformité/support
+ | TENANT
+ | client B2B ou Home
+ | SITE
+ | établissement
+ | DEVICE
+ | Box/App Node
+ | AGENT_INSTANCE
+ | agent concret
+ | DEPARTMENT
+ | équipe interne
+ |
+3.2 RBAC + ABAC
+Exemple
+ | Décision
+ | Support Agent + restart_voice sur Box du ticket
+ | AUTO
+ | Support Agent + factory_reset
+ | REFUS / L2
+ | Sales Agent + remise 8%, plafond 10%
+ | AUTO
+ | Sales Agent + remise 18%
+ | APPROBATION
+ | Finance Agent + remboursement 40€
+ | AUTO si policy OK
+ | Finance Agent + remboursement 10k€
+ | DUAL APPROVAL
+ |
+3.3 Autonomie agents
+Niveau
+ | Droits
+ | 0 Observe
+ | lecture uniquement
+ | 1 Suggest
+ | propose, humain exécute
+ | 2 Low risk
+ | actions faibles risques
+ | 3 Policy bound
+ | actions dans seuils/budgets
+ | 4 Department autonomous
+ | département autonome avec escalades
+ | 5 Executive
+ | réservé, toujours borné par policies
+ |
+
+4. iAgent Fleet Commander
+Console technique : elle gère la flotte physique et logicielle. Elle voit les agents comme workloads et états techniques, pas comme profils business.
+Menu
+ | Contenu
+ | Overview
+ | KPI, incidents, capacity, releases
+ | Devices
+ | Commander/Home/App Nodes
+ | Factory
+ | reception, install, qualification, burn-in
+ | Releases
+ | OS et composants
+ | Updates
+ | canary, waves, rollback
+ | Monitoring
+ | metrics, logs, traces
+ | Security
+ | certs, posture, secure boot, encryption
+ | Backups
+ | policies, restore
+ | Support Sessions
+ | tunnels temporaires
+ | RMA
+ | replacement, wipe, refurbish
+ | Hardware
+ | profiles/BOM
+ | App Nodes
+ | Windows/macOS/GPU
+ | Audit
+ | actions techniques
+ |
+4.1 Dashboard
+KPI total/online/offline/degraded/critical.
+Répartition par type, région, hardware, version.
+Alertes : température, SMART, heartbeat, backup, cert, update.
+Adoption release, incidents, RMA, récupération auto.
+Actions batch avec confirmation et scope visible.
+4.2 Device list
+Colonne
+ | Détail
+ | Device ID
+ | identifiant iAgent
+ | Client
+ | deep-link Platform
+ | Type
+ | Commander/Home/App Node
+ | Status
+ | online/degraded/offline
+ | Hardware
+ | model/RAM/SSD
+ | Versions
+ | OS/Commander/runtime
+ | Health
+ | score
+ | Heartbeat
+ | dernier contact
+ | Region
+ | zone
+ | Alerts
+ | sévérité
+ | Actions
+ | diagnostic/support/update
+ |
+4.3 Fiche Device
+Onglet
+ | Contenu
+ | Summary
+ | identity, client, uptime, versions
+ | Hardware
+ | CPU/RAM/SSD/NIC/audio/TPM/BIOS/temp
+ | Software
+ | services/runtimes/packages/channel
+ | Agents
+ | instances présentes et état technique
+ | Browser
+ | profiles + auth health sans secrets
+ | Voice
+ | audio/provider/latency
+ | Network
+ | interfaces/reachability
+ | Metrics
+ | time-series
+ | Logs
+ | filtres service/severity
+ | Backups
+ | restore points
+ | Updates
+ | history/target/rollback
+ | Security
+ | TPM/secure boot/encryption/cert
+ | Support
+ | sessions/tickets/diagnostics
+ | Audit
+ | actions sur le device
+ |
+4.4 Commandes
+Action
+ | Risque
+ | Règle
+ | Restart service
+ | faible
+ | Support L1 allowlist
+ | Restart Box
+ | moyen
+ | confirmation + audit
+ | Shutdown
+ | moyen
+ | maintenance window
+ | Collect diagnostics
+ | faible
+ | redaction secrets
+ | Update
+ | moyen
+ | signed artifact + channel
+ | Rollback
+ | moyen
+ | known-good + health
+ | Rotate certificate
+ | élevé
+ | Security/Fleet L2
+ | Factory reset
+ | critique
+ | dual approval
+ | Remote screen
+ | élevé
+ | JIT + audit
+ | Controlled shell
+ | critique
+ | JIT, TTL, full audit
+ |
+4.5 OTA / Releases
+DEV → INTERNAL → PILOT → CANARY → STABLE.
+Ciblage par %, région, hardware profile, type, allowlist.
+Pre-check espace, backup, compatibilité.
+Post-check heartbeat/services/UI/runtime/browser/voice.
+Auto-rollback si santé sous seuil.
+Kill switch par release.
+4.6 Hardware profiles
+Chaque modèle homologué possède exigences, périphériques, TPM/BIOS, drivers, seuils thermiques, recovery et tests Factory.
+Profil
+ | Commander
+ | Home
+ | Exemple
+ | bosgame-m4-neo-v1
+ | exr1-home-v1
+ | RAM
+ | 64 GB
+ | 16/32 GB
+ | Audio
+ | optionnel/externe
+ | micro + speakers obligatoires
+ | Browser
+ | multi profiles
+ | 1 profile
+ | Burn-in
+ | 72h qualification / 24h production
+ | idem
+ |
+4.7 Cycle physique
+État
+ | Signification
+ | RECEIVED
+ | reçu
+ | FACTORY
+ | installation
+ | QUALIFIED
+ | tests PASS
+ | READY
+ | prêt
+ | ASSIGNED
+ | lié tenant
+ | SHIPPED
+ | expédié
+ | ACTIVE
+ | production
+ | MAINTENANCE
+ | intervention
+ | RMA_REQUESTED
+ | retour demandé
+ | RETURNED
+ | retourné
+ | REFURBISH
+ | reconditionnement
+ | RETIRED
+ | sorti flotte
+ |
+
+5. iAgent Platform Commander
+Console business et produit : clients, agents, catalogue, abonnements, pricing, billing, consumption, connecteurs, skills, contenu et SEO.
+Menu
+ | Contenu
+ | Overview
+ | MRR/ARR, clients, agents, boxes, usage
+ | Customers
+ | B2B/Enterprise/Home
+ | Contracts
+ | plans, SLA, renewals
+ | Subscriptions
+ | box/agents/options
+ | Agents
+ | templates + instances
+ | Recruitment
+ | interviews/config generation
+ | Catalog
+ | métiers/secteurs/activités/logiciels
+ | Skills
+ | versions/review/distribution
+ | Connectors
+ | registry/OAuth/MCP/API
+ | Voice & Numbers
+ | providers/numbers/usage
+ | Pricing
+ | plans/countries/overrides
+ | Billing
+ | payments/invoices/failures
+ | Consumption
+ | AI/voice/phone/media/storage
+ | Support
+ | account issues
+ | Website
+ | content registry
+ | SEO Factory
+ | pages/sitemaps/health
+ | Create
+ | opportunities/business packs
+ | Analytics
+ | funnel/churn/adoption
+ | Audit
+ | actions business
+ |
+5.1 Customer 360
+Organisation, contacts, country, VAT, language.
+Sites et responsables.
+Contracts/plans.
+Boxes avec deep-link Fleet.
+Agents + Task Commander.
+Consumption/budgets.
+Tickets/conversations/CSAT.
+Invoices/payments/credits.
+Consent/DPA/retention.
+5.2 Template vs Instance
+Objet
+ | Exemple
+ | Portée
+ | Template
+ | Assistante commerciale BTP
+ | catalogue
+ | Specialization
+ | BTP + HubSpot + FR
+ | skill/config pack
+ | Instance
+ | Julie chez Dupont
+ | tenant privé
+ | Persona
+ | nom/visage/voix/ton
+ | instance/template
+ | Entitlement
+ | droit d’exécuter Julie
+ | tenant+device+période
+ |
+5.3 Fiche Agent Template
+Métier, secteur, activités.
+Objectifs/tâches/limites.
+Logiciels et méthodes d’accès.
+Connecteurs requis/optionnels.
+Skills obligatoires/recommandés.
+Capabilities : browser/email/voice/phone/social/docs/media.
+Requirements Box/GPU/App Node.
+Autonomy/risk defaults.
+Persona/voice presets.
+Pricing tier.
+SEO/langues/pays.
+Version/changelog.
+5.4 Lifecycle Agent
+État
+ | Description
+ | RECRUITMENT
+ | entretien
+ | CONFIGURATION
+ | fiche de poste générée
+ | PROVISIONING
+ | skills/connectors/workspace
+ | ACTIVE
+ | travaille
+ | PAUSED
+ | pause volontaire
+ | PAYMENT_GRACE
+ | paiement échoué
+ | RESTRICTED
+ | actions limitées
+ | SUSPENDED
+ | arrêt
+ | TERMINATED
+ | contrat fini + retention
+ | ARCHIVED
+ | historique
+ |
+5.5 Recruitment Session
+Transcript structuré.
+Fiche de poste proposée/versionnée.
+Logiciels/comptes/canaux/horaires.
+Autonomy + validations.
+Budget IA et communication.
+Validation finale client.
+Trace template/skills/version.
+5.6 Entitlements
+Type
+ | Exemple
+ | BOX
+ | Commander active
+ | AGENT
+ | Julie active
+ | VOICE
+ | Voice Pro
+ | TELEPHONY
+ | number + outbound
+ | SKILL
+ | premium pack
+ | LOCAL_AI
+ | modèles locaux
+ | APP_BRIDGE
+ | App Nodes
+ | STORAGE
+ | quota
+ |
+5.7 Billing / Pricing
+Box + agent + options + usage.
+Pricing versionné/daté.
+Overrides Enterprise.
+Taxes/devise/pays.
+Grace period configurable.
+Credits séparés des refunds.
+Usage records idempotents.
+5.8 Skills
+Status
+ | Usage
+ | DRAFT
+ | dev
+ | CANDIDATE
+ | apprentissage/terrain
+ | REVIEW
+ | revue
+ | TESTING
+ | sandbox
+ | APPROVED
+ | autorisé
+ | PUBLISHED
+ | distribuable
+ | DEPRECATED
+ | remplacé
+ | REVOKED
+ | désactivé
+ |
+5.9 Website / SEO Factory
+Content Registry draft/published/scheduled.
+Templates SEO séparés des données métier.
+Anti-thin-content / duplication.
+Sitemaps/canonicals/noindex.
+Publication atomique + rollback.
+
+6. iAgent Team — société iAgent opérée par ses agents
+Work OS des équipes internes iAgent. Les agents n’obtiennent pas des identifiants admin ; ils reçoivent missions, contexte et tools autorisés via Action Gateway.
+Menu
+ | Contenu
+ | Company
+ | organigramme/départements
+ | Teams
+ | Marketing/Sales/Support/Hotline/Fleet Ops/Finance/Legal/Product
+ | Agents
+ | agents internes/rôles/autonomie
+ | Work Queue
+ | tasks/incidents/tickets/leads/calls/approvals
+ | Missions
+ | objectifs multi-étapes
+ | Campaigns
+ | marketing/sales/content
+ | Unified Inbox
+ | email/chat/WhatsApp/Telegram/web
+ | Call Center
+ | queues/inbound/outbound
+ | Support Center
+ | tickets/SLA/diagnostics
+ | Sales Center
+ | leads/quotes/demos/follow-up
+ | Marketing Center
+ | SEO/ads/social/content
+ | Operations
+ | fleet alerts/RMA
+ | Approvals
+ | human-in-loop
+ | Performance
+ | KPI équipe/agent
+ | Schedules
+ | pools/timezones
+ | Knowledge
+ | SOP/playbooks/policies
+ | Audit
+ | actions agentiques
+ |
+6.1 Work Queue universelle
+Type
+ | Exemples
+ | TASK
+ | rédiger campagne
+ | TICKET
+ | support client
+ | INCIDENT
+ | Box offline
+ | CALL
+ | appel
+ | LEAD
+ | prospect
+ | APPROVAL
+ | refund/remise/publication
+ | REVIEW
+ | skill/content
+ | MISSION
+ | objectif long multi-agents
+ |
+6.2 Profil agent interne
+Identité/avatar/voix.
+Department/team/manager.
+Role/capabilities.
+Autonomy level.
+Policies.
+Budgets AI/ads/refunds/discounts/phone.
+Tools Action Gateway.
+Browser workspaces/service accounts.
+KPI/quality.
+Timezone/pool.
+Escalation routes.
+6.3 Support Center
+Tool
+ | Permission
+ | customer.read
+ | client du ticket
+ | device.health.read
+ | état Box
+ | diagnostic.run
+ | diagnostic contrôlé
+ | service.restart
+ | allowlist
+ | ticket.update
+ | modifier ticket
+ | billing.credit.create
+ | avoir borné
+ | rma.create
+ | RMA
+ | support.escalate
+ | L2/human
+ |
+6.4 Sales Center
+Lead enrichment.
+Call/email/WhatsApp sous policy.
+Recommendation Engine agents/packs.
+Pricing Engine source unique.
+Quote service + discount caps.
+Demo booking.
+Follow-up avec règles anti-spam.
+6.5 Marketing Center
+Content calendar/SEO/social/paid/email.
+Budgets par campagne.
+Publication via Content/Social APIs.
+Validation selon risque.
+Attribution/analytics.
+Marketing Commander distribue les tâches.
+6.6 Fleet Ops agents
+Consomment événements Fleet via tools.
+Triage outage fournisseur vs local.
+Ouvrent incident/ticket/RMA.
+Peuvent proposer stop rollout.
+Jamais de shell root permanent.
+6.7 Managers humains
+Chaque responsable humain voit objectifs, SLA, budgets, escalades, charge, performance et peut ajuster autonomie/policies.
+
+7. Operations Center
+Vue transverse temps réel construite sur les événements existants. Pas une quatrième base.
+Bloc
+ | Exemples
+ | Fleet
+ | offline/disk/thermal/update
+ | Providers
+ | LLM latency/voice outage/API degraded
+ | Business
+ | payments/provisioning/churn
+ | Support
+ | SLA/queues/escalations
+ | Security
+ | cert/policy denials
+ | Factory
+ | failure rate/stock
+ |
+Incident state
+ | Description
+ | DETECTED
+ | signal
+ | TRIAGED
+ | scope/cause estimée
+ | INVESTIGATING
+ | owner
+ | MITIGATING
+ | action
+ | MONITORING
+ | observation
+ | RESOLVED
+ | rétabli
+ | POSTMORTEM
+ | analyse majeur
+ |
+
+8. Control Plane — Box ↔ Cloud
+La Box initie une connexion sortante sécurisée. Aucun port entrant public n’est requis au quotidien.
+Canal
+ | Payload
+ | Enrollment
+ | identity/CSR/factory token/profile
+ | Heartbeat
+ | uptime/versions/state
+ | Metrics
+ | CPU/RAM/SSD/temp/network
+ | Events
+ | crash/update/auth
+ | Desired State
+ | versions/agents/policies
+ | Commands
+ | restart/diagnostic/backup
+ | Results
+ | status/output/duration
+ | Update Manifest
+ | artifact/hash/signature
+ | Entitlements
+ | features/agents
+ | Skill Manifest
+ | skills/versions
+ | Backup
+ | metadata + encrypted data
+ |
+8.1 Desired vs Actual
+Ressource
+ | Desired
+ | Actual
+ | Commander
+ | 3.6
+ | 3.5.2
+ | Julie
+ | ACTIVE
+ | ACTIVE
+ | Skill CRM
+ | v8
+ | v7
+ | Voice
+ | provider A
+ | healthy
+ | Browser Julie
+ | RUN_ON_DEMAND
+ | IDLE
+ |
+8.2 Command safety
+ID unique + idempotency.
+TTL.
+Authorization server-side.
+Allowlist hardware/profile.
+Output redacted.
+Timeout/retry.
+Audit cloud + device.
+9. iAgent Box Factory Installer — intégration admin
+Étape
+ | Contrôle
+ | Receive
+ | serial/MAC/import
+ | Preflight
+ | CPU/RAM/SSD/NIC/audio/TPM/BIOS
+ | Install
+ | iAgent OS + encryption
+ | Identity
+ | Box ID + TPM key + cert
+ | Runtime
+ | Device Agent + profile
+ | Qualify
+ | network/audio/browser/voice/update/recovery
+ | Burn-in
+ | 24h prod / 72h qualification
+ | Enroll
+ | Control Plane
+ | Label
+ | QR + serial
+ | Ready
+ | signed factory report
+ |
+Batch mode obligatoire : plusieurs Box simultanées, grille PASS/FAIL, rapport par Box et objectif < 5 minutes de temps opérateur humain par Box.
+
+10. Action Gateway, Policy Engine et approbations
+Toute action à effet réel demandée par un agent interne passe par l’Action Gateway.
+Risk
+ | Exemples
+ | Traitement
+ | R0
+ | read only
+ | auto
+ | R1
+ | restart service/draft
+ | auto + audit
+ | R2
+ | send email/small credit
+ | policy + limits
+ | R3
+ | refund/discount/reboot
+ | approval possible
+ | R4
+ | factory reset/mass suspension
+ | dual approval/JIT
+ |
+Action Request field
+ | Description
+ | actor_id
+ | human/agent/service
+ | tenant_id
+ | scope
+ | action_type
+ | normalized verb
+ | resource
+ | target
+ | parameters
+ | schema validated
+ | reason
+ | motif
+ | risk_class
+ | server computed
+ | idempotency_key
+ | anti duplicate
+ | approval_context
+ | si requis
+ | correlation_id
+ | audit chain
+ |
+10.1 Approval Inbox
+Approve/Reject/Ask clarification.
+Expiration.
+2-person rule.
+Demandeur ne peut être double approbateur.
+Impact et scope affichés.
+
+11. Event Bus & Workflow Engine
+L’Event Bus est le système nerveux. Workflow = event → condition → agent/team → action → retry → timeout → escalation.
+Event
+ | Consumer
+ | device.offline
+ | Fleet Ops
+ | device.disk_critical
+ | Fleet/RMA
+ | device.update_failed
+ | Fleet
+ | agent.provisioning_failed
+ | Platform Ops
+ | connector.auth_expiring
+ | Support/notification
+ | payment.failed
+ | Billing Team
+ | subscription.cancel_requested
+ | Customer Success
+ | lead.created
+ | Sales
+ | ticket.created
+ | Support
+ | call.received
+ | Voice routing
+ | skill.candidate_created
+ | Skill Review
+ | skill.revoked
+ | Runtime
+ | security.policy_denied
+ | Security
+ |
+11.1 Workflow requirements
+Versionné/immutable une fois publié.
+Branches, timers, retries, compensation.
+Human-in-loop natif.
+Observabilité duration/cost/error.
+Rejouable pour events idempotents.
+
+12. Connector Registry, MCP/API et App Bridge
+Catégorie
+ | Exemples
+ | Productivity
+ | Google Workspace, Microsoft 365
+ | CRM
+ | HubSpot, Salesforce, Pipedrive
+ | ERP/Accounting
+ | Sage, QuickBooks, Xero, Odoo
+ | Communication
+ | WhatsApp, Telegram, Slack, Teams
+ | Social/Ads
+ | Meta, LinkedIn, TikTok, Google Ads
+ | Commerce
+ | Shopify, WooCommerce
+ | Support
+ | Zendesk, Freshdesk, Intercom
+ | Storage
+ | Drive, OneDrive, Dropbox, S3
+ | Dev
+ | GitHub, GitLab
+ | AI
+ | OpenAI, Anthropic, Google, Mistral, local
+ | Voice
+ | SIP/STT/TTS
+ | App Bridge
+ | Windows/macOS apps
+ |
+12.1 Connector lifecycle
+Status
+ | Description
+ | AVAILABLE
+ | installable
+ | CONNECTED
+ | auth valid
+ | AUTH_EXPIRING
+ | renew soon
+ | DEGRADED
+ | partial failure
+ | DISCONNECTED
+ | unusable
+ | BLOCKED
+ | policy/compliance
+ | DEPRECATED
+ | replacement
+ |
+12.2 App Bridge
+Signed Windows/macOS service.
+mTLS enrollment.
+Installed-app inventory.
+Launch/status/screenshot controlled.
+UI automation only after API/web.
+Secure file handoff.
+Never expose RDP 3389 directly.
+
+13. Voice, téléphonie, Hotline, Sales & Support
+Objet
+ | Champs clés
+ | Voice Provider
+ | capabilities/latency/cost/regions/health
+ | Number
+ | E.164/country/tenant/routing
+ | Extension
+ | agent/team
+ | Queue
+ | priority/skills/SLA/overflow
+ | Call
+ | direction/consent/policy/cost
+ | Recording
+ | policy/retention/legal basis
+ | Voice Session
+ | provider/latency/errors/handoff
+ |
+13.1 Routing
+Identify caller/tenant/intent.
+Route Sales/Support/Billing/agent.
+Inject filtered customer context.
+Human handoff native.
+Outbound subject to consent/hours/opt-out.
+13.2 Unified Inbox
+Email/chat/WhatsApp/Telegram/phone threads are merged when identity matching is reliable and policy allows.
+
+14. Billing, licences, locations et entitlements
+Billable
+ | Mode
+ | Box
+ | monthly/commitment
+ | Agent
+ | monthly
+ | Task Commander
+ | option/included
+ | Voice
+ | plan + usage
+ | Telephony
+ | number + minutes
+ | AI
+ | metered
+ | Storage
+ | quota
+ | Premium Skill/Connector
+ | option
+ | App Node/GPU
+ | option/usage
+ |
+14.1 Payment failure state machine
+ACTIVE → PAYMENT_FAILED → GRACE → RESTRICTED → SUSPENDED → TERMINATED. Delays and restrictions configurable per product/contract.
+
+15. Données, stockage, logs et sauvegardes
+Technologie
+ | Usage
+ | PostgreSQL
+ | business/configuration/transactions
+ | TimescaleDB/metrics store
+ | time-series
+ | Redis
+ | cache/locks/rate limit
+ | NATS
+ | event bus
+ | S3-compatible
+ | backups/artifacts/diagnostics
+ | OpenSearch/Loki
+ | logs
+ |
+15.1 Isolation
+tenant_id obligatoire.
+RLS ou service-level checks.
+Backups encrypted.
+Exports audités.
+No prod data in dev/staging by default.
+15.2 Retention
+Policy par type : logs, tickets, transcripts, recordings, backups, agent state, audit; configurable par région et contrat.
+
+16. Sécurité, PKI, Vault, RBAC/ABAC et audit
+Domaine
+ | Exigence
+ | Identity
+ | SSO/MFA humans; workload identity agents/services
+ | Device trust
+ | TPM + cert + mTLS
+ | Secrets
+ | Vault/KMS
+ | OS
+ | Secure Boot/LUKS/least privilege
+ | Network
+ | outbound-first
+ | Artifacts
+ | hash+signature
+ | JIT
+ | temporary privilege
+ | Audit
+ | append-only
+ | Approvals
+ | dual control
+ | Rotation
+ | certs/keys/credentials
+ |
+Audit field
+ | Exemple
+ | timestamp
+ | 2026-10-13T14:43:12Z
+ | actor
+ | AGENT-SUPPORT-0012
+ | actor_type
+ | AGENT
+ | action
+ | fleet.service.restart
+ | resource
+ | IA-FR-CMD-00127
+ | tenant
+ | FR-002918
+ | reason
+ | voice unhealthy
+ | policy
+ | ALLOW
+ | approval
+ | none/id
+ | result
+ | SUCCESS
+ | correlation_id
+ | uuid
+ |
+
+17. APIs internes — conventions
+Endpoint conceptuel
+ | But
+ | GET /v1/devices
+ | liste
+ | GET /v1/devices/{id}
+ | fiche
+ | POST /v1/devices/{id}/commands
+ | commande
+ | GET/PUT /v1/devices/{id}/desired-state
+ | desired state
+ | POST /v1/devices/{id}/diagnostics
+ | diagnostic
+ | POST /v1/releases
+ | release
+ | POST /v1/rollouts
+ | rollout
+ | POST /v1/agents/{id}/pause
+ | pause
+ | POST /v1/agents/{id}/suspend
+ | suspend
+ | POST /v1/agents/{id}/terminate
+ | terminate
+ | POST /v1/actions
+ | Action Gateway
+ | POST /v1/approvals/{id}/approve
+ | approve
+ | GET /v1/connectors
+ | registry
+ | POST /v1/workflows/{id}/run
+ | workflow
+ |
+17.1 API rules
+OpenAPI 3.1.
+Versioning.
+Cursor pagination.
+Idempotency-Key.
+Unified error format.
+Correlation-ID.
+Scopes in spec.
+Rate limits actor/tenant.
+
+18. Data model minimum
+Entity
+ | Minimum
+ | actors
+ | id,type,status,display_name
+ | roles
+ | id,name,scope
+ | permissions
+ | id,action,resource_type
+ | actor_roles
+ | actor_id,role_id,scope
+ | tenants
+ | id,type,country,status
+ | customers
+ | tenant_id,billing_profile
+ | sites
+ | tenant_id,name
+ | devices
+ | id,tenant_id,type,profile,status
+ | device_state
+ | desired_json,actual_json,version
+ | device_certificates
+ | serial,status,expires
+ | hardware_profiles
+ | model,requirements,test_plan
+ | factory_runs
+ | device,build,status,report
+ | releases
+ | component,version,artifact,signature
+ | rollouts
+ | release,target,status
+ | agent_templates
+ | role,sector,version
+ | agent_instances
+ | tenant,template,name,status,device
+ | agent_entitlements
+ | agent,features,start,end,status
+ | skills
+ | name,version,status,artifact
+ | agent_skills
+ | agent,skill
+ | connectors
+ | provider,auth,status
+ | connector_connections
+ | tenant,connector,status,vault_ref
+ | workflows
+ | name,version,status
+ | workflow_runs
+ | workflow,state,correlation
+ | actions
+ | actor,type,resource,status,risk
+ | approvals
+ | action,status,rules
+ | subscriptions
+ | tenant,product,status,period
+ | usage_records
+ | tenant,meter,qty,cost,key
+ | invoices
+ | tenant,status,total,currency
+ | support_tickets
+ | tenant,device,agent,status
+ | incidents
+ | domain,severity,status,owner
+ | conversations
+ | tenant,channel,thread
+ | calls
+ | tenant,direction,queue,status,cost
+ | audit_events
+ | actor,action,resource,result,correlation
+ |
+
+19. Stack technique recommandée
+Couche
+ | Choix
+ | Raison
+ | Desktop
+ | Tauri + React + TypeScript
+ | 3 apps, léger
+ | Backend business
+ | Node.js + TypeScript
+ | productivity
+ | Device core
+ | Rust
+ | 24/7 robust
+ | Factory tests
+ | Python + Bash
+ | hardware/tooling
+ | Browser
+ | Playwright + TypeScript
+ | automation
+ | DB
+ | PostgreSQL
+ | transactions
+ | Events
+ | NATS
+ | simple/scalable
+ | Cache
+ | Redis
+ | locks/cache
+ | Object Storage
+ | S3 compatible
+ | artifacts/backups
+ | Observability
+ | OpenTelemetry
+ | correlation
+ | API
+ | OpenAPI 3.1
+ | SDK/contracts
+ |
+19.1 Monorepo suggéré
+apps/  fleet-commander/  platform-commander/  iagent-team/  iagent-master/services/  core-api/  control-plane/  action-gateway/  workflow-engine/  notification-service/  voice-service/packages/  ui/  api-sdk/  schemas/  permissions/  events/device/  device-agent-rust/  updater-rust/  watchdog-rust/factory/  installer/  tests/infra/  terraform/  observability/docs/
+20. Environnements, CI/CD, observabilité et tests
+Env
+ | Règle
+ | local
+ | mocks/simulators
+ | dev
+ | continuous integration
+ | staging
+ | synthetic data
+ | pilot
+ | real internal boxes
+ | production
+ | controlled rollout
+ |
+20.1 CI/CD gates
+lint/typecheck/unit.
+API contract tests.
+dependency/secret scan.
+DB migration test.
+signed builds.
+device simulator integration.
+canary for device components.
+20.2 Tests
+Famille
+ | Exemples
+ | Unit
+ | policy/pricing/states
+ | Contract
+ | API/SDK
+ | Integration
+ | billing/connectors
+ | Device sim
+ | heartbeat/commands/reconnect
+ | Chaos
+ | disconnect/duplicate/delay
+ | Security
+ | tenant isolation/escalation
+ | Load
+ | 100k heartbeats simulated
+ | Factory
+ | reinstall/recovery/power loss
+ | E2E
+ | tenant→agent→entitlement→box
+ |
+
+21. Roadmap de développement
+Lot
+ | Livrables
+ | 0 Foundations
+ | monorepo, actors, tenants, permissions, audit, OpenAPI, event conventions
+ | 1 Control Plane MVP
+ | enrollment, heartbeat, desired/actual, commands, simulator
+ | 2 Fleet MVP
+ | dashboard, devices, diagnostics, releases, factory
+ | 3 Platform Core
+ | customers, contracts, agents, entitlements
+ | 4 Billing/Usage
+ | pricing, meters, payment adapter, grace
+ | 5 Connectors/Skills
+ | registry, auth health, skill lifecycle
+ | 6 Team MVP
+ | org, work queue, internal agents, Action Gateway, approvals
+ | 7 Support/Voice/Sales
+ | unified inbox, call/support/sales tools
+ | 8 Operations Center
+ | incidents/provider status
+ | 9 Hardening
+ | JIT, security, load, DR
+ |
+Ordre critique — Ne pas coder iAgent Team avant Actors + permissions + Action Gateway. Ne pas coder Fleet UI avant enrollment + heartbeat + desired state + command protocol.
+ |
+
+22. Critères d’acceptation
+Device simulator enroll + cert + heartbeat + desired state.
+Fleet affiche la Box et lance un diagnostic audité.
+Rollout canary + auto rollback.
+Platform crée tenant + box assignment + agent + entitlement.
+Suspension agent modifie entitlement et Box converge.
+Internal Support Agent demande restart_voice via Action Gateway.
+Policy Engine autorise/refuse selon rôle/tenant/risque/seuil.
+High-risk action waits for approval.
+Every action has audit + correlation.
+Payment failure enters grace, no immediate deletion.
+Connector secrets never returned to frontend.
+Factory run report linked to device.
+RMA replacement creates new cryptographic identity.
+
+23. Backlog initial détaillé
+ID
+ | Story
+ | Priority
+ | CORE-001
+ | Actor model
+ | P0
+ | CORE-002
+ | Tenant isolation
+ | P0
+ | CORE-003
+ | RBAC registry
+ | P0
+ | CORE-004
+ | ABAC skeleton
+ | P0
+ | CORE-005
+ | Audit service
+ | P0
+ | DEV-001
+ | Enrollment API
+ | P0
+ | DEV-002
+ | Device cert flow
+ | P0
+ | DEV-003
+ | Heartbeat
+ | P0
+ | DEV-004
+ | Desired/Actual
+ | P0
+ | DEV-005
+ | Command queue/result
+ | P0
+ | DEV-006
+ | Device simulator
+ | P0
+ | FLEET-001
+ | Dashboard
+ | P1
+ | FLEET-002
+ | Device detail
+ | P1
+ | FLEET-003
+ | Diagnostics
+ | P1
+ | FLEET-004
+ | Release registry
+ | P1
+ | FLEET-005
+ | Rollout
+ | P1
+ | FACT-001
+ | Factory report ingest
+ | P1
+ | PLAT-001
+ | Customer 360
+ | P1
+ | PLAT-002
+ | Contracts/subscriptions
+ | P1
+ | PLAT-003
+ | Agent templates
+ | P1
+ | PLAT-004
+ | Agent lifecycle
+ | P1
+ | PLAT-005
+ | Entitlements
+ | P0
+ | BILL-001
+ | Pricing
+ | P1
+ | BILL-002
+ | Usage metering
+ | P1
+ | CONN-001
+ | Connector registry
+ | P1
+ | SKILL-001
+ | Skill lifecycle
+ | P1
+ | TEAM-001
+ | Org/team model
+ | P1
+ | TEAM-002
+ | Internal agents
+ | P1
+ | TEAM-003
+ | Work Queue
+ | P1
+ | ACT-001
+ | Action Gateway
+ | P0
+ | ACT-002
+ | Risk classification
+ | P0
+ | ACT-003
+ | Approval service
+ | P0
+ | WF-001
+ | Workflow engine
+ | P1
+ | EVT-001
+ | NATS backbone
+ | P0
+ | SUP-001
+ | Ticket service
+ | P1
+ | SUP-002
+ | Support tools
+ | P1
+ | VOICE-001
+ | Voice registry
+ | P2
+ | OPS-001
+ | Incident aggregation
+ | P2
+ | SEC-001
+ | JIT access
+ | P2
+ | SEC-002
+ | 2-person approval
+ | P1
+ | OBS-001
+ | OpenTelemetry baseline
+ | P0
+ |
+
+24. Annexes opérationnelles
+24.1 Permissions exemples
+Permission
+ | fleet.device.read
+ | fleet.device.command.restart
+ | fleet.device.command.shutdown
+ | fleet.device.diagnostic.run
+ | fleet.device.reset.factory
+ | fleet.release.create
+ | fleet.rollout.create
+ | fleet.support.open
+ | platform.customer.read
+ | platform.customer.update
+ | platform.agent.create
+ | platform.agent.pause
+ | platform.agent.suspend
+ | platform.agent.terminate
+ | platform.pricing.update
+ | billing.credit.create
+ | billing.refund.create
+ | connector.connection.manage
+ | skill.publish
+ | skill.revoke
+ | support.ticket.update
+ | support.rma.create
+ | sales.quote.create
+ | sales.discount.apply
+ | marketing.content.publish
+ | voice.call.outbound
+ | voice.number.manage
+ | security.certificate.rotate
+ | security.audit.read
+ |
+24.2 Status enums
+Objet
+ | États
+ | Device
+ | RECEIVED, FACTORY, QUALIFIED, READY, ASSIGNED, SHIPPED, ACTIVE, DEGRADED, OFFLINE, MAINTENANCE, RMA, RETURNED, RETIRED
+ | Agent
+ | RECRUITMENT, CONFIGURATION, PROVISIONING, ACTIVE, PAUSED, PAYMENT_GRACE, RESTRICTED, SUSPENDED, TERMINATED, ARCHIVED
+ | Connector
+ | AVAILABLE, CONNECTED, AUTH_EXPIRING, DEGRADED, DISCONNECTED, BLOCKED, DEPRECATED
+ | Skill
+ | DRAFT, CANDIDATE, REVIEW, TESTING, APPROVED, PUBLISHED, DEPRECATED, REVOKED
+ | Incident
+ | DETECTED, TRIAGED, INVESTIGATING, MITIGATING, MONITORING, RESOLVED, POSTMORTEM
+ | Subscription
+ | TRIAL, ACTIVE, PAST_DUE, GRACE, RESTRICTED, SUSPENDED, CANCELLED, ENDED
+ |
+24.3 UI communes
+Global search device/client/agent/ticket/invoice.
+Command palette.
+Saved filters + configurable tables.
+Shared status badges.
+Destructive actions show impact/scope.
+Audit side panel.
+Deep-links Fleet/Platform/Team.
+Realtime approvals/incidents.
+Accessible keyboard/labels.
+24.4 Definition of Done écran
+Permissions tested.
+Loading/empty/error/degraded states.
+Idempotent actions.
+Audit event.
+Trace/correlation ID.
+Desktop responsive.
+Keyboard/accessibility.
+E2E main path.
+24.5 Definition of Done service
+OpenAPI/schema.
+Input/output validation.
+Central authz.
+Idempotency.
+Metrics/logs/traces.
+Retry/backoff.
+Async error handling/DLQ if needed.
+DB migrations.
+Runbook.
+Contract/integration tests.
+24.6 Décisions techniques à figer
+Décision
+ | Reco
+ | Desktop shell
+ | Tauri
+ | Frontend
+ | React + TypeScript
+ | Backend
+ | Node/TypeScript modular monolith start
+ | Device services
+ | Rust
+ | Factory
+ | Ubuntu Autoinstall + Python/Bash + Rust bootstrap
+ | DB
+ | PostgreSQL
+ | Event Bus
+ | NATS
+ | Cache
+ | Redis
+ | Object Storage
+ | S3 compatible
+ | API
+ | REST/OpenAPI first
+ | Observability
+ | OpenTelemetry
+ | Auth
+ | OIDC/SSO + MFA + workload identities
+ |
+Résultat cible — iAgent doit pouvoir louer une Box et des agents, provisionner automatiquement le matériel, superviser la flotte, faire travailler ses propres équipes d’agents, exécuter des actions via policies, facturer l’usage, supporter les clients et évoluer sans accès direct incontrôlé aux systèmes critiques.
+ |
+24.7 Instruction finale au développeur
+Ne pas traiter ce document comme une liste d’écrans indépendants. Construire d’abord les contrats de données, l’identité Actor, l’Event Bus, le Policy Engine, l’Action Gateway, les state machines et le Control Plane. Les trois Desktop sont ensuite des interfaces spécialisées vers ce noyau commun.
+iAgent
+ONE CORE • THREE COMMANDERS • AGENTIC COMPANY
+Fleet Commander • Platform Commander • iAgent Team

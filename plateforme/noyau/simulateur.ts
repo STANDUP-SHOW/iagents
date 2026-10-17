@@ -29,7 +29,7 @@ export class BoxSimulee {
     const { publicKey, privateKey } = generateKeyPairSync('ed25519');
     const n = String(numero).padStart(8, '0');
     const box: Box = {
-      device_id: `BOX-SIM${n}`, tenant_id, serial: `SIM-${n}`, reference: `IA-FR-${gamme === 'home' ? 'HOME' : 'CMD'}-${n}`,
+      device_id: `BOX-SIM${n}`, tenant_id, serial: `SIM-${n}`, reference: `IA-FR-STN-${n}`,
       identite_publique: publicKey.export({ type: 'spki', format: 'pem' }).toString(), cle_chiffrement_publique: null, gamme, os: 'iagent-os-0.1.0',
       version_desktop: '0.2.1', statut: 'active', plan_id: null, sante: null, garantie_jusqu_au: null, profil_materiel: 'vm-qemu', inventaire: null,
       versions: { device: '0.1.0', os: '0.1.0' }, usine: null,

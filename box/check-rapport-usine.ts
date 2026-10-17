@@ -33,9 +33,9 @@ export function lancer(): number {
     verifier(`${f} suit rapport.schema.json`, erreurs.length === 0, erreurs.join(' ; '));
     if (erreurs.length) continue;
     verifier(`${f} : le fichier porte le nom de sa référence`, basename(f, '.json') === r.reference);
-    verifier(`${f} : référence au format du brief et de la gamme`, REFERENCE_BOX.test(r.reference) && r.reference.includes(r.gamme === 'business' ? '-CMD-' : '-HOME-'));
+    verifier(`${f} : référence au format de la série Station (IA-FR-STN-…)`, REFERENCE_BOX.test(r.reference));
     const profil = profilMateriel(r.profil_materiel);
-    verifier(`${f} : le profil matériel ${r.profil_materiel} existe et sert la gamme`, Boolean(profil) && profil!.gammes.includes(r.gamme));
+    verifier(`${f} : le profil matériel ${r.profil_materiel} existe`, Boolean(profil));
     if (!profil) continue;
     const v = verdictRapport(r.tests, profil.tests_obligatoires);
     verifier(`${f} : verdict « ${r.verdict} » = ce que la plateforme recalcule`, v.verdict === r.verdict && v.manquants.join() === r.manquants.join() && v.echoues.join() === r.echoues.join(),

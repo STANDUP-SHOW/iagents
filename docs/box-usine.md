@@ -19,8 +19,8 @@ prendre 30). Horizon : 10 Box branchées, « INSTALL BATCH », 10/10 READY.
 
 Ce que fait l'opérateur : brancher, Ethernet, clé d'usine, démarrer ; à l'écran
 d'usine : vérifier l'appareil, choisir la machine, prénom, INSTALLER, attendre
-PRÊTE À EXPÉDIER, carton. Le choix Business/Home est fait par la clé (une ISO
-par profil) : une clé ne peut pas installer le mauvais.
+PRÊTE À EXPÉDIER, carton. Une seule clé pour toutes les Stations : le profil
+(Home, Business, Enterprise) se pose à l'attribution (§3).
 
 ## 2. Langages (décision de max, 11/10/2026)
 
@@ -32,22 +32,43 @@ Python (bibliothèque standard) : les tests d'usine, le rapport, le rodage. Bash
 et cloud-init : l'autoinstall. Playwright + TypeScript pour le futur gestionnaire
 d'espaces de navigateur.
 
-## 3. Les deux gammes, un seul OS
+## 3. Une machine, l'iAgent Station ; trois profils posés au provisioning
 
-Le brief dit « profil COMMANDER / HOME ». Le dépôt dit **`gamme: business |
-home`** (`plateforme/modele.ts`) et max l'a confirmé : il y a deux gammes,
-business et home ; **Commander est le nom de l'application** (Desktop Commander),
-pas une gamme. Les profils d'OS sont donc `box/profils/business.json` et
-`home.json` ; l'écran dit « Business (Desktop Commander) ». La référence
-commerciale garde les codes du brief : `IA-FR-CMD-00000127` (business),
-`IA-FR-HOME-00000128` (home), un compteur par gamme tenu par la plateforme.
+**Décision de max du 17/10/2026** (documents « iAgent Station Gen 1 —
+Intégration simplifiée », « Supplier Technical Pack A et B », visuel des
+finitions) : une seule machine, l'**iAgent Station** (écran tactile 27", base
+avec carte Ryzen, 4 micros champ lointain, deux haut-parleurs, anneau de LED),
+en trois SKU, et **une seule image d'usine** ; le **profil** se pose au
+provisioning, pas par la clé.
 
-| | business | home |
+| SKU (`box/materiel/`) | mémoire | disque | profils qu'il sert |
+|---|---|---|---|
+| `station-32-v1` | 32 Go DDR5 | 1 To NVMe | home, business (petite entreprise) |
+| `station-64-v1` | 64 Go DDR5 | 1 To NVMe | business, enterprise |
+| `station-64-plus-v1` | 64 Go DDR5 | 2 To NVMe | business, enterprise |
+
+| Profil (`box/profils/`, `Box.gamme`) | agents / espaces de navigateur | voix |
 |---|---|---|
-| agents / espaces de navigateur | 8 / 8 | 1 / 1 |
-| voix | activable | démarre seule, test micro + enceintes + AEC |
-| machine | BOSGAME M4 Neo (64 Go, confirmé par max le 11/10) | EXR1 (32 Go, confirmé par max le 11/10 ; le brief disait 16/32) |
-| services réels en 0.1 | iagent-device, iagent-commander, iagent-updater, iagent-watchdog | les mêmes |
+| `home` | 1 / 1 | démarre seule |
+| `business` | 8 / 8 | activable |
+| `enterprise` | 10 / 10 (confirmé par max le 17/10/2026) | activable |
+
+`Box.gamme` vaut `null` tant que la Station n'est pas attribuée ; `/attribuer`
+(ou le jeton d'usine qui porte client, plan et profil) le pose, et la plateforme
+refuse un profil que le matériel ne sert pas (une Station 32 n'est pas une
+Enterprise). La référence est **une seule série**, `IA-FR-STN-00000127` :
+l'étiquette s'imprime à l'usine, avant que le profil soit connu. Les services
+actifs et le kiosque, communs à toutes, sont dans
+`box/os/systemd/SERVICES.json` (`actifs`, `kiosque`). **Commander est le nom de
+l'application** (Desktop Commander), pas une gamme.
+
+Pas encore fait : porter le profil posé jusqu'à la Box (`/etc/iagent/profil`,
+voix, nombre d'agents) ; ça viendra avec l'état voulu du noyau (`/v1`). La carte
+compute n'est pas choisie (lot 1 des fournisseurs) : les seuils des profils
+matériel sont provisoires.
+
+Historique : 11/10 Business 64 Go et Home 32 Go (mini-PC BOSGAME M4 Neo, EXR1) ;
+14/10 Home 16, Pro 32, Business 64 ; 17/10 la Station fait foi.
 
 ## 4. iAgent OS
 
@@ -75,7 +96,7 @@ remplacee`. **Un seul cycle**, dans `plateforme/controle/regles.ts` :
 | FACTORY | `usine` | `POST /controle/usine/enroler` (jeton d'usine) |
 | QUALIFIED | `qualifiee` | `POST /controle/box/usine/rapport` dont le verdict recalculé est `passe` |
 | PROVISIONED | `stock` | back-office (`/statut`), après rodage |
-| ASSIGNED | `provisionnee` | `/attribuer` (ou le jeton d'usine qui portait client + plan) |
+| ASSIGNED | `provisionnee` | `/attribuer`, qui pose le profil (ou le jeton d’usine qui portait client, plan et profil) |
 | SHIPPED | `expediee` | back-office |
 | ACTIVE | `active` | première télémétrie après expédition (`box.activee`) ; ou back-office |
 
@@ -123,11 +144,12 @@ Linux (`mise_a_jour.rs`). Le A/B d'image (§32 du brief) attend `SYSTEM_B`.
    `docs/offre-box.md` vendent une « Box Commandeur » Minisforum MS-01 (i9,
    32 Go) qui **ne fait tourner aucun agent** ; le brief nomme un BOSGAME M4 Neo
    (Ryzen 7 7840HS, 64 Go) qui fait tourner jusqu'à 8 agents. **Tranché par
-   max le 11/10/2026 : la Box business de base a 64 Go.** Le brief fait foi pour
+   max le 11/10/2026 : la Box business de base a 64 Go** ; **depuis le 17/10, la
+   Station fait foi** (SKU 32, 64, 64+, §3). Le brief fait foi pour
    `box/materiel/` ; `offre-box.json` n'est pas touché (il porte les prix de la
    boutique et `check-offre-box.ts` exige une source datée) et `docs/offre-box.md`
    le dit : sa ligne « Box Commandeur 32 Go » est dépassée sur la mémoire, à
-   remplacer quand la machine 64 Go a son prix.
+   remplacer quand les Stations ont leur prix.
 2. **« Commandeur » vs « Commander ».** Le dépôt dit les deux ; le brief et les
    plans tarifaires disent Commander. Ce document dit Commander.
 3. **L'OS.** MASTER §6 : « Ubuntu Core si compatible, sinon Windows IoT » ;

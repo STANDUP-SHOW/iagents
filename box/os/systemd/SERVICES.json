@@ -1,8 +1,10 @@
 {
-  "_note": "La seule liste de ce qui tourne sur iAgent OS (brief §16). Un service « reel » a un binaire livré (son code est dans `source`) et une unité qui le lance ; un service « absent » a une unité dont ExecStart est iagent-absent, qui refuse en français et sort en 78 : rien ne fait semblant de tourner (règle du mémo, 24/09/2026). check-systemd.ts tient les unités à cette liste, check-profils.ts refuse d'activer un service absent.",
+  "_note": "La seule liste de ce qui tourne sur iAgent OS (brief §16). Un service « reel » a un binaire livré (son code est dans `source`) et une unité qui le lance ; un service « absent » a une unité dont ExecStart est iagent-absent, qui refuse en français et sort en 78 : rien ne fait semblant de tourner (règle du mémo, 24/09/2026). check-systemd.ts tient les unités à cette liste et refuse d'activer un service absent. « actifs » et « kiosque » valent pour toutes les Stations : même image d'usine, le profil (home, business, enterprise) se pose au provisioning (max, 17/10/2026).",
   "version_os": "0.1.0",
   "journaux": ["device", "runtime", "browser", "voice", "update", "security", "factory"],
   "absent": { "binaire": "/usr/lib/iagent/iagent-absent", "source": "box/services/absent/iagent-absent.sh" },
+  "actifs": ["iagent-device", "iagent-commander", "iagent-updater", "iagent-watchdog"],
+  "kiosque": { "application": "iagent-desktop", "edition": "box" },
   "services": {
     "iagent-device": { "etat": "reel", "binaire": "/usr/bin/iagent-device", "source": "box/services/agent-device/Cargo.toml", "journal": "device", "role": "Agent de la Box : identité, inventaire, enrôlement, télémétrie, relevé des mises à jour, dépôt du rapport d'usine (Rust)." },
     "iagent-usine": { "etat": "reel", "binaire": "/usr/lib/iagent/iagent-usine.sh", "source": "box/os/kiosque/iagent-usine.sh", "journal": "factory", "role": "Mode usine du premier démarrage : iagent-device sert l'interface opérateur sur 127.0.0.1 et conduit les tests, cog l'affiche dans cage ; ne démarre plus une fois la Box qualifiée." },

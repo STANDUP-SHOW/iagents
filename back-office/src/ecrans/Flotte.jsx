@@ -89,7 +89,7 @@ export function FicheBox({ id, registre, onFermer }) {
               <div><dt>Dernier battement</dt><dd className="petit">{dateHeure(d.battement?.vu_le)}</dd></div>
               <div><dt>État voulu</dt><dd className="petit">{d.ligne.connexion === 'jamais_vue' ? <Pastille ton="neutre">aucun rapport de la Box</Pastille> : d.convergence.convergee ? <Pastille ton="succes">{`rejoint (v${d.convergence.version_voulue ?? 0})`}</Pastille> : <Pastille ton="alerte">{`écart : v${d.convergence.version_appliquee ?? 'aucune'} appliquée sur v${d.convergence.version_voulue ?? 0}`}</Pastille>}</dd></div>
             </dl>
-            <p className="petit">{d.box.reference} · {d.box.gamme} · client <code>{d.box.tenant_id ?? 'aucun'}</code> · profil {d.box.profil_materiel ?? 'non qualifié'} · versions {Object.entries(d.ligne.versions).map(([k, v]) => `${k} ${v}`).join(', ')}</p>
+            <p className="petit">{d.box.reference} · {d.box.gamme ?? 'profil à poser'} · client <code>{d.box.tenant_id ?? 'aucun'}</code> · profil {d.box.profil_materiel ?? 'non qualifié'} · versions {Object.entries(d.ligne.versions).map(([k, v]) => `${k} ${v}`).join(', ')}</p>
             {d.convergence.ecarts.length ? (
               <Tableau lignes={d.convergence.ecarts} cle={(e) => `${e.domaine}:${e.cle}`} vide=""
                 colonnes={[{ titre: 'Écart', rendu: (e) => <code>{e.domaine} · {e.cle}</code> }, { titre: 'Voulu', rendu: (e) => <code>{JSON.stringify(e.voulu)}</code> }, { titre: 'Constaté', rendu: (e) => <code>{JSON.stringify(e.reel)}</code> }]} />

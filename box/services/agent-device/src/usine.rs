@@ -224,13 +224,13 @@ fn installer(etat: &Partage, chemins: &Chemins, tests: &Path, operateur: &str, p
     let device = match plateforme::Device::lire(chemins) { Ok(d) => d, Err(e) => return echec(etat, e.to_string()) };
     // 2. The tests, one JSON line each, shown as they come.
     etat.lock().unwrap().etape = "tests".to_string();
-    let profil_os = fs::read_to_string(chemins.conf.join("profil")).map(|s| s.trim().to_string()).unwrap_or_else(|_| device.gamme.clone());
-    let profils = PathBuf::from(std::env::var("IAGENT_PROFILS").unwrap_or_else(|_| "/opt/iagent/profils".to_string()));
+    // One image for every Station (max, 17/10/2026): the factory tests read the common services, not a profile.
+    let services = std::env::var("IAGENT_SERVICES").unwrap_or_else(|_| "/opt/iagent/SERVICES.json".to_string());
     let materiel = PathBuf::from(std::env::var("IAGENT_MATERIEL").unwrap_or_else(|_| "/opt/iagent/materiel".to_string()));
     let manifeste = std::env::var("IAGENT_MANIFESTE").unwrap_or_else(|_| "/opt/iagent/manifeste.json".to_string());
     let mut enfant = match Command::new("python3")
         .arg("-I").arg(tests.join("lancer.py"))
-        .arg("--profil-os").arg(profils.join(format!("{}.json", profil_os)))
+        .arg("--services").arg(&services)
         .arg("--profil-materiel").arg(materiel.join(format!("{}.json", profil_materiel)))
         .arg("--inventaire").arg(chemins.etat.join("usine").join("inventaire.json"))
         .arg("--device").arg(plateforme::Device::chemin(chemins))

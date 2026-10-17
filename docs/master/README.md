@@ -23,6 +23,17 @@ et ce qui ne peut se faire qu'avec max (un compte, un secret, un achat).
 | 17 | Modèle de données | éparpillé | `plateforme/modele.ts`, seul endroit | — |
 | 18 | Sécurité | coffre du système, refus en français | isolation par tenant, signature des Box, audit, aucun secret journalisé | — |
 
+**Admin, Control Plane, Team (14/10/2026).** Deux documents de max posent trois
+consoles (Fleet Commander, Platform Commander, iAgent Team) sur un seul iAgent
+Core et fixent le protocole Box ↔ plateforme (battement, état voulu / réel,
+commandes). Texte dans `ADMIN-MASTER-1.0-2026-10.txt` et
+`ADMIN-MASTER-1.1-2026-10.txt` ; ce qui est conforme, ce qui contredit le dépôt
+et ce que la Box doit changer : [`admin.md`](admin.md).
+
+**Quantum-Ready et Station Gen 1 (16/10/2026).** Crypto-agilité (ML-KEM,
+ML-DSA), PKI, profils crypto ; et une Station 27" à micros en champ lointain :
+[`quantique-station.md`](quantique-station.md).
+
 ## §6 : fait et reste
 
 Fait par la plateforme (`plateforme/controle/`, banc dans `npm run controle`) :

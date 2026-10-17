@@ -5,7 +5,7 @@
 # (voir box/README.md). Premier passage : l'installation (15-25 min selon le
 # miroir apt), puis redémarrage sur le disque et le mode usine sur la console.
 #
-#   box/usine/iso/essayer-qemu.sh dist/iagent-factory-installer-v0.1.0-business.iso [--sans-ecran]
+#   box/usine/iso/essayer-qemu.sh dist/iagent-factory-installer-v0.1.0.iso [--sans-ecran]
 #
 # Dépendances (Ubuntu) : qemu-system-x86, ovmf, swtpm, swtpm-tools. Non constaté :
 # ce script a été écrit sans machine Linux sous la main ; sa première exécution

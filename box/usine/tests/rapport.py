@@ -3,8 +3,8 @@
 Le rapport suit `rapport.schema.json` ; `iagent-device rapport <fichier>` le
 signe et le dépose sur `POST /controle/box/usine/rapport`, qui recalcule le
 verdict. Il s'écrit aussi dans `<etat>/usine/<reference>.json` pour l'export USB
-de l'écran final. Rien ici n'est écrit à la main : la référence, la série et
-la gamme viennent de /etc/iagent/device.json (posé à l'enrôlement), les
+de l'écran final. Rien ici n'est écrit à la main : la référence et la série
+viennent de /etc/iagent/device.json (posé à l'enrôlement), les
 versions de l'installateur de son manifeste.
 """
 from __future__ import annotations
@@ -27,7 +27,6 @@ def assembler(device: dict, profil_materiel: dict, inventaire: dict, installateu
         "device_id": device["device_id"],
         "reference": device["reference"],
         "serial": device["serial"],
-        "gamme": device["gamme"],
         "profil_materiel": profil_materiel["id"],
         "inventaire": inventaire,
         "installateur": {"version": installateur["version"], "build_id": installateur["build_id"], "commit": installateur["commit"]},

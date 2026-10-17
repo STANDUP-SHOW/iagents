@@ -1,7 +1,7 @@
 // A small QR code encoder (ISO/IEC 18004), byte mode, error correction L,
 // versions 1 to 5 (up to 108 bytes), mask pattern 0, written after the public
 // reference implementation of Nayuki. It encodes the ONE thing the brief lets a
-// label carry (§42): the commercial reference `IA-FR-CMD-00000127`, never a key,
+// label carry (§42): the commercial reference `IA-FR-STN-00000127`, never a key,
 // never a client. Shared by the factory screen (box/usine/ui) and the back-office
 // label view: one encoder, no dependency.
 

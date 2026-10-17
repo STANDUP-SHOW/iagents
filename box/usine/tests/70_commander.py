@@ -14,8 +14,8 @@ LIBELLE = "Desktop Commander installé et armé"
 if __name__ == "__main__":
     debut = time.monotonic()
     args = arguments(__doc__)
-    profil = charger(args.profil_os)
-    application = profil["kiosque"]["application"]
+    services = charger(args.services)
+    application = services["kiosque"]["application"]
     binaire = f"/usr/bin/{application}"
     if not os.access(binaire, os.X_OK):
         emettre(resultat("commander", LIBELLE, "echec", debut, f"{binaire} absent ou non exécutable"))

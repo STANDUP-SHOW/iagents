@@ -14,7 +14,7 @@ import { join } from 'node:path';
 import { compteur, estMain, lireJson, RACINE } from './commun.ts';
 
 type Service = { etat: 'reel' | 'absent'; binaire?: string; source?: string; journal: string; role?: string; pourquoi?: string };
-type Services = { version_os: string; journaux: string[]; absent: { binaire: string; source: string }; services: Record<string, Service> };
+type Services = { version_os: string; journaux: string[]; absent: { binaire: string; source: string }; actifs: string[]; kiosque: { application: string; edition: 'box' }; services: Record<string, Service> };
 
 /** A unit file as a map of sections to repeated key/value pairs. */
 function lireUnite(chemin: string): Record<string, Record<string, string[]>> {
@@ -45,6 +45,11 @@ export function lancer(): number {
   const refus = readFileSync(join(RACINE, S.absent.source), 'utf8');
   verifier('le refus sort en 78 et ne rend jamais 0', /exit 78/.test(refus) && !/exit 0/.test(refus) && !/sleep/.test(refus));
   verifier('la version d\'OS de SERVICES.json est une version semver', /^\d+\.\d+\.\d+$/.test(S.version_os));
+  // One factory image for every Station (max, 17/10/2026): the services enabled at install are the same for every profile.
+  const nonReels = S.actifs.filter((s) => S.services[s]?.etat !== 'reel');
+  verifier('chaque service actif à l’installation est réel dans SERVICES.json', nonReels.length === 0, `non réels : ${nonReels.join(', ')}`);
+  verifier('iagent-device et iagent-commander sont actifs (sans eux il n’y a pas de Box)', ['iagent-device', 'iagent-commander'].every((s) => S.actifs.includes(s)));
+  verifier('le kiosque lance l’application desktop en édition Box', S.kiosque?.application === 'iagent-desktop' && S.kiosque?.edition === 'box');
 
   const unites = new Map(fichiers.map((f) => [f.replace(/\.service$/, ''), lireUnite(join(dossier, f))]));
   for (const [nom, decl] of Object.entries(S.services)) {

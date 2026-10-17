@@ -13,7 +13,7 @@ côté dans `dimensionnement/offre-box.json` pour la boutique.
 
 > **Dépassé sur la mémoire depuis le 11/10/2026** : max a tranché que la Box
 > business de base a **64 Go** (brief Factory Installer, BOSGAME M4 Neo,
-> `box/materiel/bosgame-m4-neo.json`), et non les 32 Go du Minisforum MS-01 de la
+> `box/materiel/bosgame-m4-neo-v1.json`), et non les 32 Go du Minisforum MS-01 de la
 > ligne « Box Commandeur » ci-dessous. Les prix et `offre-box.json` restent ceux
 > du catalogue du 25/09 tant que la machine 64 Go n'a pas son prix sourcé et
 > daté (`check-offre-box.ts` l'exige) ; voir `docs/box-usine.md` §9.

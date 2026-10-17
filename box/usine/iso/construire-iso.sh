@@ -1,8 +1,10 @@
 #!/bin/bash
 # Construit l'ISO du iAgent Box Factory Installer (brief §5) :
-#   iagent-factory-installer-v<version>-<profil>.iso  +  manifeste.json
+#   iagent-factory-installer-v<version>.iso  +  manifeste.json
+#   Une seule image pour toutes les Stations (max, 17/10/2026) : le profil
+#   (home, business, enterprise) se pose au provisioning, pas par la clé.
 #
-#   box/usine/iso/construire-iso.sh --profil business --paquets ./paquets --sortie ./dist \
+#   box/usine/iso/construire-iso.sh --paquets ./paquets --sortie ./dist \
 #       [--source-iso ./ubuntu.iso] [--operateur "Léa"] [--lot L-2026-10-A] \
 #       [--plateforme https://plateforme.iagent.agency] [--jeton-fichier ./jeton.txt] [--verifier]
 #
@@ -24,10 +26,9 @@ set -euo pipefail
 
 ICI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPOT="$(cd "$ICI/../../.." && pwd)"
-PROFIL="" ; PAQUETS="" ; SORTIE="$DEPOT/dist" ; SOURCE_ISO="" ; OPERATEUR="" ; LOT="" ; PLATEFORME="" ; JETON_FICHIER="" ; VERIFIER=0
+PAQUETS="" ; SORTIE="$DEPOT/dist" ; SOURCE_ISO="" ; OPERATEUR="" ; LOT="" ; PLATEFORME="" ; JETON_FICHIER="" ; VERIFIER=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --profil) PROFIL="$2"; shift 2 ;;
     --paquets) PAQUETS="$2"; shift 2 ;;
     --sortie) SORTIE="$2"; shift 2 ;;
     --source-iso) SOURCE_ISO="$2"; shift 2 ;;
@@ -39,11 +40,10 @@ while [ $# -gt 0 ]; do
     *) echo "argument inconnu : $1" >&2; exit 2 ;;
   esac
 done
-[ -f "$DEPOT/box/profils/$PROFIL.json" ] || { echo "--profil business|home attendu (lu : « $PROFIL »)" >&2; exit 2; }
 for outil in xorriso node git; do command -v "$outil" >/dev/null || { echo "outil manquant : $outil" >&2; exit 2; }; done
 
 VERSION="$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).version)' "$ICI/installateur.json")"
-NOM_ISO="iagent-factory-installer-v${VERSION}-${PROFIL}.iso"
+NOM_ISO="iagent-factory-installer-v${VERSION}.iso"
 TRAVAIL="$(mktemp -d)"
 trap 'rm -rf "$TRAVAIL"' EXIT
 NOCLOUD="$TRAVAIL/nocloud"
@@ -57,7 +57,6 @@ chmod 0600 "$NOCLOUD/cle-usine"
 
 I="$NOCLOUD/iagent"
 mkdir -p "$I/tard" "$I/scripts" "$I/systemd" "$I/durcissement" "$I/profils" "$I/materiel" "$I/tests" "$I/paquets"
-printf '%s\n' "$PROFIL" > "$I/profil"
 cp "$ICI/../autoinstall/tard/"*.sh "$I/tard/"
 cp "$DEPOT/box/services/absent/iagent-absent.sh" "$DEPOT/box/os/kiosque/iagent-commander.sh" "$DEPOT/box/os/kiosque/iagent-usine.sh" "$I/scripts/"
 cp "$DEPOT/box/os/systemd/"*.service "$DEPOT/box/os/systemd/"*.timer "$DEPOT/box/os/systemd/SERVICES.json" "$I/systemd/"
@@ -83,13 +82,13 @@ process.stdout.write(JSON.stringify(g, null, 2) + "\n");
 chmod 0600 "$I/usine.json"
 
 # --- le manifeste, depuis les fichiers qui portent chaque version ---------------
-node --experimental-strip-types "$ICI/manifeste.ts" --profil "$PROFIL" --iso "$NOM_ISO" > "$I/manifeste.json"
-cp "$I/manifeste.json" "$SORTIE/manifeste-${PROFIL}.json"
+node --experimental-strip-types "$ICI/manifeste.ts" --iso "$NOM_ISO" > "$I/manifeste.json"
+cp "$I/manifeste.json" "$SORTIE/manifeste.json"
 echo "manifeste : $(node -e 'const m=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")); console.log(m.build_id, "os", m.os.version, "commander", m.composants.commander.version ?? "-", "device", m.composants.device.version ?? "-")' "$I/manifeste.json")"
 
 if [ "$VERIFIER" = 1 ]; then
-  (cd "$NOCLOUD" && find . -type f | sort) > "$SORTIE/arbre-nocloud-${PROFIL}.txt"
-  echo "--verifier : arbre nocloud/ et manifeste construits ($(wc -l < "$SORTIE/arbre-nocloud-${PROFIL}.txt") fichiers), ISO non assemblée."
+  (cd "$NOCLOUD" && find . -type f | sort) > "$SORTIE/arbre-nocloud.txt"
+  echo "--verifier : arbre nocloud/ et manifeste construits ($(wc -l < "$SORTIE/arbre-nocloud.txt") fichiers), ISO non assemblée."
   exit 0
 fi
 
@@ -111,7 +110,7 @@ mkdir -p "$ARBRE"
 xorriso -osirrox on -indev "$SOURCE_ISO" -extract / "$ARBRE" 2>/dev/null
 chmod -R u+w "$ARBRE"
 cp -a "$NOCLOUD" "$ARBRE/nocloud"
-sed "s/__PROFIL__/${PROFIL}/g" "$ICI/grub.cfg" > "$ARBRE/boot/grub/grub.cfg"
+cp "$ICI/grub.cfg" "$ARBRE/boot/grub/grub.cfg"
 # Les enregistrements d'amorçage (El Torito BIOS + EFI) de l'ISO d'origine, rejoués tels quels.
 xorriso -indev "$SOURCE_ISO" -report_el_torito as_mkisofs > "$TRAVAIL/boot.args" 2>/dev/null
 # Les options d'amorçage d'origine renvoient à des fichiers de l'ISO source ; -boot_image any replay les reprend par -indev.

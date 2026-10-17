@@ -4,7 +4,7 @@
 
 import { depot } from '../depot.ts';
 import catalogueJson from '../../catalogue/catalogue.json' with { type: 'json' };
-import type { Box, RapportUsine, SkillPack, StatutBox } from '../modele.ts';
+import type { RapportUsine, SkillPack, StatutBox } from '../modele.ts';
 import { profilMateriel } from '../../box/materiel/index.ts';
 
 type StatutSkill = SkillPack['validation_status'];
@@ -39,17 +39,18 @@ export const STATUTS_ATTRIBUABLES: StatutBox[] = ['stock', 'qualifiee'];
 export const STATUTS_FERMES: StatutBox[] = ['suspendue', 'restituee', 'remplacee'];
 
 /**
- * The commercial reference printed on the label (brief §12): `IA-FR-CMD-00000127`
- * for business, `IA-FR-HOME-00000128` for home. `CMD` is the brief's own code
- * for the business Box ("Commander" being the desktop application, not a gamme).
- * The counter is per gamme, kept by the platform in `compteurs/reference-box`.
+ * The commercial reference printed on the label (brief §12): `IA-FR-STN-00000127`.
+ * One series for every iAgent Station (max, 17/10/2026): the label is printed at
+ * the factory, before the profile (home, business, enterprise) is set, so the
+ * reference cannot carry it. The counter is kept by the platform in
+ * `compteurs/reference-box`.
  */
-export function referenceBox(gamme: Box['gamme'], numero: number): string {
+export function referenceBox(numero: number): string {
   if (!Number.isInteger(numero) || numero < 1 || numero > 99_999_999) throw new Error(`Numéro de Box hors bornes : ${numero}.`);
-  return `IA-FR-${gamme === 'business' ? 'CMD' : 'HOME'}-${String(numero).padStart(8, '0')}`;
+  return `IA-FR-STN-${String(numero).padStart(8, '0')}`;
 }
 
-export const REFERENCE_BOX = /^IA-FR-(CMD|HOME)-\d{8}$/;
+export const REFERENCE_BOX = /^IA-FR-STN-\d{8}$/;
 
 /**
  * The verdict of a factory report, derived from its tests and the hardware

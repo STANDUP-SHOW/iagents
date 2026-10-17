@@ -232,7 +232,9 @@ export async function lancerPont(x: ContextePont): Promise<void> {
   verifier('l’agent répond à la question', await attendre(() => ttsX().includes('Je vous écoute.')));
   await pause(300);
   await l.parler(mediaX, 800);
-  verifier('« au revoir » : l’agent clôt l’appel, Telnyx raccroche', await attendre(() => x.operateur.some((r) => r.chemin === '/v2/calls/PONT-TX/actions/hangup')) && (appelX().etat as any).etape === 'termine' && appelX().issue === 'traite', JSON.stringify(appelX().etat));
+  // The fake operator records the hangup when it arrives; `issue` is set only once the platform has its answer.
+  // Waiting on the hangup alone raced that write (red on main cd28ac59, 13/10/2026): wait for the whole state.
+  verifier('« au revoir » : l’agent clôt l’appel, Telnyx raccroche', await attendre(() => x.operateur.some((r) => r.chemin === '/v2/calls/PONT-TX/actions/hangup') && (appelX().etat as any).etape === 'termine' && appelX().issue === 'traite'), JSON.stringify(appelX()));
   l.envoyer({ event: 'stop', sequence_number: '9', stream_id: 'ST-PONT', stop: { user_id: 'u', call_control_id: 'PONT-TX' } });
   verifier('fin du flux : la session Mistral est comptée, puis le coût recalculé', await attendre(() => (appelX().sessions_voix?.length ?? 0) === 1) && appelX().sessions_voix![0].moteur === 'mistral' && appelX().sessions_voix![0].caracteres_synthetises >= x.std.accueil.length && (appelX().cout !== null || appelX().cout_manquants.some((m) => m.includes('mistral'))), JSON.stringify(appelX().cout_manquants));
 
