@@ -193,6 +193,13 @@ pub async fn navigateur_action(
 mod tests {
     use super::*;
 
+    // Les tests ne doivent pas manipuler le meme snapshot global en parallele.
+    static VERROU_TESTS: OnceLock<Mutex<()>> = OnceLock::new();
+
+    fn en_serie() -> std::sync::MutexGuard<'static, ()> {
+        VERROU_TESTS.get_or_init(|| Mutex::new(())).lock().unwrap()
+    }
+
     fn element(tag: &str, type_champ: &str) -> ElementVue {
         ElementVue {
             tag: tag.into(), role: String::new(), type_champ: type_champ.into(),
@@ -202,6 +209,7 @@ mod tests {
 
     #[test]
     fn une_observation_ne_sert_qu_une_fois() {
+        let _garde = en_serie();
         let adresse = Url::parse("https://example.com/formulaire").unwrap();
         let mut o = Observation {
             version: 1, id: String::new(), origine: "https://example.com".into(),
@@ -217,6 +225,7 @@ mod tests {
 
     #[test]
     fn aucun_mot_de_passe_ou_lien_ou_bouton_submit() {
+        let _garde = en_serie();
         let adresse = Url::parse("https://example.com").unwrap();
         let mut o = Observation {
             version: 1, id: String::new(), origine: "https://example.com".into(),
@@ -232,6 +241,7 @@ mod tests {
 
     #[test]
     fn mauvais_identifiant_ne_consomme_pas_la_bonne_observation() {
+        let _garde = en_serie();
         let adresse = Url::parse("https://example.com").unwrap();
         let mut o = Observation {
             version: 1, id: String::new(), origine: "https://example.com".into(),
