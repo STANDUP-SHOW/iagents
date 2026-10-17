@@ -51,7 +51,7 @@ provisioning, pas par la clé.
 |---|---|---|
 | `home` | 1 / 1 | démarre seule |
 | `business` | 8 / 8 | activable |
-| `enterprise` | 10 / 10 (« une dizaine », site ; à confirmer) | activable |
+| `enterprise` | 10 / 10 (confirmé par max le 17/10/2026) | activable |
 
 `Box.gamme` vaut `null` tant que la Station n'est pas attribuée ; `/attribuer`
 (ou le jeton d'usine qui porte client, plan et profil) le pose, et la plateforme
