@@ -11,6 +11,7 @@ type SiteConnecte = {
 /** Lecture structurelle : aucune valeur de champ, cookie ou mot de passe. */
 type Observation = {
   version: number
+  id: string
   origine: string
   titre: string
   titres: string[]
@@ -47,6 +48,8 @@ export default function Navigateur() {
   const [erreur, setErreur] = useState('')
   const [occupe, setOccupe] = useState(false)
   const [observation, setObservation] = useState<Observation | null>(null)
+  const [texteAction, setTexteAction] = useState('')
+  const [resultatAction, setResultatAction] = useState('')
   // La demande d'effacement passe par une confirmation : déconnecter le client
   // de tous ses comptes sur un clic de travers se répare mal.
   const [effacementDemande, setEffacementDemande] = useState(false)
@@ -77,6 +80,39 @@ export default function Navigateur() {
     try {
       setObservation(await invoke<Observation>('navigateur_observer'))
     } catch (e) {
+      setErreur(String(e))
+    } finally {
+      setOccupe(false)
+    }
+  }
+
+  // Ce pilote initial sert a valider MANUELLEMENT la chaine de pilotage WebView.
+  // L'agent IA n'y a pas encore acces : la permission doit etre raccordee a
+  // l'orchestrateur de confiance avant toute execution non supervisee.
+  const agir = async (index: number, geste: 'renseigner' | 'cliquer') => {
+    if (!observation) return
+    const element = observation.elements[index]
+    if (!element) return
+    const nomElement = element.nom || 'element sans libelle'
+    const question = geste === 'cliquer'
+      ? `Confirmer le clic sur « ${nomElement} » sur ${observation.origine} ? Ce bouton peut declencher une action sur le site.`
+      : `Confirmer le remplissage du champ « ${nomElement} » sur ${observation.origine} ?`
+    if (!window.confirm(question)) return
+    setErreur('')
+    setResultatAction('')
+    setOccupe(true)
+    try {
+      const retour = await invoke<{ statut: string; observation_a_rafraichir: boolean }>('navigateur_action', {
+        observationId: observation.id,
+        index,
+        geste,
+        texte: geste === 'renseigner' ? texteAction : null,
+        confirmationHumaine: true,
+      })
+      setObservation(null)
+      setResultatAction(`${retour.statut} : l'evenement a ete emis. Verifiez le resultat sur le site et relancez une observation.`)
+    } catch (e) {
+      setObservation(null)
       setErreur(String(e))
     } finally {
       setOccupe(false)
@@ -209,16 +245,19 @@ export default function Navigateur() {
       </section>
 
       <section className="navigateur-observation">
-        <h3>Analyser la structure de la page ouverte</h3>
+        <h3>Analyser et tester les actions sur une page</h3>
         <p className="precision">
           Lecture locale des titres, boutons et noms de champs du site HTTPS déclaré.
           Cette fonction ne lit ni les textes saisis dans les formulaires, ni les mots de passe,
           ni les cookies, et n'effectue aucune action. Elle ne fonctionne pas sur les pages
-          qui refusent cette lecture.
+          qui refusent cette lecture. Les boutons de test ci-dessous exigent toujours
+          une confirmation humaine, ne publient rien automatiquement et ne prouvent
+          pas qu'une mission est terminee.
         </p>
         <button disabled={occupe || sites.length === 0} onClick={observer}>
           {occupe ? 'Lecture en cours…' : 'Analyser la page ouverte'}
         </button>
+        {resultatAction && <p className="precision" role="status">{resultatAction}</p>}
         {observation && (
           <div className="navigateur-resultat">
             <p><strong>{observation.titre || 'Page sans titre'}</strong> — {observation.origine}</p>
@@ -227,7 +266,17 @@ export default function Navigateur() {
             )}
             <p className="precision">
               {observation.elements.length} élément(s) interactif(s) relevé(s), sans leurs valeurs.
+              Chaque tentative d'action consomme cette observation et necessite ensuite une nouvelle lecture.
             </p>
+            <label htmlFor="web-operator-texte">Texte de test à placer dans un champ autorisé</label>
+            <input
+              id="web-operator-texte"
+              type="text"
+              maxLength={2000}
+              value={texteAction}
+              onChange={(e) => setTexteAction(e.target.value)}
+              placeholder="Texte à saisir dans le champ sélectionné"
+            />
             <ul>
               {observation.elements.map((element, index) => (
                 <li key={index}>
@@ -236,6 +285,16 @@ export default function Navigateur() {
                   {element.type_champ ? ' / ' + element.type_champ : ''}
                   {element.requis ? ' · obligatoire' : ''}
                   {element.inactif ? ' · inactif' : ''}
+                  {' '}
+                  {((element.tag === 'textarea') ||
+                    (element.tag === 'input' && ['', 'text', 'email', 'tel', 'search', 'url', 'number'].includes(element.type_champ))) &&
+                    !!element.nom && !element.inactif && (
+                      <button disabled={occupe} onClick={() => agir(index, 'renseigner')}>Remplir (test)</button>
+                    )}
+                  {element.tag === 'button' && element.type_champ === 'button' &&
+                    !!element.nom && !element.inactif && (
+                      <button disabled={occupe} onClick={() => agir(index, 'cliquer')}>Cliquer (test)</button>
+                    )}
                 </li>
               ))}
             </ul>
